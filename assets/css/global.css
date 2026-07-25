@@ -1,0 +1,66 @@
+/* Reset */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+/* Variables */
+
+:root{
+
+    --primary:#1565C0;
+    --primary-dark:#0D47A1;
+
+    --secondary:#1976D2;
+
+    --success:#2E7D32;
+
+    --danger:#D32F2F;
+
+    --warning:#FF9800;
+
+    --background:#F5F7FA;
+
+    --white:#FFFFFF;
+
+    --sidebar:#1E293B;
+
+    --text:#333333;
+
+    --border:#DDDDDD;
+
+    --shadow:0 5px 20px rgba(0,0,0,.08);
+
+}
+
+/* Body */
+
+body{
+
+    font-family:'Poppins',sans-serif;
+
+    background:var(--background);
+
+    color:var(--text);
+
+}
+
+/* Links */
+
+a{
+
+    text-decoration:none;
+
+    color:inherit;
+
+}
+
+/* Lists */
+
+ul{
+
+    list-style:none;
+
+}
