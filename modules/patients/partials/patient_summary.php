@@ -2,42 +2,33 @@
 
 declare(strict_types=1);
 
-if (!isset($patient) || !is_array($patient)) {
+/** @var array $patient */
 
-    return;
+$dateOfBirth = $patient['date_of_birth'] ?? '';
 
-}
+$age = '-';
 
-if (!function_exists('patientField')) {
+if (!empty($dateOfBirth)) {
 
-    function patientField(string $label, string $value): void
-    {
-        ?>
+    try {
 
-        <div class="review-item">
+        $dob = new DateTime($dateOfBirth);
 
-            <div class="review-label">
+        $today = new DateTime();
 
-                <?= e($label) ?>
+        $age = $today->diff($dob)->y . ' years';
 
-            </div>
+    } catch (Throwable $e) {
 
-            <div class="review-value">
+        $age = '-';
 
-                <?= nl2br(e($value !== '' ? $value : '-')) ?>
-
-            </div>
-
-        </div>
-
-        <?php
     }
 
 }
 
 ?>
 
-<div class="card patient-summary">
+<div class="card">
 
     <h2>
 
@@ -45,109 +36,157 @@ if (!function_exists('patientField')) {
 
     </h2>
 
-    <div class="review-section">
+    <div class="patient-summary">
 
-        <h3>Patient Identification</h3>
+        <div class="summary-card">
 
-        <?php
+            <h3>
 
-        patientField(
-            'Hospital Number',
-            $patient['hospital_number'] ?? ''
-        );
+                Demographics
 
-        patientField(
-            'First Name',
-            $patient['first_name'] ?? ''
-        );
+            </h3>
 
-        patientField(
-            'Last Name',
-            $patient['last_name'] ?? ''
-        );
+            <div class="summary-item">
 
-        patientField(
-            'Gender',
-            $patient['gender'] ?? ''
-        );
+                <strong>Hospital No.</strong>
 
-        patientField(
-            'Date of Birth',
-            $patient['date_of_birth'] ?? ''
-        );
+                <span>
 
-        ?>
+                    <?= e($patient['hospital_number']) ?>
 
-    </div>
+                </span>
 
-    <hr>
+            </div>
 
-    <div class="review-section">
+            <div class="summary-item">
 
-        <h3>Contact Information</h3>
+                <strong>Age</strong>
 
-        <?php
+                <span>
 
-        patientField(
-            'Phone Number',
-            $patient['phone'] ?? ''
-        );
+                    <?= e($age) ?>
 
-        patientField(
-            'Email Address',
-            $patient['email'] ?? ''
-        );
+                </span>
 
-        patientField(
-            'Residential Address',
-            $patient['address'] ?? ''
-        );
+            </div>
 
-        ?>
+            <div class="summary-item">
 
-    </div>
+                <strong>Gender</strong>
 
-    <hr>
+                <span>
 
-    <div class="review-section">
+                    <?= e($patient['gender']) ?>
 
-        <h3>Medical Information</h3>
+                </span>
 
-        <?php
+            </div>
 
-        patientField(
-            'Blood Group',
-            $patient['blood_group'] ?? ''
-        );
+            <div class="summary-item">
 
-        patientField(
-            'Genotype',
-            $patient['genotype'] ?? ''
-        );
+                <strong>Phone</strong>
 
-        ?>
+                <span>
 
-    </div>
+                    <?= e($patient['phone'] ?: '-') ?>
 
-    <hr>
+                </span>
 
-    <div class="review-section">
+            </div>
 
-        <h3>Next of Kin</h3>
+        </div>
 
-        <?php
+        <div class="summary-card">
 
-        patientField(
-            'Full Name',
-            $patient['next_of_kin'] ?? ''
-        );
+            <h3>
 
-        patientField(
-            'Phone Number',
-            $patient['next_of_kin_phone'] ?? ''
-        );
+                Medical
 
-        ?>
+            </h3>
+
+            <div class="summary-item">
+
+                <strong>Blood Group</strong>
+
+                <span>
+
+                    <?= e($patient['blood_group'] ?: '-') ?>
+
+                </span>
+
+            </div>
+
+            <div class="summary-item">
+
+                <strong>Genotype</strong>
+
+                <span>
+
+                    <?= e($patient['genotype'] ?: '-') ?>
+
+                </span>
+
+            </div>
+
+            <div class="summary-item">
+
+                <strong>Allergies</strong>
+
+                <span>
+
+                    <?= e($patient['allergies'] ?: '-') ?>
+
+                </span>
+
+            </div>
+
+        </div>
+
+        <div class="summary-card">
+
+            <h3>
+
+                Registration
+
+            </h3>
+
+            <div class="summary-item">
+
+                <strong>Registered</strong>
+
+                <span>
+
+                    <?= e($patient['created_at'] ?? '-') ?>
+
+                </span>
+
+            </div>
+
+            <div class="summary-item">
+
+                <strong>Last Updated</strong>
+
+                <span>
+
+                    <?= e($patient['updated_at'] ?? '-') ?>
+
+                </span>
+
+            </div>
+
+            <div class="summary-item">
+
+                <strong>Status</strong>
+
+                <span>
+
+                    Active
+
+                </span>
+
+            </div>
+
+        </div>
 
     </div>
 

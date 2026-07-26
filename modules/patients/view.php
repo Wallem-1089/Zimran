@@ -84,25 +84,14 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
 <?php endif; ?>
 
-<div class="card">
+  <!-- Patient Header -->
+    <?php require __DIR__ . '/partials/patient_header.php'; ?>
 
-    <h2>
+    <!-- Quick Actions -->
+    <?php require __DIR__ . '/partials/quick_actions.php'; ?>
 
-        <?= e($patient['first_name']) ?>
-
-        <?= e($patient['last_name']) ?>
-
-    </h2>
-
-    <p>
-
-        <strong>Hospital Number:</strong>
-
-        <?= e($patient['hospital_number']) ?>
-
-    </p>
-
-</div>
+    <!-- Patient Summary -->
+    <?php require __DIR__ . '/partials/patient_summary.php'; ?>
 
 <div class="card">
 
@@ -257,34 +246,6 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
         </div>
 
     </div>
-
-</div>
-
-<div class="form-actions">
-
-    <a
-        href="edit.php?id=<?= $patient['id'] ?>"
-        class="btn-primary">
-
-        Edit Patient
-
-    </a>
-
-    <a
-        href="../visits/create.php?patient=<?= $patient['id'] ?>"
-        class="btn-primary">
-
-        Create Encounter
-
-    </a>
-
-    <a
-        href="search.php"
-        class="btn-secondary">
-
-        Search Patients
-
-    </a>
 
 </div>
 
