@@ -362,65 +362,122 @@ class PatientService
     
 
     /*
+|--------------------------------------------------------------------------
+| Update Patient
+|--------------------------------------------------------------------------
+*/
+
+public function updatePatient(
+    int $id,
+    array $patient
+): array
+{
+    /*
     |--------------------------------------------------------------------------
-    | Update Patient
+    | Validate Patient Data
     |--------------------------------------------------------------------------
     */
 
-    public function updatePatient(
-        int $id,
-        array $patient
-    ): bool
-    {
+    $errors = $this->validate($patient);
+
+    if (!empty($errors)) {
+
+        return [
+
+            'success' => false,
+
+            'errors' => $errors
+
+        ];
+
+    }
+
+    try {
+
         $sql = "
 
             UPDATE patients
 
             SET
 
-                first_name=:first_name,
+                first_name = :first_name,
 
-                last_name=:last_name,
+                last_name = :last_name,
 
-                gender=:gender,
+                gender = :gender,
 
-                date_of_birth=:date_of_birth,
+                date_of_birth = :date_of_birth,
 
-                phone=:phone,
+                phone = :phone,
 
-                email=:email,
+                email = :email,
 
-                address=:address,
+                address = :address,
 
-                blood_group=:blood_group,
+                blood_group = :blood_group,
 
-                genotype=:genotype,
+                genotype = :genotype,
 
-                next_of_kin=:next_of_kin,
+                next_of_kin = :next_of_kin,
 
-                next_of_kin_phone=:next_of_kin_phone
+                next_of_kin_phone = :next_of_kin_phone
 
-            WHERE id=:id
+            WHERE id = :id
 
         ";
 
         $stmt = $this->pdo->prepare($sql);
 
-        return $stmt->execute([
+        $stmt->execute([
 
             ':first_name'        => $patient['first_name'],
+
             ':last_name'         => $patient['last_name'],
+
             ':gender'            => $patient['gender'],
-            ':date_of_birth'     => $patient['date_of_birth'],
+
+            ':date_of_birth'     => $patient['date_of_birth'] ?: null,
+
             ':phone'             => $patient['phone'],
+
             ':email'             => $patient['email'],
+
             ':address'           => $patient['address'],
+
             ':blood_group'       => $patient['blood_group'],
+
             ':genotype'          => $patient['genotype'],
+
             ':next_of_kin'       => $patient['next_of_kin'],
+
             ':next_of_kin_phone' => $patient['next_of_kin_phone'],
+
             ':id'                => $id
 
         ]);
+
+        return [
+
+            'success' => true,
+
+            'errors' => []
+
+        ];
+
+    } catch (Throwable $e) {
+
+        return [
+
+            'success' => false,
+
+            'errors' => [
+
+                $e->getMessage()
+
+            ]
+
+        ];
+
     }
+}
 }
