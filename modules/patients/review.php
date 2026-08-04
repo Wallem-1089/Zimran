@@ -57,6 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 }
 
+requireCsrfToken();
+
 /*
 |--------------------------------------------------------------------------
 | Validate Request
@@ -354,6 +356,8 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
     method="POST"
     action="<?= $isUpdate ? 'update.php' : 'save.php' ?>"
     class="confirmation-form">
+
+    <?= csrfField() ?>
 
     <?php foreach ($patient as $field => $value): ?>
 

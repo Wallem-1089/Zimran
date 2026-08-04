@@ -382,6 +382,17 @@ DEFAULT 'Outpatient',
 
     attending_doctor_id INT NULL,
 
+    queue_number INT NULL,
+
+    current_department_received_status ENUM(
+        'Pending',
+        'Received'
+    ) NOT NULL DEFAULT 'Pending',
+
+    current_department_received_by INT NULL,
+
+    current_department_received_at DATETIME NULL,
+
     visit_status ENUM(
 
         'Waiting',
@@ -405,6 +416,8 @@ DEFAULT 'Outpatient',
         'Theatre',
 
         'Accounts',
+
+        'Store',
 
         'Completed',
 
@@ -434,6 +447,9 @@ DEFAULT 'Outpatient',
 
     INDEX idx_visits_doctor
         (attending_doctor_id),
+
+    INDEX idx_visits_department_receive
+        (current_department_id, current_department_received_status),
 
     INDEX idx_visits_creator
         (created_by),
@@ -474,6 +490,16 @@ DEFAULT 'Outpatient',
 
         ON DELETE SET NULL,
 
+    CONSTRAINT fk_visits_received_by
+
+        FOREIGN KEY (current_department_received_by)
+
+        REFERENCES users(id)
+
+        ON UPDATE CASCADE
+
+        ON DELETE SET NULL,
+
     CONSTRAINT fk_visits_created_by
 
         FOREIGN KEY (created_by)
@@ -487,6 +513,159 @@ DEFAULT 'Outpatient',
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
 COLLATE=utf8mb4_unicode_ci;
+
+/*
+|--------------------------------------------------------------------------
+| Encounter Events
+|--------------------------------------------------------------------------
+*/
+
+CREATE TABLE encounter_events (
+
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
+    visit_id INT NOT NULL,
+
+    event_type VARCHAR(100) NOT NULL,
+
+    event_title VARCHAR(150) NOT NULL,
+
+    event_description TEXT NULL,
+
+    department_id INT NULL,
+
+    performed_by INT NULL,
+
+    event_time DATETIME NOT NULL
+        DEFAULT CURRENT_TIMESTAMP,
+
+    created_at TIMESTAMP
+        DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_encounter_events_visit_time
+        (visit_id, event_time, id),
+
+    INDEX idx_encounter_events_department
+        (department_id),
+
+    INDEX idx_encounter_events_performed_by
+        (performed_by),
+
+    CONSTRAINT fk_encounter_events_visit
+        FOREIGN KEY (visit_id)
+        REFERENCES visits(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_encounter_events_department
+        FOREIGN KEY (department_id)
+        REFERENCES departments(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    CONSTRAINT fk_encounter_events_performed_by
+        FOREIGN KEY (performed_by)
+        REFERENCES users(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE visit_transfers (
+
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
+    visit_id INT NOT NULL,
+
+    from_department_id INT NULL,
+
+    to_department_id INT NOT NULL,
+
+    from_status VARCHAR(50) NOT NULL,
+
+    to_status VARCHAR(50) NOT NULL,
+
+    transfer_type ENUM(
+        'Forward',
+        'Return',
+        'Referral',
+        'Discharge',
+        'Completion',
+        'Cancellation'
+    ) NOT NULL DEFAULT 'Forward',
+
+    previous_status VARCHAR(50) NULL,
+
+    new_status VARCHAR(50) NULL,
+
+    transferred_by INT NOT NULL,
+
+    remarks TEXT NULL,
+
+    transferred_at TIMESTAMP
+        DEFAULT CURRENT_TIMESTAMP,
+
+    received_by INT NULL,
+
+    received_at DATETIME NULL,
+
+    INDEX idx_visit (visit_id),
+
+    INDEX idx_from_department (from_department_id),
+
+    INDEX idx_to_department (to_department_id),
+
+    INDEX idx_transferred_by (transferred_by),
+
+    INDEX idx_transfer_pending
+        (visit_id, received_at, transferred_at),
+
+    INDEX idx_transfer_destination_pending
+        (to_department_id, received_at, transferred_at),
+
+    CONSTRAINT fk_transfer_visit
+        FOREIGN KEY (visit_id)
+        REFERENCES visits(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_transfer_from_department
+        FOREIGN KEY (from_department_id)
+        REFERENCES departments(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    CONSTRAINT fk_transfer_to_department
+        FOREIGN KEY (to_department_id)
+        REFERENCES departments(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_transfer_user
+        FOREIGN KEY (transferred_by)
+        REFERENCES users(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+
+    ,
+
+    CONSTRAINT fk_transfer_received_by
+
+        FOREIGN KEY (received_by)
+
+        REFERENCES users(id)
+
+        ON UPDATE CASCADE
+
+        ON DELETE RESTRICT
+
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+
 /*
 |--------------------------------------------------------------------------
 | Audit Logs
@@ -565,13 +744,23 @@ CREATE TABLE visit_queue (
 
     department_id INT NOT NULL,
 
+    assigned_user_id INT NULL,
+
+    position INT NULL,
+
+    remarks TEXT NULL,
+
     queue_status ENUM(
 
         'Waiting',
 
+        'Called',
+
         'In Progress',
 
-        'Completed'
+        'Completed',
+
+        'Cancelled'
 
     )
     NOT NULL
@@ -579,6 +768,14 @@ CREATE TABLE visit_queue (
 
     queued_at TIMESTAMP
         DEFAULT CURRENT_TIMESTAMP,
+
+    called_at DATETIME NULL,
+
+    started_at DATETIME NULL,
+
+    completed_at DATETIME NULL,
+
+    cancelled_at DATETIME NULL,
 
     INDEX idx_queue_visit
         (visit_id),
@@ -588,6 +785,18 @@ CREATE TABLE visit_queue (
 
     INDEX idx_queue_status
         (queue_status),
+
+    INDEX idx_queue_department_status_position
+        (department_id, queue_status, position, queued_at),
+
+    INDEX idx_queue_visit_status
+        (visit_id, queue_status),
+
+    INDEX idx_queue_queued_at
+        (queued_at),
+
+    INDEX idx_queue_position
+        (position),
 
     CONSTRAINT fk_queue_visit
 
@@ -608,6 +817,18 @@ CREATE TABLE visit_queue (
         ON UPDATE CASCADE
 
         ON DELETE RESTRICT
+
+    ,
+
+    CONSTRAINT fk_queue_assigned_user
+
+        FOREIGN KEY (assigned_user_id)
+
+        REFERENCES users(id)
+
+        ON UPDATE CASCADE
+
+        ON DELETE SET NULL
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4

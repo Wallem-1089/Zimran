@@ -211,6 +211,106 @@ function clientIp(): string
 {
     return $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN';
 }
+
+/**
+ * Return the current CSRF token, creating it when necessary.
+ */
+function csrfToken(): string
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    return (string)$_SESSION['csrf_token'];
+}
+
+/**
+ * Render a reusable hidden CSRF form field.
+ */
+function csrfField(): string
+{
+    return '<input type="hidden" name="csrf_token" value="'
+        . e(csrfToken())
+        . '">';
+}
+
+/**
+ * Verify a submitted CSRF token without exposing token details.
+ */
+function verifyCsrfToken(?string $token = null): bool
+{
+    $token = $token ?? ($_POST['csrf_token'] ?? '');
+    $sessionToken = $_SESSION['csrf_token'] ?? '';
+
+    return is_string($token)
+        && is_string($sessionToken)
+        && $token !== ''
+        && $sessionToken !== ''
+        && hash_equals($sessionToken, $token);
+}
+
+/**
+ * Enforce CSRF validation for state-changing endpoints.
+ */
+function requireCsrfToken(?int $visitId = null): void
+{
+    if (!verifyCsrfToken()) {
+        securityFailure(
+            'Security validation failed. Please submit the form again.',
+            $visitId,
+            'INVALID_CSRF'
+        );
+    }
+}
+
+/**
+ * Rotate the CSRF token after authentication or other trust-boundary changes.
+ */
+function rotateCsrfToken(): string
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+
+    return (string)$_SESSION['csrf_token'];
+}
+
+/**
+ * Store and audit a security rejection when an audit service is available.
+ */
+function securityFailure(
+    string $message,
+    ?int $visitId = null,
+    string $action = 'SECURITY_DENIED'
+): never {
+    $_SESSION['error_message'] = $message;
+
+    if (isset($GLOBALS['pdo'])) {
+        require_once __DIR__ . '/../services/AuditService.php';
+
+        $userId = isset($_SESSION['user']['id'])
+            ? (int)$_SESSION['user']['id']
+            : null;
+
+        (new AuditService($GLOBALS['pdo']))->log(
+            $userId,
+            $visitId,
+            'Security',
+            $action,
+            $message
+        );
+    }
+
+    http_response_code(403);
+
+    exit($message);
+}
 function field(
     string $name,
     array $patient,

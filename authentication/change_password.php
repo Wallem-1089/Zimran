@@ -91,6 +91,8 @@ require_once __DIR__ . '/../layouts/header.php';
             action="process_password_change.php"
             autocomplete="off">
 
+            <?= csrfField() ?>
+
             <div class="form-group">
 
                 <label for="current_password">

@@ -2,6 +2,7 @@
 
 class SessionService
 {
+    private const SESSION_TIMEOUT_SECONDS = 1800;
     /**
      * Constructor.
      * Starts a session if one is not already active.
@@ -40,6 +41,8 @@ class SessionService
         $_SESSION['logged_in'] = true;
 
         $_SESSION['login_time'] = time();
+
+        $_SESSION['last_activity'] = time();
     }
 
     /**
@@ -187,6 +190,8 @@ class SessionService
 
         }
 
+        $this->refreshOrExpire();
+
         if (!empty($_SESSION['must_change_password'])) {
 
             header('Location: /hospital_management_system/authentication/change_password.php');
@@ -209,5 +214,55 @@ class SessionService
 
             exit;
         }
+
+        $this->refreshOrExpire();
+    }
+
+    private function refreshOrExpire(): void
+    {
+        $lastActivity = (int)(
+            $_SESSION['last_activity']
+            ?? $_SESSION['login_time']
+            ?? time()
+        );
+
+        if (time() - $lastActivity <= self::SESSION_TIMEOUT_SECONDS) {
+            $_SESSION['last_activity'] = time();
+
+            return;
+        }
+
+        $userId = isset($_SESSION['user']['id'])
+            ? (int)$_SESSION['user']['id']
+            : null;
+
+        try {
+            require_once __DIR__ . '/../config/database.php';
+            require_once __DIR__ . '/AuditService.php';
+
+            (new AuditService($pdo))->log(
+                $userId,
+                null,
+                'Security',
+                'SESSION_TIMEOUT',
+                'User session expired due to inactivity.'
+            );
+        } catch (Throwable $e) {
+            // Expiration must complete even if audit storage is unavailable.
+        }
+
+        $this->logout();
+
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $_SESSION['login_errors'] = [
+            'Your session has expired. Please sign in again.'
+        ];
+
+        header('Location: /hospital_management_system/authentication/login.php');
+
+        exit;
     }
 }

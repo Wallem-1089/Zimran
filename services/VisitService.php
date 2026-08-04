@@ -1,0 +1,3106 @@
+<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/AuditService.php';
+require_once __DIR__ . '/EncounterEventService.php';
+require_once __DIR__ . '/EncounterStateService.php';
+require_once __DIR__ . '/QueueService.php';
+require_once __DIR__ . '/PermissionService.php';
+
+class VisitService
+{
+    private PDO $pdo;
+
+    private AuditService $auditService;
+
+    private EncounterEventService $eventService;
+
+    private EncounterStateService $stateService;
+
+    private QueueService $queueService;
+
+    private PermissionService $permissionService;
+
+    public function __construct(PDO $pdo)
+    {
+        $this->pdo = $pdo;
+
+        $this->auditService = new AuditService($pdo);
+
+        $this->eventService = new EncounterEventService($pdo);
+
+        $this->stateService = new EncounterStateService();
+
+        $this->queueService = new QueueService($pdo);
+
+        $this->permissionService = new PermissionService($pdo);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Queue Compatibility Wrappers
+    |--------------------------------------------------------------------------
+    */
+
+    public function enqueueEncounter(
+        int $visitId,
+        int $departmentId,
+        ?int $queuedBy = null,
+        ?int $assignedUserId = null,
+        ?string $remarks = null
+    ): array {
+        return $this->queueService->enqueueEncounter(
+            $visitId,
+            $departmentId,
+            $queuedBy,
+            $assignedUserId,
+            $remarks
+        );
+    }
+
+    public function dequeueEncounter(
+        int $queueId,
+        ?int $performedBy = null,
+        ?string $remarks = null
+    ): array {
+        return $this->queueService->dequeueEncounter(
+            $queueId,
+            $performedBy,
+            $remarks
+        );
+    }
+
+    public function callNextPatient(
+        int $departmentId,
+        ?int $calledBy = null
+    ): array {
+        return $this->queueService->callNextPatient(
+            $departmentId,
+            $calledBy
+        );
+    }
+
+    public function startService(
+        int $queueId,
+        ?int $startedBy = null
+    ): array {
+        return $this->queueService->startService(
+            $queueId,
+            $startedBy
+        );
+    }
+
+    public function completeQueueEntry(
+        int $queueId,
+        ?int $completedBy = null,
+        ?string $remarks = null
+    ): array {
+        return $this->queueService->completeQueueEntry(
+            $queueId,
+            $completedBy,
+            $remarks
+        );
+    }
+
+    public function cancelQueueEntry(
+        int $queueId,
+        ?int $cancelledBy = null,
+        ?string $remarks = null
+    ): array {
+        return $this->queueService->cancelQueueEntry(
+            $queueId,
+            $cancelledBy,
+            $remarks
+        );
+    }
+
+    public function getQueueEntryForVisit(int $visitId): ?array
+    {
+        return $this->queueService->getQueueEntryForVisit($visitId);
+    }
+
+    public function getDepartmentQueue(
+        int $departmentId,
+        ?array $statuses = null
+    ): array {
+        return $this->queueService->getDepartmentQueue(
+            $departmentId,
+            $statuses
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Create Encounter
+    |--------------------------------------------------------------------------
+    */
+
+    public function createVisit(
+    array $visit,
+    int $createdBy
+): array {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validate Input
+    |--------------------------------------------------------------------------
+    */
+
+    $errors = $this->validate($visit);
+
+    if (!empty($errors)) {
+
+        return [
+
+            'success'      => false,
+
+            'visit_id'     => null,
+
+            'visit_number' => null,
+
+            'errors'       => $errors
+
+        ];
+
+    }
+
+    try {
+
+        $this->pdo->beginTransaction();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Generate Visit Number
+        |--------------------------------------------------------------------------
+        */
+
+        $visitNumber = $this->generateVisitNumber();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Determine Initial Status
+        |--------------------------------------------------------------------------
+        |
+        | The encounter begins in the selected department.
+        | Enterprise HIS systems treat the creating department
+        | as already having received the patient.
+        |
+        */
+
+        $stmt = $this->pdo->prepare("
+
+            SELECT department_name
+
+            FROM departments
+
+            WHERE id = :id
+
+            LIMIT 1
+
+        ");
+
+        $stmt->execute([
+
+            ':id' => $visit['current_department_id']
+
+        ]);
+
+        $department = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$department) {
+
+            throw new RuntimeException(
+                'Invalid initial department.'
+            );
+
+        }
+
+        $initialStatus = $department['department_name'];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Create Encounter
+        |--------------------------------------------------------------------------
+        */
+
+        $sql = "
+
+            INSERT INTO visits (
+
+                visit_number,
+
+                patient_id,
+
+                visit_date,
+
+                visit_type,
+
+                current_department_id,
+
+                visit_status,
+
+                current_department_received_status,
+
+                current_department_received_at,
+
+                current_department_received_by,
+
+                created_by
+
+            )
+
+            VALUES (
+
+                :visit_number,
+
+                :patient_id,
+
+                :visit_date,
+
+                :visit_type,
+
+                :current_department_id,
+
+                :visit_status,
+
+                'Received',
+
+                NOW(),
+
+                :received_by,
+
+                :created_by
+
+            )
+
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+
+        $stmt->execute([
+
+            ':visit_number'          => $visitNumber,
+
+            ':patient_id'            => $visit['patient_id'],
+
+            ':visit_date'            => $visit['visit_date'],
+
+            ':visit_type'            => $visit['visit_type'],
+
+            ':current_department_id' => $visit['current_department_id'],
+
+            ':visit_status'          => $initialStatus,
+
+            ':received_by'           => $createdBy,
+
+            ':created_by'            => $createdBy
+
+        ]);
+
+        $visitId = (int)$this->pdo->lastInsertId();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Record Initial Encounter Event
+        |--------------------------------------------------------------------------
+        |
+        | This will become the first item in the encounter timeline.
+        |
+        */
+
+        $this->recordWorkflowHistory(
+            $visitId,
+            'ENCOUNTER_CREATED',
+            'Encounter Created',
+            sprintf(
+                'Encounter created and patient received in %s.',
+                $department['department_name']
+            ),
+            (int)$visit['current_department_id'],
+            $createdBy,
+            'Encounter',
+            'CREATE'
+        );
+
+        $queueResult = $this->queueService->enqueueEncounter(
+            $visitId,
+            (int)$visit['current_department_id'],
+            $createdBy
+        );
+
+        if (!$queueResult['success']) {
+
+            throw new RuntimeException(
+                $queueResult['errors'][0]
+                ?? 'Unable to queue encounter.'
+            );
+
+        }
+
+        $this->pdo->commit();
+
+        return [
+
+            'success'      => true,
+
+            'visit_id'     => $visitId,
+
+            'visit_number' => $visitNumber,
+
+            'visit_status' => $initialStatus,
+
+            'errors'       => []
+
+        ];
+
+    } catch (Throwable $e) {
+
+        if ($this->pdo->inTransaction()) {
+
+            $this->pdo->rollBack();
+
+        }
+
+        return [
+
+            'success'      => false,
+
+            'visit_id'     => null,
+
+            'visit_number' => null,
+
+            'errors'       => [
+
+            'Unable to create encounter.'
+
+            ]
+
+        ];
+
+    }
+
+}
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validate Encounter
+    |--------------------------------------------------------------------------
+    */
+
+    private function validate(array $visit): array
+    {
+        $errors = [];
+
+        if (empty($visit['patient_id'])) {
+
+            $errors[] = 'Patient is required.';
+
+        }
+
+        if (empty($visit['visit_date'])) {
+
+            $errors[] = 'Visit date is required.';
+
+        }
+
+        if (empty($visit['visit_type'])) {
+
+            $errors[] = 'Visit type is required.';
+
+        }
+
+        $allowedTypes = [
+
+            'Outpatient',
+            'Inpatient',
+            'Emergency',
+            'Referral'
+
+        ];
+
+        if (
+            !empty($visit['visit_type']) &&
+            !in_array(
+                $visit['visit_type'],
+                $allowedTypes,
+                true
+            )
+        ) {
+
+            $errors[] = 'Invalid visit type selected.';
+
+        }
+
+        if (empty($visit['current_department_id'])) {
+
+            $errors[] = 'Receiving department is required.';
+
+        }
+
+        return $errors;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Generate Visit Number
+    |--------------------------------------------------------------------------
+    */
+
+    private function generateVisitNumber(): string
+    {
+        $prefix = 'VIS';
+
+        $year = date('Y');
+
+        $stmt = $this->pdo->query(
+
+            "SELECT COUNT(*) FROM visits"
+
+        );
+
+        $next = ((int)$stmt->fetchColumn()) + 1;
+
+        return sprintf(
+
+            '%s-%s-%06d',
+
+            $prefix,
+
+            $year,
+
+            $next
+
+        );
+    }
+        /*
+    |--------------------------------------------------------------------------
+    | Get Encounter By ID
+    |--------------------------------------------------------------------------
+    */
+
+    public function getVisitById(
+    int $id
+): ?array {
+
+    $stmt = $this->pdo->prepare("
+
+        SELECT
+
+            v.*,
+
+            /*
+            |--------------------------------------------------------------------------
+            | Patient
+            |--------------------------------------------------------------------------
+            */
+
+            p.hospital_number,
+            p.first_name,
+            p.last_name,
+            p.gender,
+            p.phone,
+            p.date_of_birth,
+
+            /*
+            |--------------------------------------------------------------------------
+            | Current Department
+            |--------------------------------------------------------------------------
+            */
+
+            d.department_name,
+
+            /*
+            |--------------------------------------------------------------------------
+            | Attending Doctor
+            |--------------------------------------------------------------------------
+            */
+
+            CONCAT(
+
+                doctor.first_name,
+                ' ',
+                doctor.last_name
+
+            ) AS doctor_name,
+
+            /*
+            |--------------------------------------------------------------------------
+            | Registered By
+            |--------------------------------------------------------------------------
+            */
+
+            CONCAT(
+
+                creator.first_name,
+                ' ',
+                creator.last_name
+
+            ) AS registered_by_name,
+
+            /*
+            |--------------------------------------------------------------------------
+            | Current Department Receiver
+            |--------------------------------------------------------------------------
+            */
+
+            CONCAT(
+
+                receiver.first_name,
+                ' ',
+                receiver.last_name
+
+            ) AS current_department_received_by_name
+
+        FROM visits v
+
+        INNER JOIN patients p
+            ON p.id = v.patient_id
+
+        LEFT JOIN departments d
+            ON d.id = v.current_department_id
+
+        /*
+        |--------------------------------------------------------------------------
+        | Doctor
+        |--------------------------------------------------------------------------
+        */
+
+        LEFT JOIN users doctor
+            ON doctor.id = v.attending_doctor_id
+
+        /*
+        |--------------------------------------------------------------------------
+        | Encounter Creator
+        |--------------------------------------------------------------------------
+        */
+
+        LEFT JOIN users creator
+            ON creator.id = v.created_by
+
+        /*
+        |--------------------------------------------------------------------------
+        | Department Receiver
+        |--------------------------------------------------------------------------
+        */
+
+        LEFT JOIN users receiver
+            ON receiver.id =
+                v.current_department_received_by
+
+        WHERE v.id = :id
+
+        LIMIT 1
+
+    ");
+
+    $stmt->execute([
+
+        ':id' => $id
+
+    ]);
+
+    $visit = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $visit ?: null;
+
+}
+    
+    /*
+|--------------------------------------------------------------------------
+| Get Visit Number
+|--------------------------------------------------------------------------
+*/
+
+public function getVisitNumber(
+    int $visitId
+): ?string {
+
+    $stmt = $this->pdo->prepare("
+
+        SELECT
+
+            visit_number
+
+        FROM visits
+
+        WHERE id = :id
+
+        LIMIT 1
+
+    ");
+
+    $stmt->execute([
+
+        ':id' => $visitId
+
+    ]);
+
+    $visitNumber = $stmt->fetchColumn();
+
+    return $visitNumber !== false
+        ? (string)$visitNumber
+        : null;
+
+}
+
+public function canAccessDepartmentWorkspace(
+    int $visitId
+): bool {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Load Encounter
+    |--------------------------------------------------------------------------
+    */
+
+    $visit = $this->getVisitById($visitId);
+
+    if (!$visit) {
+
+        return false;
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Department Must Receive Patient
+    |--------------------------------------------------------------------------
+    */
+
+    return (
+
+        $visit['current_department_received_status']
+
+        ?? 'Pending'
+
+    ) === 'Received';
+
+}
+    
+
+    /*
+    |--------------------------------------------------------------------------
+    | Get Patient Encounters
+    |--------------------------------------------------------------------------
+    */
+
+    public function getPatientVisits(int $patientId): array
+    {
+        $stmt = $this->pdo->prepare("
+
+            SELECT
+
+                v.*,
+
+                d.department_name,
+
+                CONCAT(
+                    u.first_name,
+                    ' ',
+                    u.last_name
+                ) AS doctor_name
+
+            FROM visits v
+
+            LEFT JOIN departments d
+                ON d.id = v.current_department_id
+
+            LEFT JOIN users u
+                ON u.id = v.attending_doctor_id
+
+            WHERE v.patient_id = :patient_id
+
+            ORDER BY
+                v.visit_date DESC,
+                v.id DESC
+
+        ");
+
+        $stmt->execute([
+
+            ':patient_id' => $patientId
+
+        ]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Get Active Encounter
+    |--------------------------------------------------------------------------
+    */
+
+    public function getActiveVisit(
+        int $patientId
+    ): ?array {
+
+        $stmt = $this->pdo->prepare("
+
+            SELECT
+
+                v.*,
+
+                d.department_name,
+
+                CONCAT(
+                    u.first_name,
+                    ' ',
+                    u.last_name
+                ) AS doctor_name
+
+            FROM visits v
+
+            LEFT JOIN departments d
+                ON d.id = v.current_department_id
+
+            LEFT JOIN users u
+                ON u.id = v.attending_doctor_id
+
+            WHERE
+                v.patient_id = :patient_id
+
+            AND
+                v.visit_status NOT IN
+                (
+                    'Completed',
+                    'Cancelled'
+                )
+
+            ORDER BY
+                v.visit_date DESC,
+                v.id DESC
+
+            LIMIT 1
+
+        ");
+
+        $stmt->execute([
+
+            ':patient_id' => $patientId
+
+        ]);
+
+        $visit = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $visit ?: null;
+    }
+
+    /*
+|--------------------------------------------------------------------------
+| Check for Open Encounter
+|--------------------------------------------------------------------------
+*/
+
+    public function patientHasOpenVisit(
+        int $patientId
+    ): bool {
+
+        return $this->getActiveVisit($patientId) !== null;
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Count Patient Encounters
+    |--------------------------------------------------------------------------
+    */
+
+    public function countPatientVisits(
+        int $patientId
+    ): int {
+
+        $stmt = $this->pdo->prepare("
+
+            SELECT COUNT(*)
+
+            FROM visits
+
+            WHERE patient_id = :patient_id
+
+        ");
+
+        $stmt->execute([
+
+            ':patient_id' => $patientId
+
+        ]);
+
+        return (int)$stmt->fetchColumn();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Recent Encounters
+    |--------------------------------------------------------------------------
+    */
+
+    public function getRecentVisits(
+        int $limit = 20
+    ): array {
+
+        if (!$this->permissionService->hasPermission(
+            'create_encounter'
+        )) {
+
+            $this->permissionService->logDenied(
+                null,
+                null,
+                'CREATE_ENCOUNTER_DENIED',
+                'User attempted to create an encounter without permission.'
+            );
+
+            return [
+                'success' => false,
+                'visit_id' => null,
+                'visit_number' => null,
+                'errors' => [
+                    'You do not have permission to create encounters.'
+                ]
+            ];
+
+        }
+
+        $stmt = $this->pdo->prepare("
+
+            SELECT
+
+                v.*,
+
+                p.hospital_number,
+
+                p.first_name,
+
+                p.last_name,
+
+                d.department_name,
+
+                CONCAT(
+                    u.first_name,
+                    ' ',
+                    u.last_name
+                ) AS doctor_name
+
+            FROM visits v
+
+            INNER JOIN patients p
+                ON p.id = v.patient_id
+
+            LEFT JOIN departments d
+                ON d.id = v.current_department_id
+
+            LEFT JOIN users u
+                ON u.id = v.attending_doctor_id
+
+            ORDER BY
+                v.visit_date DESC,
+                v.id DESC
+
+            LIMIT :limit
+
+        ");
+
+        $stmt->bindValue(
+            ':limit',
+            $limit,
+            PDO::PARAM_INT
+        );
+
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function updateVisit(
+    int $visitId,
+    array $visit,
+    int $updatedBy
+    ): array {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validate
+        |--------------------------------------------------------------------------
+        */
+
+        $errors = [];
+
+        if (empty($visit['visit_type'])) {
+
+            $errors[] = 'Visit type is required.';
+
+        }
+
+        if (empty($visit['current_department_id'])) {
+
+            $errors[] = 'Department is required.';
+
+        }
+
+        if (!empty($errors)) {
+
+            return [
+
+                'success' => false,
+
+                'errors' => $errors
+
+            ];
+
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Ensure Encounter Exists
+        |--------------------------------------------------------------------------
+        */
+
+        $currentVisit = $this->getVisitById($visitId);
+
+        if (!$currentVisit
+            || !$this->permissionService->canEditEncounter(
+                $currentVisit
+            )
+        ) {
+
+            $this->permissionService->logDenied(
+                null,
+                $visitId,
+                'EDIT_ENCOUNTER_DENIED',
+                'User attempted to edit an encounter without permission.'
+            );
+
+            return [
+                'success' => false,
+                'errors' => [
+                    'You do not have permission to edit this encounter.'
+                ]
+            ];
+
+        }
+
+        $stateValidation =
+            $this->stateService->validateEditableEncounter(
+                $currentVisit
+            );
+
+        if (!$stateValidation['success']) {
+
+            return [
+
+                'success' => false,
+
+                'errors' => $stateValidation['errors']
+
+            ];
+
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Update Encounter
+        |--------------------------------------------------------------------------
+        */
+
+        try {
+
+            $this->pdo->beginTransaction();
+
+            $sql = "
+
+                UPDATE visits
+
+                SET
+
+                    visit_type = :visit_type,
+
+                    current_department_id = :department,
+
+                    attending_doctor_id = :doctor,
+
+                    updated_at = CURRENT_TIMESTAMP
+
+                WHERE id = :id
+
+            ";
+
+            $stmt = $this->pdo->prepare($sql);
+
+            $stmt->execute([
+
+                ':visit_type' => $visit['visit_type'],
+
+                ':department' => $visit['current_department_id'],
+
+                ':doctor' =>
+
+                    !empty($visit['attending_doctor_id'])
+
+                        ? $visit['attending_doctor_id']
+
+                        : null,
+
+                ':id' => $visitId
+
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Optional:
+            | If the encounter is still Waiting and has now been assigned
+            | to a department, automatically move it into that department.
+            |--------------------------------------------------------------------------
+            */
+
+            $this->pdo->prepare("
+
+                UPDATE visits
+
+                SET visit_status = CASE
+
+                    WHEN visit_status = 'Waiting'
+
+                    THEN 'Reception'
+
+                    ELSE visit_status
+
+                END
+
+                WHERE id = ?
+
+            ")->execute([
+
+                $visitId
+
+            ]);
+
+            $this->recordWorkflowHistory(
+                $visitId,
+                'ENCOUNTER_UPDATED',
+                'Encounter Updated',
+                'Encounter details were updated.',
+                (int)$visit['current_department_id'],
+                $updatedBy,
+                'Encounter',
+                'UPDATE'
+            );
+
+            $this->pdo->commit();
+
+            return [
+
+                'success' => true,
+
+                'errors' => []
+
+            ];
+
+        } catch (Throwable $e) {
+
+            if ($this->pdo->inTransaction()) {
+
+                $this->pdo->rollBack();
+
+            }
+
+            return [
+
+                'success' => false,
+
+                'errors' => [
+
+                    'Unable to update encounter.'
+
+                ]
+
+            ];
+
+        }
+
+    }
+        /*
+    |--------------------------------------------------------------------------
+    | Update Encounter Status
+    |--------------------------------------------------------------------------
+    */
+
+    public function updateStatus(
+        int $visitId,
+        string $status
+    ): array {
+
+        $visit = $this->getVisitById($visitId);
+
+        if (!$visit
+            || !$this->permissionService->canChangeEncounterStatus(
+                $visit
+            )
+        ) {
+
+            $this->permissionService->logDenied(
+                null,
+                $visitId,
+                'CHANGE_STATUS_DENIED',
+                'User attempted to change encounter status without permission.'
+            );
+
+            return [
+                'success' => false,
+                'errors' => [
+                    'You do not have permission to change this encounter status.'
+                ]
+            ];
+
+        }
+
+        $stateValidation =
+            $this->stateService->validateStatusTransition(
+                $visit['visit_status'] ?? null,
+                $status
+            );
+
+        if (!$stateValidation['success']) {
+
+            return [
+
+                'success' => false,
+
+                'errors' => $stateValidation['errors']
+
+            ];
+
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            $userId = isset($_SESSION['user']['id'])
+                ? (int)$_SESSION['user']['id']
+                : null;
+
+            if (in_array($status, ['Completed', 'Cancelled'], true)) {
+
+                $queueClose = $this->queueService
+                    ->closeActiveForLifecycle(
+                        $visitId,
+                        $status,
+                        $userId
+                    );
+
+                if (!$queueClose['success']) {
+
+                    throw new RuntimeException(
+                        $queueClose['errors'][0]
+                        ?? 'Unable to close the queue entry.'
+                    );
+
+                }
+
+            }
+
+            $stmt = $this->pdo->prepare("
+
+            UPDATE visits
+
+            SET
+
+                visit_status = :status
+
+            WHERE
+
+                id = :id
+
+        ");
+
+            $success = $stmt->execute([
+
+            ':status' => $status,
+
+            ':id' => $visitId
+
+        ]);
+
+            if (!$success || $stmt->rowCount() === 0) {
+                throw new RuntimeException(
+                    'Unable to update encounter status.'
+                );
+            }
+
+            $this->recordWorkflowHistory(
+                $visitId,
+                'STATUS_CHANGED',
+                'Encounter Status Changed',
+                'Encounter status changed to ' . $status . '.',
+                null,
+                $userId,
+                'Encounter',
+                'STATUS_CHANGED'
+            );
+
+            $this->pdo->commit();
+
+            return [
+
+                'success' => true,
+
+                'errors' => []
+
+            ];
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            return [
+                'success' => false,
+                'errors' => ['Unable to update encounter status.']
+            ];
+        }
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Change Current Department
+    |--------------------------------------------------------------------------
+    */
+
+    public function transferDepartment(
+        int $visitId,
+        int $departmentId
+    ): bool {
+
+        $stmt = $this->pdo->prepare("
+
+            UPDATE visits
+
+            SET
+
+                current_department_id = :department
+
+            WHERE
+
+                id = :visit
+
+        ");
+
+        return $stmt->execute([
+
+            ':department' => $departmentId,
+
+            ':visit' => $visitId
+
+        ]);
+
+    }
+
+    public function getAvailableDoctors(
+    int $departmentId
+): array {
+
+    $stmt = $this->pdo->prepare("
+
+        SELECT
+
+            u.id,
+
+            u.employee_id,
+
+            CONCAT(
+
+                u.first_name,
+                ' ',
+                u.last_name
+
+            ) AS full_name,
+
+            u.email,
+
+            u.phone
+
+        FROM users u
+
+        INNER JOIN roles r
+            ON r.id = u.role_id
+
+        WHERE
+
+            u.department_id = :department
+
+        AND
+
+            LOWER(r.role_name) = 'doctor'
+
+        AND
+
+            u.status = 'Active'
+
+        ORDER BY
+
+            u.first_name,
+            u.last_name
+
+    ");
+
+    $stmt->execute([
+
+        ':department' => $departmentId
+
+    ]);
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+}
+
+    /*
+    |--------------------------------------------------------------------------
+    | Assign Doctor
+    |--------------------------------------------------------------------------
+    */
+
+    public function assignDoctor(
+    int $visitId,
+    int $doctorId,
+    int $assignedBy
+): array {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Load Visit
+    |--------------------------------------------------------------------------
+    */
+
+    $visit = $this->getVisitById($visitId);
+
+    if (!$visit) {
+
+        return [
+
+            'success' => false,
+
+            'errors' => [
+
+                'Encounter not found.'
+
+            ]
+
+        ];
+
+    }
+
+    if (!$this->permissionService->canAssignDoctor($visit)) {
+
+        $this->permissionService->logDenied(
+            $assignedBy,
+            $visitId,
+            'ASSIGN_DOCTOR_DENIED',
+            'User attempted to assign a doctor without permission.'
+        );
+
+        return [
+            'success' => false,
+            'errors' => [
+                'You do not have permission to assign a doctor to this encounter.'
+            ]
+        ];
+
+    }
+
+    $stateValidation =
+        $this->stateService->validateDoctorAssignment($visit);
+
+    if (!$stateValidation['success']) {
+
+        return [
+
+            'success' => false,
+
+            'errors' => $stateValidation['errors']
+
+        ];
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Load Doctor
+    |--------------------------------------------------------------------------
+    */
+
+    $stmt = $this->pdo->prepare("
+
+        SELECT
+
+            u.id,
+
+            u.department_id,
+
+            u.status,
+
+            CONCAT(
+
+                u.first_name,
+                ' ',
+                u.last_name
+
+            ) AS doctor_name,
+
+            r.role_name
+
+        FROM users u
+
+        INNER JOIN roles r
+            ON r.id = u.role_id
+
+        WHERE u.id = :id
+
+        LIMIT 1
+
+    ");
+
+    $stmt->execute([
+
+        ':id' => $doctorId
+
+    ]);
+
+    $doctor = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$doctor) {
+
+        return [
+
+            'success' => false,
+
+            'errors' => [
+
+                'Selected doctor does not exist.'
+
+            ]
+
+        ];
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validate Role
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+
+        strtolower($doctor['role_name']) !== 'doctor'
+
+    ) {
+
+        return [
+
+            'success' => false,
+
+            'errors' => [
+
+                'Selected user is not a doctor.'
+
+            ]
+
+        ];
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validate Status
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+
+        strtolower($doctor['status']) !== 'active'
+
+    ) {
+
+        return [
+
+            'success' => false,
+
+            'errors' => [
+
+                'Selected doctor is inactive.'
+
+            ]
+
+        ];
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Department Validation
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+
+        (int)$doctor['department_id']
+
+        !==
+
+        (int)$visit['current_department_id']
+
+    ) {
+
+        return [
+
+            'success' => false,
+
+            'errors' => [
+
+                'Doctor does not belong to the current department.'
+
+            ]
+
+        ];
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Already Assigned?
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+
+        (int)$visit['attending_doctor_id']
+
+        ===
+
+        $doctorId
+
+    ) {
+
+        return [
+
+            'success' => false,
+
+            'errors' => [
+
+                'This doctor has already been assigned.'
+
+            ]
+
+        ];
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Save
+    |--------------------------------------------------------------------------
+    */
+
+    try {
+
+        $this->pdo->beginTransaction();
+
+        $stmt = $this->pdo->prepare("
+
+            UPDATE visits
+
+            SET
+
+                attending_doctor_id = :doctor,
+
+                queue_number = NULL,
+
+                updated_at = NOW()
+
+            WHERE id = :visit
+
+        ");
+
+        $stmt->execute([
+
+            ':doctor' => $doctorId,
+
+            ':visit'  => $visitId
+
+        ]);
+
+        $this->recordWorkflowHistory(
+            $visitId,
+            'DOCTOR_ASSIGNED',
+            'Doctor Assigned',
+            'Doctor assigned: ' . $doctor['doctor_name'] . '.',
+            (int)$visit['current_department_id'],
+            $assignedBy,
+            'Encounter',
+            'ASSIGN_DOCTOR'
+        );
+
+        $this->pdo->commit();
+
+        return [
+
+            'success' => true,
+
+            'doctor_id' => $doctorId,
+
+            'doctor_name' => $doctor['doctor_name'],
+
+            'assigned_by' => $assignedBy,
+
+            'assigned_at' => date('Y-m-d H:i:s'),
+
+            'queue_reset' => true,
+
+            'errors' => []
+
+        ];
+
+    } catch (Throwable $e) {
+
+        if ($this->pdo->inTransaction()) {
+
+            $this->pdo->rollBack();
+
+        }
+
+        return [
+
+            'success' => false,
+
+            'errors' => [
+
+                'Unable to assign doctor.'
+
+            ]
+
+        ];
+
+    }
+
+}
+
+    /*
+    |--------------------------------------------------------------------------
+    | Close Encounter
+    |--------------------------------------------------------------------------
+    */
+
+    public function closeVisit(
+        int $visitId
+    ): array {
+
+        return $this->updateStatus(
+
+            $visitId,
+
+            'Completed'
+
+        );
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cancel Encounter
+    |--------------------------------------------------------------------------
+    */
+
+    public function cancelVisit(
+        int $visitId
+    ): array {
+
+        return $this->updateStatus(
+
+            $visitId,
+
+            'Cancelled'
+
+        );
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Departments
+    |--------------------------------------------------------------------------
+    */
+
+    public function getDepartments(): array
+    {
+        $stmt = $this->pdo->query("
+
+            SELECT
+
+                id,
+                department_name
+
+            FROM departments
+
+            ORDER BY department_name
+
+        ");
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Doctors
+    |--------------------------------------------------------------------------
+    */
+
+    public function getDoctors(): array
+    {
+        $stmt = $this->pdo->query("
+
+            SELECT
+
+                u.id,
+
+                CONCAT(
+                    u.first_name,
+                    ' ',
+                    u.last_name
+                ) AS doctor_name
+
+            FROM users u
+
+            INNER JOIN roles r
+
+                ON r.id = u.role_id
+
+            WHERE
+
+                r.role_name = 'Doctor'
+
+            ORDER BY
+
+                doctor_name
+
+        ");
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Check Active Encounter
+    |--------------------------------------------------------------------------
+    */
+
+    public function hasActiveVisit(
+        int $patientId
+    ): bool {
+
+        return $this->getActiveVisit(
+
+            $patientId
+
+        ) !== null;
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Total Encounters
+    |--------------------------------------------------------------------------
+    */
+
+    public function countVisits(): int
+    {
+        return (int)$this->pdo
+            ->query("SELECT COUNT(*) FROM visits")
+            ->fetchColumn();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Today's Encounters
+    |--------------------------------------------------------------------------
+    */
+
+    public function countTodayVisits(): int
+    {
+        $stmt = $this->pdo->query("
+
+            SELECT COUNT(*)
+
+            FROM visits
+
+            WHERE DATE(visit_date)=CURDATE()
+
+        ");
+
+        return (int)$stmt->fetchColumn();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Waiting Encounters
+    |--------------------------------------------------------------------------
+    */
+
+    public function countWaitingVisits(): int
+    {
+        $stmt = $this->pdo->query("
+
+            SELECT COUNT(*)
+
+            FROM visits
+
+            WHERE visit_status='Waiting'
+
+        ");
+
+        return (int)$stmt->fetchColumn();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Transfer Encounter
+    |--------------------------------------------------------------------------
+    */
+
+    public function transferVisit(
+    int $visitId,
+    int $departmentId,
+    int $transferredBy,
+    string $transferType = 'Forward',
+    ?string $remarks = null
+): array {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Allowed Transfer Types
+    |--------------------------------------------------------------------------
+    */
+
+    /*
+    |--------------------------------------------------------------------------
+    | Load Visit
+    |--------------------------------------------------------------------------
+    */
+
+    $visit = $this->getVisitById($visitId);
+
+    if (!$visit) {
+
+        return [
+
+            'success' => false,
+
+            'department_name' => null,
+
+            'visit_status' => null,
+
+            'errors' => [
+
+                'Encounter not found.'
+
+            ]
+
+        ];
+
+    }
+
+    if (!$this->permissionService->canTransferEncounter($visit)) {
+
+        $this->permissionService->logDenied(
+            $transferredBy,
+            $visitId,
+            'TRANSFER_ENCOUNTER_DENIED',
+            'User attempted to transfer an encounter outside their department.'
+        );
+
+        return [
+            'success' => false,
+            'department_name' => null,
+            'visit_status' => null,
+            'errors' => [
+                'You do not have permission to transfer this encounter.'
+            ]
+        ];
+
+    }
+
+    $stateValidation = $this->stateService->validateTransfer(
+        $visit,
+        $departmentId,
+        $transferType
+    );
+
+    if (!$stateValidation['success']) {
+
+        return [
+
+            'success' => false,
+
+            'department_name' => null,
+
+            'visit_status' => null,
+
+            'errors' => $stateValidation['errors']
+
+        ];
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Load Destination Department
+    |--------------------------------------------------------------------------
+    */
+
+    $stmt = $this->pdo->prepare("
+
+        SELECT
+
+            id,
+            department_name
+
+        FROM departments
+
+        WHERE id = :id
+
+        LIMIT 1
+
+    ");
+
+    $stmt->execute([
+
+        ':id' => $departmentId
+
+    ]);
+
+    $department = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$department) {
+
+        return [
+
+            'success' => false,
+
+            'department_name' => null,
+
+            'visit_status' => null,
+
+            'errors' => [
+
+                'Invalid destination department.'
+
+            ]
+
+        ];
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Already In Department?
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+
+        (int)$visit['current_department_id'] === $departmentId
+
+    ) {
+
+        return [
+
+            'success' => false,
+
+            'department_name' => $department['department_name'],
+
+            'visit_status' => $visit['visit_status'],
+
+            'errors' => [
+
+                'Patient is already in this department.'
+
+            ]
+
+        ];
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Determine New Status
+    |--------------------------------------------------------------------------
+    */
+
+    $newStatus = $department['department_name'];
+
+    /*
+    |--------------------------------------------------------------------------
+    | Doctor Assignment
+    |--------------------------------------------------------------------------
+    */
+
+    $doctorId =
+
+        $newStatus === 'Doctor'
+
+            ? $visit['attending_doctor_id']
+
+            : null;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Normalize Remarks
+    |--------------------------------------------------------------------------
+    */
+
+    $remarks = trim((string)$remarks);
+
+    if ($remarks === '') {
+
+        $remarks = null;
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Save Transfer
+    |--------------------------------------------------------------------------
+    */
+
+    try {
+
+        $this->pdo->beginTransaction();
+
+        $queueClose = $this->queueService->closeActiveForTransfer(
+            $visitId,
+            $transferredBy
+        );
+
+        if (!$queueClose['success']) {
+
+            throw new RuntimeException(
+                $queueClose['errors'][0]
+                ?? 'Unable to close the current queue entry.'
+            );
+
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Transfer History
+        |--------------------------------------------------------------------------
+        */
+
+        $stmt = $this->pdo->prepare("
+
+            INSERT INTO visit_transfers (
+
+                visit_id,
+                from_department_id,
+                to_department_id,
+                from_status,
+                to_status,
+                previous_status,
+                new_status,
+                transfer_type,
+                remarks,
+                transferred_by,
+                transferred_at
+
+            )
+
+            VALUES (
+
+                :visit_id,
+                :from_department,
+                :to_department,
+                :from_status,
+                :to_status,
+                :previous_status,
+                :new_status,
+                :transfer_type,
+                :remarks,
+                :transferred_by,
+                NOW()
+
+            )
+
+        ");
+
+        $stmt->execute([
+
+            ':visit_id'        => $visitId,
+
+            ':from_department' => $visit['current_department_id'],
+
+            ':to_department'   => $departmentId,
+
+            ':from_status'     => $visit['visit_status'],
+
+            ':to_status'       => $newStatus,
+
+            ':previous_status' => $visit['visit_status'],
+
+            ':new_status'      => $newStatus,
+
+            ':transfer_type'   => $transferType,
+
+            ':remarks'         => $remarks,
+
+            ':transferred_by'  => $transferredBy
+
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Update Current Visit
+        |--------------------------------------------------------------------------
+        */
+
+        $stmt = $this->pdo->prepare("
+
+            UPDATE visits
+
+            SET
+
+                current_department_id = :department,
+
+                visit_status = :status,
+
+                attending_doctor_id = :doctor,
+
+                current_department_received_status = 'Pending',
+
+                current_department_received_by = NULL,
+
+                current_department_received_at = NULL,
+
+                updated_at = NOW()
+
+            WHERE id = :id
+
+        ");
+
+        $stmt->execute([
+
+            ':department' => $departmentId,
+
+            ':status'     => $newStatus,
+
+            ':doctor'     => $doctorId,
+
+            ':id'         => $visitId
+
+        ]);
+
+        $this->recordWorkflowHistory(
+            $visitId,
+            'TRANSFERRED',
+            'Encounter Transferred',
+            sprintf(
+                'Encounter transferred from %s to %s.',
+                $visit['current_department_id'],
+                $department['department_name']
+            ),
+            $departmentId,
+            $transferredBy,
+            'Visits',
+            'TRANSFER'
+        );
+
+        $queueResult = $this->queueService->enqueueEncounter(
+            $visitId,
+            $departmentId,
+            $transferredBy,
+            null,
+            $remarks
+        );
+
+        if (!$queueResult['success']) {
+
+            throw new RuntimeException(
+                $queueResult['errors'][0]
+                ?? 'Unable to queue transferred encounter.'
+            );
+
+        }
+
+        $this->pdo->commit();
+
+        return [
+
+            'success' => true,
+
+            'department_name' => $department['department_name'],
+
+            'visit_status' => $newStatus,
+
+            'errors' => []
+
+        ];
+
+    } catch (Throwable $e) {
+
+        if ($this->pdo->inTransaction()) {
+
+            $this->pdo->rollBack();
+
+        }
+
+        return [
+
+            'success' => false,
+
+            'department_name' => null,
+
+            'visit_status' => null,
+
+            'errors' => [
+
+                'Unable to transfer encounter.'
+
+            ]
+
+        ];
+
+    }
+
+}
+
+public function hasPendingTransfer(
+    int $visitId
+): bool {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Check for Pending Transfer
+    |--------------------------------------------------------------------------
+    |
+    | Returns TRUE when the encounter has been transferred
+    | into another department but has not yet been received.
+    |
+    */
+
+    $stmt = $this->pdo->prepare("
+
+        SELECT
+
+            COUNT(*) AS total
+
+        FROM visit_transfers
+
+        WHERE
+
+            visit_id = :visit_id
+
+            AND received_at IS NULL
+
+    ");
+
+    $stmt->execute([
+
+        ':visit_id' => $visitId
+
+    ]);
+
+    $count = (int)$stmt->fetchColumn();
+
+    return $count > 0;
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Get Transfer History
+|--------------------------------------------------------------------------
+|
+| Returns all transfers for an encounter.
+|
+*/
+
+/*
+|--------------------------------------------------------------------------
+| Get Transfer History
+|--------------------------------------------------------------------------
+|
+| Returns the complete transfer history for an encounter.
+|
+*/
+
+public function getTransferHistory(
+    int $visitId
+): array {
+
+    $stmt = $this->pdo->prepare("
+
+        SELECT
+
+            vt.id,
+
+            vt.visit_id,
+
+            vt.from_department_id,
+
+            vt.to_department_id,
+
+            vt.transfer_type,
+
+            vt.remarks,
+
+            vt.transferred_at,
+
+            vt.received_at,
+
+            vt.transferred_by,
+
+            vt.received_by,
+
+            fd.department_name
+                AS from_department_name,
+
+            td.department_name
+                AS to_department_name,
+
+            CONCAT(
+
+                tu.first_name,
+
+                ' ',
+
+                tu.last_name
+
+            ) AS transferred_by_name,
+
+            CONCAT(
+
+                ru.first_name,
+
+                ' ',
+
+                ru.last_name
+
+            ) AS received_by_name
+
+        FROM visit_transfers vt
+
+        LEFT JOIN departments fd
+
+            ON fd.id = vt.from_department_id
+
+        LEFT JOIN departments td
+
+            ON td.id = vt.to_department_id
+
+        LEFT JOIN users tu
+
+            ON tu.id = vt.transferred_by
+
+        LEFT JOIN users ru
+
+            ON ru.id = vt.received_by
+
+        WHERE vt.visit_id = :visit_id
+
+        ORDER BY
+
+            vt.transferred_at ASC,
+
+            vt.id ASC
+
+    ");
+
+    $stmt->execute([
+
+        ':visit_id' => $visitId
+
+    ]);
+
+    return $stmt->fetchAll(
+
+        PDO::FETCH_ASSOC
+
+    );
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Visit Timeline
+|--------------------------------------------------------------------------
+|
+| Returns the complete chronological timeline for a visit.
+|
+*/
+
+/*
+|--------------------------------------------------------------------------
+| Visit Timeline
+|--------------------------------------------------------------------------
+|
+| Returns the complete chronological timeline for an encounter.
+|
+*/
+
+public function getVisitTimeline(
+    int $visitId
+): array {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Load Encounter
+    |--------------------------------------------------------------------------
+    */
+
+    $visit = $this->getVisitById(
+
+        $visitId
+
+    );
+
+    if (!$visit) {
+
+        return [];
+
+    }
+
+    $eventTimeline = $this->eventService->getTimelineEvents(
+
+        $visitId
+
+    );
+
+    if (!empty($eventTimeline)) {
+
+        return $eventTimeline;
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Load Transfer History
+    |--------------------------------------------------------------------------
+    */
+
+    $transfers = $this->getTransferHistory(
+
+        $visitId
+
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Build Timeline
+    |--------------------------------------------------------------------------
+    */
+
+    $timeline = [];
+
+    /*
+    |--------------------------------------------------------------------------
+    | Encounter Creation
+    |--------------------------------------------------------------------------
+    */
+
+    $this->appendCreationEvent(
+
+        $timeline,
+
+        $visit
+
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Department Transfers
+    |--------------------------------------------------------------------------
+    */
+
+    $this->appendTransferEvents(
+
+        $timeline,
+
+        $transfers
+
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Future Clinical Modules
+    |--------------------------------------------------------------------------
+    */
+
+    if (method_exists($this, 'appendNursingEvents')) {
+
+        $this->appendNursingEvents(
+
+            $timeline,
+
+            $visitId
+
+        );
+
+    }
+
+    if (method_exists($this, 'appendConsultationEvents')) {
+
+        $this->appendConsultationEvents(
+
+            $timeline,
+
+            $visitId
+
+        );
+
+    }
+
+    if (method_exists($this, 'appendLaboratoryEvents')) {
+
+        $this->appendLaboratoryEvents(
+
+            $timeline,
+
+            $visitId
+
+        );
+
+    }
+
+    if (method_exists($this, 'appendRadiologyEvents')) {
+
+        $this->appendRadiologyEvents(
+
+            $timeline,
+
+            $visitId
+
+        );
+
+    }
+
+    if (method_exists($this, 'appendPharmacyEvents')) {
+
+        $this->appendPharmacyEvents(
+
+            $timeline,
+
+            $visitId
+
+        );
+
+    }
+
+    if (method_exists($this, 'appendBillingEvents')) {
+
+        $this->appendBillingEvents(
+
+            $timeline,
+
+            $visitId
+
+        );
+
+    }
+
+    if (method_exists($this, 'appendPhysiotherapyEvents')) {
+
+        $this->appendPhysiotherapyEvents(
+
+            $timeline,
+
+            $visitId
+
+        );
+
+    }
+
+    if (method_exists($this, 'appendTheatreEvents')) {
+
+        $this->appendTheatreEvents(
+
+            $timeline,
+
+            $visitId
+
+        );
+
+    }
+
+    if (method_exists($this, 'appendDocumentEvents')) {
+
+        $this->appendDocumentEvents(
+
+            $timeline,
+
+            $visitId
+
+        );
+
+    }
+
+    if (method_exists($this, 'appendNoteEvents')) {
+
+        $this->appendNoteEvents(
+
+            $timeline,
+
+            $visitId
+
+        );
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sort Timeline
+    |--------------------------------------------------------------------------
+    */
+
+    usort(
+
+        $timeline,
+
+        function (
+
+            array $a,
+
+            array $b
+
+        ): int {
+
+            return strtotime(
+
+                $a['created_at']
+
+            ) <=> strtotime(
+
+                $b['created_at']
+
+            );
+
+        }
+
+    );
+
+    return $timeline;
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Append Creation Event
+|--------------------------------------------------------------------------
+*/
+
+private function appendCreationEvent(
+    array &$timeline,
+    array $visit
+): void {
+
+    $timeline[] = [
+
+        'type' => 'creation',
+
+        'title' => 'Encounter Created',
+
+        'description' => sprintf(
+            '%s registered the patient at %s.',
+            $visit['registered_by_name'] ?? 'Unknown User',
+            $visit['department_name'] ?? 'Unknown Department'
+        ),
+
+        'department' => $visit['department_name'] ?? null,
+
+        'performed_by' => $visit['registered_by_name'] ?? null,
+
+        'transfer_type' => null,
+
+        'remarks' => null,
+
+        'created_at' => $visit['created_at']
+
+    ];
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Append Transfer Events
+|--------------------------------------------------------------------------
+*/
+
+private function appendTransferEvents(
+    array &$timeline,
+    array $transfers
+): void {
+
+    foreach ($transfers as $transfer) {
+
+        $description = sprintf(
+            'Transferred from %s to %s.',
+            $transfer['from_department_name'] ?? 'Unknown Department',
+            $transfer['to_department_name'] ?? 'Unknown Department'
+        );
+
+        if (!empty($transfer['remarks'])) {
+
+            $description .= ' Remarks: ' . $transfer['remarks'];
+
+        }
+
+        $timeline[] = [
+
+            'type' => 'transfer',
+
+            'title' => $transfer['transfer_type'] . ' Transfer',
+
+            'description' => $description,
+
+            'department' => $transfer['to_department_name'] ?? null,
+
+            'performed_by' => $transfer['transferred_by_name'] ?? null,
+
+            'transfer_type' => $transfer['transfer_type'],
+
+            'remarks' => $transfer['remarks'],
+
+            'created_at' => $transfer['transferred_at']
+
+        ];
+
+    }
+
+}
+
+public function receiveVisit(
+    int $visitId,
+    int $receivedBy,
+    ?string $remarks = null
+): array {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Normalize Remarks
+    |--------------------------------------------------------------------------
+    */
+
+    $remarks = trim((string)$remarks);
+
+    if ($remarks === '') {
+
+        $remarks = null;
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Load Encounter
+    |--------------------------------------------------------------------------
+    */
+
+    $visit = $this->getVisitById($visitId);
+
+    if (!$visit) {
+
+        return [
+
+            'success' => false,
+
+            'errors' => [
+
+                'Encounter not found.'
+
+            ]
+
+        ];
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Find Pending Transfer
+    |--------------------------------------------------------------------------
+    */
+
+    $stmt = $this->pdo->prepare("
+
+        SELECT
+
+            vt.*,
+
+            fd.department_name AS from_department_name,
+
+            td.department_name AS to_department_name
+
+        FROM visit_transfers vt
+
+        LEFT JOIN departments fd
+
+            ON fd.id = vt.from_department_id
+
+        LEFT JOIN departments td
+
+            ON td.id = vt.to_department_id
+
+        WHERE
+
+            vt.visit_id = :visit_id
+
+            AND vt.received_at IS NULL
+
+        ORDER BY
+
+            vt.transferred_at DESC,
+
+            vt.id DESC
+
+        LIMIT 1
+
+    ");
+
+    $stmt->execute([
+
+        ':visit_id' => $visitId
+
+    ]);
+
+    $transfer = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$this->permissionService->canReceiveEncounter(
+        $visit,
+        $transfer ?: null
+    )) {
+
+        $this->permissionService->logDenied(
+            $receivedBy,
+            $visitId,
+            'RECEIVE_ENCOUNTER_DENIED',
+            'User attempted to receive an encounter outside their department.'
+        );
+
+        return [
+            'success' => false,
+            'errors' => [
+                'You do not have permission to receive this encounter.'
+            ]
+        ];
+
+    }
+
+    $stateValidation = $this->stateService->validateReceive(
+        $visit,
+        $transfer ?: null
+    );
+
+    if (!$stateValidation['success']) {
+
+        return [
+
+            'success' => false,
+
+            'errors' => $stateValidation['errors']
+
+        ];
+
+    }
+
+    try {
+
+        $this->pdo->beginTransaction();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Mark Transfer Received
+        |--------------------------------------------------------------------------
+        */
+
+        $stmt = $this->pdo->prepare("
+
+            UPDATE visit_transfers
+
+            SET
+
+                received_by = :received_by,
+
+                received_at = NOW()
+
+            WHERE id = :id
+
+        ");
+
+        $stmt->execute([
+
+            ':received_by' => $receivedBy,
+
+            ':id'          => $transfer['id']
+
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Update Encounter
+        |--------------------------------------------------------------------------
+        */
+
+        $stmt = $this->pdo->prepare("
+
+            UPDATE visits
+
+            SET
+
+                current_department_received_by = :received_by,
+
+                current_department_received_at = NOW(),
+
+                current_department_received_status = 'Received',
+
+                updated_at = NOW()
+
+            WHERE id = :visit_id
+
+        ");
+
+        $stmt->execute([
+
+            ':received_by' => $receivedBy,
+
+            ':visit_id'    => $visitId
+
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Build Event Description
+        |--------------------------------------------------------------------------
+        */
+
+        $description =
+
+            'Patient received in '
+
+            . $transfer['to_department_name']
+
+            . ' department.';
+
+        if ($remarks !== null) {
+
+            $description .=
+
+                ' Remarks: '
+
+                . $remarks;
+
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Record Encounter Event
+        |--------------------------------------------------------------------------
+        */
+
+        $this->recordWorkflowHistory(
+            $visitId,
+            'PATIENT_RECEIVED',
+            'Patient Received',
+            $description,
+            (int)$transfer['to_department_id'],
+            $receivedBy,
+            'Visits',
+            'RECEIVE'
+        );
+
+        $this->pdo->commit();
+
+        return [
+
+            'success' => true,
+
+            'visit_id' => $visitId,
+
+            'transfer_id' => (int)$transfer['id'],
+
+            'department_id' => (int)$transfer['to_department_id'],
+
+            'department_name' => $transfer['to_department_name'],
+
+            'received_by' => $receivedBy,
+
+            'received_at' => date('Y-m-d H:i:s'),
+
+            'remarks' => $remarks,
+
+            'errors' => []
+
+        ];
+
+    } catch (Throwable $e) {
+
+        if ($this->pdo->inTransaction()) {
+
+            $this->pdo->rollBack();
+
+        }
+
+        return [
+
+            'success' => false,
+
+            'errors' => [
+
+                'Unable to receive encounter.'
+
+            ]
+
+        ];
+
+    }
+
+}
+
+    /*
+    |--------------------------------------------------------------------------
+    | Record Workflow History
+    |--------------------------------------------------------------------------
+    */
+
+    private function recordWorkflowHistory(
+        int $visitId,
+        string $eventType,
+        string $eventTitle,
+        string $eventDescription,
+        ?int $departmentId,
+        ?int $performedBy,
+        string $auditModule,
+        string $auditAction
+    ): void {
+        $event = $this->eventService->record(
+            $visitId,
+            $eventType,
+            $eventTitle,
+            $eventDescription,
+            $departmentId,
+            $performedBy
+        );
+
+        if (!$event['success']) {
+            throw new RuntimeException(
+                'Unable to record encounter event.'
+            );
+        }
+
+        if (!$this->auditService->log(
+            $performedBy,
+            $visitId,
+            $auditModule,
+            $auditAction,
+            $eventDescription
+        )) {
+            throw new RuntimeException(
+                'Unable to record audit log.'
+            );
+        }
+    }
+}

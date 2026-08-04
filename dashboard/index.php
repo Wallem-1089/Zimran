@@ -72,15 +72,15 @@ $currentDate = date('l, d F Y');
 
             </a>
 
-            <a href="../visits/create.php">
+            <a href="../modules/visits/create.php">
 
                 New Encounter
 
             </a>
 
-            <a href="../workspace/">
+            <a href="../modules/patients/search.php">
 
-                Open Workspace
+                Find Encounter
 
             </a>
 

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/session.php';
+
 /*
 |--------------------------------------------------------------------------
 | Authentication Guard
@@ -33,6 +35,14 @@ $config = require __DIR__ . '/app.php';
 */
 
 if (($config['app']['environment'] ?? 'production') === 'development') {
+
+    if (!empty($_SESSION['user'])) {
+
+        $currentUser = $_SESSION['user'];
+
+        return;
+
+    }
 
     $currentUser = [
 

@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/helpers.php';
 
 require_once __DIR__ . '/../services/UserService.php';
 require_once __DIR__ . '/../services/AuthService.php';
@@ -44,6 +45,27 @@ $sessionService->requireLogin();
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
     header('Location: change_password.php');
+    exit;
+
+}
+
+if (!verifyCsrfToken()) {
+
+    $auditService->log(
+        isset($_SESSION['user']['id'])
+            ? (int)$_SESSION['user']['id']
+            : null,
+        null,
+        'Security',
+        'INVALID_CSRF',
+        'Password change request failed CSRF validation.'
+    );
+
+    $_SESSION['error_message'] =
+        'Security validation failed. Please try again.';
+
+    header('Location: change_password.php');
+
     exit;
 
 }

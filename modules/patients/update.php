@@ -29,6 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 }
 
+requireCsrfToken();
+
 /*
 |--------------------------------------------------------------------------
 | Validate Patient ID

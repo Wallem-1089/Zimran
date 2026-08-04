@@ -68,6 +68,8 @@ class PatientService
 
                     genotype,
 
+                    allergies,
+
                     next_of_kin,
 
                     next_of_kin_phone,
@@ -98,6 +100,8 @@ class PatientService
 
                     :genotype,
 
+                    :allergies,
+
                     :next_of_kin,
 
                     :next_of_kin_phone,
@@ -121,6 +125,7 @@ class PatientService
                 ':address'           => $patient['address'],
                 ':blood_group'       => $patient['blood_group'],
                 ':genotype'          => $patient['genotype'],
+                ':allergies'         => $patient['allergies'],
                 ':next_of_kin'       => $patient['next_of_kin'],
                 ':next_of_kin_phone' => $patient['next_of_kin_phone'],
                 ':registered_by'     => $registeredBy
@@ -418,6 +423,8 @@ public function updatePatient(
 
                 genotype = :genotype,
 
+                allergies=:allergies,
+
                 next_of_kin = :next_of_kin,
 
                 next_of_kin_phone = :next_of_kin_phone
@@ -447,6 +454,8 @@ public function updatePatient(
             ':blood_group'       => $patient['blood_group'],
 
             ':genotype'          => $patient['genotype'],
+
+            ':allergies'         => $patient['allergies'],
 
             ':next_of_kin'       => $patient['next_of_kin'],
 

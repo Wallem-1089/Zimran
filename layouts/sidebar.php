@@ -51,7 +51,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <li>
 
                 <a
-                    href="../../dashboard/index.php"
+                    href="<?= e($baseUrl) ?>/dashboard/index.php"
                     class="<?= $currentPage === 'index.php' ? 'active' : '' ?>">
 
                     Dashboard
@@ -62,7 +62,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
             <li>
 
-                <a href="../modules/patients/search.php">
+                <a href="<?= e($baseUrl) ?>/modules/patients/search.php">
 
                     Patients
 
@@ -72,120 +72,13 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
             <li>
 
-                <a href="../visits/">
+                <a href="<?= e($baseUrl) ?>/modules/patients/search.php">
 
                     Encounters
 
                 </a>
 
             </li>
-
-            <li>
-
-                <a href="../workspace/">
-
-                    Workspace
-
-                </a>
-
-            </li>
-
-            <li>
-
-                <a href="../appointments/">
-
-                    Appointments
-
-                </a>
-
-            </li>
-
-            <li>
-
-                <a href="../laboratory/">
-
-                    Laboratory
-
-                </a>
-
-            </li>
-
-            <li>
-
-                <a href="../radiology/">
-
-                    X-Ray
-
-                </a>
-
-            </li>
-
-            <li>
-
-                <a href="../pharmacy/">
-
-                    Pharmacy
-
-                </a>
-
-            </li>
-
-            <li>
-
-                <a href="../accounts/">
-
-                    Accounts
-
-                </a>
-
-            </li>
-
-            <li>
-
-                <a href="../theatre/">
-
-                    Theatre
-
-                </a>
-
-            </li>
-
-            <li>
-
-                <a href="../store/">
-
-                    Store
-
-                </a>
-
-            </li>
-
-            <li>
-
-                <a href="../reports/">
-
-                    Reports
-
-                </a>
-
-            </li>
-
-            <?php if (
-                isset($currentUser['role_name']) &&
-                $currentUser['role_name'] === 'System Administrator'
-            ): ?>
-
-                <li>
-
-                    <a href="../admin/">
-
-                        Administration
-
-                    </a>
-
-                </li>
-
-            <?php endif; ?>
 
         </ul>
 
@@ -194,7 +87,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     <div class="sidebar-footer">
 
         <a
-            href="../authentication/logout.php"
+            href="<?= e($baseUrl) ?>/authentication/logout.php"
             class="logout-btn">
 
             Logout

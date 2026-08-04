@@ -29,6 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 }
 
+requireCsrfToken();
+
 /*
 |--------------------------------------------------------------------------
 | Basic Validation
@@ -77,6 +79,8 @@ $patient = [
     'blood_group' => trim($_POST['blood_group'] ?? ''),
 
     'genotype' => trim($_POST['genotype'] ?? ''),
+
+    'allergies' => trim($_POST['allergies'] ?? ''),
 
     'next_of_kin' => trim($_POST['next_of_kin'] ?? ''),
 

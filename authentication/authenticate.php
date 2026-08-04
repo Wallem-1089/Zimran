@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/helpers.php';
 
 require_once __DIR__ . '/../services/UserService.php';
 require_once __DIR__ . '/../services/AuthService.php';
@@ -35,6 +36,26 @@ $auditService = new AuditService($pdo);
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
     header('Location: ../authentication/login.php');
+    exit;
+
+}
+
+if (!verifyCsrfToken()) {
+
+    $auditService->log(
+        null,
+        null,
+        'Security',
+        'INVALID_CSRF',
+        'Authentication request failed CSRF validation.'
+    );
+
+    $_SESSION['login_errors'] = [
+        'Security validation failed. Please try again.'
+    ];
+
+    header('Location: ../authentication/login.php');
+
     exit;
 
 }
@@ -111,6 +132,8 @@ if (!$result['success']) {
 $user = $result['user'];
 
 $sessionService->login($user);
+
+rotateCsrfToken();
 
 $auditService->loginSuccess(
     (int)$user['id']

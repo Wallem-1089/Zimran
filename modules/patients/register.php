@@ -129,6 +129,8 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
         action="review.php"
         class="card">
 
+        <?= csrfField() ?>
+
         <!-- Tell review.php this is a NEW registration -->
 
         <input

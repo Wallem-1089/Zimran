@@ -1,6 +1,7 @@
 <?php
 require_once '../config/session.php';
 require_once '../config/constants.php';
+require_once '../config/helpers.php';
 
 // Redirect logged-in users to the dashboard
 if (isset($_SESSION['user'])) {
@@ -15,6 +16,14 @@ $success = "";
 if (isset($_SESSION['login_error'])) {
     $error = $_SESSION['login_error'];
     unset($_SESSION['login_error']);
+}
+
+if (isset($_SESSION['login_errors'])) {
+
+    $error = implode(' ', (array)$_SESSION['login_errors']);
+
+    unset($_SESSION['login_errors']);
+
 }
 
 if (isset($_SESSION['success'])) {
@@ -133,6 +142,8 @@ if (isset($_SESSION['success'])) {
                 action="authenticate.php"
                 method="POST"
                 autocomplete="off">
+
+                <?= csrfField() ?>
 
                 <!-- Employee ID / Username -->
 

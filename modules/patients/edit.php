@@ -48,6 +48,8 @@ $patientService = new PatientService($pdo);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
+    requireCsrfToken();
+
     $patient = $_POST;
 
     $id = isset($patient['id'])
@@ -181,6 +183,8 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
         method="POST"
         action="review.php"
         class="card">
+
+        <?= csrfField() ?>
 
         <input
             type="hidden"
