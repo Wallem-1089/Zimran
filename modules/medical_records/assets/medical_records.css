@@ -1,0 +1,72 @@
+.patient-chart-header,
+.chart-header-actions,
+.chart-navigation,
+.chart-summary-grid,
+.chart-detail-grid {
+    display: flex;
+    gap: 1rem;
+}
+
+.patient-chart-header {
+    align-items: center;
+    justify-content: space-between;
+}
+
+.chart-label,
+.chart-detail-grid span,
+.summary-card span {
+    color: #667085;
+    display: block;
+    font-size: 0.85rem;
+}
+
+.chart-navigation,
+.chart-summary-grid,
+.chart-detail-grid {
+    flex-wrap: wrap;
+}
+
+.chart-navigation a {
+    border-radius: 0.4rem;
+    color: #344054;
+    padding: 0.65rem 0.9rem;
+    text-decoration: none;
+}
+
+.chart-navigation a.active {
+    background: #155eef;
+    color: #fff;
+}
+
+.chart-summary-grid .summary-card,
+.chart-detail-grid > div {
+    flex: 1 1 200px;
+}
+
+.chart-detail-grid > div {
+    border-bottom: 1px solid #eaecf0;
+    padding: 0.75rem 0;
+}
+
+.summary-card strong {
+    display: block;
+    font-size: 1.75rem;
+    margin-top: 0.35rem;
+}
+
+.history-entry {
+    border-left: 3px solid #155eef;
+    margin: 1rem 0;
+    padding: 0.25rem 1rem;
+}
+
+.chart-foundation-notice {
+    border-left: 4px solid #f79009;
+}
+
+@media (max-width: 720px) {
+    .patient-chart-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

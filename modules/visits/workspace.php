@@ -29,6 +29,26 @@ require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/VisitService.php';
 require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
+require_once __DIR__ . '/../../services/ClinicalSafetyService.php';
+require_once __DIR__ . '/../../services/ProblemListService.php';
+require_once __DIR__ . '/../../services/MedicalDocumentService.php';
+require_once __DIR__ . '/../../services/ClinicalNoteService.php';
+require_once __DIR__ . '/../../services/ConsultationService.php';
+require_once __DIR__ . '/../../services/DepartmentNotificationService.php';
+
+function workspaceTableExists(PDO $pdo, string $table): bool
+{
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT COUNT(*) FROM information_schema.tables
+             WHERE table_schema = DATABASE() AND table_name = :table'
+        );
+        $stmt->execute([':table' => $table]);
+        return (int)$stmt->fetchColumn() > 0;
+    } catch (Throwable) {
+        return false;
+    }
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -135,6 +155,33 @@ if (!$permissionService->canViewEncounter($visit, $currentUser)) {
 
 }
 
+$canViewPatientChart = $permissionService->canViewMedicalRecord(
+    (int)$visit['patient_id'],
+    $currentUser
+);
+$canChangeEncounterStatus = $permissionService->canChangeEncounterStatus(
+    $visit,
+    $currentUser
+);
+$canViewClinicalSafety = $permissionService->canViewClinicalSafety(
+    (int)$visit['patient_id'],
+    $currentUser
+);
+$safetyBanner = ['success' => true, 'data' => ['items' => []], 'errors' => []];
+
+if ($canViewClinicalSafety) {
+    $clinicalSafetyService = new ClinicalSafetyService($pdo);
+    $safetyBanner = $clinicalSafetyService->getSafetyBannerForUser(
+        (int)$visit['patient_id'],
+        $currentUser,
+        $visitId
+    );
+    if (!($safetyBanner['success'] ?? false)) {
+        http_response_code(503);
+        exit('The encounter cannot display protected Clinical Safety information because access could not be recorded.');
+    }
+}
+
 $errorMessage = $_SESSION['error_message'] ?? null;
 
 unset($_SESSION['error_message']);
@@ -182,13 +229,39 @@ if (!$patient) {
 
 }
 
+$problemListService = new ProblemListService($pdo);
+$canViewProblemList = $permissionService->canViewProblemList(
+    (int)$patient['id'],
+    $currentUser
+);
+$canViewMedicalHistory = $permissionService->canViewStructuredMedicalHistory(
+    (int)$patient['id'],
+    $currentUser
+);
+$workspaceProblemSummary = $canViewProblemList
+    ? $problemListService->getProblemSummary((int)$patient['id'], $currentUser)
+    : ['success' => true, 'data' => ['active_confirmed' => [], 'severe_active_confirmed' => []], 'errors' => []];
+$workspaceMedicalHistorySummary = $canViewMedicalHistory
+    ? $problemListService->getMedicalHistorySummary((int)$patient['id'], $currentUser, 6)
+    : ['success' => true, 'data' => ['entries' => []], 'errors' => []];
+
 /*
 |--------------------------------------------------------------------------
 | Future Workspace Data
 |--------------------------------------------------------------------------
 */
 
-$consultation = null;
+$consultationTablesReady = workspaceTableExists($pdo, 'consultations');
+$notificationTablesReady = workspaceTableExists($pdo, 'department_notifications');
+$consultationService = $consultationTablesReady ? new ConsultationService($pdo) : null;
+$consultation = $consultationService ? $consultationService->getByVisit($visitId) : null;
+$canViewConsultation = $permissionService->canViewConsultation($visit, $currentUser);
+$canCreateConsultation = $permissionService->canCreateConsultation($visit, $currentUser);
+$canEditConsultation = $permissionService->canEditConsultation($visit, $currentUser);
+$canCompleteConsultation = $permissionService->canCompleteConsultation($visit, $currentUser);
+$departments = $visitService->getDepartments();
+$departmentNotificationService = $notificationTablesReady ? new DepartmentNotificationService($pdo) : null;
+$visitNotifications = $departmentNotificationService ? $departmentNotificationService->listForVisit($visitId) : [];
 
 $nursing = null;
 
@@ -204,9 +277,21 @@ $physiotherapy = [];
 
 $theatre = [];
 
-$documents = [];
+$medicalDocumentService = new MedicalDocumentService($pdo);
+$canViewMedicalDocuments = $permissionService->canViewMedicalDocuments((int)$patient['id'], $currentUser);
+$canUploadMedicalDocuments = $permissionService->canUploadMedicalDocuments((int)$patient['id'], null, $currentUser)
+    && $medicalDocumentService->canAcceptEncounterUpload($visit);
+$documents = $canViewMedicalDocuments
+    ? $medicalDocumentService->listEncounterDocuments($visitId, $currentUser)
+    : [];
 
-$notes = [];
+$clinicalNoteService = new ClinicalNoteService($pdo);
+$canViewClinicalNotes = $permissionService->canViewClinicalNotes((int)$patient['id'], $currentUser);
+$canCreateEncounterNotes = $permissionService->canCreateClinicalNote((int)$patient['id'], true, null, $currentUser);
+$workspaceNotesResult = $canViewClinicalNotes
+    ? $clinicalNoteService->listEncounterNotes($visitId, $currentUser, [], 1, 25)
+    : ['success' => true, 'data' => ['records' => [], 'total_results' => 0], 'errors' => []];
+$notes = $workspaceNotesResult['data']['records'] ?? [];
 
 /*
 |--------------------------------------------------------------------------
@@ -247,6 +332,15 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
     <?php endif; ?>
 
     <?php require __DIR__ . '/partials/encounter_header.php'; ?>
+
+    <?php if ($canViewClinicalSafety): ?>
+        <?php $safetyBannerUrl = '../medical_records/chart.php?patient=' . (int)$visit['patient_id'] . '&tab=safety&visit=' . $visitId; ?>
+        <?php require __DIR__ . '/../medical_records/partials/clinical_safety_banner.php'; ?>
+    <?php endif; ?>
+
+    <?php if ($canViewProblemList || $canViewMedicalHistory): ?>
+        <?php require __DIR__ . '/partials/longitudinal_summary.php'; ?>
+    <?php endif; ?>
 
     <?php require __DIR__ . '/partials/quick_actions.php'; ?>
 

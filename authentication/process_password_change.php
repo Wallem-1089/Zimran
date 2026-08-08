@@ -218,13 +218,6 @@ $userService->updatePassword(
 |--------------------------------------------------------------------------
 */
 
-$auditService->updated(
-    $userId,
-    null,
-    'Authentication',
-    'Password changed successfully.'
-);
-
 /*
 |--------------------------------------------------------------------------
 | Success

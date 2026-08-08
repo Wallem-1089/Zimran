@@ -85,42 +85,6 @@ if (!$stateValidation['success']) {
 
 }
 
-$departments = $visitService->getDepartments();
-
-/*
-|--------------------------------------------------------------------------
-| Doctors
-|--------------------------------------------------------------------------
-|
-| Later this should become:
-|
-| $doctorService->getDoctors();
-|
-*/
-
-$doctorStmt = $pdo->query("
-
-    SELECT
-
-        id,
-
-        employee_id,
-
-        first_name,
-
-        last_name
-
-    FROM users
-
-    WHERE role_id IS NOT NULL
-
-    ORDER BY first_name,
-             last_name
-
-");
-
-$doctors = $doctorStmt->fetchAll(PDO::FETCH_ASSOC);
-
 /*
 |--------------------------------------------------------------------------
 | Layout
@@ -289,25 +253,17 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         </label>
 
-        <select
+        <input
+            type="text"
+            value="<?= e($visit['department_name']) ?>"
+            readonly>
+
+        <input
+            type="hidden"
             name="current_department_id"
-            required>
+            value="<?= (int)$visit['current_department_id'] ?>">
 
-            <?php foreach ($departments as $department): ?>
-
-            <option
-                value="<?= (int)$department['id'] ?>"
-                <?= (int)$visit['current_department_id'] === (int)$department['id']
-                    ? 'selected'
-                    : '' ?>>
-
-                <?= e($department['department_name']) ?>
-
-            </option>
-
-            <?php endforeach; ?>
-
-        </select>
+        <small>Use the transfer workflow to change department.</small>
 
     </div>
 
@@ -319,34 +275,17 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         </label>
 
-        <select
-            name="attending_doctor_id">
+        <input
+            type="text"
+            value="<?= e((string)($visit['doctor_name'] ?? 'Not assigned')) ?>"
+            readonly>
 
-            <option value="">
+        <input
+            type="hidden"
+            name="attending_doctor_id"
+            value="<?= (int)($visit['attending_doctor_id'] ?? 0) ?>">
 
-                -- Not Assigned --
-
-            </option>
-
-            <?php foreach ($doctors as $doctor): ?>
-
-            <option
-                value="<?= (int)$doctor['id'] ?>"
-                <?= (int)$visit['attending_doctor_id'] === (int)$doctor['id']
-                    ? 'selected'
-                    : '' ?>>
-
-                <?= e(
-                    $doctor['first_name'] .
-                    ' ' .
-                    $doctor['last_name']
-                ) ?>
-
-            </option>
-
-            <?php endforeach; ?>
-
-        </select>
+        <small>Use the doctor assignment workflow to change this value.</small>
 
     </div>
 

@@ -45,7 +45,7 @@ $currentUser ??= [];
 
                     •
 
-                    <?= e($currentUser['department_name'] ?? '') ?>
+                    <?= e($currentUser['active_department_name'] ?? $currentUser['department_name'] ?? '') ?>
 
                 </small>
 

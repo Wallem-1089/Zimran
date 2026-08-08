@@ -4,6 +4,12 @@ $config = require __DIR__ . '/app.php';
 
 $db = $config['database'];
 
+if (($config['app']['environment'] ?? 'production') === 'testing') {
+    throw new RuntimeException(
+        'Live database bootstrap is disabled in testing. Use config/test_database.php.'
+    );
+}
+
 try {
 
     $pdo = new PDO(
@@ -16,6 +22,8 @@ try {
             PDO::ATTR_EMULATE_PREPARES => false
         ]
     );
+
+    $GLOBALS['pdo'] = $pdo;
 
 } catch (PDOException $e) {
 

@@ -19,6 +19,9 @@ $moduleScript = '/modules/patients/assets/patients.js';
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
+require_once __DIR__ . '/../../services/PatientService.php';
+require_once __DIR__ . '/../../services/PermissionService.php';
+require_once __DIR__ . '/../../services/VisitService.php';
 
 require_once __DIR__ . '/../../layouts/header.php';
 require_once __DIR__ . '/../../layouts/sidebar.php';
@@ -130,21 +133,17 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
                 <option value="">Any</option>
 
-                <option
-                    value="Male"
-                    <?= ($_GET['gender'] ?? '') === 'Male' ? 'selected' : '' ?>>
+                <?php foreach (PatientService::supportedGenders() as $genderOption): ?>
 
-                    Male
+                    <option
+                        value="<?= e($genderOption) ?>"
+                        <?= ($_GET['gender'] ?? '') === $genderOption ? 'selected' : '' ?>>
 
-                </option>
+                        <?= e($genderOption) ?>
 
-                <option
-                    value="Female"
-                    <?= ($_GET['gender'] ?? '') === 'Female' ? 'selected' : '' ?>>
+                    </option>
 
-                    Female
-
-                </option>
+                <?php endforeach; ?>
 
             </select>
 
@@ -183,6 +182,8 @@ if (!empty($_GET)) {
     */
 
     $patientService = new PatientService($pdo);
+    $permissionService = new PermissionService($pdo);
+    $visitService = new VisitService($pdo);
 
     /*
     |--------------------------------------------------------------------------
@@ -234,6 +235,8 @@ No patients found.
 
 <th>Phone</th>
 
+<th>Active Encounter</th>
+
 <th>Action</th>
 
 </tr>
@@ -243,6 +246,7 @@ No patients found.
 <tbody>
 
 <?php foreach ($patients as $patient): ?>
+<?php $activeVisit = $visitService->getActiveVisit((int)$patient['id']); ?>
 
 <tr>
 
@@ -274,6 +278,24 @@ No patients found.
 
 <td>
 
+<?php if ($activeVisit): ?>
+
+    <strong><?= e((string)$activeVisit['visit_number']) ?></strong><br>
+    <small>
+        <?= e((string)($activeVisit['department_name'] ?? '')) ?>
+        <?= !empty($activeVisit['visit_status']) ? ' - ' . e((string)$activeVisit['visit_status']) : '' ?>
+    </small>
+
+<?php else: ?>
+
+    <span class="text-muted">No active encounter</span>
+
+<?php endif; ?>
+
+</td>
+
+<td>
+
 <a
     href="view.php?id=<?= (int)$patient['id'] ?>"
     class="btn-secondary">
@@ -281,6 +303,30 @@ No patients found.
     View
 
 </a>
+
+<?php if ($permissionService->canViewMedicalRecord((int)$patient['id'], $currentUser)): ?>
+
+<a
+    href="../medical_records/chart.php?patient=<?= (int)$patient['id'] ?>"
+    class="btn-secondary">
+
+    View Patient Chart
+
+</a>
+
+<?php endif; ?>
+
+<?php if ($activeVisit): ?>
+
+<a
+    href="../visits/workspace.php?id=<?= (int)$activeVisit['id'] ?>"
+    class="btn-primary">
+
+    Open Encounter
+
+</a>
+
+<?php endif; ?>
 
 </td>
 

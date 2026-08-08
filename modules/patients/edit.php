@@ -13,6 +13,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 
 require_once __DIR__ . '/../../services/PatientService.php';
+require_once __DIR__ . '/../../services/PermissionService.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -35,6 +36,7 @@ $moduleScript =
 */
 
 $patientService = new PatientService($pdo);
+$permissionService = new PermissionService($pdo);
 
 /*
 |--------------------------------------------------------------------------
@@ -88,6 +90,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     }
 
+}
+
+if (!$patient
+    || !$permissionService->canEditPatientDemographics(
+        (int)$id,
+        $currentUser
+    )
+) {
+    if ($patient) {
+        $permissionService->logPatientDenied(
+            isset($currentUser['id']) ? (int)$currentUser['id'] : null,
+            (int)$id,
+            'PATIENT_CHART_ACCESS_DENIED',
+            'User attempted to edit patient demographics without permission.'
+        );
+    }
+
+    http_response_code(403);
+    exit('You do not have permission to edit this patient record.');
 }
 
 /*
@@ -196,6 +217,11 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
             name="action"
             value="update">
 
+        <input
+            type="hidden"
+            name="demographic_version"
+            value="<?= (int)($patient['demographic_version'] ?? 1) ?>">
+
         <?php
 
         /*
@@ -215,6 +241,30 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
         require __DIR__ . '/partials/patient_form.php';
 
         ?>
+
+        <div class="form-section">
+
+            <h2>Reason for Change</h2>
+
+            <div class="form-group">
+
+                <label for="amendment_reason">
+                    Amendment Reason <span class="required">*</span>
+                </label>
+
+                <textarea
+                    id="amendment_reason"
+                    name="amendment_reason"
+                    rows="3"
+                    required><?= field('amendment_reason', $patient) ?></textarea>
+
+                <small>
+                    This reason is retained in the permanent demographic history.
+                </small>
+
+            </div>
+
+        </div>
 
         <div class="form-actions">
 

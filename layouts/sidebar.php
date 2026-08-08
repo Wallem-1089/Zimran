@@ -8,6 +8,28 @@ if (!isset($currentUser)) {
 
 $currentPage = basename($_SERVER['PHP_SELF']);
 
+$canAccessMedicalRecordsSidebar = false;
+$departmentNotificationCount = 0;
+
+if ($currentUser && isset($pdo)) {
+    require_once __DIR__ . '/../services/PermissionService.php';
+    require_once __DIR__ . '/../services/DepartmentNotificationService.php';
+    $sidebarPermissionService = new PermissionService($pdo);
+    $canAccessMedicalRecordsSidebar = $sidebarPermissionService->hasPermission(
+        'view_medical_record',
+        $currentUser
+    );
+    $sidebarDepartmentId = (int)(
+        $currentUser['active_department_id']
+        ?? $_SESSION['active_department_id']
+        ?? $currentUser['department_id']
+        ?? 0
+    );
+    if ($sidebarDepartmentId > 0) {
+        $departmentNotificationCount = (new DepartmentNotificationService($pdo))->getUnreadCount($sidebarDepartmentId);
+    }
+}
+
 ?>
 
 <!-- Sidebar -->
@@ -75,6 +97,54 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                 <a href="<?= e($baseUrl) ?>/modules/patients/search.php">
 
                     Encounters
+
+                </a>
+
+            </li>
+
+            <li>
+
+                <a href="<?= e($baseUrl) ?>/modules/department_notifications/index.php">
+
+                    Notifications<?= $departmentNotificationCount > 0 ? ' (' . (int)$departmentNotificationCount . ')' : '' ?>
+
+                </a>
+
+            </li>
+
+            <?php if ($canAccessMedicalRecordsSidebar): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/medical_records/index.php">
+
+                        Medical Records
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
+            <?php if (($currentUser['role_name'] ?? '') === 'System Administrator'): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/administration/dashboard/index.php">
+
+                        Administration
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
+            <li>
+
+                <a href="<?= e($baseUrl) ?>/modules/administration/department_switch.php">
+
+                    Switch Department
 
                 </a>
 

@@ -113,6 +113,12 @@ if (isset($hasPendingTransfer) && !$hasPendingTransfer) {
 
 }
 
+$isClosedEncounter = in_array(
+    (string)($visit['visit_status'] ?? ''),
+    ['Completed', 'Cancelled'],
+    true
+);
+
 ?>
 
 <div class="card encounter-header">
@@ -202,6 +208,47 @@ if (isset($hasPendingTransfer) && !$hasPendingTransfer) {
     </div>
 
     <div class="encounter-header-right">
+
+        <?php if (!empty($canViewPatientChart)): ?>
+
+            <a
+                href="../medical_records/chart.php?patient=<?= (int)$patient['id'] ?>"
+                class="btn-secondary">
+
+                View Patient Chart
+
+            </a>
+
+        <?php endif; ?>
+
+        <?php if (!$isClosedEncounter && !empty($canChangeEncounterStatus)): ?>
+            <form
+                method="POST"
+                action="change_status.php"
+                style="margin-bottom:8px;">
+
+                <?= csrfField() ?>
+
+                <input
+                    type="hidden"
+                    name="visit_id"
+                    value="<?= (int)$visit['id'] ?>">
+
+                <input
+                    type="hidden"
+                    name="visit_status"
+                    value="Completed">
+
+                <button
+                    type="submit"
+                    class="btn-primary">
+
+                    Complete Visit
+
+                </button>
+
+            </form>
+        <?php endif; ?>
 
         <div class="status-badge <?= e($statusClass) ?>">
 

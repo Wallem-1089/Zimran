@@ -15,6 +15,24 @@ declare(strict_types=1);
 
     <div class="patient-actions-grid">
 
+        <?php if (!empty($canViewMedicalRecord)): ?>
+
+            <a
+                href="../medical_records/chart.php?patient=<?= (int)$patient['id'] ?>"
+                class="action-card action-primary">
+
+                <div class="action-content">
+
+                    <strong>View Patient Chart</strong>
+
+                    <span>Open the longitudinal medical record</span>
+
+                </div>
+
+            </a>
+
+        <?php endif; ?>
+
         <a
             href="../visits/create.php?patient=<?= (int)$patient['id'] ?>"
             class="action-card action-primary">

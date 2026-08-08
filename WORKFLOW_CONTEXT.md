@@ -10,7 +10,8 @@
 
 This project models the workflow of a real hospital.
 
-The system is **workflow-driven**, not CRUD-driven.
+The system is workflow-driven, and future module implementation is
+CRUD-first unless the current requirement justifies additional structure.
 
 Every clinical and administrative activity belongs to a single **Encounter (Visit)**, which serves as the central record throughout the patient's journey.
 
@@ -30,6 +31,34 @@ Each stage must:
 * Be fully traceable.
 
 Every workflow action must be reproducible from the encounter timeline.
+
+Generic encounter editing is administrative only. It must not change department ownership or doctor assignment. Department changes use the transfer and receive workflows; doctor changes use the doctor-assignment workflow.
+
+For future modules, start with the smallest maintainable workflow:
+
+```text
+Database Table
+-> Service
+-> List
+-> Create
+-> View
+-> Edit
+-> Save / Update
+-> Basic Status
+-> Permission
+-> CSRF
+-> Validation
+-> Audit
+```
+
+Add extra history tables, approval processes, settings groups, state machines,
+or abstractions only for security, financial integrity, stock integrity,
+patient identity, signed clinical records, legal/audit requirements, or actual
+current workflow needs.
+
+Clinical narrative information should remain `TEXT` unless it must be
+independently searched, calculated, filtered, routed, validated, reported, or
+integrated with another module.
 
 ---
 
@@ -140,9 +169,10 @@ Steps
 3. Select initial department.
 4. Generate visit number.
 5. Create encounter.
-6. Create initial transfer record.
-7. Create encounter event.
-8. Create audit log.
+6. Mark the initial department as received.
+7. Create the initial department queue entry.
+8. Create encounter events.
+9. Create audit logs.
 
 Validation
 
@@ -810,3 +840,230 @@ The system should prioritize:
 * Production readiness
 
 Every new module must integrate into the encounter lifecycle rather than operate as an isolated feature.
+
+## Demographic Amendment Workflow
+
+Authentication -> CSRF -> authorization -> validated input -> patient row lock
+-> expected-version comparison -> applied amendment -> append-only demographic
+history -> current row/version update -> patient-aware audit -> commit. A stale
+submission is rejected and audited without overwriting newer data. Patient
+Chart access is longitudinal PHI access and does not create an encounter event.
+
+## Master Patient Index Workflow
+
+```text
+Registration/Search Input
+    -> normalize bounded search values
+    -> exact hospital-number lookup
+    -> exact active alternate-identifier lookup
+    -> exact normalized phone lookup
+    -> indexed name/phone prefix lookup
+    -> deterministic duplicate score
+    -> warning or controlled candidate review
+```
+
+Strong registration matches require explicit review acknowledgement and are
+rechecked inside the patient-creation transaction. Non-low-confidence matches
+create one ordered candidate pair. Authorized staff can confirm, dismiss,
+defer, or request a future merge; none of these decisions modifies or combines
+either patient. Identifier changes use transaction -> row lock -> validation
+and version check -> current write -> append-only history -> audit -> commit.
+Patient-level MPI actions do not create encounter events.
+
+## Clinical Safety Workflow
+
+```mermaid
+flowchart TD
+    Capture[Authorized safety capture] --> Validate[Validate patient, values, optional visit]
+    Validate --> Lock[Transaction and row locks]
+    Lock --> Current[Write versioned current state]
+    Current --> History[Append history snapshot]
+    History --> Audit[Write patient audit]
+    Audit --> Linked{Valid same-patient visit?}
+    Linked -- Yes --> Event[Write encounter event]
+    Linked -- No --> Commit[Commit]
+    Event --> Commit
+```
+
+Allergies begin Active/Unverified. Authorized users may clarify active records,
+confirm them, resolve them, or mark them entered in error; ordinary deletion is
+not available. Alerts may be updated while active, closed with a reason, and
+reactivated with a reason. Version mismatches reject stale writes.
+
+Patient Chart and Encounter Workspace render one shared banner aggregate.
+Expired/closed alerts and resolved allergies remain in history but not active
+warnings. Confidential details are masked without their dedicated permission.
+Legacy allergy text is shown last as unverified and is never silently parsed.
+
+### Clinical Safety hardening workflow
+
+```mermaid
+flowchart LR
+    Context[Optional visit context] --> Validate[Visit exists + same patient + encounter access]
+    Validate --> Command[Clinical Safety command]
+    Command --> History[Append-only history]
+    Command --> Audit[Patient audit]
+    Command --> Event{Valid visit supplied?}
+    Event -- Yes --> Timeline[Encounter event]
+    Event -- No --> Longitudinal[Patient-only safety history]
+```
+
+Confidential reads now authorize inside the service and evaluate historical
+classification per version. Required read-audit failure prevents rendering.
+Allergy self-verification is denied by default; material edits return confirmed
+records to Unverified. Inactive allergies can be explicitly reactivated, while
+Resolved and Entered-in-error records remain terminal. Alert expiry remains a
+derived state and does not generate an incidental closure event.
+
+## Longitudinal Problem and Medical-History Workflow (Phase 2.4)
+
+```mermaid
+flowchart TD
+  Chart[Patient Chart] --> Command[Authorized problem/history command]
+  Workspace[Encounter Workspace optional context] --> Command
+  Command --> Lock[Lock patient/current record]
+  Lock --> Validate[Validate version, lifecycle, values and patient/visit]
+  Validate --> Current[Update current record]
+  Current --> Version[Append immutable history/version]
+  Version --> Audit[Write patient-aware audit]
+  Audit --> Context{Valid encounter context?}
+  Context -- yes --> Event[Write encounter event]
+  Context -- no --> Commit[Commit longitudinal action]
+  Event --> Commit
+```
+
+Problem states are Active, Inactive, Resolved and terminal Entered-in-error.
+Inactive and Resolved may be explicitly reactivated; resolution requires a
+reason and valid date. Structured history uses Active, Historical and terminal
+Entered-in-error current states; corrections are version actions, not silent
+overwrites. Both domains reject stale versions.
+
+An encounter diagnosis remains a future encounter-specific concept. It is not
+created, inferred, or automatically promoted by this workflow. A future
+`Promote Encounter Diagnosis to Problem List` command must be explicit,
+authorized and audited.
+
+## Medical Document Workflow (Phase 2.5)
+
+```mermaid
+flowchart TD
+  UI[Patient Chart or Workspace] --> Auth[Authentication + permission + CSRF]
+  Auth --> Validate[Patient/visit, metadata and server-side file validation]
+  Validate --> Store[Store opaque file in available or quarantine]
+  Store --> Tx[Begin DB transaction and lock patient/visit/document]
+  Tx --> Version[Create logical document or append immutable version]
+  Version --> Audit[Patient-aware audit]
+  Audit --> Context{Validated visit context?}
+  Context -- yes --> Event[Encounter event]
+  Context -- no --> Commit[Commit]
+  Event --> Commit
+  Tx -. failure .-> Cleanup[Rollback + compensating file removal]
+```
+
+Documents may be patient-level or encounter-linked. Encounter closure remains
+read-only by default for new/replacement attachments. Replacement creates a new
+version and never overwrites an existing file. Active documents may be archived
+and restored; Entered-in-error is terminal. Downloads do not create encounter
+timeline events and always pass through authorization, integrity verification,
+audit/access logging, and controller streaming.
+
+Malware scanning is an integration boundary: unscanned files are accurately
+labelled `Not Scanned`; when scanning is required they remain quarantined and
+unavailable. Generated module reports remain unimplemented.
+
+## Clinical Notes workflow — implemented
+
+```text
+Draft -> immutable draft versions -> Doctor signing and lock
+-> optional amendment proposal -> independent approval/rejection
+-> immutable amended version -> entered-in-error correction when required
+```
+
+Draft actions are audited but excluded from encounter timelines. Signed,
+amended, and entered-in-error actions create encounter events only for a valid
+linked visit. Closed encounters remain readable; new/edit draft mutations are
+disabled by default and signed content is corrected through amendment.
+
+## Phase 2 Lean Closeout
+
+Phase 2 is complete for the current version. The existing MPI workflow supports
+exact duplicate blocking, alternate-identifier duplicate detection, possible
+duplicate candidates, candidate review, review statuses, and registration
+warnings. Full patient merging is postponed and must not be implemented until a
+future explicit approval.
+
+## CRUD-First Roadmap
+
+### Phase 3 - Consultation and Nursing
+
+Consultation starts as CRUD around one `consultations` table linked to
+`visit_id` and `patient_id`. Narrative fields such as presenting complaint,
+history of presenting complaint, examination findings, assessment, treatment
+plan, advice, follow-up plan, and referral notes remain `TEXT`.
+
+Vital signs use a simple `vital_signs` table because measurements need
+trending and calculation. Nursing assessment starts as one primary assessment
+table with narrative sections kept as text.
+
+### Phase 4 - Laboratory and Radiology
+
+Laboratory starts with `laboratory_orders` and `laboratory_results` using:
+
+```text
+Order -> Process -> Result -> Verify
+```
+
+Radiology starts with `radiology_orders` and `radiology_reports` using:
+
+```text
+Request -> Worklist -> Report -> Complete
+```
+
+Radiology indication, findings, impression, and recommendation remain text.
+PACS, DICOM, and advanced specimen logistics are postponed.
+
+### Phase 5 - Pharmacy and Inventory
+
+Pharmacy starts with prescriptions and dispensing. Inventory starts with items
+and stock transactions, with transaction-safe stock balance updates.
+
+### Phase 6 - Billing
+
+Billing starts with charges, invoices, and payments:
+
+```text
+Charge -> Invoice -> Payment -> Receipt
+```
+
+Advanced insurance and financial approval chains are postponed.
+
+### Later / Optional
+
+Theatre, Physiotherapy, advanced analytics, FHIR, HL7, PACS, patient portal,
+SMS/email integration, full patient merging, advanced terminology, and complex
+approval systems are deferred unless current hospital operations require them.
+
+## Phase 3.1 Consultation and Department Notifications
+
+Consultation is now the first operational department CRUD module after Doctor
+assignment. The workflow is:
+
+```text
+Encounter Workspace -> Consultation tab -> Start Consultation
+-> Draft CRUD -> Complete -> View-only
+```
+
+Consultation writes are allowed only while the encounter is not `Completed` or
+`Cancelled`. The consultation belongs to the encounter and patient and normally
+uses the assigned encounter doctor as clinical owner. Administrator actions are
+permitted for development/testing but retain separate actor attribution.
+
+Department notifications are attention requests:
+
+```text
+Workspace -> Notify Department -> Receiving department inbox
+-> Mark Read -> Resolve
+```
+
+They create an audit record and `DEPARTMENT_NOTIFICATION_SENT` timeline event
+but never perform a transfer, queue movement, or encounter ownership change.

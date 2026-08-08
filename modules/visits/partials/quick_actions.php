@@ -153,3 +153,39 @@ if (!isset($visit)) {
     </div>
 
 </div>
+
+<?php if (($notificationTablesReady ?? false) && !in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true) && isset($departments)): ?>
+<div class="card">
+    <h2>Notify Department</h2>
+    <p class="text-muted">
+        Request attention from another department without transferring encounter ownership.
+    </p>
+
+    <form method="post" action="notify_department_save.php" class="form-grid">
+        <?= csrfField() ?>
+        <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
+
+        <div class="form-group">
+            <label for="to_department_id">Destination Department</label>
+            <select id="to_department_id" name="to_department_id" required>
+                <option value="">Select department</option>
+                <?php foreach ($departments as $department): ?>
+                    <?php if ((int)$department['id'] === (int)($visit['current_department_id'] ?? 0)) { continue; } ?>
+                    <option value="<?= (int)$department['id'] ?>">
+                        <?= e((string)$department['department_name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="notification_reason">Reason</label>
+            <textarea id="notification_reason" name="reason" rows="3" required></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Send Notification</button>
+        </div>
+    </form>
+</div>
+<?php endif; ?>

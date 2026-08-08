@@ -10,6 +10,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 
 require_once __DIR__ . '/../../services/PatientService.php';
+require_once __DIR__ . '/../../services/PermissionService.php';
 
 $id = filter_input(
 
@@ -30,6 +31,7 @@ if (!$id) {
 }
 
 $patientService = new PatientService($pdo);
+$permissionService = new PermissionService($pdo);
 
 $patient = $patientService->getPatientById($id);
 
@@ -40,6 +42,11 @@ if (!$patient) {
     exit('Patient not found.');
 
 }
+
+$canViewMedicalRecord = $permissionService->canViewMedicalRecord(
+    $id,
+    $currentUser
+);
 
 require_once __DIR__ . '/../../layouts/header.php';
 require_once __DIR__ . '/../../layouts/sidebar.php';

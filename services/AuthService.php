@@ -1,6 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 require_once __DIR__ . '/UserService.php';
+require_once __DIR__ . '/SettingsService.php';
 
 class AuthService
 {
@@ -11,6 +14,10 @@ class AuthService
      */
     private UserService $userService;
 
+    private array $config;
+
+    private SettingsService $settingsService;
+
     /**
      * Constructor.
      *
@@ -19,6 +26,8 @@ class AuthService
     public function __construct(PDO $db)
     {
         $this->userService = new UserService($db);
+        $this->config = require __DIR__ . '/../config/app.php';
+        $this->settingsService = new SettingsService($db);
     }
 
     /**
@@ -45,6 +54,8 @@ class AuthService
             'message' => 'Invalid username, employee ID or password.',
 
             'user' => null,
+
+            'user_id' => null,
 
             'errors' => [
                 'login' => 'Invalid credentials.'
@@ -74,11 +85,37 @@ class AuthService
 
             'user' => null,
 
+            'user_id' => (int)$user['id'],
+
             'errors' => [
                 'account' => 'Account inactive.'
             ]
 
         ];
+
+        }
+
+        if (!empty($user['locked_at'])) {
+
+            return [
+
+                'success' => false,
+
+                'status' => 'FAILED',
+
+                'code' => 423,
+
+                'message' => 'Your account is locked. Contact an administrator.',
+
+                'user' => null,
+
+                'user_id' => (int)$user['id'],
+
+                'errors' => [
+                    'account' => 'Account locked.'
+                ]
+
+            ];
 
         }
 
@@ -90,7 +127,10 @@ class AuthService
 
         if (!password_verify($password, $user['password'])) {
 
-            $this->userService->recordFailedLogin($user['id']);
+            $this->userService->recordFailedLogin(
+                (int)$user['id'],
+                $this->lockoutThreshold()
+            );
 
             return [
 
@@ -103,6 +143,8 @@ class AuthService
             'message' => 'Invalid username, employee ID or password.',
 
             'user' => null,
+
+            'user_id' => (int)$user['id'],
 
             'errors' => [
                 'password' => 'Incorrect password.'
@@ -138,7 +180,9 @@ class AuthService
 
         'message' => 'Login successful.',
 
-        'user' => $user,
+            'user' => $user,
+
+            'user_id' => (int)$user['id'],
 
         'errors' => []
 
@@ -184,5 +228,25 @@ class AuthService
             $hashedPassword
         );
 
+    }
+
+    private function lockoutThreshold(): int
+    {
+        $fallback = (int)(
+            $this->config['security']['max_failed_login_attempts']
+            ?? 5
+        );
+
+        try {
+            return max(
+                1,
+                $this->settingsService->getInteger(
+                    'security.lockout_threshold',
+                    $fallback
+                )
+            );
+        } catch (Throwable $exception) {
+            return max(1, $fallback);
+        }
     }
 }

@@ -1,0 +1,171 @@
+/*
+|--------------------------------------------------------------------------
+| Phase 2 - Milestone 2.2 MPI and Patient Identifiers
+|--------------------------------------------------------------------------
+*/
+
+ALTER TABLE patients
+    ADD COLUMN normalized_first_name VARCHAR(100) NULL AFTER first_name,
+    ADD COLUMN normalized_middle_name VARCHAR(100) NULL AFTER middle_name,
+    ADD COLUMN normalized_last_name VARCHAR(100) NULL AFTER last_name,
+    ADD COLUMN normalized_phone VARCHAR(30) NULL AFTER phone,
+    ADD COLUMN normalized_email VARCHAR(150) NULL AFTER email;
+
+UPDATE patients
+SET normalized_first_name = LOWER(TRIM(first_name)),
+    normalized_middle_name = NULLIF(LOWER(TRIM(middle_name)), ''),
+    normalized_last_name = LOWER(TRIM(last_name)),
+    normalized_phone = NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(TRIM(phone), ' ', ''), '-', ''), '(', ''), ')', ''), '+', ''), ''),
+    normalized_email = NULLIF(LOWER(TRIM(email)), '');
+
+ALTER TABLE patients
+    ADD INDEX idx_patients_normalized_name
+        (normalized_last_name, normalized_first_name, date_of_birth),
+    ADD INDEX idx_patients_normalized_phone (normalized_phone),
+    ADD INDEX idx_patients_normalized_email (normalized_email),
+    ADD INDEX idx_patients_dob_normalized_name
+        (date_of_birth, normalized_last_name, normalized_first_name);
+
+CREATE TABLE patient_identifiers (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    patient_id INT NOT NULL,
+    identifier_type VARCHAR(80) NOT NULL,
+    identifier_value VARCHAR(255) NOT NULL,
+    normalized_value VARCHAR(255) NOT NULL,
+    issuing_authority VARCHAR(150) NULL,
+    issuing_authority_key VARCHAR(150) NOT NULL DEFAULT '',
+    uniqueness_scope ENUM('Global', 'Authority', 'Patient', 'None')
+        NOT NULL DEFAULT 'Patient',
+    uniqueness_key VARCHAR(512) NULL,
+    issue_date DATE NULL,
+    expiry_date DATE NULL,
+    is_primary TINYINT(1) NOT NULL DEFAULT 0,
+    primary_key_value VARCHAR(255) NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    verification_status ENUM('Unverified', 'Verified', 'Rejected')
+        NOT NULL DEFAULT 'Unverified',
+    verified_by INT NULL,
+    verified_at DATETIME NULL,
+    created_by INT NOT NULL,
+    updated_by INT NULL,
+    version INT NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uq_patient_identifier_uniqueness UNIQUE (uniqueness_key),
+    CONSTRAINT uq_patient_identifier_primary UNIQUE (primary_key_value),
+    INDEX idx_patient_identifiers_patient
+        (patient_id, is_active, identifier_type),
+    INDEX idx_patient_identifiers_lookup
+        (identifier_type, normalized_value, is_active),
+    INDEX idx_patient_identifiers_authority
+        (identifier_type, issuing_authority_key, normalized_value),
+    INDEX idx_patient_identifiers_verification
+        (verification_status, verified_at),
+    CONSTRAINT fk_patient_identifiers_patient FOREIGN KEY (patient_id)
+        REFERENCES patients(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_patient_identifiers_verified_by FOREIGN KEY (verified_by)
+        REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_patient_identifiers_created_by FOREIGN KEY (created_by)
+        REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_patient_identifiers_updated_by FOREIGN KEY (updated_by)
+        REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE patient_identifier_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    identifier_id BIGINT NOT NULL,
+    patient_id INT NOT NULL,
+    version_no INT NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    previous_snapshot LONGTEXT NULL,
+    new_snapshot LONGTEXT NOT NULL,
+    reason TEXT NOT NULL,
+    changed_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_patient_identifier_history_version
+        UNIQUE (identifier_id, version_no),
+    INDEX idx_identifier_history_patient (patient_id, created_at),
+    INDEX idx_identifier_history_actor (changed_by, created_at),
+    CONSTRAINT fk_identifier_history_identifier FOREIGN KEY (identifier_id)
+        REFERENCES patient_identifiers(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_identifier_history_patient FOREIGN KEY (patient_id)
+        REFERENCES patients(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_identifier_history_actor FOREIGN KEY (changed_by)
+        REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE patient_duplicate_candidates (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    patient_id_low INT NOT NULL,
+    patient_id_high INT NOT NULL,
+    match_score DECIMAL(5,2) NOT NULL,
+    classification ENUM(
+        'Exact Match', 'Strong Possible Match', 'Possible Match', 'Low Confidence'
+    ) NOT NULL,
+    matched_factors LONGTEXT NOT NULL,
+    status ENUM(
+        'Pending', 'Confirmed Duplicate', 'Not Duplicate', 'Deferred', 'Merge Requested'
+    ) NOT NULL DEFAULT 'Pending',
+    review_decision VARCHAR(100) NULL,
+    review_reason TEXT NULL,
+    detected_by INT NULL,
+    detected_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reviewed_by INT NULL,
+    reviewed_at DATETIME NULL,
+    version INT NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uq_duplicate_candidate_pair UNIQUE (patient_id_low, patient_id_high),
+    CONSTRAINT chk_duplicate_candidate_order CHECK (patient_id_low < patient_id_high),
+    INDEX idx_duplicate_candidates_status
+        (status, classification, detected_at),
+    INDEX idx_duplicate_candidates_low (patient_id_low, status),
+    INDEX idx_duplicate_candidates_high (patient_id_high, status),
+    CONSTRAINT fk_duplicate_candidates_low FOREIGN KEY (patient_id_low)
+        REFERENCES patients(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_duplicate_candidates_high FOREIGN KEY (patient_id_high)
+        REFERENCES patients(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_duplicate_candidates_detected_by FOREIGN KEY (detected_by)
+        REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_duplicate_candidates_reviewed_by FOREIGN KEY (reviewed_by)
+        REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO permissions (permission_key, permission_name, module, description)
+VALUES
+ ('view_patient_identifiers', 'View Patient Identifiers', 'Medical Records', 'View authorized patient identifiers.'),
+ ('manage_patient_identifiers', 'Manage Patient Identifiers', 'Medical Records', 'Create, amend, deactivate, and select primary patient identifiers.'),
+ ('verify_patient_identifiers', 'Verify Patient Identifiers', 'Medical Records', 'Verify patient identifier evidence.'),
+ ('view_duplicate_candidates', 'View Duplicate Candidates', 'Medical Records', 'View possible duplicate patient cases.'),
+ ('review_duplicate_candidates', 'Review Duplicate Candidates', 'Medical Records', 'Record a controlled duplicate-case review decision.')
+ON DUPLICATE KEY UPDATE permission_name = VALUES(permission_name),
+ module = VALUES(module), description = VALUES(description), is_active = 1;
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.role_name = 'Records Officer'
+AND p.permission_key IN ('view_patient_identifiers','manage_patient_identifiers','verify_patient_identifiers','view_duplicate_candidates','review_duplicate_candidates');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.role_name IN ('Receptionist','Doctor','Nurse')
+AND p.permission_key = 'view_patient_identifiers';
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.role_name = 'Receptionist'
+AND p.permission_key IN ('manage_patient_identifiers','view_duplicate_candidates');
+
+INSERT INTO system_settings (
+ setting_key, setting_value, setting_type, setting_group, description,
+ default_value, validation_rules, is_public, is_editable, is_system, sort_order
+) VALUES
+ ('mpi.enabled_identifier_types', '["National Identification Number","Insurance Number","Passport Number","External Hospital Number","Legacy Medical Record Number"]', 'array', 'Medical Records', 'Enabled alternate patient identifier types.', '["National Identification Number","Insurance Number","Passport Number","External Hospital Number","Legacy Medical Record Number"]', '{"required":true}', 0, 1, 1, 10),
+ ('mpi.global_unique_types', '["National Identification Number","Passport Number"]', 'array', 'Medical Records', 'Identifier types unique across the hospital.', '["National Identification Number","Passport Number"]', '{}', 0, 1, 1, 20),
+ ('mpi.authority_unique_types', '["Insurance Number","External Hospital Number","Legacy Medical Record Number"]', 'array', 'Medical Records', 'Identifier types unique within an issuing authority.', '["Insurance Number","External Hospital Number","Legacy Medical Record Number"]', '{}', 0, 1, 1, 30),
+ ('mpi.exact_match_threshold', '100', 'integer', 'Medical Records', 'Exact duplicate score threshold.', '100', '{"min":90,"max":100}', 0, 1, 1, 40),
+ ('mpi.strong_match_threshold', '80', 'integer', 'Medical Records', 'Strong possible duplicate score threshold.', '80', '{"min":60,"max":99}', 0, 1, 1, 50),
+ ('mpi.possible_match_threshold', '55', 'integer', 'Medical Records', 'Possible duplicate score threshold.', '55', '{"min":30,"max":89}', 0, 1, 1, 60),
+ ('mpi.search_page_size', '25', 'integer', 'Medical Records', 'Default MPI search page size.', '25', '{"min":10,"max":100}', 0, 1, 1, 70),
+ ('mpi.mask_identifier_types', '["National Identification Number","Insurance Number","Passport Number"]', 'array', 'Medical Records', 'Identifier types masked in ordinary displays.', '["National Identification Number","Insurance Number","Passport Number"]', '{}', 0, 1, 1, 80)
+ON DUPLICATE KEY UPDATE description = VALUES(description);

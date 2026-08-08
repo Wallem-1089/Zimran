@@ -218,6 +218,17 @@ class VisitService
 
         $initialStatus = $department['department_name'];
 
+        $stateValidation = $this->stateService
+            ->validateStatusTransition('Waiting', $initialStatus);
+
+        if (!$stateValidation['success']) {
+
+            throw new RuntimeException(
+                'The selected department is not configured for encounter workflow.'
+            );
+
+        }
+
         /*
         |--------------------------------------------------------------------------
         | Create Encounter
@@ -997,6 +1008,42 @@ public function canAccessDepartmentWorkspace(
 
         }
 
+        if ((int)$visit['current_department_id']
+            !== (int)$currentVisit['current_department_id']
+        ) {
+
+            return [
+
+                'success' => false,
+
+                'errors' => [
+
+                    'Use the transfer workflow to change the encounter department.'
+
+                ]
+
+            ];
+
+        }
+
+        if ((int)($visit['attending_doctor_id'] ?? 0)
+            !== (int)($currentVisit['attending_doctor_id'] ?? 0)
+        ) {
+
+            return [
+
+                'success' => false,
+
+                'errors' => [
+
+                    'Use the doctor assignment workflow to change the attending doctor.'
+
+                ]
+
+            ];
+
+        }
+
         /*
         |--------------------------------------------------------------------------
         | Update Encounter
@@ -1015,10 +1062,6 @@ public function canAccessDepartmentWorkspace(
 
                     visit_type = :visit_type,
 
-                    current_department_id = :department,
-
-                    attending_doctor_id = :doctor,
-
                     updated_at = CURRENT_TIMESTAMP
 
                 WHERE id = :id
@@ -1031,47 +1074,7 @@ public function canAccessDepartmentWorkspace(
 
                 ':visit_type' => $visit['visit_type'],
 
-                ':department' => $visit['current_department_id'],
-
-                ':doctor' =>
-
-                    !empty($visit['attending_doctor_id'])
-
-                        ? $visit['attending_doctor_id']
-
-                        : null,
-
                 ':id' => $visitId
-
-            ]);
-
-            /*
-            |--------------------------------------------------------------------------
-            | Optional:
-            | If the encounter is still Waiting and has now been assigned
-            | to a department, automatically move it into that department.
-            |--------------------------------------------------------------------------
-            */
-
-            $this->pdo->prepare("
-
-                UPDATE visits
-
-                SET visit_status = CASE
-
-                    WHEN visit_status = 'Waiting'
-
-                    THEN 'Reception'
-
-                    ELSE visit_status
-
-                END
-
-                WHERE id = ?
-
-            ")->execute([
-
-                $visitId
 
             ]);
 
@@ -1271,27 +1274,31 @@ public function canAccessDepartmentWorkspace(
         int $departmentId
     ): bool {
 
-        $stmt = $this->pdo->prepare("
+        $actorId = (int)($_SESSION['user']['id'] ?? 0);
 
-            UPDATE visits
+        if ($actorId <= 0) {
 
-            SET
+            $config = require __DIR__ . '/../config/app.php';
 
-                current_department_id = :department
+            if (($config['app']['environment'] ?? 'production') === 'development') {
 
-            WHERE
+                $actorId = 1;
 
-                id = :visit
+            }
 
-        ");
+        }
 
-        return $stmt->execute([
+        if ($actorId <= 0) {
 
-            ':department' => $departmentId,
+            return false;
 
-            ':visit' => $visitId
+        }
 
-        ]);
+        return $this->transferVisit(
+            $visitId,
+            $departmentId,
+            $actorId
+        )['success'];
 
     }
 
@@ -2036,6 +2043,32 @@ public function canAccessDepartmentWorkspace(
     */
 
     $newStatus = $department['department_name'];
+
+    $targetStateValidation = $this->stateService
+        ->validateStatusTransition(
+            $visit['visit_status'] ?? null,
+            $newStatus
+        );
+
+    if (!$targetStateValidation['success']) {
+
+        return [
+
+            'success' => false,
+
+            'department_name' => $department['department_name'],
+
+            'visit_status' => $visit['visit_status'],
+
+            'errors' => [
+
+                'The destination department is not configured for encounter workflow.'
+
+            ]
+
+        ];
+
+    }
 
     /*
     |--------------------------------------------------------------------------

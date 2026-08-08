@@ -13,7 +13,6 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 
 require_once __DIR__ . '/../../services/PatientService.php';
-require_once __DIR__ . '/../../services/AuditService.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -52,8 +51,6 @@ if (empty($_POST['first_name'])) {
 
 $patientService = new PatientService($pdo);
 
-$auditService = new AuditService($pdo);
-
 /*
 |--------------------------------------------------------------------------
 | Collect Patient Data
@@ -64,17 +61,27 @@ $patient = [
 
     'first_name' => trim($_POST['first_name'] ?? ''),
 
+    'middle_name' => trim($_POST['middle_name'] ?? ''),
+
     'last_name' => trim($_POST['last_name'] ?? ''),
 
     'gender' => trim($_POST['gender'] ?? ''),
 
     'date_of_birth' => trim($_POST['date_of_birth'] ?? ''),
 
+    'marital_status' => trim($_POST['marital_status'] ?? ''),
+
+    'occupation' => trim($_POST['occupation'] ?? ''),
+
     'phone' => trim($_POST['phone'] ?? ''),
 
     'email' => trim($_POST['email'] ?? ''),
 
     'address' => trim($_POST['address'] ?? ''),
+
+    'state_of_origin' => trim($_POST['state_of_origin'] ?? ''),
+
+    'nationality' => trim($_POST['nationality'] ?? ''),
 
     'blood_group' => trim($_POST['blood_group'] ?? ''),
 
@@ -84,7 +91,12 @@ $patient = [
 
     'next_of_kin' => trim($_POST['next_of_kin'] ?? ''),
 
+    'next_of_kin_relationship'
+        => trim($_POST['next_of_kin_relationship'] ?? ''),
+
     'next_of_kin_phone' => trim($_POST['next_of_kin_phone'] ?? '')
+
+    ,'duplicate_review_ack' => trim($_POST['duplicate_review_ack'] ?? '')
 
 ];
 
@@ -148,34 +160,15 @@ if (!$result['success']) {
 
         $_POST;
 
+    if (!empty($result['duplicate_review_required'])) {
+        $_SESSION['duplicate_candidates'] = $result['duplicate_candidates'] ?? [];
+        header('Location: register.php');
+        exit;
+    }
+
     header('Location: register.php');
 
     exit;
-
-}
-
-/*
-|--------------------------------------------------------------------------
-| Audit Log
-|--------------------------------------------------------------------------
-*/
-
-/*
-|--------------------------------------------------------------------------
-| Audit Log
-|--------------------------------------------------------------------------
-*/
-
-try {
-
-    $auditService->patientRegistered(
-        $registeredBy,
-        $result['hospital_number']
-    );
-
-} catch (Throwable $e) {
-
-    die($e->getMessage());
 
 }
 

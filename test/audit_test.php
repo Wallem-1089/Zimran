@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-require_once '../config/database.php';
-require_once '../services/AuditService.php';
+require_once __DIR__ . '/../config/test_database.php';
+require_once __DIR__ . '/../services/AuditService.php';
 
 $audit = new AuditService($pdo);
 

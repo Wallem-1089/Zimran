@@ -8,11 +8,21 @@
 
 # Project Overview
 
-This project is an Enterprise Hospital Management Information System (E-HMIS) designed to model real-world hospital workflows rather than simple CRUD operations.
+This project is an Enterprise Hospital Management Information System (E-HMIS) designed to model real-world hospital workflows while keeping future module implementation practical and maintainable.
 
 The system is intended to be modular, scalable, auditable, maintainable, and production-ready.
 
+Future development now follows a **CRUD-first + selective structure** approach. New modules should start with the simplest table, service, pages, permissions, validation, CSRF protection, transactions, and audit trail that satisfy the current workflow. Add extra tables, histories, approvals, settings, or abstractions only when required for security, financial integrity, stock integrity, patient identity, signed clinical records, legal/audit requirements, or an actual current workflow.
+
 Every patient interaction revolves around a single **Encounter (Visit)** which becomes the central object of the entire system.
+
+Phase 1.8 critical pre-clinical remediation is complete. Patient gender uses
+the canonical values `Male`, `Female`, `Other`, and `Unknown`; patient mutation
+audits are service-owned and transactional; and authentication defaults to
+secure production behavior unless development bypass is explicitly enabled in
+protected server configuration. Phase 2 Medical Records functionality is
+complete through Milestone 2.6. Full patient merging is postponed; the current
+MPI duplicate-candidate workflow is sufficient for this version.
 
 ---
 
@@ -120,9 +130,8 @@ modules/
 
 # Core Design Principles
 
-This project is **NOT** a CRUD application.
-
-It is a workflow-driven hospital information system.
+This project is a workflow-driven hospital information system with a
+CRUD-first implementation policy for future modules.
 
 Every action must:
 
@@ -131,6 +140,59 @@ Every action must:
 - create audit history
 - update encounter history
 - preserve data consistency
+
+For new modules, begin with:
+
+```text
+Database Table
+-> Service
+-> List
+-> Create
+-> View
+-> Edit
+-> Save / Update
+-> Basic Status
+-> Permission
+-> CSRF
+-> Validation
+-> Audit
+```
+
+Before creating a new service, table, history table, workflow engine, approval
+process, or settings group, first ask whether ordinary CRUD using an existing
+service or one simple module service can solve the current requirement.
+
+Clinical narrative information should remain `TEXT` unless the application
+needs to independently search, calculate, report, validate, route, or integrate
+that information.
+
+Keep as `TEXT` by default:
+
+- history of presenting complaint
+- examination findings
+- clinical assessment
+- treatment plan
+- radiology findings
+- radiology impression
+- nursing narrative
+- referral notes
+
+Keep structured:
+
+- patient ID
+- visit ID
+- doctor
+- department
+- status
+- priority
+- dates
+- vital-sign measurements
+- medication
+- test
+- amount
+- quantity
+- stock balance
+- payment amount
 
 ---
 
@@ -609,143 +671,130 @@ Current Phase
 
 # Development Roadmap
 
-Phase 1
+Phase 0 through Phase 2 are complete for the current version. Future phases
+follow the CRUD-first + selective structure approach.
 
-Authentication
+## Phase 3 - Consultation and Nursing
 
-Users
+### 3.1 Consultation CRUD
 
-Roles
+Primary table: `consultations`.
 
-Departments
+Initial structured columns:
 
-Completed
+- `id`
+- `visit_id`
+- `patient_id`
+- `doctor_id`
+- `presenting_complaint`
+- `history_of_presenting_complaint`
+- `examination_findings`
+- `assessment`
+- `diagnosis_summary`
+- `treatment_plan`
+- `advice`
+- `follow_up_plan`
+- `referral_notes`
+- `status`
+- `created_at`
+- `updated_at`
 
----
+Initial service: `ConsultationService`.
 
-Phase 2
+Initial methods:
 
-Patients
+- `create()`
+- `getById()`
+- `getByVisit()`
+- `update()`
+- `complete()`
 
-Completed
+Initial pages:
 
----
+- `index.php`
+- `create.php`
+- `save.php`
+- `view.php`
+- `edit.php`
+- `update.php`
+- `complete.php`
 
-Phase 3
+Narrative clinical sections remain `TEXT`. Do not create separate tables for
+every consultation section.
 
-Visits
+### 3.2 Vital Signs CRUD
 
-Completed
+Primary table: `vital_signs`.
 
----
+Structured values are justified because they need trending and calculation:
 
-Phase 4
+- `visit_id`
+- `temperature`
+- `pulse`
+- `respiratory_rate`
+- `systolic_bp`
+- `diastolic_bp`
+- `oxygen_saturation`
+- `weight`
+- `height`
+- `bmi`
+- `blood_glucose`
+- `recorded_by`
+- `recorded_at`
 
-Transfers
+### 3.3 Nursing Assessment CRUD
 
-Completed
+Use one primary nursing assessment table. Narrative nursing sections remain
+`TEXT`; do not normalize every nursing question into its own table.
 
----
+## Phase 4 - Laboratory and Radiology
 
-Phase 5
+Laboratory starts with `laboratory_orders` and `laboratory_results`.
 
-Receive Workflow
+Basic workflow:
 
-Completed
+```text
+Order -> Process -> Result -> Verify
+```
 
----
+Do not build advanced specimen logistics initially.
 
-Phase 6
+Radiology starts with `radiology_orders` and `radiology_reports`.
 
-Doctor Assignment
+Basic workflow:
 
-Completed
+```text
+Request -> Worklist -> Report -> Complete
+```
 
----
+Use text fields for clinical indication, findings, impression, and
+recommendation. Do not build PACS or DICOM integration now.
 
-Phase 7
+## Phase 5 - Pharmacy and Inventory
 
-Consultation
+Pharmacy starts with prescriptions and dispensing.
 
-Current
+Inventory starts with items and stock transactions. Keep workflows simple, but
+protect stock quantities with transactions and audit.
 
----
+## Phase 6 - Billing
 
-Phase 8
+Billing starts with charges, invoices, and payments.
 
-Nursing
+Basic workflow:
 
----
+```text
+Charge -> Invoice -> Payment -> Receipt
+```
 
-Phase 9
+Postpone advanced insurance and financial approval chains.
 
-Laboratory
+## Later / Optional
 
----
-
-Phase 10
-
-Radiology
-
----
-
-Phase 11
-
-Pharmacy
-
----
-
-Phase 12
-
-Billing
-
----
-
-Phase 13
-
-Theatre
-
----
-
-Phase 14
-
-Physiotherapy
-
----
-
-Phase 15
-
-Medical Records
-
----
-
-Phase 16
-
-Reports
-
----
-
-Phase 17
-
-Administration
-
----
-
-Phase 18
-
-API
-
----
-
-Phase 19
-
-Testing
-
----
-
-Phase 20
-
-Production Deployment
+Postpone theatre, physiotherapy, advanced analytics, FHIR, HL7, PACS, patient
+portal, SMS, email integration, full patient merging, advanced clinical
+terminology, and complex approval systems unless current hospital operations
+require them.
 
 ---
 
@@ -830,3 +879,185 @@ Deliver a production-quality Enterprise Hospital Management Information System c
 - Future mobile/API integration
 
 This repository should evolve toward enterprise software quality rather than a typical academic CRUD project.
+
+## Current Phase 2 Status
+
+Phase 2 is complete for the current version. It includes the Medical Records
+foundation, longitudinal Patient Chart, demographic version/history,
+patient-aware audit, PHI access logging, MPI and alternate identifiers,
+duplicate warnings and candidate review, Clinical Safety, Problem List,
+structured Medical History, secure Medical Documents, and Clinical Notes.
+
+Full patient merging is officially postponed. The existing MPI and
+duplicate-candidate review workflow blocks exact unsafe duplicates, warns on
+strong possible matches, and lets authorized users review candidate pairs
+without merging records.
+
+## Recovery checkpoint (2026-08-05)
+
+The development database was reconstructed after previous development records
+became unrecoverable during a destructive baseline-import incident. Repository
+source and migrations were retained. Reconstruction used selective migrations,
+checksums, and deterministic `DEV-*` fixtures; lost records were not recreated
+from assumptions.
+
+The verified post-reconstruction baseline backup is
+`backups/hms_after_rebuild.sql` (68,606 bytes, created 2026-08-05 05:49:17
+Africa/Lagos). It is a readable MariaDB SQL dump. Timestamped later backups may
+also contain controlled verification records.
+
+The final verified reconstruction backup, including the controlled completed
+workflow verification record, is
+`backups/hms_after_rebuild_20260805_061842.sql` (74,598 bytes, created
+2026-08-05 06:18:43 Africa/Lagos).
+
+The newest verified post-test recovery point is
+`backups/hms_after_rebuild_20260805_062059.sql` (74,666 bytes, created
+2026-08-05 06:20:59 Africa/Lagos). Prefer this timestamped dump for restoration.
+
+Create and verify a backup before every migration and another after successful
+migration. Abort destructive verification whenever target, test configuration,
+or backup state is ambiguous.
+
+Migration 016 was applied through the checksum ledger on 2026-08-05. Its
+verified pre-migration backup is
+`backups/hms_before_migration_016_20260805_064201.sql` (73,598 bytes), and its
+verified post-migration backup is
+`backups/hms_after_migration_016_20260805_064344.sql` (74,811 bytes).
+
+## Phase 2 Milestone 2.3 Status
+
+Structured longitudinal allergies, clinical alerts, append-only histories,
+confidential-alert masking, and the shared Patient Chart/Encounter Workspace
+safety banner are implemented. `ClinicalSafetyService` owns mutations and
+audit/history writes. Encounter events require a validated same-patient visit.
+Legacy `patients.allergies` remains unchanged and is shown as unverified.
+
+Migration 017 was checksum-applied on 2026-08-05. Verified backups:
+
+- Before: `backups/hms_before_migration_017_20260805_082559.sql` (75,073 bytes).
+- After: `backups/hms_after_migration_017_20260805_082643.sql` (88,158 bytes).
+
+Milestone 2.4 and later completed Medical Records capabilities are documented
+below.
+
+## Phase 2 Milestone 2.3.1 — Complete
+
+Clinical Safety confidentiality, verification separation, material-edit reset,
+inactive/reactivation lifecycle, settings/schema alignment, validated optional
+encounter context, fail-closed access auditing, safe history differences, and
+dynamic expiry consistency are implemented. Migration 018 was applied through
+the checksum ledger in batch 3.
+
+Verified backups:
+
+- Before Migration 018: `backups/hms_before_migration_018_20260805_120934.sql`
+  (93,291 bytes).
+- After Migration 018: `backups/hms_after_migration_018_20260805_121804.sql`
+  (94,204 bytes).
+
+The dedicated test database remained isolated from
+`hospital_management_system`; Phase 0–2.3 regression suites passed.
+
+## Phase 2 Milestone 2.4 — Complete
+
+The longitudinal Problem List and structured Medical History are implemented
+through `ProblemListService`, Patient Chart sections, and read-only Encounter
+Workspace summaries. Current records use optimistic versions; clinical changes
+append immutable snapshots and transactional patient-aware audit records.
+Validated optional encounter context produces encounter events without making
+longitudinal records dependent on a visit. Consultation diagnoses and automatic
+diagnosis promotion were not implemented.
+
+Migration 019 was checksum-applied to `hospital_management_system` in batch 4
+on 2026-08-05 14:24:57 Africa/Lagos. Verified recovery points:
+
+- Before: `backups/hms_before_migration_019_20260805_140955.sql` (94,651 bytes).
+- After: `backups/hms_after_migration_019_20260805_142548.sql` (110,578 bytes).
+
+Dedicated-database service, migration-cycle, Phase 0–2.3.1 regression, schema,
+foreign-key, index and PHP syntax checks passed. Unauthenticated HTTP routes
+redirect to login as expected. Authenticated live HTTP verification passed for
+the administrator dashboard, Problem List and Medical History Patient Chart
+tabs, and Encounter Workspace. A protected mutation without CSRF returned HTTP
+403. Credentials are intentionally not documented.
+
+## Phase 2 Milestone 2.5 — Complete
+
+Secure patient-level and encounter-linked Medical Documents are implemented
+through `MedicalDocumentService`, `DocumentStorageInterface`, and
+`SecureLocalDocumentStorage`. Metadata and immutable versions are in MySQL;
+file bytes are held under the protected external root
+`C:\xampp\hms_secure_documents`. Downloads are controller-mediated and checked
+for authorization, confidentiality, lifecycle, checksum, audit, and PHI access.
+No Clinical Notes or later Phase 2 feature was introduced.
+
+Migration 020 was checksum-applied on 2026-08-05 15:59:38 Africa/Lagos.
+Verified recovery points created in this session are:
+
+- Before: `backups/hms_before_migration_020_20260805_155217.sql`
+  (112,499 bytes).
+- After: `backups/hms_after_migration_020_20260805_160028.sql`
+  (124,341 bytes).
+
+The dedicated test database passed focused storage/service tests, isolated
+Migration 020 down/up verification, and Phase 0–2.4 regressions. Live HTTP
+verification passed login, Patient Chart Documents, Encounter Workspace
+Documents, and CSRF refusal. Deployment requirements are in
+`MEDICAL_DOCUMENTS_DEPLOYMENT.md`.
+
+## Current status — Phase 2 Milestone 2.6
+
+Milestone 2.6 is implemented and live-verified. Clinical Notes support
+patient/encounter scope, immutable draft and signed versions, Doctor signing,
+locking, amendment approval through `record_amendments`, entered-in-error,
+confidentiality, Patient Chart and Workspace integration, PHI access logging,
+and optional encounter events. Migration 021 is ledger-applied. Verified
+recovery points are
+`backups/hms_before_migration_021_20260805_173844.sql` and
+`backups/hms_after_migration_021_20260805_174602.sql`. See
+`CLINICAL_NOTES_ARCHITECTURE.md`.
+
+## Phase 2 Lean Closeout
+
+Phase 2 closes without implementing the previously planned complex Patient
+Merge milestone. No `PatientMergeService`, survivor/canonical-patient logic,
+merge approval workflow, merge reversal, merge-history infrastructure,
+foreign-key remapping, canonical chart aggregation, or additional duplicate
+scoring engine is part of the current version.
+
+Remaining non-blocking items are categorized as **LATER**, not blockers:
+
+- full patient merge
+- break-glass access
+- co-signatures
+- controlled clinical terminology
+- advanced full-text search
+- object storage
+- real malware scanner integration
+- retention automation
+- browser automation
+- multi-process concurrency testing
+- sophisticated duplicate matching
+- FHIR, HL7, PACS, patient portal, SMS, and email integrations
+- advanced reporting infrastructure
+
+The next implementation target is Phase 3.1 Consultation CRUD.
+
+## Phase 3 Milestone 3.1 — Consultation and Department Notifications
+
+Consultation is implemented as an encounter-centered CRUD module using one
+`consultations` table and `ConsultationService`. It preserves the assigned
+clinical doctor separately from the acting user: if an administrator creates or
+completes the consultation during development/testing, `doctor_id` remains the
+encounter doctor while `created_by`, `updated_by`, or `completed_by` stores the
+administrator.
+
+Department notifications are implemented through one
+`department_notifications` table and `DepartmentNotificationService`. They
+request attention from another department only and do not transfer encounters,
+change queue ownership, or alter current department ownership.
+
+Phase 3.1 remains CRUD-first: no diagnosis tables, nursing workflow,
+laboratory/radiology/pharmacy/billing functionality, patient merge, templates,
+co-signatures, autosave, or additional architecture document was introduced.

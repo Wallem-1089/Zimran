@@ -13,7 +13,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 
 require_once __DIR__ . '/../../services/PatientService.php';
-require_once __DIR__ . '/../../services/AuditService.php';
+require_once __DIR__ . '/../../services/PermissionService.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -61,8 +61,7 @@ if (!$id) {
 */
 
 $patientService = new PatientService($pdo);
-
-$auditService = new AuditService($pdo);
+$permissionService = new PermissionService($pdo);
 
 /*
 |--------------------------------------------------------------------------
@@ -111,6 +110,14 @@ $patient = [
 
 ];
 
+$expectedVersion = filter_input(
+    INPUT_POST,
+    'demographic_version',
+    FILTER_VALIDATE_INT
+);
+
+$amendmentReason = trim($_POST['amendment_reason'] ?? '');
+
 /*
 |--------------------------------------------------------------------------
 | Current User
@@ -130,7 +137,17 @@ if (!$currentUser) {
 
 }
 
-$userId = (int)$currentUser['id'];
+if (!$permissionService->canEditPatientDemographics($id, $currentUser)) {
+    $permissionService->logPatientDenied(
+        (int)$currentUser['id'],
+        $id,
+        'PATIENT_CHART_ACCESS_DENIED',
+        'User attempted to update patient demographics without permission.'
+    );
+
+    http_response_code(403);
+    exit('You do not have permission to edit this patient record.');
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -140,19 +157,19 @@ $userId = (int)$currentUser['id'];
 
 try {
 
-    $result = $patientService->updatePatient(
-
-    $id,
-
-    $patient
-
-);
+    $result = $patientService->updatePatientWithContext(
+        $id,
+        $patient,
+        $amendmentReason,
+        $expectedVersion !== false ? $expectedVersion : null,
+        (int)$currentUser['id']
+    );
 
 
 } catch (Throwable $e) {
 
     $_SESSION['error_message'] =
-        'Unable to update patient: ' . $e->getMessage();
+        'Unable to update the patient record.';
 
     header('Location: edit.php?id=' . $id);
 
@@ -181,24 +198,6 @@ if (!$result['success']) {
     exit;
 
 }
-
-/*
-|--------------------------------------------------------------------------
-| Audit Log
-|--------------------------------------------------------------------------
-*/
-
-$auditService->updated(
-
-    $userId,
-
-    null,
-
-    'Patients',
-
-    "Updated patient record (ID: {$id})"
-
-);
 
 /*
 |--------------------------------------------------------------------------

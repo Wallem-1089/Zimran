@@ -111,7 +111,7 @@ $result = $authService->login($login, $password);
 
 if (!$result['success']) {
 
-    $auditService->loginFailed($login);
+    $auditService->loginFailed($login, $result['user_id'] ?? null);
 
     $_SESSION['login_errors'] = [$result['message']];
 

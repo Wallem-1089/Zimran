@@ -26,15 +26,15 @@ $config = require __DIR__ . '/app.php';
 | Development Mode
 |--------------------------------------------------------------------------
 |
-| During development, authentication can be bypassed so that
-| application modules can be built and tested without logging in.
-|
-| Change 'development' to 'production' in config/app.php when
-| authentication is complete.
+| Development authentication bypass is disabled unless both the application
+| environment and the protected bypass flag are explicitly configured by the
+| server process. Missing or invalid environment values resolve to production.
 |
 */
 
-if (($config['app']['environment'] ?? 'production') === 'development') {
+if (($config['app']['environment'] ?? 'production') === 'development'
+    && ($config['app']['development_auth_bypass'] ?? false) === true
+) {
 
     if (!empty($_SESSION['user'])) {
 
