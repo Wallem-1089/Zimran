@@ -29,12 +29,41 @@ $consultationStatus = $workspaceConsultation['status'] ?? 'Not Started';
                     <?php endif; ?>
                 <?php endif; ?>
             </div>
-        </div>
+    </div>
 
-        <div class="summary-grid">
-            <div class="summary-item">
-                <span class="summary-label">Encounter</span>
-                <span class="summary-value"><?= e((string)($visit['visit_number'] ?? ('#' . (int)$visit['id']))) ?></span>
+    <?php if (isset($canViewVitalSigns) && !$canViewVitalSigns): ?>
+        <div class="card alert-warning">
+            You do not have permission to view vital signs.
+        </div>
+    <?php elseif (!empty($latestVitalSigns) || isset($vitalSignsTablesReady)): ?>
+        <?php if (!$vitalSignsTablesReady): ?>
+            <div class="card">
+                <p>Vital Signs tables are not available yet. Apply Migration 023 to enable this section.</p>
+            </div>
+        <?php elseif (!empty($latestVitalSigns)): ?>
+            <div class="card">
+                <h3>Latest Vital Signs</h3>
+                <div class="summary-grid">
+                    <div class="summary-item"><span class="summary-label">Temperature</span><span class="summary-value"><?= e((string)($latestVitalSigns['temperature'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Pulse</span><span class="summary-value"><?= e((string)($latestVitalSigns['pulse'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Respiratory Rate</span><span class="summary-value"><?= e((string)($latestVitalSigns['respiratory_rate'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Blood Pressure</span><span class="summary-value"><?= e((string)($latestVitalSigns['blood_pressure'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Oxygen Saturation</span><span class="summary-value"><?= e((string)($latestVitalSigns['oxygen_saturation'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">BMI</span><span class="summary-value"><?= e((string)($latestVitalSigns['bmi'] ?? '-')) ?></span></div>
+                </div>
+            </div>
+        <?php else: ?>
+            <div class="card">
+                <h3>Latest Vital Signs</h3>
+                <p>No vital signs recorded.</p>
+            </div>
+        <?php endif; ?>
+    <?php endif; ?>
+
+    <div class="summary-grid">
+        <div class="summary-item">
+            <span class="summary-label">Encounter</span>
+            <span class="summary-value"><?= e((string)($visit['visit_number'] ?? ('#' . (int)$visit['id']))) ?></span>
             </div>
             <div class="summary-item">
                 <span class="summary-label">Hospital Number</span>

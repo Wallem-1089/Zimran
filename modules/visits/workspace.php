@@ -35,6 +35,7 @@ require_once __DIR__ . '/../../services/MedicalDocumentService.php';
 require_once __DIR__ . '/../../services/ClinicalNoteService.php';
 require_once __DIR__ . '/../../services/ConsultationService.php';
 require_once __DIR__ . '/../../services/DepartmentNotificationService.php';
+require_once __DIR__ . '/../../services/VitalSignsService.php';
 
 function workspaceTableExists(PDO $pdo, string $table): bool
 {
@@ -253,12 +254,19 @@ $workspaceMedicalHistorySummary = $canViewMedicalHistory
 
 $consultationTablesReady = workspaceTableExists($pdo, 'consultations');
 $notificationTablesReady = workspaceTableExists($pdo, 'department_notifications');
+$vitalSignsTablesReady = workspaceTableExists($pdo, 'vital_signs');
 $consultationService = $consultationTablesReady ? new ConsultationService($pdo) : null;
 $consultation = $consultationService ? $consultationService->getByVisit($visitId) : null;
 $canViewConsultation = $permissionService->canViewConsultation($visit, $currentUser);
 $canCreateConsultation = $permissionService->canCreateConsultation($visit, $currentUser);
 $canEditConsultation = $permissionService->canEditConsultation($visit, $currentUser);
 $canCompleteConsultation = $permissionService->canCompleteConsultation($visit, $currentUser);
+$vitalSignsService = $vitalSignsTablesReady ? new VitalSignsService($pdo, null, $permissionService) : null;
+$vitalSignsHistory = $vitalSignsService ? $vitalSignsService->listByVisit($visitId, $currentUser) : [];
+$latestVitalSigns = $vitalSignsHistory[0] ?? null;
+$canViewVitalSigns = $permissionService->canViewVitalSigns((int)$visit['patient_id'], $currentUser);
+$canCreateVitalSigns = $permissionService->canCreateVitalSigns($visit, $currentUser);
+$canEditVitalSigns = $permissionService->canEditVitalSigns($visit, $currentUser);
 $departments = $visitService->getDepartments();
 $departmentNotificationService = $notificationTablesReady ? new DepartmentNotificationService($pdo) : null;
 $visitNotifications = $departmentNotificationService ? $departmentNotificationService->listForVisit($visitId) : [];
@@ -406,6 +414,12 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
             case 'consultation':
 
                 require __DIR__ . '/partials/tabs/consultation.php';
+
+                break;
+
+            case 'vitals':
+
+                require __DIR__ . '/partials/tabs/vitals.php';
 
                 break;
 

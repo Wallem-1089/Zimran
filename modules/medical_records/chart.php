@@ -17,6 +17,21 @@ require_once __DIR__ . '/../../services/ProblemListService.php';
 require_once __DIR__ . '/../../services/MedicalDocumentService.php';
 require_once __DIR__ . '/../../services/ClinicalNoteService.php';
 require_once __DIR__ . '/../../services/VisitService.php';
+require_once __DIR__ . '/../../services/VitalSignsService.php';
+
+function chartTableExists(PDO $pdo, string $table): bool
+{
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT COUNT(*) FROM information_schema.tables
+             WHERE table_schema = DATABASE() AND table_name = :table'
+        );
+        $stmt->execute([':table' => $table]);
+        return (int)$stmt->fetchColumn() > 0;
+    } catch (Throwable) {
+        return false;
+    }
+}
 
 $patientId = filter_input(INPUT_GET, 'patient', FILTER_VALIDATE_INT);
 
@@ -70,6 +85,7 @@ $allowedTabs = [
     'demographics',
     'identifiers',
     'safety',
+    'vitals',
     'problems',
     'medical_history',
     'documents',
@@ -127,6 +143,11 @@ $canViewClinicalNotes = $permissionService->canViewClinicalNotes($patientId, $cu
 $canCreatePatientNotes = $permissionService->canCreateClinicalNote($patientId, false, null, $currentUser);
 $clinicalNotes = ['success' => true, 'data' => ['records' => [], 'total_results' => 0], 'errors' => []];
 $clinicalNoteFilterOptions = ['authors' => [], 'departments' => []];
+$vitalSignsTablesReady = chartTableExists($pdo, 'vital_signs');
+$canViewVitalSigns = $vitalSignsTablesReady && $permissionService->canViewVitalSigns($patientId, $currentUser);
+$vitalSignsService = $vitalSignsTablesReady ? new VitalSignsService($pdo, null, $permissionService) : null;
+$vitalSignsHistory = [];
+$latestVitalSigns = null;
 
 if ($activeTab === 'problems' && !$canViewProblemList) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'PROBLEM_LIST_ACCESS_DENIED', 'Problem List access denied.');
@@ -147,6 +168,11 @@ if ($activeTab === 'notes' && !$canViewClinicalNotes) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'CLINICAL_NOTE_ACCESS_DENIED', 'Clinical Note list access denied.');
     http_response_code(403);
     exit('You do not have permission to view Clinical Notes.');
+}
+if ($activeTab === 'vitals' && !$canViewVitalSigns) {
+    $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'VITAL_SIGNS_ACCESS_DENIED', 'Vital Signs access denied.');
+    http_response_code(403);
+    exit('You do not have permission to view Vital Signs.');
 }
 $problemListService = new ProblemListService($pdo);
 if ($canViewProblemList) {
@@ -178,6 +204,11 @@ if ($canViewClinicalNotes) {
     );
     $noteOptionsResult = $clinicalNoteService->getNoteFilterOptions($patientId, $currentUser);
     $clinicalNoteFilterOptions = $noteOptionsResult['data'] ?? $clinicalNoteFilterOptions;
+}
+
+if ($canViewVitalSigns) {
+    $vitalSignsHistory = $vitalSignsService->listByPatient($patientId, $currentUser);
+    $latestVitalSigns = $vitalSignsHistory[0] ?? null;
 }
 
 if ($activeTab === 'identifiers' && !$canViewIdentifiers) {
@@ -301,6 +332,10 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         case 'safety':
             require __DIR__ . '/partials/clinical_safety.php';
+            break;
+
+        case 'vitals':
+            require __DIR__ . '/partials/vital_signs.php';
             break;
 
         case 'problems':

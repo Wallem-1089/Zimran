@@ -282,3 +282,17 @@ Department notifications use encounter and active-department access rather than
 a new permission key in Phase 3.1. Sending requires access to the encounter;
 read/resolve requires access to the destination department. Administrator
 override remains available for development/testing.
+
+## Phase 3.2 Vital Signs permissions
+
+| Permission | Administrator | Doctor | Nurse | Records Officer | Other roles |
+|---|---:|---:|---:|---:|---:|
+| `view_vital_signs` | Yes | Yes | Yes | Yes | No default |
+| `create_vital_signs` | Yes | Yes | Yes | No default | No default |
+| `edit_vital_signs` | Yes | Yes | Yes | No default | No default |
+
+All three permissions still require an accessible encounter for mutation.
+Completed/cancelled encounters remain read-only. The Encounter Workspace and
+Patient Chart only show the Vital Signs tab when `view_vital_signs` resolves
+true for the current patient context. Administrator override remains active,
+but the service still validates encounter status and patient/visit matching.

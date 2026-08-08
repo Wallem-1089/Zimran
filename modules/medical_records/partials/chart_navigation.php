@@ -15,6 +15,10 @@ $chartTabs = [
     'history' => 'Demographic History'
 ];
 
+if (!empty($canViewVitalSigns)) {
+    $chartTabs['vitals'] = 'Vital Signs';
+}
+
 if ($canViewAudit) {
     $chartTabs['audit'] = 'Audit History';
 }

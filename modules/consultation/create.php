@@ -18,6 +18,9 @@ if ($consultationService->getByVisit($visitId)) {
 }
 
 $consultation = $_SESSION['old_consultation'] ?? ['visit_id' => $visitId];
+$latestVitalSigns = $vitalSignsService
+    ? $vitalSignsService->getLatestByVisit($visitId, $currentUser)
+    : null;
 unset($_SESSION['old_consultation']);
 
 $pageTitle = 'Start Consultation';
@@ -49,6 +52,14 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p><?= e($visit['visit_number'] ?? ('Encounter #' . $visitId)) ?></p>
         </div>
     </div>
+    <?php if ($latestVitalSigns !== null): ?>
+        <div class="card">
+            <h3>Latest Vital Signs</h3>
+            <?php $latest = $latestVitalSigns; require __DIR__ . '/../vital_signs/partials/record_card.php'; ?>
+        </div>
+    <?php else: ?>
+        <div class="card"><h3>Latest Vital Signs</h3><p>No vital signs recorded.</p></div>
+    <?php endif; ?>
     <?php $action = 'review.php'; $buttonLabel = 'Review Consultation'; require __DIR__ . '/form.php'; ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>

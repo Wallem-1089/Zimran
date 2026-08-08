@@ -1136,3 +1136,16 @@ the Doctor role. It intentionally creates no diagnosis, nursing, laboratory,
 radiology, pharmacy, billing, patient-merge, note, or history/version tables.
 The down migration drops Phase 3.1 data and is therefore restricted to
 dedicated disposable test databases or an explicitly approved recovery action.
+
+## Phase 3.2 Vital Signs
+
+Migration 023 adds the encounter-linked `vital_signs` table for routine
+measurements. It stores patient, visit, department, recorder, numeric
+measurements, BMI, and notes with `ON DELETE RESTRICT` on patient/visit/user
+links and `SET NULL` on department context. Indexed access paths support visit,
+patient, recorder, department, and chronology queries. The table is mutable
+current state; the application allows multiple records per visit and the
+workspace, patient-chart and consultation consumers all read the latest record
+as a summary. The down migration is destructive to retained encounter history
+and is restricted to approved empty test databases or a verified recovery
+action.

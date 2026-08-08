@@ -1,9 +1,9 @@
 # API Contracts
 
-> Current implementation coverage: **Phase 2.6**. Clinical Note contracts are
+> Current implementation coverage: **Phase 3.2**. Clinical Note contracts are
 > included below; the older generated overview text is retained for history.
 
-> Official reference for public PHP service contracts through Phase 2.4. “API” primarily means callable service methods and stable route-to-service behavior. Authorization keys are catalogued in [PERMISSION_MATRIX.md](PERMISSION_MATRIX.md); database details are in [DATABASE_RELATIONSHIPS.md](DATABASE_RELATIONSHIPS.md).
+> Official reference for public PHP service contracts through Phase 3.2. “API” primarily means callable service methods and stable route-to-service behavior. Authorization keys are catalogued in [PERMISSION_MATRIX.md](PERMISSION_MATRIX.md); database details are in [DATABASE_RELATIONSHIPS.md](DATABASE_RELATIONSHIPS.md).
 
 ## Contract Philosophy
 
@@ -872,6 +872,18 @@ All writes use transactions, prepared statements, structured `success/errors`
 responses, encounter-status checks and permission checks. Completed or
 cancelled encounters are read-only.
 
+### Consultation route flow
+
+| Route | HTTP | Purpose |
+|---|---|---|
+| `modules/consultation/create.php` | GET | Start a new consultation draft for a visit. |
+| `modules/consultation/review.php` | POST | Review submitted consultation text before saving. |
+| `modules/consultation/save.php` | POST | Persist the draft after review confirmation. |
+| `modules/consultation/view.php` | GET | Read-only consultation view and completion action. |
+| `modules/consultation/edit.php` | GET | Edit a draft consultation. |
+| `modules/consultation/update.php` | POST | Save draft edits. |
+| `modules/consultation/complete.php` | POST | Mark a draft consultation as completed. |
+
 ## DepartmentNotificationService — implemented in Phase 3.1
 
 | Public method | Contract |
@@ -886,3 +898,34 @@ cancelled encounters are read-only.
 
 Notifications do not mutate `visits.current_department_id`, transfers, receive
 state, queue ownership, or doctor assignment.
+
+### VitalSignsService — implemented in Phase 3.2
+
+Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?PermissionService $permissionService = null)`. Uses `vital_signs`, `visits`, `patients`, `departments`, `users`, audit and permission checks.
+
+| Signature | Purpose/return | Contract |
+|---|---|---|
+| `create(array $data, array $user): array` | Inserts a new vital-signs row for an active encounter. Returns `success`, `vital_signs_id`, `visit_id`, `patient_id`, `errors`. | Validates patient/visit consistency, encounter status, permission, range checks and BMI calculation. Writes `VITAL_SIGNS_CREATED` audit in the same transaction. No encounter event is created for routine measurements. |
+| `getById(int $vitalSignsId, ?array $user = null): ?array` | Read one record. | Returns `null` when a user is supplied and they lack view permission. |
+| `getLatestByVisit(int $visitId, ?array $user = null): ?array` | Read most recent record for a visit. | Convenience read used by Workspace, Consultation and Patient Chart. |
+| `listByVisit(int $visitId, ?array $user = null, int $limit = 0): array` | Chronological visit history. | Returns ordered rows; optional limit is used by consumers. |
+| `listByPatient(int $patientId, ?array $user = null): array` | Patient history across visits. | Read-only summary source. |
+| `update(int $vitalSignsId, array $data, array $user): array` | Updates an existing record. Returns the same structured write envelope. | Revalidates encounter status and permissions, recalculates BMI when applicable, and writes `VITAL_SIGNS_UPDATED` in the same transaction. |
+| `canViewVitalSigns(array $encounter, ?array $user = null): bool` | Permission helper for chart/workspace consumers. | Uses `PermissionService` and the active encounter/patient context. |
+| `canCreateVitalSigns(array $encounter, ?array $user = null): bool` / `canEditVitalSigns(...)` | Mutation guards for forms and controllers. | Refuse completed/cancelled encounters and require doctor/nurse/admin-scoped access. |
+
+### Vital Signs route map
+
+| Route | HTTP | Purpose |
+|---|---|---|
+| `modules/vital_signs/index.php` | GET | Module landing / visit or patient redirect. |
+| `modules/vital_signs/create.php` | GET | Render vital-signs form for a visit. |
+| `modules/vital_signs/save.php` | POST | Persist a new record. |
+| `modules/vital_signs/view.php` | GET | Read a single record. |
+| `modules/vital_signs/edit.php` | GET | Render edit form. |
+| `modules/vital_signs/update.php` | POST | Persist edits. |
+| `modules/vital_signs/history.php` | GET | Visit or patient history list. |
+
+Patient Chart, Encounter Workspace and Consultation pages call the read
+contracts directly to show the latest vitals as read-only context. No existing
+PatientService, VisitService or ConsultationService signatures changed.

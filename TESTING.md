@@ -135,7 +135,23 @@ php test\phase3_consultation_notifications_test.php
 The focused suite covers universal patient-search access, active encounter
 discovery, Doctor and Administrator consultation CRUD, clinical doctor
 attribution, unauthorized mutation denial, completed/cancelled encounter
-read-only enforcement, department notification send/read/resolve, inbox
-visibility, audit, encounter events for start/complete/sent only, and
-confirmation that notifications do not transfer encounters or alter queue
-ownership.
+read-only enforcement, consultation review/save persistence, department
+notification send/read/resolve, inbox visibility, audit, encounter events for
+start/complete/sent only, and confirmation that notifications do not transfer
+encounters or alter queue ownership.
+
+## Phase 3.2 Vital Signs
+
+```powershell
+$env:HMS_APP_ENV='testing'
+$env:HMS_TEST_DB_NAME='hms_test_hospital_management_system'
+php test\phase3_vital_signs_test.php
+```
+
+The focused suite verifies doctor, nurse and administrator create/update/view
+paths; unauthorized mutation denial; multiple records per visit; latest-record
+retrieval; visit and patient history reads; patient/visit mismatch rejection;
+completed/cancelled read-only enforcement; BMI calculation; invalid range
+rejection; CSRF-aware controller wiring; audit generation; and the integration
+hooks used by the Workspace, Consultation page and Patient Chart. Existing
+major workflows remain covered by the previous regression suites.

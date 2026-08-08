@@ -18,6 +18,9 @@ $canEdit = (string)$consultation['status'] === 'Draft'
     && $permissionService->canEditConsultation($visit, $currentUser);
 $canComplete = (string)$consultation['status'] === 'Draft'
     && $permissionService->canCompleteConsultation($visit, $currentUser);
+$latestVitalSigns = $vitalSignsService
+    ? $vitalSignsService->getLatestByVisit((int)$visit['id'], $currentUser)
+    : null;
 
 $pageTitle = 'Consultation';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -79,6 +82,15 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <div class="summary-item"><span class="summary-label">Completed</span><span class="summary-value"><?= e((string)($consultation['completed_at'] ?? 'Not completed')) ?></span></div>
         </div>
     </div>
+
+    <?php if ($latestVitalSigns !== null): ?>
+        <div class="card">
+            <h3>Latest Vital Signs</h3>
+            <?php $latest = $latestVitalSigns; require __DIR__ . '/../vital_signs/partials/record_card.php'; ?>
+        </div>
+    <?php else: ?>
+        <div class="card"><h3>Latest Vital Signs</h3><p>No vital signs recorded.</p></div>
+    <?php endif; ?>
 
     <?php foreach ($fields as $field => $label): ?>
         <div class="card">

@@ -145,3 +145,16 @@ do not transfer the encounter, change queue ownership, or alter the current
 department. The down migration removes the Phase 3.1 tables and Consultation
 permission seeds, so it is restricted to an empty dedicated test database or an
 explicitly approved recovery operation after the backup gate.
+
+## Migration 023 â€” Phase 3.2 Vital Signs
+
+`023_phase3_vital_signs_up.sql` creates one encounter-linked `vital_signs`
+table for routine measurements and seeds the three Vital Signs permissions
+(`view_vital_signs`, `create_vital_signs`, `edit_vital_signs`). Doctor and
+Nurse receive full Vital Signs CRUD; Records Officer receives view-only
+access. The baseline files already represent the table DDL, while the numbered
+migration preserves the ledgered release boundary for existing installations.
+
+The down migration removes the retained Vital Signs table and permission
+seeds. It is destructive and restricted to an empty dedicated test database or
+an explicitly approved recovery operation after the backup gate.

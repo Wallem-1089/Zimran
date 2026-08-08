@@ -8,12 +8,29 @@ require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/ConsultationService.php';
 require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
+require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/VisitService.php';
+
+function consultationTableExists(PDO $pdo, string $table): bool
+{
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT COUNT(*) FROM information_schema.tables
+             WHERE table_schema = DATABASE() AND table_name = :table'
+        );
+        $stmt->execute([':table' => $table]);
+        return (int)$stmt->fetchColumn() > 0;
+    } catch (Throwable) {
+        return false;
+    }
+}
 
 $consultationService = new ConsultationService($pdo);
 $patientService = new PatientService($pdo);
 $permissionService = new PermissionService($pdo);
 $visitService = new VisitService($pdo);
+$vitalSignsTablesReady = consultationTableExists($pdo, 'vital_signs');
+$vitalSignsService = $vitalSignsTablesReady ? new VitalSignsService($pdo, null, $permissionService) : null;
 
 function consultationFlash(array $result, string $success): void
 {

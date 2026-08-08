@@ -1,9 +1,9 @@
 # Database Relationships
 
-> Current implementation coverage: migrations **002 through 021** and the live
-> schema through **Phase 2.6**.
+> Current implementation coverage: migrations **002 through 023** and the live
+> schema through **Phase 3.2**.
 
-> Official relational reference generated from `database/hospital.sql`, migrations `002` through `019`, service SQL, and the live schema through Phase 2.4. Broader policies are described in [DATABASE_CONTEXT.md](DATABASE_CONTEXT.md) and [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md).
+> Official relational reference generated from `database/hospital.sql`, migrations `002` through `023`, service SQL, and the live schema through Phase 3.2. Broader policies are described in [DATABASE_CONTEXT.md](DATABASE_CONTEXT.md) and [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md).
 
 ## Database Overview
 
@@ -21,7 +21,7 @@ The fresh-install baseline includes the remediated patient gender enum but is no
 
 ## Complete Table Catalogue
 
-The live database contains 18 tables. “Historical” means the application treats rows as history; it does not imply MySQL blocks `UPDATE`/`DELETE`.
+The live database contains 23 tables. “Historical” means the application treats rows as history; it does not imply MySQL blocks `UPDATE`/`DELETE`.
 
 ### Administration and authorization
 
@@ -810,3 +810,29 @@ erDiagram
     DEPARTMENTS ||--o{ DEPARTMENT_NOTIFICATIONS : to
     USERS ||--o{ DEPARTMENT_NOTIFICATIONS : sends_or_resolves
 ```
+
+## Phase 3.2 relational additions
+
+| Table | Ownership | Lifecycle | Keys and query indexes |
+|---|---|---|---|
+| `vital_signs` | Encounter workflow / `VitalSignsService` | Mutable current records; multiple rows per visit | PK `id`; visit/patient/recorder/department/created_at indexes; blood-pressure and BMI are stored as ordinary nullable values, not separate tables |
+
+| FK | Source -> target | Update/delete |
+|---|---|---|
+| `fk_vital_signs_visit` | `vital_signs.visit_id -> visits.id` | CASCADE / RESTRICT |
+| `fk_vital_signs_patient` | `vital_signs.patient_id -> patients.id` | CASCADE / RESTRICT |
+| `fk_vital_signs_department` | `vital_signs.department_id -> departments.id` | CASCADE / SET NULL |
+| `fk_vital_signs_recorded_by` | `vital_signs.recorded_by -> users.id` | CASCADE / RESTRICT |
+
+```mermaid
+erDiagram
+    PATIENTS ||--o{ VITAL_SIGNS : has
+    VISITS ||--o{ VITAL_SIGNS : contextualizes
+    DEPARTMENTS o|--o{ VITAL_SIGNS : attributes
+    USERS ||--o{ VITAL_SIGNS : records
+```
+
+Migration 023 is baseline-represented for fresh installs and ledger-applied for
+existing installations. The workspace, patient-chart and consultation
+read-models use the latest record as a summary while the history page shows the
+ordered visit ledger.

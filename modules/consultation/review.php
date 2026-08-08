@@ -30,6 +30,9 @@ $fields = [
     'follow_up' => 'Follow Up',
     'referral_notes' => 'Referral Notes',
 ];
+$latestVitalSigns = $vitalSignsService
+    ? $vitalSignsService->getLatestByVisit($visitId, $currentUser)
+    : null;
 
 $pageTitle = 'Review Consultation';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -54,6 +57,15 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <div class="summary-item"><span class="summary-label">Clinical Doctor</span><span class="summary-value"><?= e((string)($visit['doctor_name'] ?? 'Not Assigned')) ?></span></div>
         </div>
     </div>
+
+    <?php if ($latestVitalSigns !== null): ?>
+        <div class="card">
+            <h3>Latest Vital Signs</h3>
+            <?php $latest = $latestVitalSigns; require __DIR__ . '/../vital_signs/partials/record_card.php'; ?>
+        </div>
+    <?php else: ?>
+        <div class="card"><h3>Latest Vital Signs</h3><p>No vital signs recorded.</p></div>
+    <?php endif; ?>
 
     <?php foreach ($fields as $field => $label): ?>
         <div class="card">

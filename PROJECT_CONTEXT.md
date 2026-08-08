@@ -1042,7 +1042,7 @@ Remaining non-blocking items are categorized as **LATER**, not blockers:
 - FHIR, HL7, PACS, patient portal, SMS, and email integrations
 - advanced reporting infrastructure
 
-The next implementation target is Phase 3.1 Consultation CRUD.
+The next implementation target after Phase 3.2 is Nursing CRUD.
 
 ## Phase 3 Milestone 3.1 — Consultation and Department Notifications
 
@@ -1058,6 +1058,23 @@ Department notifications are implemented through one
 request attention from another department only and do not transfer encounters,
 change queue ownership, or alter current department ownership.
 
+The Consultation UI uses a review step before saving a draft record, then
+returns to the consultation view and Workspace tab. The Encounter Workspace
+header also exposes a top-right `Complete Visit` action that posts through the
+existing encounter status workflow.
+
 Phase 3.1 remains CRUD-first: no diagnosis tables, nursing workflow,
 laboratory/radiology/pharmacy/billing functionality, patient merge, templates,
 co-signatures, autosave, or additional architecture document was introduced.
+
+## Phase 3.2 â€” Vital Signs CRUD
+
+**Implemented.** Vital Signs uses one `vital_signs` table, one
+`VitalSignsService`, encounter/status locking, BMI calculation, audit logging,
+patient-chart history, Encounter Workspace integration, and read-only
+consultation context display. Doctor and Nurse can create/update/view, while
+other roles receive only explicitly permitted read access.
+
+Phase 3.2 does not introduce nursing, laboratory, radiology, pharmacy,
+billing, or additional workflow engines. It is a straightforward encounter-
+centered CRUD module.

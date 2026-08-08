@@ -97,6 +97,22 @@ class PermissionService
             'sign_clinical_notes' => $role === 'Doctor',
             'amend_signed_notes', 'mark_note_entered_in_error',
             'view_confidential_notes' => in_array($role, ['Records Officer', 'Doctor'], true),
+            'view_vital_signs' => in_array(
+                $role,
+                ['Records Officer', 'Doctor', 'Nurse'],
+                true
+            ) || in_array($department, ['Records', 'Doctor', 'Nursing'], true),
+            'create_vital_signs', 'edit_vital_signs' => in_array(
+                $role,
+                ['Doctor', 'Nurse'],
+                true
+            ),
+            'view_nursing' => in_array(
+                $role,
+                ['Records Officer', 'Doctor', 'Nurse'],
+                true
+            ) || in_array($department, ['Records', 'Nursing'], true),
+            'create_nursing', 'edit_nursing', 'complete_nursing' => $role === 'Nurse',
             'view_consultation', 'create_consultation',
             'edit_consultation', 'complete_consultation' => $role === 'Doctor',
             default => false
@@ -886,6 +902,57 @@ class PermissionService
 
     /*
     |--------------------------------------------------------------------------
+    | Vital Signs Authorization
+    |--------------------------------------------------------------------------
+    */
+
+    public function canViewVitalSigns(int $patientId, ?array $user = null): bool
+    {
+        return $this->canPerformLongitudinalAction(
+            'view_vital_signs',
+            $patientId,
+            ['Records Officer', 'Doctor', 'Nurse'],
+            $user
+        );
+    }
+
+    public function canCreateVitalSigns(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateVitalSigns('create_vital_signs', $encounter, $user);
+    }
+
+    public function canEditVitalSigns(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateVitalSigns('edit_vital_signs', $encounter, $user);
+    }
+
+    public function canViewNursing(int $patientId, ?array $user = null): bool
+    {
+        return $this->canPerformLongitudinalAction(
+            'view_nursing',
+            $patientId,
+            ['Records Officer', 'Doctor', 'Nurse'],
+            $user
+        );
+    }
+
+    public function canCreateNursing(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateNursing('create_nursing', $encounter, $user);
+    }
+
+    public function canEditNursing(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateNursing('edit_nursing', $encounter, $user);
+    }
+
+    public function canCompleteNursing(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateNursing('complete_nursing', $encounter, $user);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Consultation Authorization
     |--------------------------------------------------------------------------
     */
@@ -1341,6 +1408,52 @@ class PermissionService
 
         return $this->hasPermission($permission, $user)
             && $this->roleMatches($user, ['Doctor'])
+            && $this->canViewEncounter($encounter, $user);
+    }
+
+    private function canMutateNursing(
+        string $permission,
+        array $encounter,
+        ?array $user = null
+    ): bool {
+        $user = $user ?? $this->currentUser();
+        if (!$user) {
+            return false;
+        }
+
+        if (in_array((string)($encounter['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)) {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        return $this->hasPermission($permission, $user)
+            && $this->roleMatches($user, ['Nurse'])
+            && $this->canViewEncounter($encounter, $user);
+    }
+
+    private function canMutateVitalSigns(
+        string $permission,
+        array $encounter,
+        ?array $user = null
+    ): bool {
+        $user = $user ?? $this->currentUser();
+        if (!$user) {
+            return false;
+        }
+
+        if (in_array((string)($encounter['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)) {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        return $this->hasPermission($permission, $user)
+            && $this->roleMatches($user, ['Doctor', 'Nurse'])
             && $this->canViewEncounter($encounter, $user);
     }
 

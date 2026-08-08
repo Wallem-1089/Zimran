@@ -18,6 +18,9 @@ if ((string)$consultation['status'] !== 'Draft'
     http_response_code(403);
     exit('This consultation cannot be edited.');
 }
+$latestVitalSigns = $vitalSignsService
+    ? $vitalSignsService->getLatestByVisit((int)$visit['id'], $currentUser)
+    : null;
 
 $pageTitle = 'Edit Consultation';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -37,6 +40,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p><?= e((string)$consultation['visit_number']) ?></p>
         </div>
     </div>
+    <?php if ($latestVitalSigns !== null): ?>
+        <div class="card">
+            <h3>Latest Vital Signs</h3>
+            <?php $latest = $latestVitalSigns; require __DIR__ . '/../vital_signs/partials/record_card.php'; ?>
+        </div>
+    <?php endif; ?>
     <?php $action = 'update.php'; $buttonLabel = 'Update Draft'; require __DIR__ . '/form.php'; ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>

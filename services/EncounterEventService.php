@@ -148,6 +148,8 @@ class EncounterEventService
             'TRANSFERRED' => 'transfer',
             'PATIENT_RECEIVED' => 'transfer',
             'DOCTOR_ASSIGNED' => 'consultation',
+            'NURSING_ASSESSMENT_STARTED',
+            'NURSING_ASSESSMENT_COMPLETED' => 'nursing',
             default => 'default'
         };
     }

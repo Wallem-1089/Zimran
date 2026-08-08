@@ -1050,13 +1050,17 @@ assignment. The workflow is:
 
 ```text
 Encounter Workspace -> Consultation tab -> Start Consultation
--> Draft CRUD -> Complete -> View-only
+-> Review Consultation -> Save Draft -> View -> Complete -> View-only
 ```
 
 Consultation writes are allowed only while the encounter is not `Completed` or
 `Cancelled`. The consultation belongs to the encounter and patient and normally
 uses the assigned encounter doctor as clinical owner. Administrator actions are
 permitted for development/testing but retain separate actor attribution.
+
+The Workspace header also provides a top-right `Complete Visit` action that
+posts through the existing encounter status transition route. It closes the
+visit itself and is separate from consultation completion.
 
 Department notifications are attention requests:
 
@@ -1067,3 +1071,19 @@ Workspace -> Notify Department -> Receiving department inbox
 
 They create an audit record and `DEPARTMENT_NOTIFICATION_SENT` timeline event
 but never perform a transfer, queue movement, or encounter ownership change.
+
+## Phase 3.2 Vital Signs
+
+Vital signs are recorded directly against an active encounter through the
+Encounter Workspace or the Vital Signs module. The workflow is intentionally
+simple:
+
+```text
+Workspace or Patient Chart -> Vital Signs tab -> Record New / Edit Latest
+-> Save -> Audit
+```
+
+Encounters that are `Completed` or `Cancelled` remain read-only for vital-signs
+mutation. Patient Chart and Consultation views reuse the latest encounter
+vital-signs summary as read-only context, while the dedicated history view
+lists prior entries in reverse chronological order.

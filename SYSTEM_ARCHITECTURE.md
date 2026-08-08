@@ -621,12 +621,19 @@ simple encounter-linked CRUD module with narrative `TEXT` fields for history,
 examination, assessment, treatment plan, advice, follow-up plan and referral
 notes. Do not create separate tables for every consultation section.
 
+Phase 3.2 Vital Signs is also implemented as a small CRUD module with one
+`vital_signs` table, doctor/nurse CRUD permissions, workspace and patient-chart
+read views, and read-only consultation context display. It remains encounter-
+centered and does not add workflow engines, history tables, or timeline events
+for routine measurement updates.
+
 ## Phase 3.1 — Consultation and Department Notifications
 
 **Implemented.** Consultation follows the CRUD-first, encounter-centered
 pattern: one table, one service, thin controllers, textarea-based narrative
-fields, permission checks, CSRF, transaction-owned writes, audit logging, and
-meaningful encounter events for start/complete only.
+fields, permission checks, CSRF, transaction-owned writes, audit logging, a
+review-before-save step, and meaningful encounter events for start/complete
+only.
 
 ```mermaid
 flowchart LR
