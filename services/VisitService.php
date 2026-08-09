@@ -2872,6 +2872,70 @@ private function appendLaboratoryEvents(
 
 }
 
+private function appendRadiologyEvents(
+    array &$timeline,
+    int $visitId
+): void {
+    if (!$this->tableExists('radiology_requests')) {
+        return;
+    }
+
+    try {
+        $stmt = $this->pdo->prepare('
+            SELECT lr.id,
+                   lr.study_requested,
+                   lr.request_source,
+                   lr.priority,
+                   lr.status,
+                   lr.created_at,
+                   lr.updated_at,
+                   lr.completed_at,
+                   CONCAT(u.first_name, " ", u.last_name) AS requested_by_name
+            FROM radiology_requests lr
+            LEFT JOIN users u ON u.id = lr.requested_by
+            WHERE lr.visit_id = :visit_id
+            ORDER BY lr.created_at ASC, lr.id ASC
+        ');
+        $stmt->execute([':visit_id' => $visitId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable) {
+        return;
+    }
+
+    foreach ($rows as $row) {
+        $timeline[] = [
+            'type' => 'radiology',
+            'title' => 'Radiology Request Created',
+            'description' => sprintf(
+                '%s requested radiology study: %s (%s, %s).',
+                $row['requested_by_name'] ?? 'Unknown User',
+                $row['study_requested'] ?? 'Unknown study',
+                $row['request_source'] ?? 'Clinical',
+                $row['priority'] ?? 'Routine'
+            ),
+            'department' => 'Radiology',
+            'performed_by' => $row['requested_by_name'] ?? null,
+            'transfer_type' => null,
+            'remarks' => null,
+            'created_at' => $row['created_at']
+        ];
+
+        if ((string)($row['status'] ?? '') === 'Completed' && !empty($row['completed_at'])) {
+            $timeline[] = [
+                'type' => 'radiology',
+                'title' => 'Radiology Request Completed',
+                'description' => 'Radiology request completed.',
+                'department' => 'Radiology',
+                'performed_by' => $row['requested_by_name'] ?? null,
+                'transfer_type' => null,
+                'remarks' => null,
+                'created_at' => $row['completed_at']
+            ];
+        }
+    }
+
+}
+
 private function tableExists(string $table): bool
 {
     try {

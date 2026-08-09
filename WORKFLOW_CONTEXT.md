@@ -1012,21 +1012,15 @@ Laboratory is now implemented and the next practical module is Radiology CRUD.
 
 ### Phase 4 - Radiology
 
-Laboratory is implemented with `laboratory_requests` and `laboratory_results`.
-Radiology starts with `radiology_orders` and `radiology_reports` using:
-
-```text
-Order -> Process -> Result -> Verify
-```
-
-Radiology starts with `radiology_orders` and `radiology_reports` using:
+Radiology is implemented with `radiology_requests` and `radiology_reports` using:
 
 ```text
 Request -> Worklist -> Report -> Complete
 ```
 
-Radiology indication, findings, impression, and recommendation remain text.
-PACS, DICOM, and advanced specimen logistics are postponed.
+Radiology study requested, clinical indication, findings, impression, and
+recommendation remain text. PACS, DICOM, and advanced imaging logistics are
+postponed.
 
 ### Phase 5 - Pharmacy and Inventory
 

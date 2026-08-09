@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/ConsultationService.php';
 require_once __DIR__ . '/../../services/LaboratoryService.php';
+require_once __DIR__ . '/../../services/RadiologyService.php';
 require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
@@ -33,6 +34,9 @@ $visitService = new VisitService($pdo);
 $laboratoryTablesReady = consultationTableExists($pdo, 'laboratory_requests')
     && consultationTableExists($pdo, 'laboratory_results');
 $laboratoryService = $laboratoryTablesReady ? new LaboratoryService($pdo, null, null, $permissionService) : null;
+$radiologyTablesReady = consultationTableExists($pdo, 'radiology_requests')
+    && consultationTableExists($pdo, 'radiology_reports');
+$radiologyService = $radiologyTablesReady ? new RadiologyService($pdo, null, null, $permissionService) : null;
 $vitalSignsTablesReady = consultationTableExists($pdo, 'vital_signs');
 $vitalSignsService = $vitalSignsTablesReady ? new VitalSignsService($pdo, null, $permissionService) : null;
 

@@ -185,3 +185,20 @@ patient/visit mismatch rejection; completed/cancelled read-only behavior;
 Vital Signs, Clinical Safety, Problem List, and Medical History integration;
 patient-chart/workspace wiring; audit and encounter-event generation; and
 existing Consultation/Vital Signs regression coverage.
+
+## Phase 3.5 Radiology
+
+```powershell
+$env:HMS_APP_ENV='testing'
+$env:HMS_TEST_DB_NAME='hms_test_hospital_management_system'
+php test\phase3_radiology_test.php
+```
+
+The focused suite verifies clinical and direct radiology requests; Radiographer
+and Doctor access; unauthorized mutation denial; patient/visit mismatch
+rejection; completed/cancelled read-only enforcement; report creation and
+update; completion without report rejection; CSRF-aware controller wiring;
+audit generation; encounter-event generation; and the integration hooks used
+by the Workspace, Consultation page and Patient Chart. Existing Consultation,
+Vital Signs, Nursing, Laboratory, Workspace, and Department Notification
+regression coverage remains in place.

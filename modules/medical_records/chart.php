@@ -17,6 +17,7 @@ require_once __DIR__ . '/../../services/ProblemListService.php';
 require_once __DIR__ . '/../../services/MedicalDocumentService.php';
 require_once __DIR__ . '/../../services/ClinicalNoteService.php';
 require_once __DIR__ . '/../../services/LaboratoryService.php';
+require_once __DIR__ . '/../../services/RadiologyService.php';
 require_once __DIR__ . '/../../services/VisitService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
@@ -89,6 +90,7 @@ $allowedTabs = [
     'safety',
     'vitals',
     'laboratory',
+    'radiology',
     'problems',
     'medical_history',
     'documents',
@@ -153,6 +155,12 @@ $canViewLaboratory = $laboratoryTablesReady && $permissionService->canViewLabora
 $laboratoryService = $laboratoryTablesReady ? new LaboratoryService($pdo, null, null, $permissionService) : null;
 $laboratoryHistory = [];
 $latestLaboratoryRequest = null;
+$radiologyTablesReady = chartTableExists($pdo, 'radiology_requests')
+    && chartTableExists($pdo, 'radiology_reports');
+$canViewRadiology = $radiologyTablesReady && $permissionService->canViewRadiology($patientId, $currentUser);
+$radiologyService = $radiologyTablesReady ? new RadiologyService($pdo, null, null, $permissionService) : null;
+$radiologyHistory = [];
+$latestRadiologyRequest = null;
 $vitalSignsTablesReady = chartTableExists($pdo, 'vital_signs');
 $canViewVitalSigns = $vitalSignsTablesReady && $permissionService->canViewVitalSigns($patientId, $currentUser);
 $vitalSignsService = $vitalSignsTablesReady ? new VitalSignsService($pdo, null, $permissionService) : null;
@@ -234,6 +242,10 @@ if ($canViewVitalSigns) {
 if ($canViewLaboratory) {
     $laboratoryHistory = $laboratoryService->listByPatient($patientId, $currentUser);
     $latestLaboratoryRequest = $laboratoryHistory[0] ?? null;
+}
+if ($canViewRadiology) {
+    $radiologyHistory = $radiologyService->listByPatient($patientId, $currentUser);
+    $latestRadiologyRequest = $radiologyHistory[0] ?? null;
 }
 
 if ($canViewNursing) {
@@ -370,6 +382,10 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         case 'laboratory':
             require __DIR__ . '/partials/laboratory.php';
+            break;
+
+        case 'radiology':
+            require __DIR__ . '/partials/radiology.php';
             break;
 
         case 'nursing':

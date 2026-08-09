@@ -36,6 +36,7 @@ require_once __DIR__ . '/../../services/ClinicalNoteService.php';
 require_once __DIR__ . '/../../services/ConsultationService.php';
 require_once __DIR__ . '/../../services/DepartmentNotificationService.php';
 require_once __DIR__ . '/../../services/LaboratoryService.php';
+require_once __DIR__ . '/../../services/RadiologyService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
 
@@ -296,6 +297,23 @@ $canEnterLaboratoryResult = $permissionService->canEnterLaboratoryResult($visit,
 $canEditLaboratoryResult = $permissionService->canEditLaboratoryResult($visit, $currentUser);
 $canCompleteLaboratoryRequest = $permissionService->canCompleteLaboratoryRequest($visit, $currentUser);
 $laboratoryRequestSource = ($visit['department_name'] ?? '') === 'Laboratory' ? 'Direct' : 'Clinical';
+$radiologyTablesReady = workspaceTableExists($pdo, 'radiology_requests')
+    && workspaceTableExists($pdo, 'radiology_reports');
+$radiologyService = $radiologyTablesReady ? new RadiologyService($pdo, null, null, $permissionService) : null;
+$radiologyRequestSource = in_array((string)($visit['department_name'] ?? ''), ['Radiology', 'X-Ray'], true)
+    ? 'Direct'
+    : 'Clinical';
+$radiologyRequests = $radiologyService ? $radiologyService->listByVisit($visitId, $currentUser) : [];
+$latestRadiologyRequest = $radiologyRequests[0] ?? null;
+$latestRadiologyResult = $latestRadiologyRequest
+    ? $radiologyService->getResult((int)$latestRadiologyRequest['id'], $currentUser)
+    : null;
+$canViewRadiology = $permissionService->canViewRadiology((int)$visit['patient_id'], $currentUser);
+$canCreateRadiologyRequest = $permissionService->canCreateRadiologyRequest($visit, $currentUser, $radiologyRequestSource);
+$canProcessRadiologyRequest = $permissionService->canProcessRadiologyRequest($visit, $currentUser);
+$canEnterRadiologyReport = $permissionService->canEnterRadiologyReport($visit, $currentUser);
+$canEditRadiologyReport = $permissionService->canEditRadiologyReport($visit, $currentUser);
+$canCompleteRadiologyRequest = $permissionService->canCompleteRadiologyRequest($visit, $currentUser);
 $radiology = [];
 $pharmacy = [];
 $billing = [];

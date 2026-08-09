@@ -24,6 +24,10 @@ if (!empty($canViewLaboratory)) {
     $chartTabs['laboratory'] = 'Laboratory';
 }
 
+if (!empty($canViewRadiology)) {
+    $chartTabs['radiology'] = 'Radiology';
+}
+
 if ($canViewAudit) {
     $chartTabs['audit'] = 'Audit History';
 }

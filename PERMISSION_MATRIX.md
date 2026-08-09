@@ -36,7 +36,7 @@ Current roles in the database:
 | Laboratory Scientist | Implemented | Laboratory request/result worklist and CRUD. |
 | Pharmacist | Implemented | Future pharmacy work. |
 | Physiotherapist | Implemented | Future physiotherapy work. |
-| Radiographer | Implemented | Future radiology work. |
+| Radiographer | Implemented | Radiology request/report workflow. |
 | Theatre Staff | Implemented | Future theatre work. |
 | Accountant | Implemented | Future billing and payment work. |
 | Store Officer | Implemented | Future store/inventory work. |
@@ -103,7 +103,7 @@ The matrix describes current seeded behavior, not a final clinical permission mo
 | Consultation | Doctor-specific clinical permission | Planned |
 | Nursing | Nursing-specific clinical permission | Implemented |
 | Laboratory | Laboratory-specific permission | Planned |
-| Radiology | Radiology-specific permission | Planned |
+| Radiology | Radiology-specific permission | Implemented |
 | Pharmacy | Pharmacy-specific permission | Planned |
 | Billing | Billing-specific permission | Planned |
 | Reporting | Reporting permissions and data scopes | Planned |
@@ -167,6 +167,21 @@ Administrators retain the existing override. Chart authorization then requires
 the database permission and either Records/Reception scope or an active
 treatment relationship through the current encounter department or assigned
 doctor. Patient audit history remains more restrictive than general chart view.
+
+## Radiology Permissions
+
+| Permission | Status | Seeded roles |
+|---|---|---|
+| `view_radiology` | Implemented | Records Officer, Doctor, Nurse, Radiographer |
+| `create_radiology_request` | Implemented | Doctor, Radiographer |
+| `process_radiology_request` | Implemented | Radiographer |
+| `enter_radiology_report` | Implemented | Radiographer |
+| `edit_radiology_report` | Implemented | Radiographer |
+| `complete_radiology_request` | Implemented | Radiographer |
+
+Radiology permissions are encounter-scoped and respect active-encounter
+locking. Direct requests are limited to Radiographer or Administrator users,
+while clinical requests remain Doctor-initiated through the encounter context.
 
 ## MPI and Identifier Permissions
 

@@ -24,6 +24,15 @@ $latestVitalSigns = $vitalSignsService
 $latestLaboratoryRequests = $laboratoryService
     ? $laboratoryService->listByVisit((int)$visit['id'], $currentUser)
     : [];
+$latestLaboratoryResult = ($latestLaboratoryRequests !== [] && $laboratoryService)
+    ? $laboratoryService->getResult((int)$latestLaboratoryRequests[0]['id'], $currentUser)
+    : null;
+$latestRadiologyRequests = $radiologyService
+    ? $radiologyService->listByVisit((int)$visit['id'], $currentUser)
+    : [];
+$latestRadiologyReport = ($latestRadiologyRequests !== [] && $radiologyService)
+    ? $radiologyService->getResult((int)$latestRadiologyRequests[0]['id'], $currentUser)
+    : null;
 
 $pageTitle = 'Consultation';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -124,6 +133,38 @@ require __DIR__ . '/../../layouts/sidebar.php';
                     <div class="summary-item"><span class="summary-label">Result</span><span class="summary-value"><?= e((string)$latestLaboratoryResult['result']) ?></span></div>
                 </div>
             <?php endif; ?>
+        <?php endif; ?>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3>Radiology Requests</h3>
+                <p>Encounter radiology requests and reports.</p>
+            </div>
+            <?php if ($permissionService->canCreateRadiologyRequest($visit, $currentUser, 'Clinical')): ?>
+                <a class="btn-primary" href="../radiology/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request Radiology Study</a>
+            <?php endif; ?>
+        </div>
+        <?php if ($latestRadiologyRequests === []): ?>
+            <p class="text-muted">No radiology requests recorded.</p>
+        <?php else: ?>
+            <ul class="clean-list">
+                <?php foreach (array_slice($latestRadiologyRequests, 0, 5) as $request): ?>
+                    <li>
+                        <a href="../radiology/view.php?id=<?= (int)$request['id'] ?>">#<?= (int)$request['id'] ?></a>
+                        — <?= e((string)($request['study_requested'] ?? $request['tests_requested'] ?? '')) ?>
+                        (<?= e((string)$request['status']) ?>)
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+                <?php if ($latestRadiologyReport !== null && trim((string)($latestRadiologyReport['impression'] ?? '')) !== ''): ?>
+                    <div class="summary-grid">
+                        <div class="summary-item"><span class="summary-label">Findings</span><span class="summary-value"><?= e((string)($latestRadiologyReport['findings'] ?? '-')) ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Impression</span><span class="summary-value"><?= e((string)($latestRadiologyReport['impression'] ?? '-')) ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Recommendation</span><span class="summary-value"><?= e((string)($latestRadiologyReport['recommendation'] ?? '-')) ?></span></div>
+                    </div>
+                <?php endif; ?>
         <?php endif; ?>
     </div>
 

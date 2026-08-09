@@ -153,6 +153,9 @@ class EncounterEventService
             'LABORATORY_REQUESTED',
             'LABORATORY_REQUEST_STARTED',
             'LABORATORY_COMPLETED' => 'laboratory',
+            'RADIOLOGY_REQUESTED',
+            'RADIOLOGY_REQUEST_STARTED',
+            'RADIOLOGY_COMPLETED' => 'radiology',
             default => 'default'
         };
     }

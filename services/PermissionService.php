@@ -125,6 +125,18 @@ class PermissionService
             ),
             'process_laboratory_request', 'enter_laboratory_result',
             'edit_laboratory_result', 'complete_laboratory_request' => $role === 'Laboratory Scientist',
+            'view_radiology' => in_array(
+                $role,
+                ['Records Officer', 'Doctor', 'Nurse', 'Radiographer'],
+                true
+            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Radiology'], true),
+            'create_radiology_request' => in_array(
+                $role,
+                ['Doctor', 'Radiographer'],
+                true
+            ),
+            'process_radiology_request', 'enter_radiology_report',
+            'edit_radiology_report', 'complete_radiology_request' => $role === 'Radiographer',
             'view_consultation', 'create_consultation',
             'edit_consultation', 'complete_consultation' => $role === 'Doctor',
             default => false
@@ -1053,6 +1065,71 @@ class PermissionService
         );
     }
 
+    public function canViewRadiology(int $patientId, ?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        if (!$user || $patientId <= 0) {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        if (!$this->hasPermission('view_radiology', $user)) {
+            return false;
+        }
+
+        if ($this->roleMatches($user, ['Radiographer'])) {
+            return true;
+        }
+
+        if ($this->roleMatches($user, ['Records Officer', 'Doctor', 'Nurse'])) {
+            return $this->canViewMedicalRecord($patientId, $user);
+        }
+
+        return in_array((string)($user['department_name'] ?? ''), ['Records', 'Doctor', 'Nursing', 'Radiology'], true)
+            && $this->canViewMedicalRecord($patientId, $user);
+    }
+
+    public function canCreateRadiologyRequest(
+        array $encounter,
+        ?array $user = null,
+        string $requestSource = 'Clinical'
+    ): bool {
+        return $this->canMutateRadiology('create_radiology_request', $encounter, $user, $requestSource);
+    }
+
+    public function canProcessRadiologyRequest(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateRadiology('process_radiology_request', $encounter, $user);
+    }
+
+    public function canEnterRadiologyReport(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateRadiology('enter_radiology_report', $encounter, $user);
+    }
+
+    public function canEnterRadiologyResult(array $encounter, ?array $user = null): bool
+    {
+        return $this->canEnterRadiologyReport($encounter, $user);
+    }
+
+    public function canEditRadiologyReport(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateRadiology('edit_radiology_report', $encounter, $user);
+    }
+
+    public function canEditRadiologyResult(array $encounter, ?array $user = null): bool
+    {
+        return $this->canEditRadiologyReport($encounter, $user);
+    }
+
+    public function canCompleteRadiologyRequest(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateRadiology('complete_radiology_request', $encounter, $user);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Consultation Authorization
@@ -1571,6 +1648,45 @@ class PermissionService
             'edit_laboratory_result',
             'complete_laboratory_request' => $this->roleMatches($user, ['Laboratory Scientist'])
                 && $this->canViewLaboratory((int)($encounter['patient_id'] ?? 0), $user),
+            default => false
+        };
+    }
+
+    private function canMutateRadiology(
+        string $permission,
+        array $encounter,
+        ?array $user = null,
+        string $requestSource = 'Clinical'
+    ): bool {
+        $user = $user ?? $this->currentUser();
+        if (!$user) {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        if (in_array((string)($encounter['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)) {
+            return false;
+        }
+
+        if (!$this->hasPermission($permission, $user)) {
+            return false;
+        }
+
+        $source = strtoupper(trim($requestSource));
+
+        return match ($permission) {
+            'create_radiology_request' => $source === 'DIRECT'
+                ? $this->roleMatches($user, ['Radiographer'])
+                : $this->roleMatches($user, ['Doctor'])
+                    && $this->canViewEncounter($encounter, $user),
+            'process_radiology_request',
+            'enter_radiology_report',
+            'edit_radiology_report',
+            'complete_radiology_request' => $this->roleMatches($user, ['Radiographer'])
+                && $this->canViewRadiology((int)($encounter['patient_id'] ?? 0), $user),
             default => false
         };
     }

@@ -748,23 +748,14 @@ Use one primary nursing assessment table. Narrative nursing sections remain
 `TEXT`; do not normalize every nursing question into its own table.
 
 Phase 3.3 Nursing CRUD is implemented and live-verified. Phase 3.4
-Laboratory CRUD is implemented and live-verified. The next module target
-after the current Consultation/Nursing/Laboratory slice is Radiology CRUD.
+Laboratory CRUD is implemented and live-verified. Phase 3.5 Radiology CRUD
+is implemented and live-verified. The next module target after the current
+Consultation/Nursing/Laboratory/Radiology slice is Pharmacy CRUD.
 
 ## Phase 4 - Radiology
 
-Laboratory is implemented and uses `laboratory_requests` and
-`laboratory_results`.
-
-Basic workflow:
-
-```text
-Order -> Process -> Result -> Verify
-```
-
-Do not build advanced specimen logistics initially.
-
-Radiology starts with `radiology_orders` and `radiology_reports`.
+Radiology is implemented with `radiology_requests` and
+`radiology_reports`.
 
 Basic workflow:
 
@@ -772,8 +763,8 @@ Basic workflow:
 Request -> Worklist -> Report -> Complete
 ```
 
-Use text fields for clinical indication, findings, impression, and
-recommendation. Do not build PACS or DICOM integration now.
+Use text fields for study requested, clinical indication, findings,
+impression, and recommendation. Do not build PACS or DICOM integration now.
 
 ## Phase 5 - Pharmacy and Inventory
 

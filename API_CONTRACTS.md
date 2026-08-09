@@ -59,7 +59,7 @@ Current extended results may additionally retain `user_id`, `role_id`, `permissi
 | `DashboardService` | Aggregated administrator dashboard data from existing operational tables. | Read-only except explicit dashboard-view audit method. Administrator controller authorization expected. |
 | `SettingsService` | Typed definitions, validation, history, export and request-local cache. | Owns settings write transactions; history/audit atomic; authorization remains controller-owned. |
 
-`BillingService.php`, `ConsultationService.php`, `LaboratoryService.php`, and `PharmacyService.php` are service contracts with differing implementation maturity. `LaboratoryService.php` is implemented for request/result CRUD and worklist operations; the others remain planned or partial depending on module status. There is no implemented `TimelineService`; timeline reads are exposed by `VisitService`, `EncounterEventService`, and `AuditService`.
+`BillingService.php`, `ConsultationService.php`, `LaboratoryService.php`, `RadiologyService.php`, and `PharmacyService.php` are service contracts with differing implementation maturity. `LaboratoryService.php` and `RadiologyService.php` are implemented for request/report CRUD and worklist operations; the others remain planned or partial depending on module status. There is no implemented `TimelineService`; timeline reads are exposed by `VisitService`, `EncounterEventService`, and `AuditService`.
 
 ## Public Method Contracts
 
@@ -312,7 +312,7 @@ Constructor: `__construct(PDO $db)`. Writes/reads `audit_logs`; timeline query a
 | `loginSuccess(int $userId): void` / `loginFailed(string $login, ?int $userId = null): void` / `logout(int $userId): void` | Authentication convenience audits. | Compatibility wrappers; authentication controller/session invoke as applicable. |
 | `patientRegistered(int $userId, string $hospitalNumber): void` | Patient registration convenience audit. | Compatibility-only. Patient mutation controllers must not call it because `PatientService` owns the authoritative audit. |
 | `encounterCreated(int $userId, int $visitId): void` | Encounter convenience audit. | Compatibility-only; workflow service is authoritative. |
-| `consultationCompleted(...)`, `laboratoryRequested(...)`, `laboratoryResultUploaded(...)`, `radiologyCompleted(...)`, `medicationDispensed(...)`, `paymentReceived(...)` | Reserved clinical convenience audit wrappers. | Implemented methods but consuming clinical modules are **Planned**. They do not create encounter events. |
+| `consultationCompleted(...)`, `laboratoryRequested(...)`, `laboratoryResultUploaded(...)`, `radiologyCompleted(...)`, `medicationDispensed(...)`, `paymentReceived(...)` | Reserved clinical convenience audit wrappers. | Implemented methods; consuming modules may use direct service auditing or convenience wrappers as appropriate. They do not create encounter events. |
 | `updated(int $userId, ?int $visitId, string $module, string $description): void` / `deleted(...)` | Generic compatibility convenience logs. | Avoid when domain service already audits. |
 | `recent(int $limit = 50): array` | Recent audit rows. | Read; limit should remain bounded. |
 | `getEncounterTimeline(int $visitId): array` | Encounter-related audit/timeline view. | Read; distinct from authoritative encounter event insertion. |

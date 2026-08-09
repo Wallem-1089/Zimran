@@ -842,6 +842,7 @@ ordered visit ledger.
 | Table | Ownership | Lifecycle | Keys and query indexes |
 |---|---|---|---|
 | `nursing_assessments` | Encounter workflow / `NursingService` | Mutable draft current record; one primary assessment per visit | PK `id`; unique `visit_id`; patient/nurse/department/status/created_at indexes; narrative nursing sections remain `TEXT` fields rather than normalized sub-tables |
+| `radiology_requests` / `radiology_reports` | Encounter workflow / `RadiologyService` | Mutable request with immutable text report; multiple requests per visit allowed | PK `id`; visit/patient/requester/department/status/source indexes; report unique on request; study requested, clinical indication, findings, impression, and recommendation remain `TEXT` fields |
 
 | FK | Source -> target | Update/delete |
 |---|---|---|
@@ -852,6 +853,15 @@ ordered visit ledger.
 | `fk_nursing_assessments_created_by` | `nursing_assessments.created_by -> users.id` | CASCADE / RESTRICT |
 | `fk_nursing_assessments_updated_by` | `nursing_assessments.updated_by -> users.id` | CASCADE / SET NULL |
 | `fk_nursing_assessments_completed_by` | `nursing_assessments.completed_by -> users.id` | CASCADE / SET NULL |
+| `fk_radiology_requests_visit` | `radiology_requests.visit_id -> visits.id` | CASCADE / RESTRICT |
+| `fk_radiology_requests_patient` | `radiology_requests.patient_id -> patients.id` | CASCADE / RESTRICT |
+| `fk_radiology_requests_requested_by` | `radiology_requests.requested_by -> users.id` | CASCADE / RESTRICT |
+| `fk_radiology_requests_department` | `radiology_requests.department_id -> departments.id` | CASCADE / SET NULL |
+| `fk_radiology_reports_request` | `radiology_reports.radiology_request_id -> radiology_requests.id` | CASCADE / RESTRICT |
+| `fk_radiology_reports_visit` | `radiology_reports.visit_id -> visits.id` | CASCADE / RESTRICT |
+| `fk_radiology_reports_patient` | `radiology_reports.patient_id -> patients.id` | CASCADE / RESTRICT |
+| `fk_radiology_reports_performed_by` | `radiology_reports.performed_by -> users.id` | CASCADE / RESTRICT |
+| `fk_radiology_reports_completed_by` | `radiology_reports.completed_by -> users.id` | CASCADE / SET NULL |
 
 ```mermaid
 erDiagram

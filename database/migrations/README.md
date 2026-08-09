@@ -193,3 +193,19 @@ results and no catalogue, specimen, analyser, or PACS integration.
 The down migration removes the Laboratory tables and permission seeds. It is
 destructive and restricted to an empty dedicated test database or an
 explicitly approved recovery operation after the backup gate.
+
+## Migration 027 — Phase 3.5 Radiology
+
+`027_phase3_radiology_up.sql` creates `radiology_requests` and
+`radiology_reports`, then seeds six Radiology permissions
+(`view_radiology`, `create_radiology_request`, `process_radiology_request`,
+`enter_radiology_report`, `edit_radiology_report`,
+`complete_radiology_request`). Doctor receives clinical request access,
+Nurse receives view-only access, Records Officer receives view-only access,
+and Radiographer receives the full workflow permissions. The module keeps
+studies and reports as simple encounter-linked CRUD records with text-based
+study, indication, findings, impression, and recommendation fields.
+
+The down migration removes the Radiology tables and permission seeds. It is
+destructive and restricted to an empty dedicated test database or an
+explicitly approved recovery operation after the backup gate.

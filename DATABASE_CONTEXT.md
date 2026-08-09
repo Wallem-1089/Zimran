@@ -598,11 +598,15 @@ One result record with sample details, findings, result text, and interpretation
 
 ## radiology_requests
 
----
+One radiology request
+
+↓
+
+One text-based report workflow record linked to the same visit and patient
 
 ## radiology_reports
 
----
+One report record with findings, impression, recommendation, reporter, and completion timestamps
 
 ## nursing_assessments
 
