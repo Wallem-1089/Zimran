@@ -150,6 +150,9 @@ class EncounterEventService
             'DOCTOR_ASSIGNED' => 'consultation',
             'NURSING_ASSESSMENT_STARTED',
             'NURSING_ASSESSMENT_COMPLETED' => 'nursing',
+            'LABORATORY_REQUESTED',
+            'LABORATORY_REQUEST_STARTED',
+            'LABORATORY_COMPLETED' => 'laboratory',
             default => 'default'
         };
     }

@@ -158,3 +158,17 @@ migration preserves the ledgered release boundary for existing installations.
 The down migration removes the retained Vital Signs table and permission
 seeds. It is destructive and restricted to an empty dedicated test database or
 an explicitly approved recovery operation after the backup gate.
+
+## Migration 024 â€” Phase 3.3 Nursing Assessment
+
+`024_phase3_nursing_up.sql` creates one primary `nursing_assessments` table
+per visit and seeds the four Nursing permissions (`view_nursing`,
+`create_nursing`, `edit_nursing`, `complete_nursing`). Nurse receives full
+CRUD; Doctor receives view-only access; Administrator keeps the development
+override supplied by the service layer. The baseline files already represent
+the table DDL, while the numbered migration preserves the ledgered release
+boundary for existing installations.
+
+The down migration removes the retained nursing assessment table and
+permission seeds. It is destructive and restricted to an empty dedicated test
+database or an explicitly approved recovery operation after the backup gate.

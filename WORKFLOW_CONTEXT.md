@@ -1005,6 +1005,10 @@ Vital signs use a simple `vital_signs` table because measurements need
 trending and calculation. Nursing assessment starts as one primary assessment
 table with narrative sections kept as text.
 
+Phase 3.3 Nursing CRUD is implemented using the same encounter-centered
+pattern. Nursing assessments remain read-only once completed, and the next
+practical module after this consultation/nursing slice is Laboratory CRUD.
+
 ### Phase 4 - Laboratory and Radiology
 
 Laboratory starts with `laboratory_orders` and `laboratory_results` using:

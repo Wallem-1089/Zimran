@@ -1149,3 +1149,14 @@ workspace, patient-chart and consultation consumers all read the latest record
 as a summary. The down migration is destructive to retained encounter history
 and is restricted to approved empty test databases or a verified recovery
 action.
+
+## Phase 3.3 Nursing Assessment
+
+Migration 024 adds the encounter-linked `nursing_assessments` table for a
+simple primary nursing assessment per visit. It stores the patient, visit,
+nurse, department, narrative assessment fields, Draft/Completed status, actor
+fields, timestamps, and a completed-at marker. The table uses restrictive
+patient/visit foreign keys, a unique visit constraint, and indexes that support
+patient, nurse, department, status, and chronology queries. The down migration
+removes retained nursing assessment data and is therefore restricted to empty
+test databases or an explicitly approved archival recovery procedure.

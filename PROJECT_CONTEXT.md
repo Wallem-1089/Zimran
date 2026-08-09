@@ -665,7 +665,7 @@ Completed
 
 Current Phase
 
-➡ Consultation Module
+➡ Laboratory Module
 
 ---
 
@@ -746,6 +746,9 @@ Structured values are justified because they need trending and calculation:
 
 Use one primary nursing assessment table. Narrative nursing sections remain
 `TEXT`; do not normalize every nursing question into its own table.
+
+Phase 3.3 Nursing CRUD is implemented and live-verified. The next module
+target after the current Consultation/Nursing slice is Laboratory CRUD.
 
 ## Phase 4 - Laboratory and Radiology
 
@@ -1042,7 +1045,7 @@ Remaining non-blocking items are categorized as **LATER**, not blockers:
 - FHIR, HL7, PACS, patient portal, SMS, and email integrations
 - advanced reporting infrastructure
 
-The next implementation target after Phase 3.2 is Nursing CRUD.
+The next implementation target after Phase 3.3 is Laboratory CRUD.
 
 ## Phase 3 Milestone 3.1 — Consultation and Department Notifications
 

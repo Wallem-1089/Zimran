@@ -101,7 +101,7 @@ The matrix describes current seeded behavior, not a final clinical permission mo
 | Doctor assignment | `assign_doctor` plus Doctor department, receipt, and active state | Implemented |
 | Queue operations | Queue service permission and lifecycle checks | Partially implemented |
 | Consultation | Doctor-specific clinical permission | Planned |
-| Nursing | Nursing-specific clinical permission | Planned |
+| Nursing | Nursing-specific clinical permission | Implemented |
 | Laboratory | Laboratory-specific permission | Planned |
 | Radiology | Radiology-specific permission | Planned |
 | Pharmacy | Pharmacy-specific permission | Planned |

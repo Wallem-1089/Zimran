@@ -1,6 +1,6 @@
 # API Contracts
 
-> Current implementation coverage: **Phase 3.2**. Clinical Note contracts are
+> Current implementation coverage: **Phase 3.3**. Clinical Note contracts are
 > included below; the older generated overview text is retained for history.
 
 > Official reference for public PHP service contracts through Phase 3.2. “API” primarily means callable service methods and stable route-to-service behavior. Authorization keys are catalogued in [PERMISSION_MATRIX.md](PERMISSION_MATRIX.md); database details are in [DATABASE_RELATIONSHIPS.md](DATABASE_RELATIONSHIPS.md).
@@ -929,3 +929,32 @@ Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?Permiss
 Patient Chart, Encounter Workspace and Consultation pages call the read
 contracts directly to show the latest vitals as read-only context. No existing
 PatientService, VisitService or ConsultationService signatures changed.
+
+### NursingService â€” implemented in Phase 3.3
+
+Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?EncounterEventService $eventService = null, ?PermissionService $permissionService = null)`. Uses `nursing_assessments`, `visits`, `patients`, `departments`, `users`, audit and encounter-event logging, and the shared permission model.
+
+| Signature | Purpose/return | Contract |
+|---|---|---|
+| `create(array $data, array $user): array` | Inserts a new draft nursing assessment for an active encounter. Returns `success`, `nursing_assessment_id`, `visit_id`, `patient_id`, `errors`. | Validates patient/visit consistency, encounter status, permission, and text lengths. Writes `NURSING_ASSESSMENT_CREATED` audit and `NURSING_ASSESSMENT_STARTED` encounter event in the same transaction. |
+| `getById(int $assessmentId, ?array $user = null): ?array` | Read one nursing assessment. | Returns `null` when a user is supplied and they lack view permission. |
+| `getByVisit(int $visitId, ?array $user = null): ?array` | Read the encounter's assessment. | Convenience read used by Workspace and Patient Chart. |
+| `update(int $assessmentId, array $data, array $user): array` | Updates a draft nursing assessment. Returns the same structured write envelope. | Revalidates encounter status and permissions, and writes `NURSING_ASSESSMENT_UPDATED` in the same transaction. |
+| `complete(int $assessmentId, array $user): array` | Marks a draft assessment completed. | Requires meaningful content, writes `NURSING_ASSESSMENT_COMPLETED`, and records the completion encounter event. |
+| `listByPatient(int $patientId, ?array $user = null): array` | Patient history across visits. | Read-only summary source for the Patient Chart and history page. |
+| `listByVisit(int $visitId, ?array $user = null): array` | Visit history list. | Ordered by chronology. |
+| `getLatestByVisit(int $visitId, ?array $user = null): ?array` | Convenience alias for the current encounter assessment. | Used by Workspace tabs and the Patient Chart. |
+
+### Nursing route map
+
+| Route | HTTP | Purpose |
+|---|---|---|
+| `modules/nursing/index.php` | GET | Module landing / visit or patient redirect. |
+| `modules/nursing/assessment.php` | GET | Workspace entry point; opens the current assessment or a new draft form. |
+| `modules/nursing/create.php` | GET | Render nursing form for a visit. |
+| `modules/nursing/save.php` | POST | Persist a new assessment. |
+| `modules/nursing/view.php` | GET | Read a single assessment. |
+| `modules/nursing/edit.php` | GET | Render edit form for a draft. |
+| `modules/nursing/update.php` | POST | Persist edits. |
+| `modules/nursing/complete.php` | POST | Complete a draft assessment. |
+| `modules/nursing/history.php` | GET | Visit or patient history list. |

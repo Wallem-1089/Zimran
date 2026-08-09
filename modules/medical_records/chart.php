@@ -18,6 +18,7 @@ require_once __DIR__ . '/../../services/MedicalDocumentService.php';
 require_once __DIR__ . '/../../services/ClinicalNoteService.php';
 require_once __DIR__ . '/../../services/VisitService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
+require_once __DIR__ . '/../../services/NursingService.php';
 
 function chartTableExists(PDO $pdo, string $table): bool
 {
@@ -90,6 +91,7 @@ $allowedTabs = [
     'medical_history',
     'documents',
     'notes',
+    'nursing',
     'encounters',
     'history',
     'audit'
@@ -148,6 +150,11 @@ $canViewVitalSigns = $vitalSignsTablesReady && $permissionService->canViewVitalS
 $vitalSignsService = $vitalSignsTablesReady ? new VitalSignsService($pdo, null, $permissionService) : null;
 $vitalSignsHistory = [];
 $latestVitalSigns = null;
+$nursingTablesReady = chartTableExists($pdo, 'nursing_assessments');
+$canViewNursing = $nursingTablesReady && $permissionService->canViewNursing($patientId, $currentUser);
+$nursingService = $nursingTablesReady ? new NursingService($pdo, null, null, $permissionService) : null;
+$nursingHistory = [];
+$latestNursingAssessment = null;
 
 if ($activeTab === 'problems' && !$canViewProblemList) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'PROBLEM_LIST_ACCESS_DENIED', 'Problem List access denied.');
@@ -173,6 +180,11 @@ if ($activeTab === 'vitals' && !$canViewVitalSigns) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'VITAL_SIGNS_ACCESS_DENIED', 'Vital Signs access denied.');
     http_response_code(403);
     exit('You do not have permission to view Vital Signs.');
+}
+if ($activeTab === 'nursing' && !$canViewNursing) {
+    $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'NURSING_ACCESS_DENIED', 'Nursing access denied.');
+    http_response_code(403);
+    exit('You do not have permission to view Nursing assessments.');
 }
 $problemListService = new ProblemListService($pdo);
 if ($canViewProblemList) {
@@ -209,6 +221,11 @@ if ($canViewClinicalNotes) {
 if ($canViewVitalSigns) {
     $vitalSignsHistory = $vitalSignsService->listByPatient($patientId, $currentUser);
     $latestVitalSigns = $vitalSignsHistory[0] ?? null;
+}
+
+if ($canViewNursing) {
+    $nursingHistory = $nursingService->listByPatient($patientId, $currentUser);
+    $latestNursingAssessment = $nursingHistory[0] ?? null;
 }
 
 if ($activeTab === 'identifiers' && !$canViewIdentifiers) {
@@ -336,6 +353,10 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         case 'vitals':
             require __DIR__ . '/partials/vital_signs.php';
+            break;
+
+        case 'nursing':
+            require __DIR__ . '/partials/nursing.php';
             break;
 
         case 'problems':

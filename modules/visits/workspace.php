@@ -36,6 +36,7 @@ require_once __DIR__ . '/../../services/ClinicalNoteService.php';
 require_once __DIR__ . '/../../services/ConsultationService.php';
 require_once __DIR__ . '/../../services/DepartmentNotificationService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
+require_once __DIR__ . '/../../services/NursingService.php';
 
 function workspaceTableExists(PDO $pdo, string $table): bool
 {
@@ -255,6 +256,7 @@ $workspaceMedicalHistorySummary = $canViewMedicalHistory
 $consultationTablesReady = workspaceTableExists($pdo, 'consultations');
 $notificationTablesReady = workspaceTableExists($pdo, 'department_notifications');
 $vitalSignsTablesReady = workspaceTableExists($pdo, 'vital_signs');
+$nursingTablesReady = workspaceTableExists($pdo, 'nursing_assessments');
 $consultationService = $consultationTablesReady ? new ConsultationService($pdo) : null;
 $consultation = $consultationService ? $consultationService->getByVisit($visitId) : null;
 $canViewConsultation = $permissionService->canViewConsultation($visit, $currentUser);
@@ -267,11 +269,16 @@ $latestVitalSigns = $vitalSignsHistory[0] ?? null;
 $canViewVitalSigns = $permissionService->canViewVitalSigns((int)$visit['patient_id'], $currentUser);
 $canCreateVitalSigns = $permissionService->canCreateVitalSigns($visit, $currentUser);
 $canEditVitalSigns = $permissionService->canEditVitalSigns($visit, $currentUser);
+$nursingService = $nursingTablesReady ? new NursingService($pdo, null, null, $permissionService) : null;
+$nursingHistory = $nursingService ? $nursingService->listByVisit($visitId, $currentUser) : [];
+$nursing = $nursingHistory[0] ?? null;
+$canViewNursing = $permissionService->canViewNursing((int)$visit['patient_id'], $currentUser);
+$canCreateNursing = $permissionService->canCreateNursing($visit, $currentUser);
+$canEditNursing = $permissionService->canEditNursing($visit, $currentUser);
+$canCompleteNursing = $permissionService->canCompleteNursing($visit, $currentUser);
 $departments = $visitService->getDepartments();
 $departmentNotificationService = $notificationTablesReady ? new DepartmentNotificationService($pdo) : null;
 $visitNotifications = $departmentNotificationService ? $departmentNotificationService->listForVisit($visitId) : [];
-
-$nursing = null;
 
 $laboratory = [];
 

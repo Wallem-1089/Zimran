@@ -168,11 +168,30 @@ if (!isset($patient, $visit)) {
 
         </h2>
 
-        <div class="empty-state">
-
-            No nursing assessment available.
-
-        </div>
+        <?php if (!empty($nursing)) : ?>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <span class="summary-label">Status</span>
+                    <span class="summary-value"><?= e((string)($nursing['status'] ?? 'Draft')) ?></span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Nurse</span>
+                    <span class="summary-value"><?= e((string)($nursing['nurse_name'] ?? 'Unknown')) ?></span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Recorded At</span>
+                    <span class="summary-value"><?= e((string)($nursing['created_at'] ?? '-')) ?></span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Summary</span>
+                    <span class="summary-value"><?= e((string)($nursing['summary'] ?? '')) ?></span>
+                </div>
+            </div>
+        <?php else : ?>
+            <div class="empty-state">
+                No nursing assessment available.
+            </div>
+        <?php endif; ?>
 
     </div>
 

@@ -9,6 +9,7 @@ $chartTabs = [
     'safety' => 'Clinical Safety',
     'problems' => 'Problem List',
     'medical_history' => 'Medical History',
+    'nursing' => 'Nursing',
     'documents' => 'Medical Documents',
     'notes' => 'Clinical Notes',
     'encounters' => 'Encounter History',

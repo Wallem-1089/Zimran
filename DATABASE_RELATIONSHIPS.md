@@ -1,9 +1,9 @@
 # Database Relationships
 
-> Current implementation coverage: migrations **002 through 023** and the live
+> Current implementation coverage: migrations **002 through 024** and the live
 > schema through **Phase 3.2**.
 
-> Official relational reference generated from `database/hospital.sql`, migrations `002` through `023`, service SQL, and the live schema through Phase 3.2. Broader policies are described in [DATABASE_CONTEXT.md](DATABASE_CONTEXT.md) and [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md).
+> Official relational reference generated from `database/hospital.sql`, migrations `002` through `024`, service SQL, and the live schema through Phase 3.3. Broader policies are described in [DATABASE_CONTEXT.md](DATABASE_CONTEXT.md) and [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md).
 
 ## Database Overview
 
@@ -836,3 +836,32 @@ Migration 023 is baseline-represented for fresh installs and ledger-applied for
 existing installations. The workspace, patient-chart and consultation
 read-models use the latest record as a summary while the history page shows the
 ordered visit ledger.
+
+## Phase 3.3 relational additions
+
+| Table | Ownership | Lifecycle | Keys and query indexes |
+|---|---|---|---|
+| `nursing_assessments` | Encounter workflow / `NursingService` | Mutable draft current record; one primary assessment per visit | PK `id`; unique `visit_id`; patient/nurse/department/status/created_at indexes; narrative nursing sections remain `TEXT` fields rather than normalized sub-tables |
+
+| FK | Source -> target | Update/delete |
+|---|---|---|
+| `fk_nursing_assessments_visit` | `nursing_assessments.visit_id -> visits.id` | CASCADE / RESTRICT |
+| `fk_nursing_assessments_patient` | `nursing_assessments.patient_id -> patients.id` | CASCADE / RESTRICT |
+| `fk_nursing_assessments_nurse` | `nursing_assessments.nurse_id -> users.id` | CASCADE / SET NULL |
+| `fk_nursing_assessments_department` | `nursing_assessments.department_id -> departments.id` | CASCADE / SET NULL |
+| `fk_nursing_assessments_created_by` | `nursing_assessments.created_by -> users.id` | CASCADE / RESTRICT |
+| `fk_nursing_assessments_updated_by` | `nursing_assessments.updated_by -> users.id` | CASCADE / SET NULL |
+| `fk_nursing_assessments_completed_by` | `nursing_assessments.completed_by -> users.id` | CASCADE / SET NULL |
+
+```mermaid
+erDiagram
+    PATIENTS ||--o{ NURSING_ASSESSMENTS : has
+    VISITS ||--o{ NURSING_ASSESSMENTS : contextualizes
+    DEPARTMENTS o|--o{ NURSING_ASSESSMENTS : attributes
+    USERS ||--o{ NURSING_ASSESSMENTS : records
+```
+
+Migration 024 is baseline-represented for fresh installs and ledger-applied for
+existing installations. The workspace, Patient Chart and nursing history views
+use the latest record as a summary while preserving a single assessment per
+visit.

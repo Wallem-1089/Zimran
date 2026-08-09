@@ -113,6 +113,18 @@ class PermissionService
                 true
             ) || in_array($department, ['Records', 'Nursing'], true),
             'create_nursing', 'edit_nursing', 'complete_nursing' => $role === 'Nurse',
+            'view_laboratory' => in_array(
+                $role,
+                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist'],
+                true
+            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory'], true),
+            'create_laboratory_request' => in_array(
+                $role,
+                ['Doctor', 'Laboratory Scientist'],
+                true
+            ),
+            'process_laboratory_request', 'enter_laboratory_result',
+            'edit_laboratory_result', 'complete_laboratory_request' => $role === 'Laboratory Scientist',
             'view_consultation', 'create_consultation',
             'edit_consultation', 'complete_consultation' => $role === 'Doctor',
             default => false
@@ -953,6 +965,79 @@ class PermissionService
 
     /*
     |--------------------------------------------------------------------------
+    | Laboratory Authorization
+    |--------------------------------------------------------------------------
+    */
+
+    public function canViewLaboratory(int $patientId, ?array $user = null): bool
+    {
+        return $this->canPerformLongitudinalAction(
+            'view_laboratory',
+            $patientId,
+            ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist'],
+            $user
+        );
+    }
+
+    public function canCreateLaboratoryRequest(
+        array $encounter,
+        ?array $user = null,
+        string $requestSource = 'Clinical'
+    ): bool {
+        return $this->canMutateLaboratory(
+            'create_laboratory_request',
+            $encounter,
+            $user,
+            $requestSource
+        );
+    }
+
+    public function canProcessLaboratoryRequest(
+        array $encounter,
+        ?array $user = null
+    ): bool {
+        return $this->canMutateLaboratory(
+            'process_laboratory_request',
+            $encounter,
+            $user
+        );
+    }
+
+    public function canEnterLaboratoryResult(
+        array $encounter,
+        ?array $user = null
+    ): bool {
+        return $this->canMutateLaboratory(
+            'enter_laboratory_result',
+            $encounter,
+            $user
+        );
+    }
+
+    public function canEditLaboratoryResult(
+        array $encounter,
+        ?array $user = null
+    ): bool {
+        return $this->canMutateLaboratory(
+            'edit_laboratory_result',
+            $encounter,
+            $user
+        );
+    }
+
+    public function canCompleteLaboratoryRequest(
+        array $encounter,
+        ?array $user = null
+    ): bool {
+        return $this->canMutateLaboratory(
+            'complete_laboratory_request',
+            $encounter,
+            $user
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Consultation Authorization
     |--------------------------------------------------------------------------
     */
@@ -1421,7 +1506,27 @@ class PermissionService
             return false;
         }
 
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
         if (in_array((string)($encounter['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)) {
+            return false;
+        }
+
+        return $this->hasPermission($permission, $user)
+            && $this->roleMatches($user, ['Nurse'])
+            && $this->canViewEncounter($encounter, $user);
+    }
+
+    private function canMutateLaboratory(
+        string $permission,
+        array $encounter,
+        ?array $user = null,
+        string $requestSource = 'Clinical'
+    ): bool {
+        $user = $user ?? $this->currentUser();
+        if (!$user) {
             return false;
         }
 
@@ -1429,9 +1534,26 @@ class PermissionService
             return true;
         }
 
-        return $this->hasPermission($permission, $user)
-            && $this->roleMatches($user, ['Nurse'])
-            && $this->canViewEncounter($encounter, $user);
+        if (in_array((string)($encounter['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)) {
+            return false;
+        }
+
+        if (!$this->hasPermission($permission, $user) || !$this->canViewEncounter($encounter, $user)) {
+            return false;
+        }
+
+        $source = strtoupper(trim($requestSource));
+
+        return match ($permission) {
+            'create_laboratory_request' => $source === 'DIRECT'
+                ? $this->roleMatches($user, ['Laboratory Scientist'])
+                : $this->roleMatches($user, ['Doctor']),
+            'process_laboratory_request',
+            'enter_laboratory_result',
+            'edit_laboratory_result',
+            'complete_laboratory_request' => $this->roleMatches($user, ['Laboratory Scientist']),
+            default => false
+        };
     }
 
     private function canMutateVitalSigns(

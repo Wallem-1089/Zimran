@@ -2808,6 +2808,86 @@ private function appendTransferEvents(
 
 }
 
+private function appendLaboratoryEvents(
+    array &$timeline,
+    int $visitId
+): void {
+    if (!$this->tableExists('laboratory_requests')) {
+        return;
+    }
+
+    try {
+        $stmt = $this->pdo->prepare('
+            SELECT lr.id,
+                   lr.tests_requested,
+                   lr.request_source,
+                   lr.priority,
+                   lr.status,
+                   lr.created_at,
+                   lr.updated_at,
+                   lr.completed_at,
+                   CONCAT(u.first_name, " ", u.last_name) AS requested_by_name
+            FROM laboratory_requests lr
+            LEFT JOIN users u ON u.id = lr.requested_by
+            WHERE lr.visit_id = :visit_id
+            ORDER BY lr.created_at ASC, lr.id ASC
+        ');
+        $stmt->execute([':visit_id' => $visitId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable) {
+        return;
+    }
+
+    foreach ($rows as $row) {
+        $timeline[] = [
+            'type' => 'laboratory',
+            'title' => 'Laboratory Request Created',
+            'description' => sprintf(
+                '%s requested laboratory tests: %s (%s, %s).',
+                $row['requested_by_name'] ?? 'Unknown User',
+                $row['tests_requested'] ?? 'Unknown tests',
+                $row['request_source'] ?? 'Clinical',
+                $row['priority'] ?? 'Routine'
+            ),
+            'department' => 'Laboratory',
+            'performed_by' => $row['requested_by_name'] ?? null,
+            'transfer_type' => null,
+            'remarks' => null,
+            'created_at' => $row['created_at']
+        ];
+
+        if ((string)($row['status'] ?? '') === 'Completed' && !empty($row['completed_at'])) {
+            $timeline[] = [
+                'type' => 'laboratory',
+                'title' => 'Laboratory Request Completed',
+                'description' => 'Laboratory request completed.',
+                'department' => 'Laboratory',
+                'performed_by' => $row['requested_by_name'] ?? null,
+                'transfer_type' => null,
+                'remarks' => null,
+                'created_at' => $row['completed_at']
+            ];
+        }
+    }
+
+}
+
+private function tableExists(string $table): bool
+{
+    try {
+        $stmt = $this->pdo->prepare('
+            SELECT COUNT(*)
+            FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name = :table
+        ');
+        $stmt->execute([':table' => $table]);
+        return (int)$stmt->fetchColumn() > 0;
+    } catch (Throwable) {
+        return false;
+    }
+}
+
 public function receiveVisit(
     int $visitId,
     int $receivedBy,

@@ -1557,3 +1557,47 @@ CREATE TABLE vital_signs (
     CONSTRAINT fk_vital_signs_department FOREIGN KEY (department_id) REFERENCES departments(id) ON UPDATE CASCADE ON DELETE SET NULL,
     CONSTRAINT fk_vital_signs_recorded_by FOREIGN KEY (recorded_by) REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================================
+-- PHASE 3.3 BASELINE: NURSING
+-- Tables are baseline-represented; Migration 024 remains ledger-applied for existing installs.
+-- =========================================================
+
+CREATE TABLE nursing_assessments (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    visit_id INT NOT NULL,
+    patient_id INT NOT NULL,
+    nurse_id INT NULL,
+    department_id INT NULL,
+    general_condition TEXT NULL,
+    nursing_observation TEXT NULL,
+    pain_assessment TEXT NULL,
+    mobility TEXT NULL,
+    nutrition TEXT NULL,
+    elimination TEXT NULL,
+    skin_assessment TEXT NULL,
+    fall_risk TEXT NULL,
+    nursing_interventions TEXT NULL,
+    patient_response TEXT NULL,
+    handover_notes TEXT NULL,
+    additional_notes TEXT NULL,
+    status ENUM('Draft','Completed') NOT NULL DEFAULT 'Draft',
+    created_by INT NOT NULL,
+    updated_by INT NULL,
+    completed_by INT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    completed_at DATETIME NULL,
+    UNIQUE KEY uq_nursing_assessments_visit (visit_id),
+    INDEX idx_nursing_assessments_patient_created (patient_id, created_at),
+    INDEX idx_nursing_assessments_nurse_created (nurse_id, created_at),
+    INDEX idx_nursing_assessments_department_created (department_id, created_at),
+    INDEX idx_nursing_assessments_status_created (status, created_at),
+    CONSTRAINT fk_nursing_assessments_visit FOREIGN KEY (visit_id) REFERENCES visits(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_nursing_assessments_patient FOREIGN KEY (patient_id) REFERENCES patients(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_nursing_assessments_nurse FOREIGN KEY (nurse_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    CONSTRAINT fk_nursing_assessments_department FOREIGN KEY (department_id) REFERENCES departments(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    CONSTRAINT fk_nursing_assessments_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_nursing_assessments_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    CONSTRAINT fk_nursing_assessments_completed_by FOREIGN KEY (completed_by) REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

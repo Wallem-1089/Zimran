@@ -62,7 +62,9 @@ class NursingService
                     :additional_notes, \'Draft\', :created_by
                 )
             ');
-            $stmt->execute($this->parameters($visit, $user, $payload, null, (int)$user['id']));
+            $stmt->execute($this->parameters($visit, $user, $payload, null) + [
+                ':created_by' => (int)$user['id']
+            ]);
             $assessmentId = (int)$this->pdo->lastInsertId();
 
             if (!$this->audit('NURSING_ASSESSMENT_CREATED', $visit, $user, 'Created nursing assessment #' . $assessmentId . '.')) {
@@ -89,7 +91,7 @@ class NursingService
                 'patient_id' => (int)$visit['patient_id'],
                 'errors' => []
             ];
-        } catch (Throwable) {
+        } catch (Throwable $throwable) {
             $this->rollback();
             return $this->failure(['Unable to save nursing assessment.']);
         }
@@ -176,7 +178,7 @@ class NursingService
                     updated_by = :updated_by
                 WHERE id = :id
             ');
-            $stmt->execute($this->parameters($visit, $user, $payload, $assessment, (int)$user['id']) + [
+            $stmt->execute($this->updateParameters($visit, $user, $payload, $assessment) + [
                 ':updated_by' => (int)$user['id'],
                 ':id' => $assessmentId
             ]);
@@ -194,7 +196,7 @@ class NursingService
                 'patient_id' => (int)$visit['patient_id'],
                 'errors' => []
             ];
-        } catch (Throwable) {
+        } catch (Throwable $throwable) {
             $this->rollback();
             return $this->failure(['Unable to update nursing assessment.']);
         }
@@ -266,7 +268,7 @@ class NursingService
                 'patient_id' => (int)$visit['patient_id'],
                 'errors' => []
             ];
-        } catch (Throwable) {
+        } catch (Throwable $throwable) {
             $this->rollback();
             return $this->failure(['Unable to complete nursing assessment.']);
         }
@@ -317,7 +319,7 @@ class NursingService
         if (!$this->permissionService->canViewEncounter($visit, $user)) {
             $errors[] = 'You cannot access this encounter.';
         }
-        if (in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)) {
+        if (!$this->permissionService->isAdministrator($user) && in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)) {
             $errors[] = 'Completed or cancelled encounters are read-only.';
         }
         if (!$this->permissionService->isAdministrator($user) && (string)($user['role_name'] ?? '') !== 'Nurse') {
@@ -377,7 +379,7 @@ class NursingService
             : null;
     }
 
-    private function parameters(array $visit, array $user, array $payload, ?array $existing, int $actorId): array
+    private function parameters(array $visit, array $user, array $payload, ?array $existing): array
     {
         return [
             ':visit_id' => (int)$visit['id'],
@@ -396,7 +398,26 @@ class NursingService
             ':patient_response' => $payload['payload']['patient_response'],
             ':handover_notes' => $payload['payload']['handover_notes'],
             ':additional_notes' => $payload['payload']['additional_notes'],
-            ':created_by' => $actorId
+        ];
+    }
+
+    private function updateParameters(array $visit, array $user, array $payload, ?array $existing): array
+    {
+        return [
+            ':nurse_id' => $this->resolveNurseId($existing ?? [], $user),
+            ':department_id' => $this->recordingDepartmentId($visit, $user),
+            ':general_condition' => $payload['payload']['general_condition'],
+            ':nursing_observation' => $payload['payload']['nursing_observation'],
+            ':pain_assessment' => $payload['payload']['pain_assessment'],
+            ':mobility' => $payload['payload']['mobility'],
+            ':nutrition' => $payload['payload']['nutrition'],
+            ':elimination' => $payload['payload']['elimination'],
+            ':skin_assessment' => $payload['payload']['skin_assessment'],
+            ':fall_risk' => $payload['payload']['fall_risk'],
+            ':nursing_interventions' => $payload['payload']['nursing_interventions'],
+            ':patient_response' => $payload['payload']['patient_response'],
+            ':handover_notes' => $payload['payload']['handover_notes'],
+            ':additional_notes' => $payload['payload']['additional_notes'],
         ];
     }
 
