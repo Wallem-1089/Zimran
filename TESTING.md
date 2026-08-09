@@ -42,6 +42,21 @@ Create and verify a backup before every migration and another afterward. A
 backup must be readable, non-empty, and recognized as a MySQL/MariaDB dump.
 Otherwise destructive work stops.
 
+## Phase 3.4 Laboratory CRUD
+
+Use only the explicit dedicated database configuration:
+
+```powershell
+$env:HMS_APP_ENV='testing'
+$env:HMS_TEST_DB_NAME='hms_test_hospital_management_system'
+php test\phase3_laboratory_test.php
+```
+
+The focused suite covers clinical and direct laboratory requests, result
+entry, completion, permissions, encounter locking, audit/event hooks,
+consultation and workspace integration, and regression checks for the major
+encounter flow.
+
 ## Phase 2.4 Problem List and Medical History
 
 Use only the explicit dedicated database configuration:

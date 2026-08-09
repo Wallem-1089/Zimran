@@ -30,10 +30,10 @@ Current roles in the database:
 |---|---|---|
 | System Administrator | Implemented | Full administrative access through explicit override. |
 | Receptionist | Implemented | Patient and encounter registration, reception workflow. |
-| Records Officer | Implemented | Records-oriented access; detailed records module planned. |
+| Records Officer | Implemented | Records-oriented access; detailed records module implemented separately. |
 | Doctor | Implemented | Doctor assignment and future clinical work. |
 | Nurse | Implemented | Future nursing work. |
-| Laboratory Scientist | Implemented | Future laboratory work. |
+| Laboratory Scientist | Implemented | Laboratory request/result worklist and CRUD. |
 | Pharmacist | Implemented | Future pharmacy work. |
 | Physiotherapist | Implemented | Future physiotherapy work. |
 | Radiographer | Implemented | Future radiology work. |
@@ -59,7 +59,7 @@ Role activation/deactivation is implemented through `RoleService`. Role inherita
 | `manage_permissions` | Administration | Implemented for administrator override; role assignment available |
 | `manage_settings` | Administration | Implemented for administrator override; role assignment available |
 
-Future permissions will be added for consultation, nursing, laboratory, radiology, pharmacy, billing, records, inventory, reporting, specialized dashboards, and granular security administration.
+Future permissions will be added for radiology, pharmacy, billing, records, inventory, reporting, specialized dashboards, and granular security administration.
 
 ## Current Permission Matrix
 

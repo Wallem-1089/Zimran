@@ -152,7 +152,7 @@ class LaboratoryService
 
     public function listWorklist(?array $user = null, array $filters = []): array
     {
-        if ($user !== null && !$this->permissionService->canViewLaboratory(1, $user) && !$this->permissionService->isAdministrator($user)) {
+        if ($user !== null && !$this->permissionService->hasPermission('view_laboratory', $user)) {
             return [];
         }
 
@@ -179,18 +179,18 @@ class LaboratoryService
 
     public function saveResult(array $data, array $user): array
     {
-        return $this->saveOrUpdateResult($data, $user, false);
+        return $this->saveOrUpdateResult($data, $user, false, 'enter_laboratory_result');
     }
 
     public function updateResult(array $data, array $user): array
     {
-        return $this->saveOrUpdateResult($data, $user, true);
+        return $this->saveOrUpdateResult($data, $user, true, 'edit_laboratory_result');
     }
 
     public function getResult(int $requestId, ?array $user = null): ?array
     {
         $stmt = $this->pdo->prepare('
-            SELECT lr.*, lres.id AS result_id, lres.result, lres.interpretation,
+            SELECT lr.*, lres.id AS result_id, lres.sample_taken, lres.findings, lres.result, lres.interpretation,
                    lres.performed_by, lres.completed_by, lres.created_at AS result_created_at,
                    lres.updated_at AS result_updated_at, lres.completed_at AS result_completed_at,
                    CONCAT(performed.first_name, " ", performed.last_name) AS performed_by_name,
@@ -227,7 +227,7 @@ class LaboratoryService
             }
 
             $visit = $this->lockVisit((int)$request['visit_id']);
-            $errors = $this->validateProcessing($request, $visit, $user, true);
+            $errors = $this->validateProcessing($request, $visit, $user, 'complete_laboratory_request');
             $result = $this->lockResultByRequest($requestId);
 
             if (!$result) {
@@ -282,7 +282,7 @@ class LaboratoryService
             }
 
             $visit = $this->lockVisit((int)$request['visit_id']);
-            $errors = $this->validateProcessing($request, $visit, $user, false);
+            $errors = $this->validateProcessing($request, $visit, $user, 'process_laboratory_request');
 
             if ((string)($request['status'] ?? '') !== 'Requested' && (string)($request['status'] ?? '') !== 'In Progress') {
                 $errors[] = 'Only active laboratory requests can be cancelled.';
@@ -316,7 +316,7 @@ class LaboratoryService
         }
     }
 
-    private function saveOrUpdateResult(array $data, array $user, bool $mustExist): array
+    private function saveOrUpdateResult(array $data, array $user, bool $mustExist, string $permissionKey): array
     {
         try {
             $this->pdo->beginTransaction();
@@ -329,9 +329,19 @@ class LaboratoryService
             }
 
             $visit = $this->lockVisit((int)$request['visit_id']);
-            $errors = $this->validateProcessing($request, $visit, $user, true);
+            $errors = $this->validateProcessing($request, $visit, $user, $permissionKey);
+            $sampleTaken = $this->nullableText($data['sample_taken'] ?? null);
+            $findings = $this->nullableText($data['findings'] ?? null);
             $resultText = trim((string)($data['result'] ?? ''));
             $interpretation = $this->nullableText($data['interpretation'] ?? null);
+
+            if ($sampleTaken !== null && $this->textLength($sampleTaken) > 3000) {
+                $errors[] = 'Sample taken is too long.';
+            }
+
+            if ($findings !== null && $this->textLength($findings) > 10000) {
+                $errors[] = 'Findings are too long.';
+            }
 
             if ($resultText === '') {
                 $errors[] = 'Result is required.';
@@ -352,20 +362,23 @@ class LaboratoryService
 
             $existing = $this->lockResultByRequest($requestId);
             if ($mustExist && !$existing) {
-                $this->rollback();
-                return $this->failure(['Laboratory result not found.']);
+                $existing = null;
             }
 
             if ($existing) {
                 $stmt = $this->pdo->prepare('
                     UPDATE laboratory_results
-                    SET result = :result,
+                    SET sample_taken = :sample_taken,
+                        findings = :findings,
+                        result = :result,
                         interpretation = :interpretation,
                         performed_by = :performed_by,
                         updated_at = NOW()
                     WHERE laboratory_request_id = :laboratory_request_id
                 ');
                 $stmt->execute([
+                    ':sample_taken' => $sampleTaken,
+                    ':findings' => $findings,
                     ':result' => $resultText,
                     ':interpretation' => $interpretation,
                     ':performed_by' => (int)$user['id'],
@@ -383,17 +396,19 @@ class LaboratoryService
             } else {
                 $stmt = $this->pdo->prepare('
                     INSERT INTO laboratory_results (
-                        laboratory_request_id, visit_id, patient_id, result,
-                        interpretation, performed_by, created_at, updated_at
+                        laboratory_request_id, visit_id, patient_id, sample_taken,
+                        findings, result, interpretation, performed_by, created_at, updated_at
                     ) VALUES (
-                        :laboratory_request_id, :visit_id, :patient_id, :result,
-                        :interpretation, :performed_by, NOW(), NOW()
+                        :laboratory_request_id, :visit_id, :patient_id, :sample_taken,
+                        :findings, :result, :interpretation, :performed_by, NOW(), NOW()
                     )
                 ');
                 $stmt->execute([
                     ':laboratory_request_id' => $requestId,
                     ':visit_id' => (int)$visit['id'],
                     ':patient_id' => (int)$visit['patient_id'],
+                    ':sample_taken' => $sampleTaken,
+                    ':findings' => $findings,
                     ':result' => $resultText,
                     ':interpretation' => $interpretation,
                     ':performed_by' => (int)$user['id'],
@@ -479,10 +494,10 @@ class LaboratoryService
         return $errors;
     }
 
-    private function validateProcessing(array $request, array $visit, array $user, bool $requireProcessPermission): array
+    private function validateProcessing(array $request, array $visit, array $user, string $permissionKey): array
     {
         $errors = [];
-        if (!$this->permissionService->canViewEncounter($visit, $user)) {
+        if (!$this->permissionService->canViewLaboratory((int)($visit['patient_id'] ?? 0), $user)) {
             $errors[] = 'You cannot access this encounter.';
         }
 
@@ -491,12 +506,22 @@ class LaboratoryService
             $errors[] = 'Completed or cancelled encounters cannot receive laboratory mutations.';
         }
 
-        if ($requireProcessPermission && !$this->permissionService->canProcessLaboratoryRequest($visit, $user)) {
-            $errors[] = 'You cannot process this laboratory request.';
-        }
+        $allowed = match ($permissionKey) {
+            'process_laboratory_request' => $this->permissionService->canProcessLaboratoryRequest($visit, $user),
+            'enter_laboratory_result' => $this->permissionService->canEnterLaboratoryResult($visit, $user),
+            'edit_laboratory_result' => $this->permissionService->canEditLaboratoryResult($visit, $user),
+            'complete_laboratory_request' => $this->permissionService->canCompleteLaboratoryRequest($visit, $user),
+            default => false,
+        };
 
-        if (!$requireProcessPermission && !$this->permissionService->canEnterLaboratoryResult($visit, $user)) {
-            $errors[] = 'You cannot complete this laboratory request.';
+        if (!$allowed) {
+            $errors[] = match ($permissionKey) {
+                'process_laboratory_request' => 'You cannot process this laboratory request.',
+                'enter_laboratory_result' => 'You cannot enter this laboratory result.',
+                'edit_laboratory_result' => 'You cannot edit this laboratory result.',
+                'complete_laboratory_request' => 'You cannot complete this laboratory request.',
+                default => 'You cannot process this laboratory request.',
+            };
         }
 
         if ((string)($request['status'] ?? '') === 'Cancelled') {
@@ -521,7 +546,7 @@ class LaboratoryService
             }
 
             $visit = $this->lockVisit((int)$request['visit_id']);
-            $errors = $this->validateProcessing($request, $visit, $user, true);
+            $errors = $this->validateProcessing($request, $visit, $user, 'process_laboratory_request');
 
             if ($newStatus === 'In Progress' && (string)($request['status'] ?? '') !== 'Requested') {
                 $errors[] = 'Only requested laboratory requests can be started.';
@@ -741,6 +766,8 @@ class LaboratoryService
                    CONCAT(resper.first_name, " ", resper.last_name) AS result_performed_by_name,
                    CONCAT(rescomp.first_name, " ", rescomp.last_name) AS result_completed_by_name,
                    lres.id AS result_id,
+                   lres.sample_taken,
+                   lres.findings,
                    lres.result,
                    lres.interpretation,
                    lres.performed_by AS result_performed_by,

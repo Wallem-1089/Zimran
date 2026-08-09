@@ -175,7 +175,7 @@ No `TimelineService.php` class is currently implemented. Timeline behavior is pa
 
 ### Future or Empty Services
 
-`BillingService.php`, `ConsultationService.php`, `LaboratoryService.php`, and `PharmacyService.php` currently exist as empty placeholders. Their clinical/business workflows are planned, not implemented.
+`BillingService.php`, `ConsultationService.php`, `LaboratoryService.php`, and `PharmacyService.php` are service contracts with different implementation maturity. `LaboratoryService.php` is implemented for laboratory request/result CRUD and worklist operations; the others remain planned or partial depending on module status.
 
 ## Module Architecture
 
@@ -196,7 +196,7 @@ No `TimelineService.php` class is currently implemented. Timeline behavior is pa
 | Reporting | Planned | no reporting implementation |
 | Consultation | Planned | empty service placeholder and workspace tab only |
 | Nursing | Planned | workspace tab/directory only |
-| Laboratory | Planned | empty service placeholder and workspace tab |
+| Laboratory | Implemented | laboratory request/result CRUD, worklist, workspace integration |
 | Radiology | Planned | workspace tab/directory only |
 | Pharmacy | Planned | empty service placeholder and workspace tab |
 | Accounts/Billing | Planned | billing dashboard/tab only |
@@ -611,7 +611,7 @@ merge is postponed.
 | Phase | Scope | Initial model |
 |---|---|---|
 | Phase 3 | Consultation and Nursing | `consultations`, `vital_signs`, one nursing assessment table |
-| Phase 4 | Laboratory and Radiology | `laboratory_orders`, `laboratory_results`, `radiology_orders`, `radiology_reports` |
+| Phase 4 | Radiology | `radiology_orders`, `radiology_reports` |
 | Phase 5 | Pharmacy and Inventory | prescriptions, dispensing, items, stock transactions |
 | Phase 6 | Billing | charges, invoices, payments, receipts |
 | Later / Optional | Theatre, Physiotherapy, advanced analytics, integrations | Implement only when operationally required |

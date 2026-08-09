@@ -35,6 +35,7 @@ require_once __DIR__ . '/../../services/MedicalDocumentService.php';
 require_once __DIR__ . '/../../services/ClinicalNoteService.php';
 require_once __DIR__ . '/../../services/ConsultationService.php';
 require_once __DIR__ . '/../../services/DepartmentNotificationService.php';
+require_once __DIR__ . '/../../services/LaboratoryService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
 
@@ -280,16 +281,25 @@ $departments = $visitService->getDepartments();
 $departmentNotificationService = $notificationTablesReady ? new DepartmentNotificationService($pdo) : null;
 $visitNotifications = $departmentNotificationService ? $departmentNotificationService->listForVisit($visitId) : [];
 
-$laboratory = [];
-
+$laboratoryTablesReady = workspaceTableExists($pdo, 'laboratory_requests')
+    && workspaceTableExists($pdo, 'laboratory_results');
+$laboratoryService = $laboratoryTablesReady ? new LaboratoryService($pdo, null, null, $permissionService) : null;
+$laboratoryRequests = $laboratoryService ? $laboratoryService->listByVisit($visitId, $currentUser) : [];
+$latestLaboratoryRequest = $laboratoryRequests[0] ?? null;
+$latestLaboratoryResult = $latestLaboratoryRequest
+    ? $laboratoryService->getResult((int)$latestLaboratoryRequest['id'], $currentUser)
+    : null;
+$canViewLaboratory = $permissionService->canViewLaboratory((int)$visit['patient_id'], $currentUser);
+$canCreateLaboratoryRequest = $permissionService->canCreateLaboratoryRequest($visit, $currentUser, ($visit['department_name'] ?? '') === 'Laboratory' ? 'Direct' : 'Clinical');
+$canProcessLaboratoryRequest = $permissionService->canProcessLaboratoryRequest($visit, $currentUser);
+$canEnterLaboratoryResult = $permissionService->canEnterLaboratoryResult($visit, $currentUser);
+$canEditLaboratoryResult = $permissionService->canEditLaboratoryResult($visit, $currentUser);
+$canCompleteLaboratoryRequest = $permissionService->canCompleteLaboratoryRequest($visit, $currentUser);
+$laboratoryRequestSource = ($visit['department_name'] ?? '') === 'Laboratory' ? 'Direct' : 'Clinical';
 $radiology = [];
-
 $pharmacy = [];
-
 $billing = [];
-
 $physiotherapy = [];
-
 $theatre = [];
 
 $medicalDocumentService = new MedicalDocumentService($pdo);
@@ -355,6 +365,21 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
     <?php if ($canViewProblemList || $canViewMedicalHistory): ?>
         <?php require __DIR__ . '/partials/longitudinal_summary.php'; ?>
+    <?php endif; ?>
+
+    <?php if ($latestLaboratoryResult !== null && trim((string)($latestLaboratoryResult['result'] ?? '')) !== ''): ?>
+        <div class="card">
+            <h3>Latest Laboratory Result</h3>
+            <div class="summary-grid">
+                <div class="summary-item"><span class="summary-label">Sample Taken</span><span class="summary-value"><?= e((string)($latestLaboratoryResult['sample_taken'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Findings</span><span class="summary-value"><?= e((string)($latestLaboratoryResult['findings'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Result</span><span class="summary-value"><?= e((string)$latestLaboratoryResult['result']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Interpretation</span><span class="summary-value"><?= e((string)($latestLaboratoryResult['interpretation'] ?? '-')) ?></span></div>
+            </div>
+            <div class="form-actions">
+                <a class="btn-secondary" href="../laboratory/view.php?id=<?= (int)$latestLaboratoryRequest['id'] ?>">Open Result</a>
+            </div>
+        </div>
     <?php endif; ?>
 
     <?php require __DIR__ . '/partials/quick_actions.php'; ?>

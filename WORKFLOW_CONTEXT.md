@@ -1007,11 +1007,13 @@ table with narrative sections kept as text.
 
 Phase 3.3 Nursing CRUD is implemented using the same encounter-centered
 pattern. Nursing assessments remain read-only once completed, and the next
-practical module after this consultation/nursing slice is Laboratory CRUD.
+practical module after this consultation/nursing slice was Laboratory CRUD;
+Laboratory is now implemented and the next practical module is Radiology CRUD.
 
-### Phase 4 - Laboratory and Radiology
+### Phase 4 - Radiology
 
-Laboratory starts with `laboratory_orders` and `laboratory_results` using:
+Laboratory is implemented with `laboratory_requests` and `laboratory_results`.
+Radiology starts with `radiology_orders` and `radiology_reports` using:
 
 ```text
 Order -> Process -> Result -> Verify

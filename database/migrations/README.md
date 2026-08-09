@@ -29,6 +29,11 @@ The current migration order is:
 17. `018_phase2_clinical_safety_hardening_up.sql`
 18. `019_phase2_problem_list_medical_history_up.sql`
 19. `020_phase2_medical_documents_up.sql`
+20. `021_phase2_clinical_notes_up.sql`
+21. `022_phase3_consultation_notifications_up.sql`
+22. `023_phase3_vital_signs_up.sql`
+23. `024_phase3_nursing_up.sql`
+24. `025_phase3_laboratory_up.sql`
 
 The missing `001` number is historical and is intentionally not reused.
 Migration files are not replayed against an already aligned database.
@@ -172,3 +177,19 @@ boundary for existing installations.
 The down migration removes the retained nursing assessment table and
 permission seeds. It is destructive and restricted to an empty dedicated test
 database or an explicitly approved recovery operation after the backup gate.
+
+## Migration 025 â€” Phase 3.4 Laboratory
+
+`025_phase3_laboratory_up.sql` creates `laboratory_requests` and
+`laboratory_results`, then seeds six Laboratory permissions
+(`view_laboratory`, `create_laboratory_request`, `process_laboratory_request`,
+`enter_laboratory_result`, `edit_laboratory_result`,
+`complete_laboratory_request`). Doctor receives clinical request access,
+Nurse receives view-only access, Records Officer receives view-only access,
+and Laboratory Scientist receives the full workflow permissions. The module
+keeps requests and results as simple encounter-linked CRUD records with text
+results and no catalogue, specimen, analyser, or PACS integration.
+
+The down migration removes the Laboratory tables and permission seeds. It is
+destructive and restricted to an empty dedicated test database or an
+explicitly approved recovery operation after the backup gate.

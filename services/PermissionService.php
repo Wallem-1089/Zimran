@@ -971,12 +971,29 @@ class PermissionService
 
     public function canViewLaboratory(int $patientId, ?array $user = null): bool
     {
-        return $this->canPerformLongitudinalAction(
-            'view_laboratory',
-            $patientId,
-            ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist'],
-            $user
-        );
+        $user = $user ?? $this->currentUser();
+        if (!$user || $patientId <= 0) {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        if (!$this->hasPermission('view_laboratory', $user)) {
+            return false;
+        }
+
+        if ($this->roleMatches($user, ['Laboratory Scientist'])) {
+            return true;
+        }
+
+        if ($this->roleMatches($user, ['Records Officer', 'Doctor', 'Nurse'])) {
+            return $this->canViewMedicalRecord($patientId, $user);
+        }
+
+        return in_array((string)($user['department_name'] ?? ''), ['Records', 'Doctor', 'Nursing', 'Laboratory'], true)
+            && $this->canViewMedicalRecord($patientId, $user);
     }
 
     public function canCreateLaboratoryRequest(
@@ -1538,7 +1555,7 @@ class PermissionService
             return false;
         }
 
-        if (!$this->hasPermission($permission, $user) || !$this->canViewEncounter($encounter, $user)) {
+        if (!$this->hasPermission($permission, $user)) {
             return false;
         }
 
@@ -1547,11 +1564,13 @@ class PermissionService
         return match ($permission) {
             'create_laboratory_request' => $source === 'DIRECT'
                 ? $this->roleMatches($user, ['Laboratory Scientist'])
-                : $this->roleMatches($user, ['Doctor']),
+                : $this->roleMatches($user, ['Doctor'])
+                    && $this->canViewEncounter($encounter, $user),
             'process_laboratory_request',
             'enter_laboratory_result',
             'edit_laboratory_result',
-            'complete_laboratory_request' => $this->roleMatches($user, ['Laboratory Scientist']),
+            'complete_laboratory_request' => $this->roleMatches($user, ['Laboratory Scientist'])
+                && $this->canViewLaboratory((int)($encounter['patient_id'] ?? 0), $user),
             default => false
         };
     }

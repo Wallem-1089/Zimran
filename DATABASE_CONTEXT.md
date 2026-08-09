@@ -536,7 +536,7 @@ One visit
 
 ↓
 
-One consultation
+One laboratory request
 
 Relationship
 
@@ -588,11 +588,11 @@ Many requests
 
 ## laboratory_results
 
-One request
+One laboratory request
 
 ↓
 
-One or many results
+One result record with sample details, findings, result text, and interpretation
 
 ---
 

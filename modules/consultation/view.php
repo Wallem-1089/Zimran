@@ -21,6 +21,9 @@ $canComplete = (string)$consultation['status'] === 'Draft'
 $latestVitalSigns = $vitalSignsService
     ? $vitalSignsService->getLatestByVisit((int)$visit['id'], $currentUser)
     : null;
+$latestLaboratoryRequests = $laboratoryService
+    ? $laboratoryService->listByVisit((int)$visit['id'], $currentUser)
+    : [];
 
 $pageTitle = 'Consultation';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -91,6 +94,38 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <?php else: ?>
         <div class="card"><h3>Latest Vital Signs</h3><p>No vital signs recorded.</p></div>
     <?php endif; ?>
+
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3>Laboratory Requests</h3>
+                <p>Encounter laboratory requests and results.</p>
+            </div>
+            <?php if ($permissionService->canCreateLaboratoryRequest($visit, $currentUser, 'Clinical')): ?>
+                <a class="btn-primary" href="../laboratory/create.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request Laboratory Test</a>
+            <?php endif; ?>
+        </div>
+        <?php if ($latestLaboratoryRequests === []): ?>
+            <p class="text-muted">No laboratory requests recorded.</p>
+        <?php else: ?>
+            <ul class="clean-list">
+                <?php foreach (array_slice($latestLaboratoryRequests, 0, 5) as $request): ?>
+                    <li>
+                        <a href="../laboratory/view.php?id=<?= (int)$request['id'] ?>">#<?= (int)$request['id'] ?></a>
+                        — <?= e((string)$request['tests_requested']) ?>
+                        (<?= e((string)$request['status']) ?>)
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+            <?php if ($latestLaboratoryResult !== null && trim((string)($latestLaboratoryResult['result'] ?? '')) !== ''): ?>
+                <div class="summary-grid">
+                    <div class="summary-item"><span class="summary-label">Sample Taken</span><span class="summary-value"><?= e((string)($latestLaboratoryResult['sample_taken'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Findings</span><span class="summary-value"><?= e((string)($latestLaboratoryResult['findings'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Result</span><span class="summary-value"><?= e((string)$latestLaboratoryResult['result']) ?></span></div>
+                </div>
+            <?php endif; ?>
+        <?php endif; ?>
+    </div>
 
     <?php foreach ($fields as $field => $label): ?>
         <div class="card">

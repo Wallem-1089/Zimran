@@ -20,6 +20,10 @@ if (!empty($canViewVitalSigns)) {
     $chartTabs['vitals'] = 'Vital Signs';
 }
 
+if (!empty($canViewLaboratory)) {
+    $chartTabs['laboratory'] = 'Laboratory';
+}
+
 if ($canViewAudit) {
     $chartTabs['audit'] = 'Audit History';
 }

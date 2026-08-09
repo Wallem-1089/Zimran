@@ -16,6 +16,7 @@ require_once __DIR__ . '/../../services/ClinicalSafetyService.php';
 require_once __DIR__ . '/../../services/ProblemListService.php';
 require_once __DIR__ . '/../../services/MedicalDocumentService.php';
 require_once __DIR__ . '/../../services/ClinicalNoteService.php';
+require_once __DIR__ . '/../../services/LaboratoryService.php';
 require_once __DIR__ . '/../../services/VisitService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
@@ -87,6 +88,7 @@ $allowedTabs = [
     'identifiers',
     'safety',
     'vitals',
+    'laboratory',
     'problems',
     'medical_history',
     'documents',
@@ -145,6 +147,12 @@ $canViewClinicalNotes = $permissionService->canViewClinicalNotes($patientId, $cu
 $canCreatePatientNotes = $permissionService->canCreateClinicalNote($patientId, false, null, $currentUser);
 $clinicalNotes = ['success' => true, 'data' => ['records' => [], 'total_results' => 0], 'errors' => []];
 $clinicalNoteFilterOptions = ['authors' => [], 'departments' => []];
+$laboratoryTablesReady = chartTableExists($pdo, 'laboratory_requests')
+    && chartTableExists($pdo, 'laboratory_results');
+$canViewLaboratory = $laboratoryTablesReady && $permissionService->canViewLaboratory($patientId, $currentUser);
+$laboratoryService = $laboratoryTablesReady ? new LaboratoryService($pdo, null, null, $permissionService) : null;
+$laboratoryHistory = [];
+$latestLaboratoryRequest = null;
 $vitalSignsTablesReady = chartTableExists($pdo, 'vital_signs');
 $canViewVitalSigns = $vitalSignsTablesReady && $permissionService->canViewVitalSigns($patientId, $currentUser);
 $vitalSignsService = $vitalSignsTablesReady ? new VitalSignsService($pdo, null, $permissionService) : null;
@@ -221,6 +229,11 @@ if ($canViewClinicalNotes) {
 if ($canViewVitalSigns) {
     $vitalSignsHistory = $vitalSignsService->listByPatient($patientId, $currentUser);
     $latestVitalSigns = $vitalSignsHistory[0] ?? null;
+}
+
+if ($canViewLaboratory) {
+    $laboratoryHistory = $laboratoryService->listByPatient($patientId, $currentUser);
+    $latestLaboratoryRequest = $laboratoryHistory[0] ?? null;
 }
 
 if ($canViewNursing) {
@@ -353,6 +366,10 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         case 'vitals':
             require __DIR__ . '/partials/vital_signs.php';
+            break;
+
+        case 'laboratory':
+            require __DIR__ . '/partials/laboratory.php';
             break;
 
         case 'nursing':
