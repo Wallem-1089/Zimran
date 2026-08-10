@@ -34,6 +34,9 @@ The current migration order is:
 22. `023_phase3_vital_signs_up.sql`
 23. `024_phase3_nursing_up.sql`
 24. `025_phase3_laboratory_up.sql`
+25. `026_phase3_laboratory_result_details_up.sql`
+26. `027_phase3_radiology_up.sql`
+27. `028_phase3_physiotherapy_up.sql`
 
 The missing `001` number is historical and is intentionally not reused.
 Migration files are not replayed against an already aligned database.

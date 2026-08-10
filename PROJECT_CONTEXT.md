@@ -749,8 +749,10 @@ Use one primary nursing assessment table. Narrative nursing sections remain
 
 Phase 3.3 Nursing CRUD is implemented and live-verified. Phase 3.4
 Laboratory CRUD is implemented and live-verified. Phase 3.5 Radiology CRUD
-is implemented and live-verified. The next module target after the current
-Consultation/Nursing/Laboratory/Radiology slice is Pharmacy CRUD.
+is implemented and live-verified. Phase 3.6 Physiotherapy CRUD is
+implemented and live-verified. The next module target after the current
+Consultation/Nursing/Laboratory/Radiology/Physiotherapy slice is now one of
+the remaining later operational modules.
 
 ## Phase 4 - Radiology
 
@@ -1038,7 +1040,13 @@ Remaining non-blocking items are categorized as **LATER**, not blockers:
 - FHIR, HL7, PACS, patient portal, SMS, and email integrations
 - advanced reporting infrastructure
 
-The next implementation target after Phase 3.4 is Radiology CRUD.
+Phase 3.6 Physiotherapy CRUD is implemented through
+`PhysiotherapyService`, encounter/workspace integration, patient-chart
+history, clinical/direct referral flows, session records, and audit/timeline
+events.
+
+The next implementation target after the current Phase 3 slice is one of the
+remaining later operational modules, not Physiotherapy.
 
 ## Phase 3 Milestone 3.1 — Consultation and Department Notifications
 

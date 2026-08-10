@@ -1006,9 +1006,9 @@ trending and calculation. Nursing assessment starts as one primary assessment
 table with narrative sections kept as text.
 
 Phase 3.3 Nursing CRUD is implemented using the same encounter-centered
-pattern. Nursing assessments remain read-only once completed, and the next
-practical module after this consultation/nursing slice was Laboratory CRUD;
-Laboratory is now implemented and the next practical module is Radiology CRUD.
+pattern. Nursing assessments remain read-only once completed. Laboratory,
+Radiology, and Physiotherapy are also implemented in the same practical CRUD
+style, each remaining encounter-linked and transaction-safe.
 
 ### Phase 4 - Radiology
 
@@ -1021,6 +1021,22 @@ Request -> Worklist -> Report -> Complete
 Radiology study requested, clinical indication, findings, impression, and
 recommendation remain text. PACS, DICOM, and advanced imaging logistics are
 postponed.
+
+### Phase 3.6 - Physiotherapy
+
+Physiotherapy is implemented with one `physiotherapy_records` table for the
+primary encounter record and one `physiotherapy_sessions` table for follow-up
+sessions. The workflow is:
+
+```text
+Referral -> Assessment -> Treatment Plan -> Sessions -> Complete
+```
+
+Clinical referrals and direct physiotherapy encounters are both supported.
+Narrative assessment, goals, precautions, treatment given, patient response,
+and progress notes remain text fields. The workspace, consultation context,
+and patient chart all surface the same physiotherapy record and session
+summary without duplicating the data model.
 
 ### Phase 5 - Pharmacy and Inventory
 
@@ -1039,7 +1055,7 @@ Advanced insurance and financial approval chains are postponed.
 
 ### Later / Optional
 
-Theatre, Physiotherapy, advanced analytics, FHIR, HL7, PACS, patient portal,
+Theatre, advanced analytics, FHIR, HL7, PACS, patient portal,
 SMS/email integration, full patient merging, advanced terminology, and complex
 approval systems are deferred unless current hospital operations require them.
 

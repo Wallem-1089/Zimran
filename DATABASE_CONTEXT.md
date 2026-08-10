@@ -1164,3 +1164,15 @@ patient/visit foreign keys, a unique visit constraint, and indexes that support
 patient, nurse, department, status, and chronology queries. The down migration
 removes retained nursing assessment data and is therefore restricted to empty
 test databases or an explicitly approved archival recovery procedure.
+
+## Phase 3.6 Physiotherapy
+
+Migration 028 adds the encounter-linked `physiotherapy_records` and
+`physiotherapy_sessions` tables. The record table stores the patient, visit,
+physiotherapist, department, record source, referral reason, presenting
+problem, assessment, treatment plan, goals, precautions, status, actor fields,
+and timestamps. The session table stores multiple follow-up treatments per
+record with session date, treatment given, patient response, progress notes,
+next plan, and recorder metadata. Both tables use restrictive patient/visit
+links, support active record and chronology queries, and preserve encounter
+history without introducing a more complex rehabilitation workflow.

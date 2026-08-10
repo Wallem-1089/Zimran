@@ -871,6 +871,36 @@ erDiagram
     USERS ||--o{ NURSING_ASSESSMENTS : records
 ```
 
+## Phase 3.6 relational additions
+
+| Table | Ownership | Lifecycle | Keys and query indexes |
+|---|---|---|---|
+| `physiotherapy_records` | Encounter workflow / `PhysiotherapyService` | Mutable encounter record; one primary record per visit | PK `id`; unique `visit_id`; visit/patient/physiotherapist/department/source/status/created_at indexes; referral reason, presenting problem, assessment, treatment plan, goals, and precautions remain `TEXT` fields |
+| `physiotherapy_sessions` | Encounter workflow / `PhysiotherapyService` | Append-only follow-up sessions per record | PK `id`; physiotherapy-record/visit/patient/recorded-by/session-date indexes; treatment given, patient response, progress notes, and next plan remain `TEXT` fields |
+
+| FK | Source -> target | Update/delete |
+|---|---|---|
+| `fk_physiotherapy_records_visit` | `physiotherapy_records.visit_id -> visits.id` | CASCADE / RESTRICT |
+| `fk_physiotherapy_records_patient` | `physiotherapy_records.patient_id -> patients.id` | CASCADE / RESTRICT |
+| `fk_physiotherapy_records_physiotherapist` | `physiotherapy_records.physiotherapist_id -> users.id` | CASCADE / SET NULL |
+| `fk_physiotherapy_records_department` | `physiotherapy_records.department_id -> departments.id` | CASCADE / SET NULL |
+| `fk_physiotherapy_sessions_record` | `physiotherapy_sessions.physiotherapy_record_id -> physiotherapy_records.id` | CASCADE / RESTRICT |
+| `fk_physiotherapy_sessions_visit` | `physiotherapy_sessions.visit_id -> visits.id` | CASCADE / RESTRICT |
+| `fk_physiotherapy_sessions_patient` | `physiotherapy_sessions.patient_id -> patients.id` | CASCADE / RESTRICT |
+| `fk_physiotherapy_sessions_recorded_by` | `physiotherapy_sessions.recorded_by -> users.id` | CASCADE / RESTRICT |
+
+```mermaid
+erDiagram
+    PATIENTS ||--o{ PHYSIOTHERAPY_RECORDS : has
+    VISITS ||--o{ PHYSIOTHERAPY_RECORDS : contextualizes
+    DEPARTMENTS o|--o{ PHYSIOTHERAPY_RECORDS : attributes
+    USERS ||--o{ PHYSIOTHERAPY_RECORDS : owns
+    PHYSIOTHERAPY_RECORDS ||--o{ PHYSIOTHERAPY_SESSIONS : contains
+    VISITS ||--o{ PHYSIOTHERAPY_SESSIONS : contextualizes
+    PATIENTS ||--o{ PHYSIOTHERAPY_SESSIONS : has
+    USERS ||--o{ PHYSIOTHERAPY_SESSIONS : records
+```
+
 Migration 024 is baseline-represented for fresh installs and ledger-applied for
 existing installations. The workspace, Patient Chart and nursing history views
 use the latest record as a summary while preserving a single assessment per

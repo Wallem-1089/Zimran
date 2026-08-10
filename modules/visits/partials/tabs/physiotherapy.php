@@ -2,401 +2,123 @@
 
 declare(strict_types=1);
 
-/*
-|--------------------------------------------------------------------------
-| Variables supplied by workspace.php
-|--------------------------------------------------------------------------
-*/
-
 if (!isset($visit, $patient)) {
-
     return;
-
 }
 
+$record = $latestPhysiotherapyRecord ?? null;
+$session = $latestPhysiotherapySession ?? null;
+$isClosedEncounter = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
+$requestSource = $physiotherapyRequestSource ?? 'Clinical';
 ?>
 
-<section
-    id="tab-physiotherapy"
-    class="workspace-tab">
-
+<section id="tab-physiotherapy" class="workspace-tab">
     <div class="card">
-
         <div class="card-header">
-
             <div>
-
-                <h2>
-
-                    Physiotherapy
-
-                </h2>
-
-                <p>
-
-                    Physiotherapy referrals, treatment sessions, rehabilitation
-                    plans and progress monitoring.
-
-                </p>
-
+                <h2>Physiotherapy</h2>
+                <p>Physiotherapy records and sessions linked to this encounter.</p>
             </div>
-
             <div>
-
-                <a
-                    href="../../physiotherapy/refer.php?visit=<?= (int)$visit['id'] ?>"
-                    class="btn-primary">
-
-                    Refer to Physiotherapy
-
-                </a>
-
+                <a class="btn-secondary" href="../physiotherapy/index.php">Worklist</a>
+                <?php if (!$physiotherapyTablesReady): ?>
+                    <span class="badge badge-warning">Migration required</span>
+                <?php elseif (!$canViewPhysiotherapy): ?>
+                    <span class="badge badge-warning">No physiotherapy permission</span>
+                <?php elseif ($record === null && !$isClosedEncounter && $canCreatePhysiotherapyRequest): ?>
+                    <a href="../physiotherapy/request.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
+                        <?= $requestSource === 'Direct' ? 'Start Direct Record' : 'Refer to Physiotherapy' ?>
+                    </a>
+                <?php endif; ?>
             </div>
-
         </div>
 
         <div class="summary-grid">
-
             <div class="summary-item">
+                <span class="summary-label">Encounter</span>
+                <span class="summary-value"><?= e((string)($visit['visit_number'] ?? ('#' . (int)$visit['id']))) ?></span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Hospital Number</span>
+                <span class="summary-value"><?= e((string)$patient['hospital_number']) ?></span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Latest Record</span>
+                <span class="summary-value"><?= e((string)($record['created_at'] ?? 'Not recorded')) ?></span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Status</span>
+                <span class="summary-value"><?= e((string)($record['status'] ?? 'Not recorded')) ?></span>
+            </div>
+        </div>
+    </div>
 
-                <span class="summary-label">
-
-                    Encounter
-
-                </span>
-
-                <span class="summary-value">
-
-                    #<?= (int)$visit['id'] ?>
-
-                </span>
-
+    <?php if (!$physiotherapyTablesReady): ?>
+        <div class="card">
+            <p>Physiotherapy tables are not available yet. Apply Migration 028 to enable this section.</p>
+        </div>
+    <?php elseif (!$canViewPhysiotherapy): ?>
+        <div class="card alert-warning">
+            You do not have permission to view physiotherapy records.
+        </div>
+    <?php elseif ($record === null): ?>
+        <div class="card">
+            <p class="text-muted">No Physiotherapy record.</p>
+            <?php if (!$isClosedEncounter && $canCreatePhysiotherapyRequest): ?>
+                <p>
+                    <a href="../physiotherapy/request.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
+                        <?= $requestSource === 'Direct' ? 'Start Direct Record' : 'Refer to Physiotherapy' ?>
+                    </a>
+                </p>
+            <?php endif; ?>
+        </div>
+    <?php else: ?>
+        <div class="card">
+            <h3>Latest Record</h3>
+            <div class="summary-grid">
+                <div class="summary-item"><span class="summary-label">Presenting Problem</span><span class="summary-value"><?= e((string)($record['presenting_problem'] ?? '')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Source</span><span class="summary-value"><?= e((string)$record['record_source']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"><?= e((string)$record['status']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Physiotherapist</span><span class="summary-value"><?= e((string)($record['physiotherapist_name'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Sessions</span><span class="summary-value"><?= e((string)($record['session_count'] ?? 0)) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Created</span><span class="summary-value"><?= e((string)($record['created_at'] ?? '-')) ?></span></div>
             </div>
 
-            <div class="summary-item">
-
-                <span class="summary-label">
-
-                    Hospital Number
-
-                </span>
-
-                <span class="summary-value">
-
-                    <?= e($patient['hospital_number']) ?>
-
-                </span>
-
+            <div class="form-actions">
+                <a href="../physiotherapy/view.php?id=<?= (int)$record['id'] ?>" class="btn-secondary">View</a>
+                <a href="../physiotherapy/history.php?visit=<?= (int)$visit['id'] ?>" class="btn-secondary">View History</a>
+                <?php if (!$isClosedEncounter && $canEditPhysiotherapy && (string)$record['status'] === 'Active'): ?>
+                    <a class="btn-secondary" href="../physiotherapy/edit.php?id=<?= (int)$record['id'] ?>">Edit Record</a>
+                <?php endif; ?>
+                <?php if (!$isClosedEncounter && $canManagePhysiotherapySessions && (string)$record['status'] === 'Active'): ?>
+                    <a class="btn-primary" href="../physiotherapy/report.php?record=<?= (int)$record['id'] ?>">
+                        <?= $session ? 'Edit Latest Session' : 'Add Session' ?>
+                    </a>
+                <?php endif; ?>
+                <?php if (!$isClosedEncounter && $canCompletePhysiotherapyRequest && (string)$record['status'] === 'Active'): ?>
+                    <form method="post" action="../physiotherapy/complete.php">
+                        <?= csrfField() ?>
+                        <input type="hidden" name="id" value="<?= (int)$record['id'] ?>">
+                        <button type="submit" class="btn-secondary">Complete</button>
+                    </form>
+                <?php endif; ?>
             </div>
+        </div>
 
-            <div class="summary-item">
-
-                <span class="summary-label">
-
-                    Referral Status
-
-                </span>
-
-                <span class="summary-value">
-
-                    Not Referred
-
-                </span>
-
+        <?php if ($session && trim((string)($session['treatment_given'] ?? '')) !== ''): ?>
+            <div class="card">
+                <h3>Latest Session</h3>
+                <div class="summary-grid">
+                    <div class="summary-item"><span class="summary-label">Date</span><span class="summary-value"><?= e((string)($session['session_date'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Treatment Given</span><span class="summary-value"><?= e((string)($session['treatment_given'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Patient Response</span><span class="summary-value"><?= e((string)($session['patient_response'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Recorded By</span><span class="summary-value"><?= e((string)($session['recorded_by_name'] ?? '-')) ?></span></div>
+                </div>
             </div>
-
-            <div class="summary-item">
-
-                <span class="summary-label">
-
-                    Treatment Sessions
-
-                </span>
-
-                <span class="summary-value">
-
-                    0
-
-                </span>
-
+        <?php else: ?>
+            <div class="card">
+                <p class="text-muted">No physiotherapy session recorded.</p>
             </div>
-
-        </div>
-
-    </div>
-
-    <div class="card">
-
-        <h3>
-
-            Physiotherapy Referral
-
-        </h3>
-
-        <div class="empty-state">
-
-            No physiotherapy referral has been made for this encounter.
-
-        </div>
-
-    </div>
-
-    <div class="card">
-
-        <h3>
-
-            Rehabilitation Plan
-
-        </h3>
-
-        <table class="summary-table">
-
-            <tbody>
-
-                <tr>
-
-                    <th>
-
-                        Diagnosis
-
-                    </th>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <th>
-
-                        Rehabilitation Goal
-
-                    </th>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <th>
-
-                        Treatment Plan
-
-                    </th>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <th>
-
-                        Estimated Duration
-
-                    </th>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-    <div class="card">
-
-        <h3>
-
-            Therapy Sessions
-
-        </h3>
-
-        <table class="summary-table">
-
-            <thead>
-
-                <tr>
-
-                    <th>
-
-                        Date
-
-                    </th>
-
-                    <th>
-
-                        Therapist
-
-                    </th>
-
-                    <th>
-
-                        Procedure
-
-                    </th>
-
-                    <th>
-
-                        Outcome
-
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                <tr>
-
-                    <td
-                        colspan="4"
-                        class="text-center">
-
-                        No physiotherapy sessions recorded.
-
-                    </td>
-
-                </tr>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-    <div class="card">
-
-        <h3>
-
-            Functional Assessment
-
-        </h3>
-
-        <table class="summary-table">
-
-            <tbody>
-
-                <tr>
-
-                    <th>
-
-                        Mobility
-
-                    </th>
-
-                    <td>
-
-                        Not Assessed
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <th>
-
-                        Muscle Strength
-
-                    </th>
-
-                    <td>
-
-                        Not Assessed
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <th>
-
-                        Range of Motion
-
-                    </th>
-
-                    <td>
-
-                        Not Assessed
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <th>
-
-                        Pain Score
-
-                    </th>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-    <div class="card">
-
-        <h3>
-
-            Progress Notes
-
-        </h3>
-
-        <div class="empty-state">
-
-            No physiotherapy progress notes available.
-
-        </div>
-
-    </div>
-
-    <div class="card">
-
-        <h3>
-
-            Discharge Summary
-
-        </h3>
-
-        <div class="empty-state">
-
-            No physiotherapy discharge summary available.
-
-        </div>
-
-    </div>
-
+        <?php endif; ?>
+    <?php endif; ?>
 </section>

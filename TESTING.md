@@ -202,3 +202,20 @@ audit generation; encounter-event generation; and the integration hooks used
 by the Workspace, Consultation page and Patient Chart. Existing Consultation,
 Vital Signs, Nursing, Laboratory, Workspace, and Department Notification
 regression coverage remains in place.
+
+## Phase 3.6 Physiotherapy
+
+```powershell
+$env:HMS_APP_ENV='testing'
+$env:HMS_TEST_DB_NAME='hms_test_hospital_management_system'
+php test\phase3_physiotherapy_test.php
+```
+
+The focused suite verifies clinical and direct physiotherapy records;
+Physiotherapist, Doctor, Nurse, and Administrator access; unauthorized
+mutation denial; patient/visit mismatch rejection; session create/update;
+completion and read-only locking; CSRF-aware controller wiring; audit
+generation; encounter-event generation; and the workspace, consultation, and
+patient-chart integration hooks. Existing Consultation, Vital Signs, Nursing,
+Laboratory, Radiology, Workspace, and Department Notification regression
+coverage remains in place.

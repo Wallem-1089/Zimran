@@ -2936,6 +2936,68 @@ private function appendRadiologyEvents(
 
 }
 
+private function appendPhysiotherapyEvents(
+    array &$timeline,
+    int $visitId
+): void {
+    if (!$this->tableExists('physiotherapy_records')) {
+        return;
+    }
+
+    try {
+        $stmt = $this->pdo->prepare('
+            SELECT pr.id,
+                   pr.presenting_problem,
+                   pr.referral_reason,
+                   pr.record_source,
+                   pr.status,
+                   pr.created_at,
+                   pr.completed_at,
+                   CONCAT(u.first_name, " ", u.last_name) AS created_by_name
+            FROM physiotherapy_records pr
+            LEFT JOIN users u ON u.id = pr.created_by
+            WHERE pr.visit_id = :visit_id
+            ORDER BY pr.created_at ASC, pr.id ASC
+        ');
+        $stmt->execute([':visit_id' => $visitId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable) {
+        return;
+    }
+
+    foreach ($rows as $row) {
+        $timeline[] = [
+            'type' => 'physiotherapy',
+            'title' => 'Physiotherapy Started',
+            'description' => sprintf(
+                '%s started physiotherapy: %s (%s).',
+                $row['created_by_name'] ?? 'Unknown User',
+                $row['presenting_problem'] ?? 'Unknown problem',
+                $row['record_source'] ?? 'Clinical'
+            ),
+            'department' => 'Physiotherapy',
+            'performed_by' => $row['created_by_name'] ?? null,
+            'transfer_type' => null,
+            'remarks' => null,
+            'created_at' => $row['created_at']
+        ];
+
+        if ((string)($row['status'] ?? '') === 'Completed' && !empty($row['completed_at'])) {
+            $timeline[] = [
+                'type' => 'physiotherapy',
+                'title' => 'Physiotherapy Completed',
+                'description' => 'Physiotherapy record completed.',
+                'department' => 'Physiotherapy',
+                'performed_by' => $row['created_by_name'] ?? null,
+                'transfer_type' => null,
+                'remarks' => null,
+                'created_at' => $row['completed_at']
+            ];
+        }
+    }
+
+}
+
 private function tableExists(string $table): bool
 {
     try {

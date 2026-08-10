@@ -168,6 +168,49 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?php endif; ?>
     </div>
 
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3>Physiotherapy</h3>
+                <p>Encounter physiotherapy records and sessions.</p>
+            </div>
+            <?php if ($physiotherapyService && $permissionService->canCreatePhysiotherapyRequest($visit, $currentUser, 'Clinical')): ?>
+                <a class="btn-primary" href="../physiotherapy/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Refer to Physiotherapy</a>
+            <?php endif; ?>
+        </div>
+        <?php if (!$physiotherapyService): ?>
+            <p class="text-muted">Physiotherapy tables are not available yet.</p>
+        <?php else: ?>
+            <?php
+                $latestPhysiotherapyRecords = $physiotherapyService->listByVisit((int)$visit['id'], $currentUser);
+                $latestPhysiotherapyRecord = $latestPhysiotherapyRecords[0] ?? null;
+                $latestPhysiotherapySession = $latestPhysiotherapyRecord
+                    ? $physiotherapyService->getResult((int)$latestPhysiotherapyRecord['id'], $currentUser)
+                    : null;
+            ?>
+            <?php if ($latestPhysiotherapyRecords === []): ?>
+                <p class="text-muted">No physiotherapy records recorded.</p>
+            <?php else: ?>
+                <ul class="clean-list">
+                    <?php foreach (array_slice($latestPhysiotherapyRecords, 0, 5) as $record): ?>
+                        <li>
+                            <a href="../physiotherapy/view.php?id=<?= (int)$record['id'] ?>">#<?= (int)$record['id'] ?></a>
+                            — <?= e((string)($record['presenting_problem'] ?? $record['summary'] ?? '')) ?>
+                            (<?= e((string)$record['status']) ?>)
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+                <?php if ($latestPhysiotherapySession !== null && trim((string)($latestPhysiotherapySession['treatment_given'] ?? '')) !== ''): ?>
+                    <div class="summary-grid">
+                        <div class="summary-item"><span class="summary-label">Treatment Given</span><span class="summary-value"><?= e((string)($latestPhysiotherapySession['treatment_given'] ?? '-')) ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Patient Response</span><span class="summary-value"><?= e((string)($latestPhysiotherapySession['patient_response'] ?? '-')) ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Next Plan</span><span class="summary-value"><?= e((string)($latestPhysiotherapySession['next_plan'] ?? '-')) ?></span></div>
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
+        <?php endif; ?>
+    </div>
+
     <?php foreach ($fields as $field => $label): ?>
         <div class="card">
             <h3><?= e($label) ?></h3>

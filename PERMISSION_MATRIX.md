@@ -179,6 +179,16 @@ doctor. Patient audit history remains more restrictive than general chart view.
 | `edit_radiology_report` | Implemented | Radiographer |
 | `complete_radiology_request` | Implemented | Radiographer |
 
+## Physiotherapy Permissions
+
+| Permission | Status | Seeded roles |
+|---|---|---|
+| `view_physiotherapy` | Implemented | Records Officer, Doctor, Nurse, Physiotherapist |
+| `create_physiotherapy` | Implemented | Doctor, Physiotherapist |
+| `edit_physiotherapy` | Implemented | Physiotherapist |
+| `manage_physiotherapy_sessions` | Implemented | Physiotherapist |
+| `complete_physiotherapy` | Implemented | Physiotherapist |
+
 Radiology permissions are encounter-scoped and respect active-encounter
 locking. Direct requests are limited to Radiographer or Administrator users,
 while clinical requests remain Doctor-initiated through the encounter context.

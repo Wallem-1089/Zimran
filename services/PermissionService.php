@@ -1132,6 +1132,90 @@ class PermissionService
 
     /*
     |--------------------------------------------------------------------------
+    | Physiotherapy Authorization
+    |--------------------------------------------------------------------------
+    */
+
+    public function canViewPhysiotherapy(int $patientId, ?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        if (!$user || $patientId <= 0) {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        if (!$this->hasPermission('view_physiotherapy', $user)) {
+            return false;
+        }
+
+        if ($this->roleMatches($user, ['Physiotherapist'])) {
+            return true;
+        }
+
+        if ($this->roleMatches($user, ['Records Officer', 'Doctor', 'Nurse'])) {
+            return $this->canViewMedicalRecord($patientId, $user);
+        }
+
+        return in_array((string)($user['department_name'] ?? ''), ['Records', 'Doctor', 'Nursing', 'Physiotherapy', 'Physio', 'Rehabilitation'], true)
+            && $this->canViewMedicalRecord($patientId, $user);
+    }
+
+    public function canCreatePhysiotherapy(
+        array $encounter,
+        ?array $user = null,
+        string $recordSource = 'Clinical'
+    ): bool {
+        return $this->canMutatePhysiotherapy('create_physiotherapy', $encounter, $user, $recordSource);
+    }
+
+    public function canCreatePhysiotherapyRequest(
+        array $encounter,
+        ?array $user = null,
+        string $recordSource = 'Clinical'
+    ): bool {
+        return $this->canCreatePhysiotherapy($encounter, $user, $recordSource);
+    }
+
+    public function canEditPhysiotherapy(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutatePhysiotherapy('edit_physiotherapy', $encounter, $user);
+    }
+
+    public function canEditPhysiotherapyResult(array $encounter, ?array $user = null): bool
+    {
+        return $this->canEditPhysiotherapy($encounter, $user);
+    }
+
+    public function canManagePhysiotherapySessions(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutatePhysiotherapy('manage_physiotherapy_sessions', $encounter, $user);
+    }
+
+    public function canProcessPhysiotherapyRequest(array $encounter, ?array $user = null): bool
+    {
+        return $this->canManagePhysiotherapySessions($encounter, $user);
+    }
+
+    public function canEnterPhysiotherapyResult(array $encounter, ?array $user = null): bool
+    {
+        return $this->canManagePhysiotherapySessions($encounter, $user);
+    }
+
+    public function canCompletePhysiotherapy(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutatePhysiotherapy('complete_physiotherapy', $encounter, $user);
+    }
+
+    public function canCompletePhysiotherapyRequest(array $encounter, ?array $user = null): bool
+    {
+        return $this->canCompletePhysiotherapy($encounter, $user);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Consultation Authorization
     |--------------------------------------------------------------------------
     */
@@ -1687,6 +1771,44 @@ class PermissionService
             'edit_radiology_report',
             'complete_radiology_request' => $this->roleMatches($user, ['Radiographer'])
                 && $this->canViewRadiology((int)($encounter['patient_id'] ?? 0), $user),
+            default => false
+        };
+    }
+
+    private function canMutatePhysiotherapy(
+        string $permission,
+        array $encounter,
+        ?array $user = null,
+        string $recordSource = 'Clinical'
+    ): bool {
+        $user = $user ?? $this->currentUser();
+        if (!$user) {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        if (in_array((string)($encounter['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)) {
+            return false;
+        }
+
+        if (!$this->hasPermission($permission, $user)) {
+            return false;
+        }
+
+        $source = strtoupper(trim($recordSource));
+
+        return match ($permission) {
+            'create_physiotherapy' => $source === 'DIRECT'
+                ? $this->roleMatches($user, ['Physiotherapist'])
+                : $this->roleMatches($user, ['Doctor'])
+                    && $this->canViewEncounter($encounter, $user),
+            'edit_physiotherapy',
+            'manage_physiotherapy_sessions',
+            'complete_physiotherapy' => $this->roleMatches($user, ['Physiotherapist'])
+                && $this->canViewPhysiotherapy((int)($encounter['patient_id'] ?? 0), $user),
             default => false
         };
     }

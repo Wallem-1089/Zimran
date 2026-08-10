@@ -18,6 +18,7 @@ require_once __DIR__ . '/../../services/MedicalDocumentService.php';
 require_once __DIR__ . '/../../services/ClinicalNoteService.php';
 require_once __DIR__ . '/../../services/LaboratoryService.php';
 require_once __DIR__ . '/../../services/RadiologyService.php';
+require_once __DIR__ . '/../../services/PhysiotherapyService.php';
 require_once __DIR__ . '/../../services/VisitService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
@@ -91,6 +92,7 @@ $allowedTabs = [
     'vitals',
     'laboratory',
     'radiology',
+    'physiotherapy',
     'problems',
     'medical_history',
     'documents',
@@ -161,6 +163,12 @@ $canViewRadiology = $radiologyTablesReady && $permissionService->canViewRadiolog
 $radiologyService = $radiologyTablesReady ? new RadiologyService($pdo, null, null, $permissionService) : null;
 $radiologyHistory = [];
 $latestRadiologyRequest = null;
+$physiotherapyTablesReady = chartTableExists($pdo, 'physiotherapy_records')
+    && chartTableExists($pdo, 'physiotherapy_sessions');
+$canViewPhysiotherapy = $physiotherapyTablesReady && $permissionService->canViewPhysiotherapy($patientId, $currentUser);
+$physiotherapyService = $physiotherapyTablesReady ? new PhysiotherapyService($pdo, null, null, $permissionService) : null;
+$physiotherapyHistory = [];
+$latestPhysiotherapyRecord = null;
 $vitalSignsTablesReady = chartTableExists($pdo, 'vital_signs');
 $canViewVitalSigns = $vitalSignsTablesReady && $permissionService->canViewVitalSigns($patientId, $currentUser);
 $vitalSignsService = $vitalSignsTablesReady ? new VitalSignsService($pdo, null, $permissionService) : null;
@@ -201,6 +209,11 @@ if ($activeTab === 'nursing' && !$canViewNursing) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'NURSING_ACCESS_DENIED', 'Nursing access denied.');
     http_response_code(403);
     exit('You do not have permission to view Nursing assessments.');
+}
+if ($activeTab === 'physiotherapy' && !$canViewPhysiotherapy) {
+    $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'PHYSIOTHERAPY_ACCESS_DENIED', 'Physiotherapy access denied.');
+    http_response_code(403);
+    exit('You do not have permission to view Physiotherapy.');
 }
 $problemListService = new ProblemListService($pdo);
 if ($canViewProblemList) {
@@ -246,6 +259,11 @@ if ($canViewLaboratory) {
 if ($canViewRadiology) {
     $radiologyHistory = $radiologyService->listByPatient($patientId, $currentUser);
     $latestRadiologyRequest = $radiologyHistory[0] ?? null;
+}
+
+if ($canViewPhysiotherapy) {
+    $physiotherapyHistory = $physiotherapyService->listByPatient($patientId, $currentUser);
+    $latestPhysiotherapyRecord = $physiotherapyHistory[0] ?? null;
 }
 
 if ($canViewNursing) {
@@ -386,6 +404,10 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         case 'radiology':
             require __DIR__ . '/partials/radiology.php';
+            break;
+
+        case 'physiotherapy':
+            require __DIR__ . '/partials/physiotherapy.php';
             break;
 
         case 'nursing':

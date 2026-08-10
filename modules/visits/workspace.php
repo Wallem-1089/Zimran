@@ -37,6 +37,7 @@ require_once __DIR__ . '/../../services/ConsultationService.php';
 require_once __DIR__ . '/../../services/DepartmentNotificationService.php';
 require_once __DIR__ . '/../../services/LaboratoryService.php';
 require_once __DIR__ . '/../../services/RadiologyService.php';
+require_once __DIR__ . '/../../services/PhysiotherapyService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
 
@@ -278,6 +279,23 @@ $canViewNursing = $permissionService->canViewNursing((int)$visit['patient_id'], 
 $canCreateNursing = $permissionService->canCreateNursing($visit, $currentUser);
 $canEditNursing = $permissionService->canEditNursing($visit, $currentUser);
 $canCompleteNursing = $permissionService->canCompleteNursing($visit, $currentUser);
+$physiotherapyTablesReady = workspaceTableExists($pdo, 'physiotherapy_records')
+    && workspaceTableExists($pdo, 'physiotherapy_sessions');
+$physiotherapyService = $physiotherapyTablesReady ? new PhysiotherapyService($pdo, null, null, $permissionService) : null;
+$physiotherapyHistory = $physiotherapyService ? $physiotherapyService->listByVisit($visitId, $currentUser) : [];
+$latestPhysiotherapyRecord = $physiotherapyHistory[0] ?? null;
+$latestPhysiotherapySession = $latestPhysiotherapyRecord
+    ? $physiotherapyService->getResult((int)$latestPhysiotherapyRecord['id'], $currentUser)
+    : null;
+$canViewPhysiotherapy = $permissionService->canViewPhysiotherapy((int)$visit['patient_id'], $currentUser);
+$physiotherapyRequestSource = in_array((string)($visit['department_name'] ?? ''), ['Physiotherapy', 'Physio', 'Rehabilitation'], true)
+    ? 'Direct'
+    : 'Clinical';
+$canCreatePhysiotherapyRequest = $permissionService->canCreatePhysiotherapyRequest($visit, $currentUser, $physiotherapyRequestSource);
+$canProcessPhysiotherapyRequest = $permissionService->canProcessPhysiotherapyRequest($visit, $currentUser);
+$canEnterPhysiotherapyReport = $permissionService->canEnterPhysiotherapyResult($visit, $currentUser);
+$canEditPhysiotherapyReport = $permissionService->canEditPhysiotherapyResult($visit, $currentUser);
+$canCompletePhysiotherapyRequest = $permissionService->canCompletePhysiotherapyRequest($visit, $currentUser);
 $departments = $visitService->getDepartments();
 $departmentNotificationService = $notificationTablesReady ? new DepartmentNotificationService($pdo) : null;
 $visitNotifications = $departmentNotificationService ? $departmentNotificationService->listForVisit($visitId) : [];
@@ -317,7 +335,7 @@ $canCompleteRadiologyRequest = $permissionService->canCompleteRadiologyRequest($
 $radiology = [];
 $pharmacy = [];
 $billing = [];
-$physiotherapy = [];
+$physiotherapy = $latestPhysiotherapyRecord ? [$latestPhysiotherapyRecord] : [];
 $theatre = [];
 
 $medicalDocumentService = new MedicalDocumentService($pdo);

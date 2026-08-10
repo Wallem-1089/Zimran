@@ -28,6 +28,10 @@ if (!empty($canViewRadiology)) {
     $chartTabs['radiology'] = 'Radiology';
 }
 
+if (!empty($canViewPhysiotherapy)) {
+    $chartTabs['physiotherapy'] = 'Physiotherapy';
+}
+
 if ($canViewAudit) {
     $chartTabs['audit'] = 'Audit History';
 }
