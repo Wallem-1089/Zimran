@@ -199,7 +199,8 @@ No `TimelineService.php` class is currently implemented. Timeline behavior is pa
 | Laboratory | Implemented | laboratory request/result CRUD, worklist, workspace integration |
 | Radiology | Planned | workspace tab/directory only |
 | Pharmacy | Planned | empty service placeholder and workspace tab |
-| Accounts/Billing | Planned | billing dashboard/tab only |
+| Accounts | Implemented | standalone sidebar price catalogue (`billable_items`) |
+| Accounts/Billing | Planned | encounter-specific billing/charges later |
 | Physiotherapy | Implemented | `PhysiotherapyService`, record/session CRUD, worklist, workspace integration |
 | Theatre | Implemented | `TheatreService`, single-record CRUD, workspace integration |
 | Store/Inventory | Partially implemented | department and dashboard references; inventory workflow absent |
@@ -411,7 +412,7 @@ Open encounter workspace
   -> render through the workspace/timeline integration
 ```
 
-Planned integrations include Medical Records, Consultation, Nursing, Laboratory, Radiology, Pharmacy, Accounts/Billing, Store/Inventory, Reporting, dashboards, notifications, appointments, APIs, and discharge.
+Planned integrations include Medical Records, Consultation, Nursing, Laboratory, Radiology, Pharmacy, Billing/Charges, Store/Inventory, Reporting, dashboards, notifications, appointments, APIs, and discharge. Accounts is already implemented as the standalone price catalogue.
 
 Future module implementation should avoid unnecessary normalization of
 clinical narrative text. Keep narrative sections such as consultation history,

@@ -196,6 +196,7 @@ $successMessage = $_SESSION['success_message'] ?? null;
 
 unset($_SESSION['success_message']);
 
+$theatreAccessDenied = false;
 if ($theatreAccessDenied) {
     http_response_code(403);
     exit('You do not have permission to view Theatre.');

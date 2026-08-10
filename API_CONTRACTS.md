@@ -958,3 +958,21 @@ Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?Encount
 | `modules/nursing/update.php` | POST | Persist edits. |
 | `modules/nursing/complete.php` | POST | Complete a draft assessment. |
 | `modules/nursing/history.php` | GET | Visit or patient history list. |
+
+### `AccountsService`
+
+Constructor: `__construct(PDO $db, ?AuditService $auditService = null, ?PermissionService $permissionService = null)`. Uses `billable_items`, departments, users, permissions and audit.
+
+| Signature | Purpose/return | Contract |
+|---|---|---|
+| `createItem(array $data, array $user): array` | Creates a billable item; returns `billable_item_id`. | Transaction; validates code/name/type/price/department; duplicate code prevention; `BILLABLE_ITEM_CREATED`. |
+| `getItemById(int $itemId, ?array $user = null): ?array` | Detailed item view with department/user names. | Read; visibility controlled by `view_billable_items`. |
+| `getItemByCode(string $itemCode, ?array $user = null): ?array` | Lookup by code. | Read. |
+| `listItems(array $filters = [], ?array $user = null): array` | Search/filter catalogue. | Read; supports code/name/type/department/status filtering. |
+| `searchItems(array $filters = [], ?array $user = null): array` | Compatibility alias for list/filter. | Read. |
+| `updateItem(int $itemId, array $data, array $user): array` | Updates catalogue metadata and price. | Transaction/row lock; duplicate prevention; `BILLABLE_ITEM_UPDATED`. |
+| `activateItem(int $itemId, array $user): array` / `deactivateItem(...)` | Soft activation toggle. | Transaction/row lock; `BILLABLE_ITEM_ACTIVATED` / `BILLABLE_ITEM_DEACTIVATED`. |
+
+Accounts is a standalone sidebar destination for price master data only. It is
+not an Encounter Workspace tab and it does not create charges, invoices,
+payments, receipts, or inventory movements.

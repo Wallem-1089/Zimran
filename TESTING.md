@@ -236,3 +236,19 @@ controller wiring; audit generation; encounter-event generation; workspace
 integration; department notification integration; and the existing
 Consultation, Vital Signs, Nursing, Physiotherapy, Laboratory, Radiology, and
 chart regression coverage.
+
+## Phase 4.1 Accounts / Price Catalogue
+
+```powershell
+$env:HMS_APP_ENV='testing'
+$env:HMS_TEST_DB_NAME='hms_test_hospital_management_system'
+php test\phase4_accounts_test.php
+```
+
+The focused suite verifies service and product creation, duplicate code
+rejection, edit/price update, activate/deactivate, role-based permissions,
+administrator override, unauthorized mutation denial, search/filter behavior,
+CSRF-aware controller wiring, audit generation, and sidebar visibility. It
+also confirms that no Accounts Encounter Workspace tab was introduced and
+that the module remains independent from patient charges, invoices, payments,
+and receipts.

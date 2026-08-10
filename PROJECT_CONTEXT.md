@@ -1081,3 +1081,7 @@ other roles receive only explicitly permitted read access.
 Phase 3.2 does not introduce nursing, laboratory, radiology, pharmacy,
 billing, or additional workflow engines. It is a straightforward encounter-
 centered CRUD module.
+
+Accounts / Price Catalogue is now implemented as a standalone sidebar module.
+It owns the hospital-wide price catalogue only; Billing/Charges will later
+consume those prices at the encounter level.

@@ -1112,3 +1112,8 @@ Encounters that are `Completed` or `Cancelled` remain read-only for vital-signs
 mutation. Patient Chart and Consultation views reuse the latest encounter
 vital-signs summary as read-only context, while the dedicated history view
 lists prior entries in reverse chronological order.
+
+Accounts owns the reusable price catalogue. It is a sidebar-only master-data
+module and does not live inside the Encounter Workspace. Billing/Charges will
+later consume `billable_items` when encounter-specific financial workflows are
+implemented.

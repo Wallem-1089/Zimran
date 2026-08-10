@@ -1188,3 +1188,12 @@ patient/visit foreign keys, a unique visit constraint, and indexes that
 support patient, surgeon, department, status, and chronology queries. The
 down migration removes retained theatre data and is therefore restricted to
 empty test databases or an explicitly approved archival recovery procedure.
+
+## Phase 4.1 Accounts / Price Catalogue
+
+Migration 030 adds the standalone `billable_items` price catalogue. The table
+stores an item code, item name, item type, optional department context,
+description, current unit price, optional unit, soft activation state, actor
+attribution and timestamps. It uses restrictive foreign keys to departments
+and users and is consumed by the Accounts sidebar module only. There is no
+patient, visit, charge, invoice, payment, or receipt table in this phase.

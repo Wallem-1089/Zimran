@@ -187,6 +187,45 @@ class PermissionService
                 ['Accountant', 'Accounts'],
                 true
             ) || $department === 'Accounts',
+            'view_inventory' => in_array(
+                $role,
+                [
+                    'Store Officer',
+                    'Accountant',
+                    'Doctor',
+                    'Nurse',
+                    'Laboratory Scientist',
+                    'Radiographer',
+                    'Physiotherapist',
+                    'Theatre Staff',
+                    'Pharmacist',
+                    'Receptionist',
+                    'Records Officer'
+                ],
+                true
+            ) || in_array(
+                $department,
+                [
+                    'Store',
+                    'Accounts',
+                    'Doctor',
+                    'Nursing',
+                    'Laboratory',
+                    'Radiology',
+                    'Physiotherapy',
+                    'Theatre',
+                    'Pharmacy',
+                    'Reception',
+                    'Records'
+                ],
+                true
+            ),
+            'manage_inventory_items', 'receive_stock', 'issue_stock',
+            'return_stock', 'adjust_stock', 'view_stock_ledger' => in_array(
+                $role,
+                ['Store Officer'],
+                true
+            ) || $department === 'Store',
             'view_consultation', 'create_consultation',
             'edit_consultation', 'complete_consultation' => $role === 'Doctor',
             default => false
@@ -1319,6 +1358,55 @@ class PermissionService
         $user = $user ?? $this->currentUser();
         return $this->isAdministrator($user)
             || $this->hasPermission('manage_billable_item_status', $user);
+    }
+
+    public function canViewInventory(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('view_inventory', $user);
+    }
+
+    public function canManageInventoryItems(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('manage_inventory_items', $user);
+    }
+
+    public function canReceiveStock(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('receive_stock', $user);
+    }
+
+    public function canIssueStock(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('issue_stock', $user);
+    }
+
+    public function canReturnStock(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('return_stock', $user);
+    }
+
+    public function canAdjustStock(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('adjust_stock', $user);
+    }
+
+    public function canViewStockLedger(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('view_stock_ledger', $user);
     }
 
     /*

@@ -929,3 +929,22 @@ erDiagram
     DEPARTMENTS o|--o{ THEATRE_RECORDS : attributes
     USERS ||--o{ THEATRE_RECORDS : owns
 ```
+
+## Phase 4.1 relational additions
+
+| Table | Ownership | Lifecycle | Keys and query indexes |
+|---|---|---|---|
+| `billable_items` | Accounts / `AccountsService` | Mutable master data with soft activation | PK `id`; unique `item_code`; item name, type, department, active, created_at, created_by and updated_by indexes; price, unit and description are catalogue fields only |
+
+| FK | Source -> target | Update/delete |
+|---|---|---|
+| `fk_billable_items_department` | `billable_items.department_id -> departments.id` | CASCADE / SET NULL |
+| `fk_billable_items_created_by` | `billable_items.created_by -> users.id` | CASCADE / RESTRICT |
+| `fk_billable_items_updated_by` | `billable_items.updated_by -> users.id` | CASCADE / SET NULL |
+
+```mermaid
+erDiagram
+    DEPARTMENTS o|--o{ BILLABLE_ITEMS : classifies
+    USERS ||--o{ BILLABLE_ITEMS : creates
+    USERS ||--o{ BILLABLE_ITEMS : updates
+```

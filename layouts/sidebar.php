@@ -126,6 +126,20 @@ if ($currentUser && isset($pdo)) {
 
             <?php endif; ?>
 
+            <?php if ($currentUser && $sidebarPermissionService->canViewBillableItems($currentUser)): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/accounts/index.php">
+
+                        Accounts
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
             <?php if (($currentUser['role_name'] ?? '') === 'System Administrator'): ?>
 
                 <li>

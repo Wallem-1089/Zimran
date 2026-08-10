@@ -38,7 +38,7 @@ Current roles in the database:
 | Physiotherapist | Implemented | Future physiotherapy work. |
 | Radiographer | Implemented | Radiology request/report workflow. |
 | Theatre Staff | Implemented | Theatre workflow. |
-| Accountant | Implemented | Future billing and payment work. |
+| Accountant | Implemented | Price catalogue ownership now implemented; future billing and payment work remains. |
 | Store Officer | Implemented | Future store/inventory work. |
 
 Role activation/deactivation is implemented through `RoleService`. Role inheritance is not implemented.
@@ -330,3 +330,16 @@ Completed/cancelled encounters remain read-only. The Encounter Workspace and
 Patient Chart only show the Vital Signs tab when `view_vital_signs` resolves
 true for the current patient context. Administrator override remains active,
 but the service still validates encounter status and patient/visit matching.
+
+## Phase 4.1 Accounts / Price Catalogue permissions
+
+| Permission | Administrator | Accountant | Doctor | Nurse | Laboratory | Radiology | Physiotherapy | Theatre | Pharmacy | Store | Other |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `view_billable_items` | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | No default |
+| `create_billable_items` | Yes | Yes | No | No | No | No | No | No | No | No | No |
+| `edit_billable_items` | Yes | Yes | No | No | No | No | No | No | No | No | No |
+| `manage_billable_item_status` | Yes | Yes | No | No | No | No | No | No | No | No | No |
+
+Accounts is a standalone sidebar destination. The module is not an Encounter
+Workspace tab, and it does not create patient charges, invoices, payments, or
+receipts.

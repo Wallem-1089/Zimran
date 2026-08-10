@@ -38,6 +38,7 @@ The current migration order is:
 26. `027_phase3_radiology_up.sql`
 27. `028_phase3_physiotherapy_up.sql`
 28. `029_phase3_theatre_up.sql`
+29. `030_phase4_accounts_price_catalogue_up.sql`
 
 The missing `001` number is historical and is intentionally not reused.
 Migration files are not replayed against an already aligned database.
@@ -241,4 +242,20 @@ no separate request, scheduling, anaesthesia, recovery, or checklist tables.
 
 The down migration removes the Theatre table and permission seeds. It is
 destructive and restricted to an empty dedicated test database or an
+explicitly approved recovery operation after the backup gate.
+
+## Migration 030 â€” Phase 4.1 Accounts / Price Catalogue
+
+`030_phase4_accounts_price_catalogue_up.sql` creates the standalone
+`billable_items` price catalogue and seeds the four Accounts permissions
+(`view_billable_items`, `create_billable_items`, `edit_billable_items`,
+`manage_billable_item_status`). Accountant receives full catalogue CRUD.
+Doctor, Nurse, Laboratory Scientist, Radiographer, Physiotherapist, Theatre
+Staff, Pharmacist, Receptionist, Records Officer, and Store Officer receive
+view-only access so the current price catalogue can be consulted where
+needed. The module is sidebar-owned, not an Encounter Workspace tab, and it
+does not create patient charges, invoices, payments, or receipts.
+
+The down migration removes the price-catalogue table and permission seeds. It
+is destructive and restricted to an empty dedicated test database or an
 explicitly approved recovery operation after the backup gate.
