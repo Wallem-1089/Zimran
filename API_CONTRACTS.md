@@ -59,7 +59,7 @@ Current extended results may additionally retain `user_id`, `role_id`, `permissi
 | `DashboardService` | Aggregated administrator dashboard data from existing operational tables. | Read-only except explicit dashboard-view audit method. Administrator controller authorization expected. |
 | `SettingsService` | Typed definitions, validation, history, export and request-local cache. | Owns settings write transactions; history/audit atomic; authorization remains controller-owned. |
 
-`BillingService.php`, `ConsultationService.php`, `LaboratoryService.php`, `RadiologyService.php`, `PhysiotherapyService.php`, and `PharmacyService.php` are service contracts with differing implementation maturity. `LaboratoryService.php`, `RadiologyService.php`, and `PhysiotherapyService.php` are implemented for request/report or record/session CRUD and worklist operations; the others remain planned or partial depending on module status. There is no implemented `TimelineService`; timeline reads are exposed by `VisitService`, `EncounterEventService`, and `AuditService`.
+`BillingService.php`, `ConsultationService.php`, `LaboratoryService.php`, `RadiologyService.php`, `PhysiotherapyService.php`, `TheatreService.php`, and `PharmacyService.php` are service contracts with differing implementation maturity. `LaboratoryService.php`, `RadiologyService.php`, `PhysiotherapyService.php`, and `TheatreService.php` are implemented for their current CRUD/workflow operations; the others remain planned or partial depending on module status. There is no implemented `TimelineService`; timeline reads are exposed by `VisitService`, `EncounterEventService`, and `AuditService`.
 
 ## Public Method Contracts
 

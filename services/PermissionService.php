@@ -137,6 +137,56 @@ class PermissionService
             ),
             'process_radiology_request', 'enter_radiology_report',
             'edit_radiology_report', 'complete_radiology_request' => $role === 'Radiographer',
+            'view_theatre' => in_array(
+                $role,
+                ['Doctor', 'Nurse', 'Theatre Staff'],
+                true
+            ) || in_array($department, ['Doctor', 'Nursing', 'Theatre'], true),
+            'create_theatre', 'edit_theatre', 'complete_theatre' => in_array(
+                $role,
+                ['Doctor', 'Theatre Staff'],
+                true
+            ) || in_array($department, ['Doctor', 'Theatre'], true),
+            'view_billable_items' => in_array(
+                $role,
+                [
+                    'Accountant',
+                    'Accounts',
+                    'Receptionist',
+                    'Records Officer',
+                    'Doctor',
+                    'Nurse',
+                    'Laboratory Scientist',
+                    'Radiographer',
+                    'Physiotherapist',
+                    'Theatre Staff',
+                    'Pharmacist',
+                    'Store Officer'
+                ],
+                true
+            ) || in_array(
+                $department,
+                [
+                    'Accounts',
+                    'Reception',
+                    'Records',
+                    'Doctor',
+                    'Nursing',
+                    'Laboratory',
+                    'Radiology',
+                    'Physiotherapy',
+                    'Theatre',
+                    'Pharmacy',
+                    'Store'
+                ],
+                true
+            ),
+            'create_billable_items', 'edit_billable_items',
+            'manage_billable_item_status' => in_array(
+                $role,
+                ['Accountant', 'Accounts'],
+                true
+            ) || $department === 'Accounts',
             'view_consultation', 'create_consultation',
             'edit_consultation', 'complete_consultation' => $role === 'Doctor',
             default => false
@@ -1216,6 +1266,63 @@ class PermissionService
 
     /*
     |--------------------------------------------------------------------------
+    | Theatre Authorization
+    |--------------------------------------------------------------------------
+    */
+
+    public function canViewTheatre(array $encounter, ?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || ($this->hasPermission('view_theatre', $user)
+                && $this->canViewEncounter($encounter, $user));
+    }
+
+    public function canCreateTheatre(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateTheatre('create_theatre', $encounter, $user);
+    }
+
+    public function canEditTheatre(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateTheatre('edit_theatre', $encounter, $user);
+    }
+
+    public function canCompleteTheatre(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateTheatre('complete_theatre', $encounter, $user);
+    }
+
+    public function canViewBillableItems(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('view_billable_items', $user);
+    }
+
+    public function canCreateBillableItems(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('create_billable_items', $user);
+    }
+
+    public function canEditBillableItems(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('edit_billable_items', $user);
+    }
+
+    public function canManageBillableItemStatus(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('manage_billable_item_status', $user);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Consultation Authorization
     |--------------------------------------------------------------------------
     */
@@ -1482,6 +1589,18 @@ class PermissionService
         } catch (Throwable $exception) {
             return false;
         }
+    }
+
+    private function canMutateTheatre(
+        string $permission,
+        array $encounter,
+        ?array $user
+    ): bool {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || ($this->hasPermission($permission, $user)
+                && $this->canViewEncounter($encounter, $user)
+                && $this->isEditable($encounter));
     }
 
     private function activeDepartmentId(array $user): int

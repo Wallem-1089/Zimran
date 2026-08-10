@@ -2,523 +2,106 @@
 
 declare(strict_types=1);
 
-/*
-|--------------------------------------------------------------------------
-| Variables supplied by workspace.php
-|--------------------------------------------------------------------------
-*/
-
 if (!isset($visit, $patient)) {
-
     return;
-
 }
 
+$theatreRecord = $latestTheatreRecord ?? null;
+$theatreHistory = $theatreHistory ?? [];
+$canCreateTheatre = $canCreateTheatre ?? false;
+$canEditTheatre = $canEditTheatre ?? false;
+$canCompleteTheatre = $canCompleteTheatre ?? false;
 ?>
 
-<section
-    id="tab-theatre"
-    class="workspace-tab">
-
+<section id="tab-theatre" class="workspace-tab">
     <div class="card">
-
         <div class="card-header">
-
             <div>
-
-                <h2>
-
-                    Theatre
-
-                </h2>
-
-                <p>
-
-                    Surgical requests, theatre scheduling, operative procedures
-                    and post-operative management.
-
-                </p>
-
+                <h2>Theatre</h2>
+                <p>Simple encounter-linked theatre record and operative notes.</p>
             </div>
-
             <div>
-
-                <a
-                    href="../../theatre/request.php?visit=<?= (int)$visit['id'] ?>"
-                    class="btn-primary">
-
-                    Request Surgery
-
-                </a>
-
+                <?php if ($theatreRecord === null && $canCreateTheatre): ?>
+                    <a class="btn-primary" href="../theatre/create.php?visit=<?= (int)$visit['id'] ?>">Start Theatre Record</a>
+                <?php elseif ($theatreRecord !== null): ?>
+                    <a class="btn-secondary" href="../theatre/view.php?id=<?= (int)$theatreRecord['id'] ?>">Open Theatre</a>
+                    <?php if ((string)($theatreRecord['status'] ?? '') === 'Draft' && $canEditTheatre): ?>
+                        <a class="btn-primary" href="../theatre/edit.php?id=<?= (int)$theatreRecord['id'] ?>">Continue/Edit</a>
+                    <?php endif; ?>
+                <?php endif; ?>
             </div>
-
         </div>
 
         <div class="summary-grid">
-
             <div class="summary-item">
-
-                <span class="summary-label">
-
-                    Encounter
-
-                </span>
-
-                <span class="summary-value">
-
-                    #<?= (int)$visit['id'] ?>
-
-                </span>
-
+                <span class="summary-label">Encounter</span>
+                <span class="summary-value">#<?= (int)$visit['id'] ?></span>
             </div>
-
             <div class="summary-item">
-
-                <span class="summary-label">
-
-                    Hospital Number
-
-                </span>
-
-                <span class="summary-value">
-
-                    <?= e($patient['hospital_number']) ?>
-
-                </span>
-
+                <span class="summary-label">Hospital Number</span>
+                <span class="summary-value"><?= e($patient['hospital_number']) ?></span>
             </div>
-
             <div class="summary-item">
-
-                <span class="summary-label">
-
-                    Theatre Status
-
-                </span>
-
-                <span class="summary-value">
-
-                    No Surgery Requested
-
-                </span>
-
+                <span class="summary-label">Theatre Status</span>
+                <span class="summary-value"><?= e((string)($theatreRecord['status'] ?? 'No Theatre record')) ?></span>
             </div>
-
             <div class="summary-item">
-
-                <span class="summary-label">
-
-                    Operations
-
-                </span>
-
-                <span class="summary-value">
-
-                    0
-
-                </span>
-
+                <span class="summary-label">Procedure</span>
+                <span class="summary-value"><?= e((string)($theatreRecord['procedure_name'] ?? '-')) ?></span>
             </div>
-
         </div>
-
     </div>
 
     <div class="card">
-
-        <h3>
-
-            Surgical Request
-
-        </h3>
-
-        <div class="empty-state">
-
-            No surgical request has been submitted for this encounter.
-
-        </div>
-
+        <h3>Theatre Record</h3>
+        <?php if ($theatreRecord === null): ?>
+            <div class="empty-state">No Theatre record.</div>
+        <?php else: ?>
+            <div class="summary-grid">
+                <div class="summary-item"><span class="summary-label">Surgeon</span><span class="summary-value"><?= e((string)($theatreRecord['surgeon_name'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Created By</span><span class="summary-value"><?= e((string)($theatreRecord['created_by_name'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Completed By</span><span class="summary-value"><?= e((string)($theatreRecord['completed_by_name'] ?? 'Not completed')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Completed At</span><span class="summary-value"><?= e((string)($theatreRecord['completed_at'] ?? 'Not completed')) ?></span></div>
+            </div>
+            <div class="form-actions">
+                <a class="btn-secondary" href="../theatre/view.php?id=<?= (int)$theatreRecord['id'] ?>">View</a>
+                <a class="btn-secondary" href="../theatre/history.php?patient=<?= (int)$patient['id'] ?>">History</a>
+                <?php if ((string)($theatreRecord['status'] ?? '') === 'Draft' && $canCompleteTheatre): ?>
+                    <form method="post" action="../theatre/complete.php" style="display:inline">
+                        <?= csrfField() ?>
+                        <input type="hidden" name="id" value="<?= (int)$theatreRecord['id'] ?>">
+                        <button class="btn-primary" type="submit">Complete</button>
+                    </form>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     </div>
 
     <div class="card">
-
-        <h3>
-
-            Theatre Schedule
-
-        </h3>
-
-        <table class="summary-table">
-
-            <tbody>
-
-                <tr>
-
-                    <th>
-
-                        Surgery Date
-
-                    </th>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <th>
-
-                        Theatre Room
-
-                    </th>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <th>
-
-                        Lead Surgeon
-
-                    </th>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <th>
-
-                        Anaesthetist
-
-                    </th>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-            </tbody>
-
-        </table>
-
+        <h3>Recent Theatre History</h3>
+        <?php if ($theatreHistory === []): ?>
+            <p class="text-muted">No theatre history recorded for this encounter.</p>
+        <?php else: ?>
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Procedure</th>
+                        <th>Surgeon</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach (array_slice($theatreHistory, 0, 5) as $record): ?>
+                        <tr>
+                            <td><?= e((string)($record['created_at'] ?? '-')) ?></td>
+                            <td><?= e((string)($record['procedure_name'] ?? '-')) ?></td>
+                            <td><?= e((string)($record['surgeon_name'] ?? '-')) ?></td>
+                            <td><?= e((string)($record['status'] ?? '-')) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
     </div>
-
-    <div class="card">
-
-        <h3>
-
-            Planned Procedure
-
-        </h3>
-
-        <table class="summary-table">
-
-            <tbody>
-
-                <tr>
-
-                    <th>
-
-                        Procedure
-
-                    </th>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <th>
-
-                        Priority
-
-                    </th>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <th>
-
-                        Estimated Duration
-
-                    </th>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <th>
-
-                        Current Status
-
-                    </th>
-
-                    <td>
-
-                        Awaiting Scheduling
-
-                    </td>
-
-                </tr>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-    <div class="card">
-
-        <h3>
-
-            Operative Report
-
-        </h3>
-
-        <div class="empty-state">
-
-            No operative report available.
-
-        </div>
-
-    </div>
-
-    <div class="card">
-
-        <h3>
-
-            Post-Operative Care
-
-        </h3>
-
-        <table class="summary-table">
-
-            <tbody>
-
-                <tr>
-
-                    <th>
-
-                        Recovery Status
-
-                    </th>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <th>
-
-                        Ward Transfer
-
-                    </th>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <th>
-
-                        Follow-up Required
-
-                    </th>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <th>
-
-                        Complications
-
-                    </th>
-
-                    <td>
-
-                        None Recorded
-
-                    </td>
-
-                </tr>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-    <div class="card">
-
-        <h3>
-
-            Surgical Team
-
-        </h3>
-
-        <table class="summary-table">
-
-            <thead>
-
-                <tr>
-
-                    <th>
-
-                        Role
-
-                    </th>
-
-                    <th>
-
-                        Staff Member
-
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                <tr>
-
-                    <td>
-
-                        Surgeon
-
-                    </td>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <td>
-
-                        Assistant Surgeon
-
-                    </td>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <td>
-
-                        Anaesthetist
-
-                    </td>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <td>
-
-                        Theatre Nurse
-
-                    </td>
-
-                    <td>
-
-                        —
-
-                    </td>
-
-                </tr>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-    <div class="card">
-
-        <h3>
-
-            Theatre Notes
-
-        </h3>
-
-        <div class="empty-state">
-
-            No theatre notes available for this encounter.
-
-        </div>
-
-    </div>
-
 </section>

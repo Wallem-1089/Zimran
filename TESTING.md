@@ -219,3 +219,20 @@ generation; encounter-event generation; and the workspace, consultation, and
 patient-chart integration hooks. Existing Consultation, Vital Signs, Nursing,
 Laboratory, Radiology, Workspace, and Department Notification regression
 coverage remains in place.
+
+## Phase 3.7 Theatre
+
+```powershell
+$env:HMS_APP_ENV='testing'
+$env:HMS_TEST_DB_NAME='hms_test_hospital_management_system'
+php test\phase3_theatre_test.php
+```
+
+The focused suite verifies Theatre staff, Doctor, Nurse, and Administrator
+create/update/view/complete flows; clinical attribution preservation;
+unauthorized mutation denial; duplicate record prevention; patient/visit
+mismatch rejection; completed/cancelled read-only enforcement; CSRF-aware
+controller wiring; audit generation; encounter-event generation; workspace
+integration; department notification integration; and the existing
+Consultation, Vital Signs, Nursing, Physiotherapy, Laboratory, Radiology, and
+chart regression coverage.

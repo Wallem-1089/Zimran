@@ -37,7 +37,7 @@ Current roles in the database:
 | Pharmacist | Implemented | Future pharmacy work. |
 | Physiotherapist | Implemented | Future physiotherapy work. |
 | Radiographer | Implemented | Radiology request/report workflow. |
-| Theatre Staff | Implemented | Future theatre work. |
+| Theatre Staff | Implemented | Theatre workflow. |
 | Accountant | Implemented | Future billing and payment work. |
 | Store Officer | Implemented | Future store/inventory work. |
 
@@ -188,6 +188,15 @@ doctor. Patient audit history remains more restrictive than general chart view.
 | `edit_physiotherapy` | Implemented | Physiotherapist |
 | `manage_physiotherapy_sessions` | Implemented | Physiotherapist |
 | `complete_physiotherapy` | Implemented | Physiotherapist |
+
+## Theatre Permissions
+
+| Permission | Status | Seeded roles |
+|---|---|---|
+| `view_theatre` | Implemented | Doctor, Nurse, Theatre Staff |
+| `create_theatre` | Implemented | Doctor, Theatre Staff |
+| `edit_theatre` | Implemented | Doctor, Theatre Staff |
+| `complete_theatre` | Implemented | Doctor, Theatre Staff |
 
 Radiology permissions are encounter-scoped and respect active-encounter
 locking. Direct requests are limited to Radiographer or Administrator users,

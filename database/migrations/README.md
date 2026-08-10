@@ -37,6 +37,7 @@ The current migration order is:
 25. `026_phase3_laboratory_result_details_up.sql`
 26. `027_phase3_radiology_up.sql`
 27. `028_phase3_physiotherapy_up.sql`
+28. `029_phase3_theatre_up.sql`
 
 The missing `001` number is historical and is intentionally not reused.
 Migration files are not replayed against an already aligned database.
@@ -210,5 +211,34 @@ studies and reports as simple encounter-linked CRUD records with text-based
 study, indication, findings, impression, and recommendation fields.
 
 The down migration removes the Radiology tables and permission seeds. It is
+destructive and restricted to an empty dedicated test database or an
+explicitly approved recovery operation after the backup gate.
+
+## Migration 028 â€” Phase 3.6 Physiotherapy
+
+`028_phase3_physiotherapy_up.sql` creates `physiotherapy_records` and
+`physiotherapy_sessions`, then seeds five Physiotherapy permissions
+(`view_physiotherapy`, `create_physiotherapy`, `edit_physiotherapy`,
+`manage_physiotherapy_sessions`, `complete_physiotherapy`). Doctor receives
+clinical referral access, Nurse receives view-only access, and Physiotherapist
+receives the full workflow permissions. The module keeps the record simple:
+one primary physiotherapy record per visit plus multiple append-only session
+rows.
+
+The down migration removes the Physiotherapy tables and permission seeds. It
+is destructive and restricted to an empty dedicated test database or an
+explicitly approved recovery operation after the backup gate.
+
+## Migration 029 â€” Phase 3.7 Theatre
+
+`029_phase3_theatre_up.sql` creates a single `theatre_records` table and
+seeds the four Theatre permissions (`view_theatre`, `create_theatre`,
+`edit_theatre`, `complete_theatre`). Doctor, Theatre Staff, and Nurse receive
+their respective access levels; Theatre Staff and Doctor can create and
+complete while Nurse is view-only. The module keeps theatre as a single
+encounter-linked draft/completed clinical record with mostly text fields and
+no separate request, scheduling, anaesthesia, recovery, or checklist tables.
+
+The down migration removes the Theatre table and permission seeds. It is
 destructive and restricted to an empty dedicated test database or an
 explicitly approved recovery operation after the backup gate.

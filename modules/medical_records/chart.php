@@ -19,6 +19,7 @@ require_once __DIR__ . '/../../services/ClinicalNoteService.php';
 require_once __DIR__ . '/../../services/LaboratoryService.php';
 require_once __DIR__ . '/../../services/RadiologyService.php';
 require_once __DIR__ . '/../../services/PhysiotherapyService.php';
+require_once __DIR__ . '/../../services/TheatreService.php';
 require_once __DIR__ . '/../../services/VisitService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
@@ -169,6 +170,11 @@ $canViewPhysiotherapy = $physiotherapyTablesReady && $permissionService->canView
 $physiotherapyService = $physiotherapyTablesReady ? new PhysiotherapyService($pdo, null, null, $permissionService) : null;
 $physiotherapyHistory = [];
 $latestPhysiotherapyRecord = null;
+$theatreTablesReady = chartTableExists($pdo, 'theatre_records');
+$canViewTheatre = $theatreTablesReady && ($permissionService->hasPermission('view_theatre', $currentUser) || $permissionService->isAdministrator($currentUser));
+$theatreService = $theatreTablesReady ? new TheatreService($pdo, null, null, $permissionService) : null;
+$theatreHistory = [];
+$latestTheatreRecord = null;
 $vitalSignsTablesReady = chartTableExists($pdo, 'vital_signs');
 $canViewVitalSigns = $vitalSignsTablesReady && $permissionService->canViewVitalSigns($patientId, $currentUser);
 $vitalSignsService = $vitalSignsTablesReady ? new VitalSignsService($pdo, null, $permissionService) : null;
@@ -214,6 +220,11 @@ if ($activeTab === 'physiotherapy' && !$canViewPhysiotherapy) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'PHYSIOTHERAPY_ACCESS_DENIED', 'Physiotherapy access denied.');
     http_response_code(403);
     exit('You do not have permission to view Physiotherapy.');
+}
+if ($activeTab === 'theatre' && !$canViewTheatre) {
+    $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'THEATRE_ACCESS_DENIED', 'Theatre access denied.');
+    http_response_code(403);
+    exit('You do not have permission to view Theatre.');
 }
 $problemListService = new ProblemListService($pdo);
 if ($canViewProblemList) {
@@ -264,6 +275,11 @@ if ($canViewRadiology) {
 if ($canViewPhysiotherapy) {
     $physiotherapyHistory = $physiotherapyService->listByPatient($patientId, $currentUser);
     $latestPhysiotherapyRecord = $physiotherapyHistory[0] ?? null;
+}
+
+if ($canViewTheatre) {
+    $theatreHistory = $theatreService ? $theatreService->listByPatient($patientId, null) : [];
+    $latestTheatreRecord = $theatreHistory[0] ?? null;
 }
 
 if ($canViewNursing) {
@@ -408,6 +424,10 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         case 'physiotherapy':
             require __DIR__ . '/partials/physiotherapy.php';
+            break;
+
+        case 'theatre':
+            require __DIR__ . '/partials/theatre.php';
             break;
 
         case 'nursing':

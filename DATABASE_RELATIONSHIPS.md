@@ -905,3 +905,27 @@ Migration 024 is baseline-represented for fresh installs and ledger-applied for
 existing installations. The workspace, Patient Chart and nursing history views
 use the latest record as a summary while preserving a single assessment per
 visit.
+
+## Phase 3.7 relational additions
+
+| Table | Ownership | Lifecycle | Keys and query indexes |
+|---|---|---|---|
+| `theatre_records` | Encounter workflow / `TheatreService` | Mutable draft current record; one primary record per visit | PK `id`; unique `visit_id`; visit/patient/surgeon/department/status/created_at indexes; procedure name, indication, preoperative notes, procedure details, findings, complications, postoperative notes, postoperative plan, and anaesthesia notes remain `TEXT` fields |
+
+| FK | Source -> target | Update/delete |
+|---|---|---|
+| `fk_theatre_records_visit` | `theatre_records.visit_id -> visits.id` | CASCADE / RESTRICT |
+| `fk_theatre_records_patient` | `theatre_records.patient_id -> patients.id` | CASCADE / RESTRICT |
+| `fk_theatre_records_surgeon` | `theatre_records.surgeon_id -> users.id` | CASCADE / SET NULL |
+| `fk_theatre_records_department` | `theatre_records.department_id -> departments.id` | CASCADE / SET NULL |
+| `fk_theatre_records_created_by` | `theatre_records.created_by -> users.id` | CASCADE / RESTRICT |
+| `fk_theatre_records_updated_by` | `theatre_records.updated_by -> users.id` | CASCADE / SET NULL |
+| `fk_theatre_records_completed_by` | `theatre_records.completed_by -> users.id` | CASCADE / SET NULL |
+
+```mermaid
+erDiagram
+    PATIENTS ||--o{ THEATRE_RECORDS : has
+    VISITS ||--o{ THEATRE_RECORDS : contextualizes
+    DEPARTMENTS o|--o{ THEATRE_RECORDS : attributes
+    USERS ||--o{ THEATRE_RECORDS : owns
+```

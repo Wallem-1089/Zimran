@@ -1007,8 +1007,8 @@ table with narrative sections kept as text.
 
 Phase 3.3 Nursing CRUD is implemented using the same encounter-centered
 pattern. Nursing assessments remain read-only once completed. Laboratory,
-Radiology, and Physiotherapy are also implemented in the same practical CRUD
-style, each remaining encounter-linked and transaction-safe.
+Radiology, Physiotherapy, and Theatre are also implemented in the same
+practical CRUD style, each remaining encounter-linked and transaction-safe.
 
 ### Phase 4 - Radiology
 
@@ -1021,6 +1021,15 @@ Request -> Worklist -> Report -> Complete
 Radiology study requested, clinical indication, findings, impression, and
 recommendation remain text. PACS, DICOM, and advanced imaging logistics are
 postponed.
+
+### Phase 3.7 - Theatre
+
+Theatre is implemented as a single encounter-linked record with Draft and
+Completed states. Procedure name, indication, preoperative notes, procedure
+details, findings, complications, postoperative notes, postoperative plan,
+and anaesthesia notes remain text fields. Consultation and Workspace entry
+points open the same theatre record, and the patient chart shows read-only
+theatre history.
 
 ### Phase 3.6 - Physiotherapy
 
@@ -1055,9 +1064,9 @@ Advanced insurance and financial approval chains are postponed.
 
 ### Later / Optional
 
-Theatre, advanced analytics, FHIR, HL7, PACS, patient portal,
-SMS/email integration, full patient merging, advanced terminology, and complex
-approval systems are deferred unless current hospital operations require them.
+advanced analytics, FHIR, HL7, PACS, patient portal, SMS/email integration,
+full patient merging, advanced terminology, and complex approval systems are
+deferred unless current hospital operations require them.
 
 ## Phase 3.1 Consultation and Department Notifications
 

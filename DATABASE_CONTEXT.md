@@ -1176,3 +1176,15 @@ record with session date, treatment given, patient response, progress notes,
 next plan, and recorder metadata. Both tables use restrictive patient/visit
 links, support active record and chronology queries, and preserve encounter
 history without introducing a more complex rehabilitation workflow.
+
+## Phase 3.7 Theatre
+
+Migration 029 adds the encounter-linked `theatre_records` table. It stores
+the patient, visit, surgeon, department, procedure name, indication,
+preoperative notes, procedure details, findings, complications,
+postoperative notes, postoperative plan, anaesthesia notes, Draft/Completed
+status, actor fields, and timestamps. The table uses restrictive
+patient/visit foreign keys, a unique visit constraint, and indexes that
+support patient, surgeon, department, status, and chronology queries. The
+down migration removes retained theatre data and is therefore restricted to
+empty test databases or an explicitly approved archival recovery procedure.

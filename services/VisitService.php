@@ -2998,6 +2998,66 @@ private function appendPhysiotherapyEvents(
 
 }
 
+private function appendTheatreEvents(
+    array &$timeline,
+    int $visitId
+): void {
+    if (!$this->tableExists('theatre_records')) {
+        return;
+    }
+
+    try {
+        $stmt = $this->pdo->prepare('
+            SELECT tr.id,
+                   tr.procedure_name,
+                   tr.procedure_details,
+                   tr.status,
+                   tr.created_at,
+                   tr.completed_at,
+                   CONCAT(u.first_name, " ", u.last_name) AS created_by_name
+            FROM theatre_records tr
+            LEFT JOIN users u ON u.id = tr.created_by
+            WHERE tr.visit_id = :visit_id
+            ORDER BY tr.created_at ASC, tr.id ASC
+        ');
+        $stmt->execute([':visit_id' => $visitId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable) {
+        return;
+    }
+
+    foreach ($rows as $row) {
+        $timeline[] = [
+            'type' => 'theatre',
+            'title' => 'Theatre Started',
+            'description' => sprintf(
+                '%s started theatre for %s.',
+                $row['created_by_name'] ?? 'Unknown User',
+                $row['procedure_name'] ?? 'Unknown procedure'
+            ),
+            'department' => 'Theatre',
+            'performed_by' => $row['created_by_name'] ?? null,
+            'transfer_type' => null,
+            'remarks' => null,
+            'created_at' => $row['created_at']
+        ];
+
+        if ((string)($row['status'] ?? '') === 'Completed' && !empty($row['completed_at'])) {
+            $timeline[] = [
+                'type' => 'theatre',
+                'title' => 'Theatre Completed',
+                'description' => 'Theatre record completed.',
+                'department' => 'Theatre',
+                'performed_by' => $row['created_by_name'] ?? null,
+                'transfer_type' => null,
+                'remarks' => null,
+                'created_at' => $row['completed_at']
+            ];
+        }
+    }
+
+}
+
 private function tableExists(string $table): bool
 {
     try {

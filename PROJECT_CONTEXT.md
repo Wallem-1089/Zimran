@@ -789,10 +789,9 @@ Postpone advanced insurance and financial approval chains.
 
 ## Later / Optional
 
-Postpone theatre, physiotherapy, advanced analytics, FHIR, HL7, PACS, patient
-portal, SMS, email integration, full patient merging, advanced clinical
-terminology, and complex approval systems unless current hospital operations
-require them.
+Postpone advanced analytics, FHIR, HL7, PACS, patient portal, SMS, email
+integration, full patient merging, advanced clinical terminology, and complex
+approval systems unless current hospital operations require them.
 
 ---
 

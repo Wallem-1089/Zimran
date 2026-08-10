@@ -158,6 +158,8 @@ class EncounterEventService
             'RADIOLOGY_COMPLETED' => 'radiology',
             'PHYSIOTHERAPY_STARTED',
             'PHYSIOTHERAPY_COMPLETED' => 'physiotherapy',
+            'THEATRE_STARTED',
+            'THEATRE_COMPLETED' => 'theatre',
             default => 'default'
         };
     }

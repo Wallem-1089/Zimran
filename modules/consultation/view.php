@@ -210,6 +210,34 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
         <?php endif; ?>
     </div>
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3>Theatre</h3>
+                <p>Open or review the current theatre record.</p>
+            </div>
+            <?php if ($theatreService && $permissionService->canCreateTheatre($visit, $currentUser)): ?>
+                <?php $existingTheatre = $theatreService->getByVisit((int)$visit['id'], $currentUser); ?>
+                <a class="btn-primary" href="<?= $existingTheatre ? '../theatre/view.php?id=' . (int)$existingTheatre['id'] : '../theatre/create.php?visit=' . (int)$visit['id'] ?>">
+                    <?= $existingTheatre ? 'Open Theatre' : 'Start Theatre Record' ?>
+                </a>
+            <?php endif; ?>
+        </div>
+        <?php if (!$theatreService): ?>
+            <p class="text-muted">Theatre tables are not available yet.</p>
+        <?php else: ?>
+            <?php $existingTheatre = $theatreService->getByVisit((int)$visit['id'], $currentUser); ?>
+            <?php if ($existingTheatre === null): ?>
+                <p class="text-muted">No theatre record recorded.</p>
+            <?php else: ?>
+                <div class="summary-grid">
+                    <div class="summary-item"><span class="summary-label">Procedure</span><span class="summary-value"><?= e((string)($existingTheatre['procedure_name'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Surgeon</span><span class="summary-value"><?= e((string)($existingTheatre['surgeon_name'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"><?= e((string)($existingTheatre['status'] ?? '-')) ?></span></div>
+                </div>
+            <?php endif; ?>
+        <?php endif; ?>
+    </div>
 
     <?php foreach ($fields as $field => $label): ?>
         <div class="card">

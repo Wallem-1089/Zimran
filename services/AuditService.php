@@ -213,10 +213,7 @@ class AuditService
                 action,
                 description,
                 ip_address,
-                user_agent,
-                department_id,
-                severity,
-                event_type
+                user_agent
 
             )
 
@@ -229,10 +226,7 @@ class AuditService
                 :action,
                 :description,
                 :ip_address,
-                :user_agent,
-                :department_id,
-                :severity,
-                :event_type
+                :user_agent
 
             )
 
@@ -254,11 +248,12 @@ class AuditService
                 ':action'      => $action,
                 ':description' => $description,
                 ':ip_address'  => $this->getClientIp(),
-                ':user_agent' => $this->getUserAgent(),
-                ':department_id' => $departmentId,
-                ':severity' => strtoupper($severity),
-                ':event_type' => $eventType ?? $action
+                ':user_agent' => $this->getUserAgent()
             ]);
+
+            if ($result === false) {
+                return false;
+            }
 
             if ($ownsTransaction) {
                 $this->db->commit();

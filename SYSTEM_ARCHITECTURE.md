@@ -201,7 +201,7 @@ No `TimelineService.php` class is currently implemented. Timeline behavior is pa
 | Pharmacy | Planned | empty service placeholder and workspace tab |
 | Accounts/Billing | Planned | billing dashboard/tab only |
 | Physiotherapy | Implemented | `PhysiotherapyService`, record/session CRUD, worklist, workspace integration |
-| Theatre | Planned | directory and workspace tab only |
+| Theatre | Implemented | `TheatreService`, single-record CRUD, workspace integration |
 | Store/Inventory | Partially implemented | department and dashboard references; inventory workflow absent |
 
 Modules communicate through services and shared encounter identifiers. Future clinical modules should attach records to `visit_id`, validate encounter state, authorize department access, use transactions, create audit logs, and create encounter events.
@@ -411,7 +411,7 @@ Open encounter workspace
   -> render through the workspace/timeline integration
 ```
 
-Planned integrations include Medical Records, Consultation, Nursing, Laboratory, Radiology, Pharmacy, Accounts/Billing, Theatre, Store/Inventory, Reporting, dashboards, notifications, appointments, APIs, and discharge.
+Planned integrations include Medical Records, Consultation, Nursing, Laboratory, Radiology, Pharmacy, Accounts/Billing, Store/Inventory, Reporting, dashboards, notifications, appointments, APIs, and discharge.
 
 Future module implementation should avoid unnecessary normalization of
 clinical narrative text. Keep narrative sections such as consultation history,
@@ -614,7 +614,7 @@ merge is postponed.
 | Phase 4 | Radiology | `radiology_orders`, `radiology_reports` |
 | Phase 5 | Pharmacy and Inventory | prescriptions, dispensing, items, stock transactions |
 | Phase 6 | Billing | charges, invoices, payments, receipts |
-| Later / Optional | Theatre, advanced analytics, integrations | Implement only when operationally required |
+| Later / Optional | advanced analytics, integrations | Implement only when operationally required |
 
 Consultation is the next implementation target. Its first version should be a
 simple encounter-linked CRUD module with narrative `TEXT` fields for history,

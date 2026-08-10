@@ -38,6 +38,7 @@ require_once __DIR__ . '/../../services/DepartmentNotificationService.php';
 require_once __DIR__ . '/../../services/LaboratoryService.php';
 require_once __DIR__ . '/../../services/RadiologyService.php';
 require_once __DIR__ . '/../../services/PhysiotherapyService.php';
+require_once __DIR__ . '/../../services/TheatreService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
 
@@ -195,6 +196,11 @@ $successMessage = $_SESSION['success_message'] ?? null;
 
 unset($_SESSION['success_message']);
 
+if ($theatreAccessDenied) {
+    http_response_code(403);
+    exit('You do not have permission to view Theatre.');
+}
+
 /*
 |--------------------------------------------------------------------------
 | Department Access
@@ -296,6 +302,24 @@ $canProcessPhysiotherapyRequest = $permissionService->canProcessPhysiotherapyReq
 $canEnterPhysiotherapyReport = $permissionService->canEnterPhysiotherapyResult($visit, $currentUser);
 $canEditPhysiotherapyReport = $permissionService->canEditPhysiotherapyResult($visit, $currentUser);
 $canCompletePhysiotherapyRequest = $permissionService->canCompletePhysiotherapyRequest($visit, $currentUser);
+$theatreTablesReady = workspaceTableExists($pdo, 'theatre_records');
+$theatreService = $theatreTablesReady ? new TheatreService($pdo, null, null, $permissionService) : null;
+$theatreHistory = $theatreService ? $theatreService->listByVisit($visitId, $currentUser) : [];
+$latestTheatreRecord = $theatreHistory[0] ?? null;
+$canViewTheatre = $permissionService->canViewTheatre($visit, $currentUser);
+$canCreateTheatre = $permissionService->canCreateTheatre($visit, $currentUser);
+$canEditTheatre = $permissionService->canEditTheatre($visit, $currentUser);
+$canCompleteTheatre = $permissionService->canCompleteTheatre($visit, $currentUser);
+$theatreAccessDenied = false;
+if ($activeTab === 'theatre' && !$canViewTheatre) {
+    $permissionService->logDenied(
+        (int)($currentUser['id'] ?? 0),
+        $visitId,
+        'THEATRE_ACCESS_DENIED',
+        'Theatre access denied.'
+    );
+    $theatreAccessDenied = true;
+}
 $departments = $visitService->getDepartments();
 $departmentNotificationService = $notificationTablesReady ? new DepartmentNotificationService($pdo) : null;
 $visitNotifications = $departmentNotificationService ? $departmentNotificationService->listForVisit($visitId) : [];
@@ -336,7 +360,7 @@ $radiology = [];
 $pharmacy = [];
 $billing = [];
 $physiotherapy = $latestPhysiotherapyRecord ? [$latestPhysiotherapyRecord] : [];
-$theatre = [];
+$theatre = $latestTheatreRecord ? [$latestTheatreRecord] : [];
 
 $medicalDocumentService = new MedicalDocumentService($pdo);
 $canViewMedicalDocuments = $permissionService->canViewMedicalDocuments((int)$patient['id'], $currentUser);
