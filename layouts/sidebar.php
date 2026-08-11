@@ -140,6 +140,20 @@ if ($currentUser && isset($pdo)) {
 
             <?php endif; ?>
 
+            <?php if ($currentUser && $sidebarPermissionService->canViewInventory($currentUser)): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/store/index.php">
+
+                        Store
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
             <?php if (($currentUser['role_name'] ?? '') === 'System Administrator'): ?>
 
                 <li>

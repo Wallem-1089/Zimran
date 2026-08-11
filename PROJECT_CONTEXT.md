@@ -1085,3 +1085,8 @@ centered CRUD module.
 Accounts / Price Catalogue is now implemented as a standalone sidebar module.
 It owns the hospital-wide price catalogue only; Billing/Charges will later
 consume those prices at the encounter level.
+
+Store / Inventory is also implemented as a standalone sidebar module. It owns
+stock receipts, issues, returns, adjustments, department balances, and the
+inventory item catalogue. Store does not live inside the Encounter Workspace,
+and it does not create patient charges or dispensing workflows.

@@ -343,3 +343,19 @@ but the service still validates encounter status and patient/visit matching.
 Accounts is a standalone sidebar destination. The module is not an Encounter
 Workspace tab, and it does not create patient charges, invoices, payments, or
 receipts.
+
+## Phase 4.2 Store / Inventory permissions
+
+| Permission | Administrator | Store Officer | Accountant | Doctor | Nurse | Laboratory | Radiology | Physiotherapy | Theatre | Pharmacy | Reception | Records | Other |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `view_inventory` | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | No default |
+| `manage_inventory_items` | Yes | Yes | No | No | No | No | No | No | No | No | No | No | No |
+| `receive_stock` | Yes | Yes | No | No | No | No | No | No | No | No | No | No | No |
+| `issue_stock` | Yes | Yes | No | No | No | No | No | No | No | No | No | No | No |
+| `return_stock` | Yes | Yes | No | No | No | No | No | No | No | No | No | No | No |
+| `adjust_stock` | Yes | Yes | No | No | No | No | No | No | No | No | No | No | No |
+| `view_stock_ledger` | Yes | Yes | Yes | No | No | No | No | No | No | No | No | No | No |
+
+Store is a standalone sidebar module. It is not an Encounter Workspace tab.
+Store owns stock movements and department balances only. It does not own
+pricing, dispensing, patient charges, invoices, or receipts.

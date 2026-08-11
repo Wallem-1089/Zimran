@@ -252,3 +252,19 @@ CSRF-aware controller wiring, audit generation, and sidebar visibility. It
 also confirms that no Accounts Encounter Workspace tab was introduced and
 that the module remains independent from patient charges, invoices, payments,
 and receipts.
+
+## Phase 4.2 Store / Inventory
+
+```powershell
+$env:HMS_APP_ENV='testing'
+$env:HMS_TEST_DB_NAME='hms_test_hospital_management_system'
+php test\phase4_store_test.php
+```
+
+The focused suite verifies inventory item CRUD, optional billable-item
+linkage, receive/issue/return/adjust stock transactions, department balances,
+ledger history, item activation toggles, role-based permissions,
+administrator override, unauthorized mutation denial, CSRF-aware controller
+wiring, audit generation, and sidebar visibility. It also confirms that no
+Store Encounter Workspace tab was introduced and that the module remains
+independent from Pharmacy dispensing and Billing.

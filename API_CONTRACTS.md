@@ -976,3 +976,28 @@ Constructor: `__construct(PDO $db, ?AuditService $auditService = null, ?Permissi
 Accounts is a standalone sidebar destination for price master data only. It is
 not an Encounter Workspace tab and it does not create charges, invoices,
 payments, receipts, or inventory movements.
+
+### `StoreService`
+
+Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?PermissionService $permissionService = null)`. Uses
+`inventory_items`, `stock_transactions`, `department_stock_balances`,
+`billable_items`, departments, users, permissions, and audit.
+
+| Signature | Purpose/return | Contract |
+|---|---|---|
+| `createItem(array $data, array $user): array` | Creates an inventory item; optional `billable_item_id`. | Transaction; validates code/name/category/unit; duplicate code prevention; `INVENTORY_ITEM_CREATED`. |
+| `getItemById(int $itemId, ?array $user = null): ?array` | Detailed item view with billable-link names. | Read; visibility controlled by `view_inventory`. |
+| `listItems(array $filters = [], ?array $user = null): array` / `searchItems(...)` | Search/filter inventory catalogue. | Read; supports code/name/category/status/billable-link filtering. |
+| `updateItem(int $itemId, array $data, array $user): array` | Updates inventory metadata and linkage. | Transaction/row lock; duplicate prevention; `INVENTORY_ITEM_UPDATED`. |
+| `activateItem(int $itemId, array $user): array` / `deactivateItem(...)` | Soft activation toggle. | Transaction/row lock; `INVENTORY_ITEM_ACTIVATED` / `INVENTORY_ITEM_DEACTIVATED`. |
+| `receiveStock(array $data, array $user): array` | Receives stock into Store. | Transaction/row lock; validates item, quantity, store department; `STOCK_RECEIVED`. |
+| `issueStock(array $data, array $user): array` | Issues stock from Store to another department. | Transaction/row lock; sufficient-balance validation; `STOCK_ISSUED`. |
+| `returnStock(array $data, array $user): array` | Returns stock from another department to Store. | Transaction/row lock; sufficient-balance validation; `STOCK_RETURNED`. |
+| `adjustStock(array $data, array $user): array` | Records a stock increase/decrease adjustment. | Transaction/row lock; validates adjustment mode and balance; `STOCK_ADJUSTED`. |
+| `getDepartmentBalance(int $itemId, int $departmentId, ?array $user = null): ?array` | Current maintained quantity for a department/item pair. | Read; null when inaccessible. |
+| `listDepartmentStock(?int $departmentId = null, ?array $user = null): array` | Department stock listing. | Read; returns maintained balance rows. |
+| `getItemLedger(int $itemId, ?array $user = null): array` | Immutable movement ledger for one item. | Read; returns chronological transaction rows. |
+
+Store is a standalone sidebar destination for stock master data and
+operational movements only. It is not an Encounter Workspace tab and it does
+not create patient charges, invoices, payments, receipts, or dispensing.

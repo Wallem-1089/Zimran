@@ -1117,3 +1117,9 @@ Accounts owns the reusable price catalogue. It is a sidebar-only master-data
 module and does not live inside the Encounter Workspace. Billing/Charges will
 later consume `billable_items` when encounter-specific financial workflows are
 implemented.
+
+Store owns the operational stock ledger. It is a sidebar-only inventory
+module for item catalogue maintenance, stock receipt, issue, return,
+adjustment, and department balance tracking. It does not live inside the
+Encounter Workspace and it does not create patient charges or dispensing
+actions.

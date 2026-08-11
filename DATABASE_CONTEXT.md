@@ -1197,3 +1197,16 @@ description, current unit price, optional unit, soft activation state, actor
 attribution and timestamps. It uses restrictive foreign keys to departments
 and users and is consumed by the Accounts sidebar module only. There is no
 patient, visit, charge, invoice, payment, or receipt table in this phase.
+
+## Phase 4.2 Store / Inventory
+
+Migration 031 adds the Store inventory catalogue and stock ledger. The
+`inventory_items` table stores the item code, item name, category, unit,
+optional description, optional linkage to `billable_items`, activation state,
+actor attribution, and timestamps. The `stock_transactions` table stores
+immutable receipts, issues, returns, and adjustments with source/destination
+departments, references, remarks, and performer attribution. The
+`department_stock_balances` table maintains the simplest safe cache of current
+department quantities so Store and downstream department views can read
+balances without editing them directly. Store remains a sidebar operational
+module and does not create patient charges or dispensing workflows.

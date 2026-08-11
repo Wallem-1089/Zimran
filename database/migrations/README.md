@@ -39,6 +39,7 @@ The current migration order is:
 27. `028_phase3_physiotherapy_up.sql`
 28. `029_phase3_theatre_up.sql`
 29. `030_phase4_accounts_price_catalogue_up.sql`
+30. `031_phase4_store_inventory_up.sql`
 
 The missing `001` number is historical and is intentionally not reused.
 Migration files are not replayed against an already aligned database.

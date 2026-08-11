@@ -935,16 +935,36 @@ erDiagram
 | Table | Ownership | Lifecycle | Keys and query indexes |
 |---|---|---|---|
 | `billable_items` | Accounts / `AccountsService` | Mutable master data with soft activation | PK `id`; unique `item_code`; item name, type, department, active, created_at, created_by and updated_by indexes; price, unit and description are catalogue fields only |
+| `inventory_items` | Store / `StoreService` | Mutable inventory master data with soft activation | PK `id`; unique `item_code`; item name, category, billable-item link, active, created_at, created_by and updated_by indexes |
+| `stock_transactions` | Store / `StoreService` | Immutable stock movement ledger | PK `id`; inventory item, transaction type, quantity, from/to department, created_at, performer indexes |
+| `department_stock_balances` | Store / `StoreService` | Maintained cache of current department quantities | Composite PK `(inventory_item_id, department_id)`; quantity and updated_at |
 
 | FK | Source -> target | Update/delete |
 |---|---|---|
 | `fk_billable_items_department` | `billable_items.department_id -> departments.id` | CASCADE / SET NULL |
 | `fk_billable_items_created_by` | `billable_items.created_by -> users.id` | CASCADE / RESTRICT |
 | `fk_billable_items_updated_by` | `billable_items.updated_by -> users.id` | CASCADE / SET NULL |
+| `fk_inventory_items_billable_item` | `inventory_items.billable_item_id -> billable_items.id` | CASCADE / SET NULL |
+| `fk_inventory_items_created_by` | `inventory_items.created_by -> users.id` | CASCADE / RESTRICT |
+| `fk_inventory_items_updated_by` | `inventory_items.updated_by -> users.id` | CASCADE / SET NULL |
+| `fk_stock_transactions_item` | `stock_transactions.inventory_item_id -> inventory_items.id` | CASCADE / RESTRICT |
+| `fk_stock_transactions_from_department` | `stock_transactions.from_department_id -> departments.id` | CASCADE / SET NULL |
+| `fk_stock_transactions_to_department` | `stock_transactions.to_department_id -> departments.id` | CASCADE / SET NULL |
+| `fk_stock_transactions_performed_by` | `stock_transactions.performed_by -> users.id` | CASCADE / RESTRICT |
+| `fk_department_stock_balances_item` | `department_stock_balances.inventory_item_id -> inventory_items.id` | CASCADE / CASCADE |
+| `fk_department_stock_balances_department` | `department_stock_balances.department_id -> departments.id` | CASCADE / CASCADE |
 
 ```mermaid
 erDiagram
     DEPARTMENTS o|--o{ BILLABLE_ITEMS : classifies
     USERS ||--o{ BILLABLE_ITEMS : creates
     USERS ||--o{ BILLABLE_ITEMS : updates
+    BILLABLE_ITEMS ||--o{ INVENTORY_ITEMS : prices
+    USERS ||--o{ INVENTORY_ITEMS : creates
+    USERS ||--o{ INVENTORY_ITEMS : updates
+    INVENTORY_ITEMS ||--o{ STOCK_TRANSACTIONS : moves
+    DEPARTMENTS ||--o{ STOCK_TRANSACTIONS : from_or_to
+    USERS ||--o{ STOCK_TRANSACTIONS : performs
+    INVENTORY_ITEMS ||--o{ DEPARTMENT_STOCK_BALANCES : balances
+    DEPARTMENTS ||--o{ DEPARTMENT_STOCK_BALANCES : holds
 ```

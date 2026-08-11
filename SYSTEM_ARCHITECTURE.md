@@ -203,7 +203,7 @@ No `TimelineService.php` class is currently implemented. Timeline behavior is pa
 | Accounts/Billing | Planned | encounter-specific billing/charges later |
 | Physiotherapy | Implemented | `PhysiotherapyService`, record/session CRUD, worklist, workspace integration |
 | Theatre | Implemented | `TheatreService`, single-record CRUD, workspace integration |
-| Store/Inventory | Partially implemented | department and dashboard references; inventory workflow absent |
+| Store/Inventory | Implemented | standalone sidebar inventory items, stock movements, and department balances |
 
 Modules communicate through services and shared encounter identifiers. Future clinical modules should attach records to `visit_id`, validate encounter state, authorize department access, use transactions, create audit logs, and create encounter events.
 
@@ -412,7 +412,7 @@ Open encounter workspace
   -> render through the workspace/timeline integration
 ```
 
-Planned integrations include Medical Records, Consultation, Nursing, Laboratory, Radiology, Pharmacy, Billing/Charges, Store/Inventory, Reporting, dashboards, notifications, appointments, APIs, and discharge. Accounts is already implemented as the standalone price catalogue.
+Planned integrations include Medical Records, Consultation, Nursing, Laboratory, Radiology, Pharmacy, Billing/Charges, Reporting, dashboards, notifications, appointments, APIs, and discharge. Accounts and Store are already implemented as standalone sidebar modules for price and stock master data respectively.
 
 Future module implementation should avoid unnecessary normalization of
 clinical narrative text. Keep narrative sections such as consultation history,
