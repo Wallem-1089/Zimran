@@ -260,3 +260,18 @@ does not create patient charges, invoices, payments, or receipts.
 The down migration removes the price-catalogue table and permission seeds. It
 is destructive and restricted to an empty dedicated test database or an
 explicitly approved recovery operation after the backup gate.
+
+## Migration 032 — Phase 4.3 Pharmacy / Dispensing
+
+`032_phase4_pharmacy_up.sql` creates the encounter-linked `prescriptions`
+and `pharmacy_dispensing` tables and seeds the Pharmacy permissions
+(`view_pharmacy`, `create_prescription`, `edit_prescription`,
+`dispense_prescription`). Pharmacist receives the full workflow, Doctor can
+create and edit clinical prescriptions, and Nurse and Records Officer receive
+view-only access. The module keeps Pharmacy as a small prescription and
+dispensing layer that reuses Store inventory balances for stock consumption
+and does not create patient charges.
+
+The down migration removes the Pharmacy tables and permission seeds. It is
+destructive and restricted to an empty dedicated test database or an
+explicitly approved recovery operation after the backup gate.

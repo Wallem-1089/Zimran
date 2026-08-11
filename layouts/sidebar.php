@@ -154,6 +154,20 @@ if ($currentUser && isset($pdo)) {
 
             <?php endif; ?>
 
+            <?php if ($currentUser && $sidebarPermissionService->hasPermission('view_pharmacy', $currentUser)): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/pharmacy/index.php">
+
+                        Pharmacy
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
             <?php if (($currentUser['role_name'] ?? '') === 'System Administrator'): ?>
 
                 <li>

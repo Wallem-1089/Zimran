@@ -220,6 +220,98 @@ class StoreService
         return $this->recordMovement('Adjustment', $data, $user, 'STOCK_ADJUSTED');
     }
 
+    public function consumeDepartmentStock(array $data, array $user): array
+    {
+        try {
+            $this->assertCanViewItemForMovement($user);
+            $payload = $this->normalizeConsumptionPayload($data);
+            if ($payload['errors'] !== []) {
+                return $this->failure($payload['errors']);
+            }
+
+            $ownsTransaction = !$this->pdo->inTransaction();
+            if ($ownsTransaction) {
+                $this->pdo->beginTransaction();
+            }
+
+            $item = $this->fetchItemByIdForUpdate($payload['data']['inventory_item_id']);
+            if (!$item) {
+                $this->rollback();
+                return $this->failure(['Inventory item not found.']);
+            }
+
+            if ((int)$item['is_active'] !== 1) {
+                $this->rollback();
+                return $this->failure(['Inventory item is inactive.']);
+            }
+
+            $this->ensureBalanceRow($item['id'], $payload['data']['department_id']);
+            $this->lockBalanceRow($item['id'], $payload['data']['department_id']);
+
+            $balance = $this->fetchBalance($item['id'], $payload['data']['department_id']);
+            if (!$balance || (float)$balance['quantity'] < (float)$payload['data']['quantity']) {
+                $this->rollback();
+                return $this->failure(['Insufficient stock for the selected department.']);
+            }
+
+            $stmt = $this->pdo->prepare('
+                INSERT INTO stock_transactions (
+                    inventory_item_id,
+                    transaction_type,
+                    quantity,
+                    from_department_id,
+                    to_department_id,
+                    reference,
+                    remarks,
+                    performed_by,
+                    created_at
+                ) VALUES (
+                    :inventory_item_id,
+                    :transaction_type,
+                    :quantity,
+                    :from_department_id,
+                    NULL,
+                    :reference,
+                    :remarks,
+                    :performed_by,
+                    NOW()
+                )
+            ');
+            $stmt->execute([
+                ':inventory_item_id' => $item['id'],
+                ':transaction_type' => 'Issue',
+                ':quantity' => $payload['data']['quantity'],
+                ':from_department_id' => $payload['data']['department_id'],
+                ':reference' => $payload['data']['reference'],
+                ':remarks' => $payload['data']['remarks'],
+                ':performed_by' => (int)$user['id'],
+            ]);
+            $transactionId = (int)$this->pdo->lastInsertId();
+
+            $this->changeBalance($item['id'], $payload['data']['department_id'], 0 - (float)$payload['data']['quantity']);
+
+            if (!$this->audit((int)$user['id'], null, 'STOCK_ISSUED', 'Consumed stock from department for dispensing. Item #' . $item['id'] . '.')) {
+                throw new RuntimeException('Unable to audit stock consumption.');
+            }
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+
+            return [
+                'success' => true,
+                'stock_transaction_id' => $transactionId,
+                'inventory_item_id' => (int)$item['id'],
+                'errors' => [],
+            ];
+        } catch (Throwable) {
+            if ($this->pdo->inTransaction()) {
+                $this->rollback();
+            }
+            return $this->failure(['Unable to consume stock from the department.']);
+        }
+    }
+
     public function getDepartmentBalance(int $itemId, int $departmentId, ?array $user = null): ?array
     {
         if ($user !== null && !$this->permissionService->canViewInventory($user)) {
@@ -912,6 +1004,50 @@ class StoreService
         if (!$allowed) {
             throw new RuntimeException('You are not allowed to perform this stock movement.');
         }
+    }
+
+    private function assertCanViewItemForMovement(array $user): void
+    {
+        if (!$this->permissionService->canViewInventory($user)) {
+            throw new RuntimeException('You are not allowed to access inventory items.');
+        }
+    }
+
+    private function normalizeConsumptionPayload(array $data): array
+    {
+        $errors = [];
+        $itemId = (int)($data['inventory_item_id'] ?? 0);
+        $departmentId = (int)($data['department_id'] ?? 0);
+        $quantityRaw = $data['quantity'] ?? null;
+        $reference = trim((string)($data['reference'] ?? ''));
+        $remarks = trim((string)($data['remarks'] ?? ''));
+
+        if ($itemId <= 0) {
+            $errors[] = 'Inventory item is required.';
+        }
+        if ($departmentId <= 0 || !$this->departmentExists($departmentId)) {
+            $errors[] = 'Department is invalid.';
+        }
+        if (!is_numeric($quantityRaw) || (float)$quantityRaw <= 0) {
+            $errors[] = 'Quantity must be greater than zero.';
+        }
+        if (mb_strlen($reference) > 255) {
+            $errors[] = 'Reference must not exceed 255 characters.';
+        }
+        if (mb_strlen($remarks) > 2000) {
+            $errors[] = 'Remarks must not exceed 2000 characters.';
+        }
+
+        return [
+            'errors' => $errors,
+            'data' => [
+                'inventory_item_id' => $itemId,
+                'department_id' => $departmentId,
+                'quantity' => number_format((float)$quantityRaw, 2, '.', ''),
+                'reference' => $reference === '' ? null : $reference,
+                'remarks' => $remarks === '' ? null : $remarks,
+            ],
+        ];
     }
 
     private function audit(int $userId, ?int $visitId, string $action, string $description): bool

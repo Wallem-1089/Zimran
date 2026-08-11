@@ -10,6 +10,9 @@ require_once __DIR__ . '/../../services/LaboratoryService.php';
 require_once __DIR__ . '/../../services/RadiologyService.php';
 require_once __DIR__ . '/../../services/PhysiotherapyService.php';
 require_once __DIR__ . '/../../services/TheatreService.php';
+require_once __DIR__ . '/../../services/ClinicalSafetyService.php';
+require_once __DIR__ . '/../../services/PharmacyService.php';
+require_once __DIR__ . '/../../services/StoreService.php';
 require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
@@ -46,6 +49,11 @@ $theatreTablesReady = consultationTableExists($pdo, 'theatre_records');
 $theatreService = $theatreTablesReady ? new TheatreService($pdo, null, null, $permissionService) : null;
 $vitalSignsTablesReady = consultationTableExists($pdo, 'vital_signs');
 $vitalSignsService = $vitalSignsTablesReady ? new VitalSignsService($pdo, null, $permissionService) : null;
+$pharmacyTablesReady = consultationTableExists($pdo, 'prescriptions')
+    && consultationTableExists($pdo, 'pharmacy_dispensing');
+$pharmacyService = $pharmacyTablesReady
+    ? new PharmacyService($pdo, new StoreService($pdo, null, $permissionService), new ClinicalSafetyService($pdo), null, null, $permissionService, $visitService)
+    : null;
 
 function consultationFlash(array $result, string $success): void
 {

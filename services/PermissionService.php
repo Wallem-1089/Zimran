@@ -147,6 +147,18 @@ class PermissionService
                 ['Doctor', 'Theatre Staff'],
                 true
             ) || in_array($department, ['Doctor', 'Theatre'], true),
+            'view_pharmacy' => in_array(
+                $role,
+                ['Pharmacist', 'Doctor', 'Nurse', 'Records Officer'],
+                true
+            ) || in_array($department, ['Pharmacy', 'Doctor', 'Nursing', 'Records'], true),
+            'create_prescription', 'edit_prescription' => in_array(
+                $role,
+                ['Doctor', 'Pharmacist'],
+                true
+            ) || in_array($department, ['Doctor', 'Pharmacy'], true),
+            'dispense_prescription' => $role === 'Pharmacist'
+                || $department === 'Pharmacy',
             'view_billable_items' => in_array(
                 $role,
                 [
@@ -1332,6 +1344,56 @@ class PermissionService
         return $this->canMutateTheatre('complete_theatre', $encounter, $user);
     }
 
+    public function canViewPharmacy(int $patientId, ?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        if (!$user || $patientId <= 0) {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        if (!$this->hasPermission('view_pharmacy', $user)) {
+            return false;
+        }
+
+        if ($this->roleMatches($user, ['Pharmacist'])) {
+            return true;
+        }
+
+        if ($this->roleMatches($user, ['Records Officer', 'Doctor', 'Nurse'])) {
+            return $this->canViewMedicalRecord($patientId, $user);
+        }
+
+        return in_array((string)($user['department_name'] ?? ''), ['Pharmacy', 'Records', 'Doctor', 'Nursing'], true)
+            && $this->canViewMedicalRecord($patientId, $user);
+    }
+
+    public function canCreatePrescription(
+        array $encounter,
+        ?array $user = null,
+        string $source = 'Clinical'
+    ): bool {
+        return $this->canMutatePharmacy('create_prescription', $encounter, $user, $source);
+    }
+
+    public function canEditPrescription(
+        array $encounter,
+        ?array $user = null,
+        string $source = 'Clinical'
+    ): bool {
+        return $this->canMutatePharmacy('edit_prescription', $encounter, $user, $source);
+    }
+
+    public function canDispensePrescription(
+        array $encounter,
+        ?array $user = null
+    ): bool {
+        return $this->canMutatePharmacy('dispense_prescription', $encounter, $user);
+    }
+
     public function canViewBillableItems(?array $user = null): bool
     {
         $user = $user ?? $this->currentUser();
@@ -1978,6 +2040,46 @@ class PermissionService
             'edit_radiology_report',
             'complete_radiology_request' => $this->roleMatches($user, ['Radiographer'])
                 && $this->canViewRadiology((int)($encounter['patient_id'] ?? 0), $user),
+            default => false
+        };
+    }
+
+    private function canMutatePharmacy(
+        string $permission,
+        array $encounter,
+        ?array $user = null,
+        string $source = 'Clinical'
+    ): bool {
+        $user = $user ?? $this->currentUser();
+        if (!$user) {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        if (in_array((string)($encounter['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)) {
+            return false;
+        }
+
+        if (!$this->hasPermission($permission, $user)) {
+            return false;
+        }
+
+        $source = strtoupper(trim($source));
+
+        return match ($permission) {
+            'create_prescription' => $source === 'DIRECT'
+                ? $this->roleMatches($user, ['Pharmacist'])
+                : $this->roleMatches($user, ['Doctor'])
+                    && $this->canViewEncounter($encounter, $user),
+            'edit_prescription' => $source === 'DIRECT'
+                ? $this->roleMatches($user, ['Pharmacist'])
+                : $this->roleMatches($user, ['Doctor'])
+                    && $this->canViewEncounter($encounter, $user),
+            'dispense_prescription' => $this->roleMatches($user, ['Pharmacist'])
+                && $this->canViewPharmacy((int)($encounter['patient_id'] ?? 0), $user),
             default => false
         };
     }

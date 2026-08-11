@@ -33,6 +33,11 @@ $latestRadiologyRequests = $radiologyService
 $latestRadiologyReport = ($latestRadiologyRequests !== [] && $radiologyService)
     ? $radiologyService->getResult((int)$latestRadiologyRequests[0]['id'], $currentUser)
     : null;
+$latestPharmacyRequests = $pharmacyService
+    ? $pharmacyService->listByVisit((int)$visit['id'], $currentUser)
+    : [];
+$latestPharmacyPrescription = $latestPharmacyRequests[0] ?? null;
+$canCreatePrescription = $permissionService->canCreatePrescription($visit, $currentUser, 'Clinical');
 
 $pageTitle = 'Consultation';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -165,6 +170,40 @@ require __DIR__ . '/../../layouts/sidebar.php';
                         <div class="summary-item"><span class="summary-label">Recommendation</span><span class="summary-value"><?= e((string)($latestRadiologyReport['recommendation'] ?? '-')) ?></span></div>
                     </div>
                 <?php endif; ?>
+        <?php endif; ?>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3>Pharmacy Prescriptions</h3>
+                <p>Encounter prescriptions and dispensing status.</p>
+            </div>
+            <?php if ($pharmacyService && $canCreatePrescription): ?>
+                <a class="btn-primary" href="../pharmacy/prescribe.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Create Prescription</a>
+            <?php endif; ?>
+        </div>
+        <?php if (!$pharmacyService): ?>
+            <p class="text-muted">Pharmacy tables are not available yet. Apply Migration 032 to enable this section.</p>
+        <?php elseif ($latestPharmacyRequests === []): ?>
+            <p class="text-muted">No prescriptions recorded for this encounter.</p>
+        <?php else: ?>
+            <ul class="clean-list">
+                <?php foreach (array_slice($latestPharmacyRequests, 0, 5) as $prescription): ?>
+                    <li>
+                        <a href="../pharmacy/view.php?id=<?= (int)$prescription['id'] ?>">#<?= (int)$prescription['id'] ?></a>
+                        — <?= e((string)$prescription['medication_name']) ?>
+                        (<?= e((string)$prescription['status']) ?>)
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+            <?php if ($latestPharmacyPrescription !== null && (string)($latestPharmacyPrescription['status'] ?? '') === 'Dispensed'): ?>
+                <div class="summary-grid">
+                    <div class="summary-item"><span class="summary-label">Dispensed By</span><span class="summary-value"><?= e((string)($latestPharmacyPrescription['dispensed_by_name'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Dispensed At</span><span class="summary-value"><?= e((string)($latestPharmacyPrescription['dispensed_recorded_at'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Quantity Dispensed</span><span class="summary-value"><?= e((string)($latestPharmacyPrescription['quantity_dispensed'] ?? '-')) ?></span></div>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 

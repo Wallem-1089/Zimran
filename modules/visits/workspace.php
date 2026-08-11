@@ -39,6 +39,8 @@ require_once __DIR__ . '/../../services/LaboratoryService.php';
 require_once __DIR__ . '/../../services/RadiologyService.php';
 require_once __DIR__ . '/../../services/PhysiotherapyService.php';
 require_once __DIR__ . '/../../services/TheatreService.php';
+require_once __DIR__ . '/../../services/PharmacyService.php';
+require_once __DIR__ . '/../../services/StoreService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
 
@@ -358,7 +360,30 @@ $canEnterRadiologyReport = $permissionService->canEnterRadiologyReport($visit, $
 $canEditRadiologyReport = $permissionService->canEditRadiologyReport($visit, $currentUser);
 $canCompleteRadiologyRequest = $permissionService->canCompleteRadiologyRequest($visit, $currentUser);
 $radiology = [];
-$pharmacy = [];
+$pharmacyRequestSource = in_array((string)($visit['department_name'] ?? ''), ['Pharmacy'], true)
+    ? 'Direct'
+    : 'Clinical';
+$pharmacyClinicalSafetyService = isset($clinicalSafetyService)
+    ? $clinicalSafetyService
+    : new ClinicalSafetyService($pdo);
+$pharmacyTablesReady = workspaceTableExists($pdo, 'prescriptions')
+    && workspaceTableExists($pdo, 'pharmacy_dispensing');
+$pharmacyService = $pharmacyTablesReady
+    ? new PharmacyService(
+        $pdo,
+        new StoreService($pdo, null, $permissionService),
+        $pharmacyClinicalSafetyService,
+        null,
+        null,
+        $permissionService,
+        $visitService
+    )
+    : null;
+$pharmacy = $pharmacyService ? $pharmacyService->listByVisit($visitId, $currentUser) : [];
+$latestPharmacyPrescription = $pharmacy[0] ?? null;
+$canViewPharmacy = $permissionService->canViewPharmacy((int)$visit['patient_id'], $currentUser);
+$canCreatePrescription = $permissionService->canCreatePrescription($visit, $currentUser, $pharmacyRequestSource);
+$canDispensePrescription = $permissionService->canDispensePrescription($visit, $currentUser);
 $billing = [];
 $physiotherapy = $latestPhysiotherapyRecord ? [$latestPhysiotherapyRecord] : [];
 $theatre = $latestTheatreRecord ? [$latestTheatreRecord] : [];
