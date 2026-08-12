@@ -168,6 +168,34 @@ if ($currentUser && isset($pdo)) {
 
             <?php endif; ?>
 
+            <?php if ($currentUser && $sidebarPermissionService->canViewBilling($currentUser)): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/billing/index.php">
+
+                        Billing
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
+            <?php if ($currentUser && $sidebarPermissionService->canViewReports($currentUser)): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/reports/index.php">
+
+                        Reports
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
             <?php if (($currentUser['role_name'] ?? '') === 'System Administrator'): ?>
 
                 <li>

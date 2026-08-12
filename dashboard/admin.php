@@ -29,6 +29,10 @@ $queue = $data['queue'] ?? [];
 $security = $data['security'] ?? [];
 $audit = $data['audit'] ?? [];
 $charts = $data['charts'] ?? [];
+$notifications = $data['notifications'] ?? [];
+$clinical = $data['clinical'] ?? [];
+$financial = $data['financial'] ?? [];
+$inventory = $data['inventory'] ?? [];
 $pageTitle = 'Administrator Dashboard';
 $moduleStylesheet = '/assets/css/admin-dashboard.css';
 
@@ -72,11 +76,15 @@ function dashboardCount(array $values, string $key): int
             ['Encounters', dashboardCount($encounters, 'total'), 'Active ' . dashboardCount($encounters, 'active')],
             ['Waiting Queue', dashboardCount($queue, 'waiting'), 'In service ' . dashboardCount($queue, 'in_service')],
             ['Active Sessions', dashboardCount($security, 'active_sessions'), 'Locked ' . dashboardCount($security, 'locked_accounts')],
-            ['Failed Logins Today', dashboardCount($security, 'failed_logins_today'), 'Successful ' . dashboardCount($security, 'successful_logins_today')]
+            ['Failed Logins Today', dashboardCount($security, 'failed_logins_today'), 'Successful ' . dashboardCount($security, 'successful_logins_today')],
+            ['Unread Notifications', dashboardCount($notifications, 'unread'), 'Department attention'],
+            ['Completed Today', (int)($encounters['completed_today'] ?? 0), 'Encounters'],
+            ['Payments Today', (float)($financial['payments_today'] ?? 0), 'Charges ' . number_format((float)($financial['charges_today'] ?? 0), 2)],
+            ['Inventory Items', dashboardCount($inventory, 'active_items'), 'Low/zero ' . dashboardCount($inventory, 'low_or_zero_stock')]
         ] as $card): ?>
             <article class="stat-card">
                 <span><?= e($card[0]) ?></span>
-                <strong><?= (int)$card[1] ?></strong>
+                <strong><?= is_float($card[1]) ? e(number_format($card[1], 2)) : (int)$card[1] ?></strong>
                 <small><?= e($card[2]) ?></small>
             </article>
         <?php endforeach; ?>
@@ -124,6 +132,42 @@ function dashboardCount(array $values, string $key): int
                 <?php foreach (($users['by_role'] ?? []) as $role => $count): ?>
                     <div><span><?= e($role) ?></span><strong><?= (int)$count ?></strong></div>
                 <?php endforeach; ?>
+            </div>
+        </article>
+    </section>
+
+    <section class="dashboard-columns">
+        <article class="card">
+            <h3>Clinical Activity Today</h3>
+            <div class="metric-list">
+                <div><span>Consultations</span><strong><?= dashboardCount($clinical, 'consultations_today') ?></strong></div>
+                <div><span>Nursing Assessments</span><strong><?= dashboardCount($clinical, 'nursing_today') ?></strong></div>
+                <div><span>Laboratory Requests</span><strong><?= dashboardCount($clinical, 'laboratory_today') ?></strong></div>
+                <div><span>Radiology Requests</span><strong><?= dashboardCount($clinical, 'radiology_today') ?></strong></div>
+                <div><span>Physio Records</span><strong><?= dashboardCount($clinical, 'physiotherapy_records_today') ?></strong></div>
+                <div><span>Physio Sessions</span><strong><?= dashboardCount($clinical, 'physiotherapy_sessions_today') ?></strong></div>
+                <div><span>Theatre Records</span><strong><?= dashboardCount($clinical, 'theatre_today') ?></strong></div>
+                <div><span>Prescriptions</span><strong><?= dashboardCount($clinical, 'prescriptions_today') ?></strong></div>
+            </div>
+        </article>
+
+        <article class="card">
+            <h3>Financial Summary</h3>
+            <div class="metric-list">
+                <div><span>Charges Today</span><strong><?= e(number_format((float)($financial['charges_today'] ?? 0), 2)) ?></strong></div>
+                <div><span>Payments Today</span><strong><?= e(number_format((float)($financial['payments_today'] ?? 0), 2)) ?></strong></div>
+                <div><span>Open Invoices</span><strong><?= dashboardCount($financial, 'open_invoices') ?></strong></div>
+                <div><span>Outstanding Balance</span><strong><?= e(number_format((float)($financial['outstanding_balance'] ?? 0), 2)) ?></strong></div>
+            </div>
+        </article>
+
+        <article class="card">
+            <h3>Inventory Summary</h3>
+            <div class="metric-list">
+                <div><span>Active Items</span><strong><?= dashboardCount($inventory, 'active_items') ?></strong></div>
+                <div><span>Low/Zero Stock</span><strong><?= dashboardCount($inventory, 'low_or_zero_stock') ?></strong></div>
+                <div><span>Receipts Today</span><strong><?= dashboardCount($inventory, 'receipts_today') ?></strong></div>
+                <div><span>Issues Today</span><strong><?= dashboardCount($inventory, 'issues_today') ?></strong></div>
             </div>
         </article>
     </section>

@@ -159,6 +159,35 @@ class PermissionService
             ) || in_array($department, ['Doctor', 'Pharmacy'], true),
             'dispense_prescription' => $role === 'Pharmacist'
                 || $department === 'Pharmacy',
+            'view_billing' => in_array(
+                $role,
+                [
+                    'Accounts',
+                    'Accountant',
+                    'Receptionist',
+                    'Records Officer',
+                    'Doctor',
+                    'Nurse',
+                    'Laboratory Scientist',
+                    'Radiographer',
+                    'Physiotherapist',
+                    'Theatre Staff',
+                    'Pharmacist',
+                    'Store Officer',
+                ],
+                true
+            ) || in_array($department, ['Accounts', 'Reception', 'Records'], true),
+            'create_patient_charge', 'cancel_patient_charge',
+            'create_invoice', 'record_payment' => in_array(
+                $role,
+                ['Accounts', 'Accountant'],
+                true
+            ) || $department === 'Accounts',
+            'view_receipts' => in_array(
+                $role,
+                ['Accounts', 'Accountant', 'Receptionist', 'Records Officer'],
+                true
+            ) || in_array($department, ['Accounts', 'Reception', 'Records'], true),
             'view_billable_items' => in_array(
                 $role,
                 [
@@ -238,6 +267,23 @@ class PermissionService
                 ['Store Officer'],
                 true
             ) || $department === 'Store',
+            'view_reports' => in_array(
+                $role,
+                ['System Administrator', 'Accountant', 'Accounts', 'Store Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist', 'Records Officer'],
+                true
+            ) || in_array($department, ['Administrator', 'Accounts', 'Store', 'Doctor', 'Nursing', 'Laboratory', 'Radiology', 'Physiotherapy', 'Theatre', 'Pharmacy', 'Records'], true),
+            'view_financial_reports' => in_array(
+                $role,
+                ['Accountant', 'Accounts'],
+                true
+            ) || $department === 'Accounts',
+            'view_inventory_reports' => $role === 'Store Officer'
+                || $department === 'Store',
+            'view_clinical_reports' => in_array(
+                $role,
+                ['Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist', 'Records Officer'],
+                true
+            ) || in_array($department, ['Doctor', 'Nursing', 'Laboratory', 'Radiology', 'Physiotherapy', 'Theatre', 'Pharmacy', 'Records'], true),
             'view_consultation', 'create_consultation',
             'edit_consultation', 'complete_consultation' => $role === 'Doctor',
             default => false
@@ -1401,6 +1447,48 @@ class PermissionService
             || $this->hasPermission('view_billable_items', $user);
     }
 
+    public function canViewBilling(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('view_billing', $user);
+    }
+
+    public function canCreatePatientCharge(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('create_patient_charge', $user);
+    }
+
+    public function canCancelPatientCharge(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('cancel_patient_charge', $user);
+    }
+
+    public function canCreateInvoice(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('create_invoice', $user);
+    }
+
+    public function canRecordPayment(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('record_payment', $user);
+    }
+
+    public function canViewReceipts(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('view_receipts', $user);
+    }
+
     public function canCreateBillableItems(?array $user = null): bool
     {
         $user = $user ?? $this->currentUser();
@@ -1469,6 +1557,34 @@ class PermissionService
         $user = $user ?? $this->currentUser();
         return $this->isAdministrator($user)
             || $this->hasPermission('view_stock_ledger', $user);
+    }
+
+    public function canViewReports(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('view_reports', $user);
+    }
+
+    public function canViewFinancialReports(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('view_financial_reports', $user);
+    }
+
+    public function canViewInventoryReports(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('view_inventory_reports', $user);
+    }
+
+    public function canViewClinicalReports(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('view_clinical_reports', $user);
     }
 
     /*

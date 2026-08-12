@@ -40,6 +40,7 @@ require_once __DIR__ . '/../../services/RadiologyService.php';
 require_once __DIR__ . '/../../services/PhysiotherapyService.php';
 require_once __DIR__ . '/../../services/TheatreService.php';
 require_once __DIR__ . '/../../services/PharmacyService.php';
+require_once __DIR__ . '/../../services/BillingService.php';
 require_once __DIR__ . '/../../services/StoreService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
@@ -384,7 +385,22 @@ $latestPharmacyPrescription = $pharmacy[0] ?? null;
 $canViewPharmacy = $permissionService->canViewPharmacy((int)$visit['patient_id'], $currentUser);
 $canCreatePrescription = $permissionService->canCreatePrescription($visit, $currentUser, $pharmacyRequestSource);
 $canDispensePrescription = $permissionService->canDispensePrescription($visit, $currentUser);
-$billing = [];
+$canViewBilling = $permissionService->canViewBilling($currentUser);
+$canCreatePatientCharge = $permissionService->canCreatePatientCharge($currentUser);
+$canCancelPatientCharge = $permissionService->canCancelPatientCharge($currentUser);
+$canCreateInvoice = $permissionService->canCreateInvoice($currentUser);
+$canRecordPayment = $permissionService->canRecordPayment($currentUser);
+$canViewReceipts = $permissionService->canViewReceipts($currentUser);
+$billingTablesReady = workspaceTableExists($pdo, 'patient_charges')
+    && workspaceTableExists($pdo, 'invoices')
+    && workspaceTableExists($pdo, 'payments');
+$billingService = $billingTablesReady ? new BillingService($pdo) : null;
+$billingSummary = $canViewBilling && $billingService
+    ? $billingService->getEncounterBalance($visitId, $currentUser)
+    : ['success' => true, 'invoice' => null, 'total_charges' => 0, 'amount_paid' => 0, 'balance_due' => 0, 'status' => 'Unbilled', 'errors' => []];
+$billingCharges = $canViewBilling && $billingService ? $billingService->listChargesByVisit($visitId, $currentUser) : [];
+$billingPayments = $canViewBilling && $billingService ? $billingService->listPayments($visitId, $currentUser) : [];
+$billingInvoice = $billingSummary['invoice'] ?? null;
 $physiotherapy = $latestPhysiotherapyRecord ? [$latestPhysiotherapyRecord] : [];
 $theatre = $latestTheatreRecord ? [$latestTheatreRecord] : [];
 
