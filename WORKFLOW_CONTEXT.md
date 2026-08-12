@@ -1123,3 +1123,10 @@ module for item catalogue maintenance, stock receipt, issue, return,
 adjustment, and department balance tracking. It does not live inside the
 Encounter Workspace and it does not create patient charges or dispensing
 actions.
+## Phase 4.5 Basic Dashboards / Reports
+
+Reports are read-only operational summaries. They do not create encounter
+timeline events and do not change clinical, inventory, or financial workflow
+ownership. Financial figures come from Billing, prices remain owned by
+Accounts, stock remains owned by Store, and dispensing remains owned by
+Pharmacy.

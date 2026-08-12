@@ -11,6 +11,8 @@ if (!$pharmacyTablesReady) {
 
 $status = trim((string)($_GET['status'] ?? 'Prescribed'));
 $worklist = $pharmacyService->listWorklist($currentUser, ['status' => $status]);
+$summaryRows = $pharmacyService->listWorklist($currentUser, []);
+$statusCounts = array_count_values(array_map(static fn (array $row): string => (string)($row['status'] ?? 'Unknown'), $summaryRows));
 
 $pageTitle = 'Pharmacy Worklist';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -31,6 +33,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <a class="btn-secondary" href="index.php?status=Dispensed">Dispensed</a>
             <a class="btn-secondary" href="index.php?status=Cancelled">Cancelled</a>
         </div>
+    </div>
+
+    <div class="summary-grid">
+        <div class="summary-item"><span class="summary-label">Waiting</span><span class="summary-value"><?= (int)($statusCounts['Prescribed'] ?? 0) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Dispensed</span><span class="summary-value"><?= (int)($statusCounts['Dispensed'] ?? 0) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Cancelled</span><span class="summary-value"><?= (int)($statusCounts['Cancelled'] ?? 0) ?></span></div>
     </div>
 
     <div class="card">

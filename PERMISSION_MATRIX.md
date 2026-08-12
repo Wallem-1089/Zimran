@@ -359,3 +359,16 @@ receipts.
 Store is a standalone sidebar module. It is not an Encounter Workspace tab.
 Store owns stock movements and department balances only. It does not own
 pricing, dispensing, patient charges, invoices, or receipts.
+## Phase 4.5 Basic Dashboards / Reports permissions
+
+| Permission | Administrator | Accounts | Store Officer | Clinical Roles |
+| --- | --- | --- | --- | --- |
+| `view_reports` | Full | Yes | Yes | Yes, where granted |
+| `view_financial_reports` | Full | Yes | No | No |
+| `view_inventory_reports` | Full | No | Yes | No |
+| `view_clinical_reports` | Full | No | No | Yes, aggregate only |
+
+Reports are read-only. Financial reports use Billing records. Inventory
+reports use Store stock tables. Clinical reports show counts only and do not
+display clinical narratives, note text, laboratory result text, or radiology
+report text.

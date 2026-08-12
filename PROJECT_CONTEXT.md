@@ -1090,3 +1090,10 @@ Store / Inventory is also implemented as a standalone sidebar module. It owns
 stock receipts, issues, returns, adjustments, department balances, and the
 inventory item catalogue. Store does not live inside the Encounter Workspace,
 and it does not create patient charges or dispensing workflows.
+## Phase 4.5 Basic Dashboards / Reports
+
+Phase 4.5 adds a small read-only Reports module and enhances the
+Administrator dashboard with current clinical activity, financial, inventory,
+and notification summaries. This is not a BI platform: there are no scheduled
+reports, report designer, warehouse tables, chart-library dependencies, or
+advanced analytics.

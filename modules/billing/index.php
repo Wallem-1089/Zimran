@@ -21,6 +21,7 @@ $filters = [
 
 $invoices = $billingTablesReady ? $billingService->listInvoices($filters, $currentUser) : [];
 $recentPayments = $billingTablesReady ? $billingService->listPayments(null, $currentUser) : [];
+$openInvoices = count(array_filter($invoices, static fn (array $invoice): bool => in_array((string)($invoice['status'] ?? ''), ['Unpaid', 'Partially Paid'], true)));
 
 $pageTitle = 'Billing';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -35,6 +36,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <h1>Billing</h1>
             <p>Patient Accounts, invoices, and payments.</p>
         </div>
+    </div>
+
+    <div class="summary-grid">
+        <div class="summary-item"><span class="summary-label">Open Invoices</span><span class="summary-value"><?= $openInvoices ?></span></div>
+        <div class="summary-item"><span class="summary-label">Recent Payments</span><span class="summary-value"><?= count($recentPayments) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Filtered Invoices</span><span class="summary-value"><?= count($invoices) ?></span></div>
     </div>
 
     <form method="get" class="card">

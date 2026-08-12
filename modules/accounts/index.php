@@ -20,6 +20,9 @@ $filters = [
 ];
 
 $items = $accountsService->searchItems($filters, $currentUser);
+$allItems = $accountsService->searchItems(['status' => 'all'], $currentUser);
+$activeServices = count(array_filter($allItems, static fn (array $item): bool => !empty($item['is_active']) && (string)$item['item_type'] === 'Service'));
+$activeProducts = count(array_filter($allItems, static fn (array $item): bool => !empty($item['is_active']) && (string)$item['item_type'] === 'Product'));
 
 $pageTitle = 'Price Catalogue';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -47,6 +50,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <a class="btn-primary" href="create.php">Create Item</a>
             <?php endif; ?>
         </div>
+    </div>
+
+    <div class="summary-grid">
+        <div class="summary-item"><span class="summary-label">Catalogue Items</span><span class="summary-value"><?= count($allItems) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Active Services</span><span class="summary-value"><?= $activeServices ?></span></div>
+        <div class="summary-item"><span class="summary-label">Active Products</span><span class="summary-value"><?= $activeProducts ?></span></div>
     </div>
 
     <form method="get" class="card">
@@ -146,4 +155,3 @@ require __DIR__ . '/../../layouts/sidebar.php';
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
-

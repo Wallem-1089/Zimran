@@ -268,3 +268,10 @@ administrator override, unauthorized mutation denial, CSRF-aware controller
 wiring, audit generation, and sidebar visibility. It also confirms that no
 Store Encounter Workspace tab was introduced and that the module remains
 independent from Pharmacy dispensing and Billing.
+## Phase 4.5 Basic Dashboards / Reports
+
+Run `php test/phase4_reports_test.php` against the dedicated test database.
+The test applies the required Phase 4 migrations through the migration
+manager, verifies report permissions, administrator dashboard contract,
+report aggregate contracts, sidebar visibility, and guards against narrative
+PHI leakage in the basic report pages.

@@ -275,3 +275,13 @@ and does not create patient charges.
 The down migration removes the Pharmacy tables and permission seeds. It is
 destructive and restricted to an empty dedicated test database or an
 explicitly approved recovery operation after the backup gate.
+
+## Migration 034 - Phase 4.5 Basic Dashboards / Reports
+
+`034_phase4_basic_dashboards_reports_up.sql` seeds the read-only Reports
+permissions (`view_reports`, `view_financial_reports`,
+`view_inventory_reports`, `view_clinical_reports`). No reporting tables are
+created. Reports are generated from existing operational tables through
+bounded aggregate queries in `DashboardService`.
+
+The down migration removes only the Reports permission seeds and role grants.

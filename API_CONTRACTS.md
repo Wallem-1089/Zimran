@@ -332,6 +332,11 @@ Constructor: `__construct(PDO $db)`. Reads users, roles, departments/memberships
 |---|---|---|
 | `getAdministratorDashboard(): array` | Returns the full widget/chart data set for users, departments, encounters, queues, security, audit and seven-day activity. | Read only; empty-state-safe arrays/counts; administrator authorization required by page/controller. No per-widget audit. |
 | `recordDashboardView(?int $userId): bool` | Records administrator dashboard view. | Audit-only `ADMIN_DASHBOARD_VIEWED`-style event as implemented; no statistics mutation. |
+| `getPatientEncounterActivity(array $filters = []): array` | Returns encounter counts and department activity for an inclusive date range, optional department, and optional status. | Read only; aggregate output only. |
+| `getClinicalActivityReport(array $filters = []): array` | Returns aggregate counts for Consultation, Nursing, Vital Signs, Laboratory, Radiology, Physiotherapy, Theatre, and Pharmacy. | Read only; does not expose clinical narratives or result/report text. |
+| `getFinancialReport(array $filters = []): array` | Returns posted Billing totals for charges, invoices, payments, open invoices, and outstanding balances. | Uses Billing records only; does not recalculate from Accounts prices. |
+| `getInventoryReport(array $filters = []): array` | Returns stock movement totals and current department balances. | Uses Store inventory tables as stock source of truth. |
+| `recordReportView(?int $userId, string $action = 'REPORT_VIEWED'): bool` | Records concise report access audit events when report pages are opened. | Audit-only; no encounter timeline event. |
 
 ### `SettingsService`
 

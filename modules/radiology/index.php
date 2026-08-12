@@ -6,6 +6,8 @@ require __DIR__ . '/_bootstrap.php';
 
 $status = (string)($_GET['status'] ?? '');
 $worklist = $radiologyService->listWorklist($currentUser, ['status' => $status]);
+$summaryRows = $radiologyService->listWorklist($currentUser, []);
+$statusCounts = array_count_values(array_map(static fn (array $row): string => (string)($row['status'] ?? 'Unknown'), $summaryRows));
 
 $pageTitle = 'Radiology Worklist';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -27,6 +29,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <a class="btn-secondary" href="index.php?status=In%20Progress">In Progress</a>
             <a class="btn-secondary" href="index.php?status=Completed">Completed</a>
         </div>
+    </div>
+
+    <div class="summary-grid">
+        <div class="summary-item"><span class="summary-label">Requested</span><span class="summary-value"><?= (int)($statusCounts['Requested'] ?? 0) ?></span></div>
+        <div class="summary-item"><span class="summary-label">In Progress</span><span class="summary-value"><?= (int)($statusCounts['In Progress'] ?? 0) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Completed</span><span class="summary-value"><?= (int)($statusCounts['Completed'] ?? 0) ?></span></div>
     </div>
 
     <div class="card">

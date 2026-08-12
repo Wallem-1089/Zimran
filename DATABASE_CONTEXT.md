@@ -1210,3 +1210,11 @@ departments, references, remarks, and performer attribution. The
 department quantities so Store and downstream department views can read
 balances without editing them directly. Store remains a sidebar operational
 module and does not create patient charges or dispensing workflows.
+## Phase 4.5 Basic Dashboards / Reports
+
+Phase 4.5 does not add reporting tables. The Reports module uses indexed
+operational tables through `DashboardService` aggregate queries. Financial
+summaries read `patient_charges`, `invoices`, and `payments`. Inventory
+summaries read `inventory_items`, `stock_transactions`, and
+`department_stock_balances`. Clinical reports count records only and do not
+expose narrative PHI.
