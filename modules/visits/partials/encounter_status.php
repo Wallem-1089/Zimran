@@ -85,6 +85,12 @@ $canTransfer = !isset($permissionService)
         $currentUser ?? null
     );
 
+$canCancelEncounter = isset($permissionService)
+    && $permissionService->canCancelEncounter(
+        $visit,
+        $currentUser ?? null
+    );
+
 $canAssignDoctor = !isset($permissionService)
     || $permissionService->canAssignDoctor(
         $visit,
@@ -310,32 +316,46 @@ $canAssignDoctor = !isset($permissionService)
 
         <?php if ($nextStatus !== null && $canChangeStatus): ?>
 
-            <form
-                method="POST"
-                action="change_status.php"
-                style="margin-bottom:10px;">
+            <?php if ($nextStatus === 'Completed'): ?>
 
-                <?= csrfField() ?>
-
-                <input
-                    type="hidden"
-                    name="visit_id"
-                    value="<?= (int)$visit['id'] ?>">
-
-                <input
-                    type="hidden"
-                    name="visit_status"
-                    value="<?= e($nextStatus) ?>">
-
-                <button
-                    type="submit"
+                <a
+                    href="complete.php?visit=<?= (int)$visit['id'] ?>"
                     class="btn-primary">
 
-                    Move to <?= e($nextStatus) ?>
+                    Complete Encounter
 
-                </button>
+                </a>
 
-            </form>
+            <?php else: ?>
+
+                <form
+                    method="POST"
+                    action="change_status.php"
+                    style="margin-bottom:10px;">
+
+                    <?= csrfField() ?>
+
+                    <input
+                        type="hidden"
+                        name="visit_id"
+                        value="<?= (int)$visit['id'] ?>">
+
+                    <input
+                        type="hidden"
+                        name="visit_status"
+                        value="<?= e($nextStatus) ?>">
+
+                    <button
+                        type="submit"
+                        class="btn-primary">
+
+                        Move to <?= e($nextStatus) ?>
+
+                    </button>
+
+                </form>
+
+            <?php endif; ?>
 
         <?php elseif ($status === 'Completed'): ?>
 
@@ -355,9 +375,41 @@ $canAssignDoctor = !isset($permissionService)
 
         <?php endif; ?>
 
+        <?php if (!$isClosedEncounter && $canCancelEncounter): ?>
+
+            <form
+                method="POST"
+                action="change_status.php"
+                class="cancel-encounter-form"
+                onsubmit="return confirm('Cancel this encounter? This will make clinical encounter sections read-only.');">
+
+                <?= csrfField() ?>
+
+                <input
+                    type="hidden"
+                    name="visit_id"
+                    value="<?= (int)$visit['id'] ?>">
+
+                <input
+                    type="hidden"
+                    name="visit_status"
+                    value="Cancelled">
+
+                <button
+                    type="submit"
+                    class="btn-danger">
+
+                    Cancel Encounter
+
+                </button>
+
+            </form>
+
+        <?php endif; ?>
+
         <?php if (!$isClosedEncounter && $canTransfer): ?>
 
-        <div class="form-actions">
+        <div class="form-actions encounter-workflow-actions">
 
             <a
                 href="transfer.php?visit=<?= (int)$visit['id'] ?>"

@@ -56,12 +56,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Department</span><span class="summary-value"><?= e((string)($item['department_name'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Unit</span><span class="summary-value"><?= e((string)($item['unit'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Unit Price</span><span class="summary-value"><?= e(number_format((float)$item['unit_price'], 2)) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"><?= !empty($item['is_active']) ? 'Active' : 'Inactive' ?></span></div>
-            <div class="summary-item"><span class="summary-label">Created By</span><span class="summary-value"><?= e((string)($item['created_by_name'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Updated By</span><span class="summary-value"><?= e((string)($item['updated_by_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Department</span> <span class="summary-value"><?= e((string)($item['department_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Unit</span> <span class="summary-value"><?= e((string)($item['unit'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Unit Price</span> <span class="summary-value"><?= e(number_format((float)$item['unit_price'], 2)) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= !empty($item['is_active']) ? 'Active' : 'Inactive' ?></span></div>
+            <div class="summary-item"><span class="summary-label">Created By</span> <span class="summary-value"><?= e((string)($item['created_by_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Updated By</span> <span class="summary-value"><?= e((string)($item['updated_by_name'] ?? '-')) ?></span></div>
         </div>
     </div>
 

@@ -1711,6 +1711,137 @@ public function canAccessDepartmentWorkspace(
 
     }
 
+    public function completeVisitWithDischarge(
+        int $visitId,
+        array $data,
+        array $user
+    ): array {
+        $visit = $this->getVisitById($visitId);
+
+        if (!$visit
+            || !$this->permissionService->canChangeEncounterStatus($visit, $user)
+        ) {
+            $this->permissionService->logDenied(
+                (int)($user['id'] ?? 0) ?: null,
+                $visitId,
+                'COMPLETE_ENCOUNTER_DENIED',
+                'User attempted to complete an encounter without permission.'
+            );
+
+            return [
+                'success' => false,
+                'errors' => ['You do not have permission to complete this encounter.']
+            ];
+        }
+
+        $dischargeDiagnosis = trim((string)($data['discharge_diagnosis'] ?? ''));
+        $dischargeNotes = trim((string)($data['discharge_notes'] ?? ''));
+        $followUpInstructions = trim((string)($data['follow_up_instructions'] ?? ''));
+        $errors = [];
+
+        if ($dischargeDiagnosis === '') {
+            $errors[] = 'Discharge diagnosis is required.';
+        }
+
+        if (strlen($dischargeDiagnosis) > 5000) {
+            $errors[] = 'Discharge diagnosis is too long.';
+        }
+
+        if (strlen($dischargeNotes) > 10000) {
+            $errors[] = 'Discharge notes are too long.';
+        }
+
+        if (strlen($followUpInstructions) > 5000) {
+            $errors[] = 'Follow-up instructions are too long.';
+        }
+
+        $stateValidation = $this->stateService->validateStatusTransition(
+            $visit['visit_status'] ?? null,
+            'Completed'
+        );
+
+        if (!$stateValidation['success']) {
+            $errors = array_merge($errors, $stateValidation['errors']);
+        }
+
+        if ($errors !== []) {
+            return [
+                'success' => false,
+                'errors' => $errors
+            ];
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            $userId = (int)($user['id'] ?? 0);
+
+            $queueClose = $this->queueService->closeActiveForLifecycle(
+                $visitId,
+                'Completed',
+                $userId > 0 ? $userId : null
+            );
+
+            if (!$queueClose['success']) {
+                throw new RuntimeException(
+                    $queueClose['errors'][0]
+                    ?? 'Unable to close the queue entry.'
+                );
+            }
+
+            $stmt = $this->pdo->prepare("
+                UPDATE visits
+                SET visit_status = 'Completed',
+                    completed_at = NOW(),
+                    completed_by = :completed_by,
+                    discharge_diagnosis = :discharge_diagnosis,
+                    discharge_notes = :discharge_notes,
+                    follow_up_instructions = :follow_up_instructions
+                WHERE id = :id
+                  AND visit_status NOT IN ('Completed', 'Cancelled')
+            ");
+
+            $stmt->execute([
+                ':completed_by' => $userId > 0 ? $userId : null,
+                ':discharge_diagnosis' => $dischargeDiagnosis,
+                ':discharge_notes' => $dischargeNotes === '' ? null : $dischargeNotes,
+                ':follow_up_instructions' => $followUpInstructions === '' ? null : $followUpInstructions,
+                ':id' => $visitId
+            ]);
+
+            if ($stmt->rowCount() === 0) {
+                throw new RuntimeException('Unable to complete encounter.');
+            }
+
+            $this->recordWorkflowHistory(
+                $visitId,
+                'STATUS_CHANGED',
+                'Encounter Completed',
+                'Encounter completed with discharge details.',
+                null,
+                $userId > 0 ? $userId : null,
+                'Encounter',
+                'ENCOUNTER_COMPLETED'
+            );
+
+            $this->pdo->commit();
+
+            return [
+                'success' => true,
+                'errors' => []
+            ];
+        } catch (Throwable) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            return [
+                'success' => false,
+                'errors' => ['Unable to complete encounter.']
+            ];
+        }
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Cancel Encounter

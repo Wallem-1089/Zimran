@@ -574,6 +574,42 @@ class BillingService
         return $this->listPayments($visitId, $user);
     }
 
+    public function searchEncountersForBilling(array $filters, ?array $user = null): array
+    {
+        if ($user !== null && !$this->permissionService->canViewBilling($user)) {
+            return [];
+        }
+
+        [$where, $params] = $this->buildEncounterBillingFilters($filters);
+
+        $stmt = $this->pdo->prepare('
+            SELECT
+                v.id AS visit_id,
+                v.visit_number,
+                v.visit_status,
+                v.visit_date,
+                p.id AS patient_id,
+                p.hospital_number,
+                CONCAT(p.first_name, " ", p.last_name) AS patient_name,
+                d.department_name,
+                COALESCE(i.invoice_number, "-") AS invoice_number,
+                COALESCE(i.status, "Unbilled") AS billing_status,
+                COALESCE(i.total_amount, 0.00) AS total_amount,
+                COALESCE(i.amount_paid, 0.00) AS amount_paid,
+                COALESCE(i.balance_due, 0.00) AS balance_due
+            FROM visits v
+            INNER JOIN patients p ON p.id = v.patient_id
+            LEFT JOIN departments d ON d.id = v.current_department_id
+            LEFT JOIN invoices i ON i.visit_id = v.id
+            ' . $where . '
+            ORDER BY v.visit_date DESC, v.id DESC
+            LIMIT 50
+        ');
+        $stmt->execute($params);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
     private function canMutateBilling(array $visit): bool
     {
         return !in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
@@ -814,6 +850,38 @@ class BillingService
         if ($status !== '' && in_array($status, ['Unpaid', 'Partially Paid', 'Paid', 'Cancelled'], true)) {
             $where[] = 'i.status = :status';
             $params[':status'] = $status;
+        }
+
+        return [
+            $where === [] ? '' : ' WHERE ' . implode(' AND ', $where),
+            $params,
+        ];
+    }
+
+    private function buildEncounterBillingFilters(array $filters): array
+    {
+        $where = [];
+        $params = [];
+
+        if (!empty($filters['visit_number'])) {
+            $where[] = 'v.visit_number LIKE :visit_number';
+            $params[':visit_number'] = '%' . trim((string)$filters['visit_number']) . '%';
+        }
+
+        if (!empty($filters['hospital_number'])) {
+            $where[] = 'p.hospital_number LIKE :hospital_number';
+            $params[':hospital_number'] = '%' . trim((string)$filters['hospital_number']) . '%';
+        }
+
+        if (!empty($filters['patient_name'])) {
+            $where[] = '(CONCAT(p.first_name, " ", p.last_name) LIKE :patient_name OR p.first_name LIKE :patient_name OR p.last_name LIKE :patient_name)';
+            $params[':patient_name'] = '%' . trim((string)$filters['patient_name']) . '%';
+        }
+
+        $status = trim((string)($filters['visit_status'] ?? ''));
+        if ($status !== '' && in_array($status, ['Waiting', 'Reception', 'Records', 'Nursing', 'Doctor', 'Laboratory', 'X-Ray', 'Pharmacy', 'Physiotherapy', 'Theatre', 'Accounts', 'Store', 'Completed', 'Cancelled'], true)) {
+            $where[] = 'v.visit_status = :visit_status';
+            $params[':visit_status'] = $status;
         }
 
         return [

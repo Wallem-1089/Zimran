@@ -24,7 +24,7 @@ require __DIR__ . '/../../../layouts/sidebar.php';
 <h1><?= e($document['title']) ?></h1>
 <div class="card summary-grid">
 <?php foreach (['document_type'=>'Type','document_status'=>'Status','confidentiality_level'=>'Confidentiality','current_version'=>'Current version','department_name'=>'Department','uploader_name'=>'Uploaded by','uploaded_at'=>'Uploaded','mime_type'=>'File type','file_size'=>'File size'] as $field=>$label): ?>
-<div class="summary-item"><span class="summary-label"><?= e($label) ?></span><span class="summary-value"><?= $field === 'document_type' ? e(documentTypeLabel((string)$document[$field])) : ($field === 'file_size' ? e(documentFormatBytes((int)$document[$field])) : e($document[$field] ?? 'Not recorded')) ?></span></div>
+<div class="summary-item"><span class="summary-label"><?= e($label) ?></span> <span class="summary-value"><?= $field === 'document_type' ? e(documentTypeLabel((string)$document[$field])) : ($field === 'file_size' ? e(documentFormatBytes((int)$document[$field])) : e($document[$field] ?? 'Not recorded')) ?></span></div>
 <?php endforeach; ?>
 </div>
 <?php if (!empty($document['description'])): ?><div class="card"><h2>Description</h2><p><?= nl2br(e($document['description'])) ?></p></div><?php endif; ?>

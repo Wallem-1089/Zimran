@@ -65,12 +65,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
     </div>
     <div class="card">
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Procedure</span><span class="summary-value"><?= e((string)$theatre['procedure_name']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Surgeon</span><span class="summary-value"><?= e((string)($theatre['surgeon_name'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Department</span><span class="summary-value"><?= e((string)($theatre['department_name'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Created By</span><span class="summary-value"><?= e((string)($theatre['created_by_name'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Completed By</span><span class="summary-value"><?= e((string)($theatre['completed_by_name'] ?? 'Not completed')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Completed At</span><span class="summary-value"><?= e((string)($theatre['completed_at'] ?? 'Not completed')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Procedure</span> <span class="summary-value"><?= e((string)$theatre['procedure_name']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Surgeon</span> <span class="summary-value"><?= e((string)($theatre['surgeon_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Department</span> <span class="summary-value"><?= e((string)($theatre['department_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Created By</span> <span class="summary-value"><?= e((string)($theatre['created_by_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Completed By</span> <span class="summary-value"><?= e((string)($theatre['completed_by_name'] ?? 'Not completed')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Completed At</span> <span class="summary-value"><?= e((string)($theatre['completed_at'] ?? 'Not completed')) ?></span></div>
         </div>
     </div>
     <?php if ($latestVitalSigns !== null): ?>

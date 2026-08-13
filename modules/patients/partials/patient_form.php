@@ -23,7 +23,7 @@ $supportedGenders = PatientService::supportedGenders();
 
         <div class="form-group">
 
-            <label for="middle_name">Middle Name</label>
+            <label for="middle_name">Other Names</label>
 
             <input type="text" id="middle_name" name="middle_name" maxlength="100"
                 value="<?= field('middle_name', $patient) ?>">
@@ -90,6 +90,15 @@ $supportedGenders = PatientService::supportedGenders();
 
         <div class="form-group">
 
+            <label for="place_of_work">Place of Work</label>
+
+            <input type="text" id="place_of_work" name="place_of_work" maxlength="150"
+                value="<?= field('place_of_work', $patient) ?>">
+
+        </div>
+
+        <div class="form-group">
+
             <label for="nationality">Nationality</label>
 
             <input type="text" id="nationality" name="nationality" maxlength="100"
@@ -103,6 +112,24 @@ $supportedGenders = PatientService::supportedGenders();
 
             <input type="text" id="state_of_origin" name="state_of_origin" maxlength="100"
                 value="<?= field('state_of_origin', $patient) ?>">
+
+        </div>
+
+        <div class="form-group">
+
+            <label for="ethnic_group">Ethnic Group</label>
+
+            <input type="text" id="ethnic_group" name="ethnic_group" maxlength="100"
+                value="<?= field('ethnic_group', $patient) ?>">
+
+        </div>
+
+        <div class="form-group">
+
+            <label for="religion">Religion</label>
+
+            <input type="text" id="religion" name="religion" maxlength="100"
+                value="<?= field('religion', $patient) ?>">
 
         </div>
 
@@ -205,6 +232,14 @@ $supportedGenders = PatientService::supportedGenders();
 
             <input type="tel" id="next_of_kin_phone" name="next_of_kin_phone"
                 maxlength="20" value="<?= field('next_of_kin_phone', $patient) ?>">
+
+        </div>
+
+        <div class="form-group">
+
+            <label for="next_of_kin_address">Address</label>
+
+            <textarea id="next_of_kin_address" name="next_of_kin_address" rows="3"><?= field('next_of_kin_address', $patient) ?></textarea>
 
         </div>
 

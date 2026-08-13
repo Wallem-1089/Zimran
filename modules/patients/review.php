@@ -107,6 +107,8 @@ $fields = [
 
     'occupation',
 
+    'place_of_work',
+
     'phone',
 
     'email',
@@ -116,6 +118,10 @@ $fields = [
     'state_of_origin',
 
     'nationality',
+
+    'ethnic_group',
+
+    'religion',
 
     'blood_group',
 
@@ -128,6 +134,8 @@ $fields = [
     'next_of_kin_relationship',
 
     'next_of_kin_phone'
+
+    ,'next_of_kin_address'
 
     ,'duplicate_review_ack'
 
@@ -326,6 +334,11 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
             $patient['occupation']
         );
 
+        reviewItem(
+            'Place of Work',
+            $patient['place_of_work']
+        );
+
         ?>
 
     </div>
@@ -361,6 +374,16 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
         reviewItem(
             'Nationality',
             $patient['nationality']
+        );
+
+        reviewItem(
+            'Ethnic Group',
+            $patient['ethnic_group']
+        );
+
+        reviewItem(
+            'Religion',
+            $patient['religion']
         );
 
         ?>
@@ -410,6 +433,11 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
         reviewItem(
             'Phone Number',
             $patient['next_of_kin_phone']
+        );
+
+        reviewItem(
+            'Address',
+            $patient['next_of_kin_address']
         );
 
         ?>

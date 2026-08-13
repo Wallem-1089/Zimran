@@ -13,6 +13,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 
 require_once __DIR__ . '/../../services/VisitService.php';
+require_once __DIR__ . '/../../services/PermissionService.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -101,6 +102,7 @@ if (!$visitId || $status === '') {
 */
 
 $visitService = new VisitService($pdo);
+$permissionService = new PermissionService($pdo);
 
 
 /*
@@ -125,6 +127,43 @@ if (!$visit) {
 
     exit;
 
+}
+
+if ($status === 'Cancelled'
+    && !$permissionService->canCancelEncounter($visit, $currentUser)
+) {
+    $_SESSION['error_message'] =
+        'You are not allowed to cancel this encounter.';
+
+    header(
+        'Location: workspace.php?id=' . $visitId
+    );
+
+    exit;
+}
+
+if ($status === 'Completed') {
+    $_SESSION['error_message'] =
+        'Use the Complete Encounter review form to enter discharge details.';
+
+    header(
+        'Location: complete.php?visit=' . $visitId
+    );
+
+    exit;
+}
+
+if ($status !== 'Cancelled'
+    && !$permissionService->canChangeEncounterStatus($visit, $currentUser)
+) {
+    $_SESSION['error_message'] =
+        'You are not allowed to update this encounter status.';
+
+    header(
+        'Location: workspace.php?id=' . $visitId
+    );
+
+    exit;
 }
 
 /*

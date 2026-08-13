@@ -11,10 +11,10 @@ declare(strict_types=1);
         <p class="text-muted">No vital signs recorded.</p>
     <?php else: ?>
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Recorded At</span><span class="summary-value"><?= e((string)($latestVitalSigns['created_at'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Recorded By</span><span class="summary-value"><?= e((string)($latestVitalSigns['recorded_by_name'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Temperature</span><span class="summary-value"><?= e((string)($latestVitalSigns['temperature'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Blood Pressure</span><span class="summary-value"><?= e((string)($latestVitalSigns['blood_pressure'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Recorded At</span> <span class="summary-value"><?= e((string)($latestVitalSigns['created_at'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Recorded By</span> <span class="summary-value"><?= e((string)($latestVitalSigns['recorded_by_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Temperature</span> <span class="summary-value"><?= e((string)($latestVitalSigns['temperature'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Blood Pressure</span> <span class="summary-value"><?= e((string)($latestVitalSigns['blood_pressure'] ?? '-')) ?></span></div>
         </div>
         <table>
             <thead>

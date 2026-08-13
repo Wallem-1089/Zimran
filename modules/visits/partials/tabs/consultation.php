@@ -44,12 +44,12 @@ $consultationStatus = $workspaceConsultation['status'] ?? 'Not Started';
             <div class="card">
                 <h3>Latest Vital Signs</h3>
                 <div class="summary-grid">
-                    <div class="summary-item"><span class="summary-label">Temperature</span><span class="summary-value"><?= e((string)($latestVitalSigns['temperature'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Pulse</span><span class="summary-value"><?= e((string)($latestVitalSigns['pulse'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Respiratory Rate</span><span class="summary-value"><?= e((string)($latestVitalSigns['respiratory_rate'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Blood Pressure</span><span class="summary-value"><?= e((string)($latestVitalSigns['blood_pressure'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Oxygen Saturation</span><span class="summary-value"><?= e((string)($latestVitalSigns['oxygen_saturation'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">BMI</span><span class="summary-value"><?= e((string)($latestVitalSigns['bmi'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Temperature</span> <span class="summary-value"><?= e((string)($latestVitalSigns['temperature'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Pulse</span> <span class="summary-value"><?= e((string)($latestVitalSigns['pulse'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Respiratory Rate</span> <span class="summary-value"><?= e((string)($latestVitalSigns['respiratory_rate'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Blood Pressure</span> <span class="summary-value"><?= e((string)($latestVitalSigns['blood_pressure'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Oxygen Saturation</span> <span class="summary-value"><?= e((string)($latestVitalSigns['oxygen_saturation'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">BMI</span> <span class="summary-value"><?= e((string)($latestVitalSigns['bmi'] ?? '-')) ?></span></div>
                 </div>
             </div>
         <?php else: ?>

@@ -20,6 +20,9 @@ $filters = [
 ];
 
 $invoices = $billingTablesReady ? $billingService->listInvoices($filters, $currentUser) : [];
+$encounterMatches = ($filters['patient_name'] !== '' || $filters['hospital_number'] !== '' || $filters['visit_number'] !== '')
+    ? $billingService->searchEncountersForBilling($filters, $currentUser)
+    : [];
 $recentPayments = $billingTablesReady ? $billingService->listPayments(null, $currentUser) : [];
 $openInvoices = count(array_filter($invoices, static fn (array $invoice): bool => in_array((string)($invoice['status'] ?? ''), ['Unpaid', 'Partially Paid'], true)));
 
@@ -39,9 +42,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
     </div>
 
     <div class="summary-grid">
-        <div class="summary-item"><span class="summary-label">Open Invoices</span><span class="summary-value"><?= $openInvoices ?></span></div>
-        <div class="summary-item"><span class="summary-label">Recent Payments</span><span class="summary-value"><?= count($recentPayments) ?></span></div>
-        <div class="summary-item"><span class="summary-label">Filtered Invoices</span><span class="summary-value"><?= count($invoices) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Open Invoices</span> <span class="summary-value"><?= $openInvoices ?></span></div>
+        <div class="summary-item"><span class="summary-label">Recent Payments</span> <span class="summary-value"><?= count($recentPayments) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Filtered Invoices</span> <span class="summary-value"><?= count($invoices) ?></span></div>
     </div>
 
     <form method="get" class="card">
@@ -77,6 +80,53 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <a class="btn-secondary" href="index.php">Reset</a>
         </div>
     </form>
+
+    <?php if ($filters['patient_name'] !== '' || $filters['hospital_number'] !== '' || $filters['visit_number'] !== ''): ?>
+        <div class="card">
+            <h3>Select Patient Encounter</h3>
+            <p class="text-muted">Choose the encounter you want to bill. Patient name, hospital number, and visit number will be carried into the billing page.</p>
+
+            <?php if ($encounterMatches === []): ?>
+                <div class="empty-state">No matching patient encounters found.</div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Hospital Number</th>
+                                <th>Visit Number</th>
+                                <th>Visit Status</th>
+                                <th>Department</th>
+                                <th>Billing Status</th>
+                                <th>Balance</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($encounterMatches as $match): ?>
+                                <tr>
+                                    <td><?= e((string)($match['patient_name'] ?? '-')) ?></td>
+                                    <td><?= e((string)($match['hospital_number'] ?? '-')) ?></td>
+                                    <td><?= e((string)($match['visit_number'] ?? ('#' . (int)$match['visit_id']))) ?></td>
+                                    <td><?= e((string)($match['visit_status'] ?? '-')) ?></td>
+                                    <td><?= e((string)($match['department_name'] ?? '-')) ?></td>
+                                    <td><?= e((string)($match['billing_status'] ?? 'Unbilled')) ?></td>
+                                    <td>₦<?= e(number_format((float)($match['balance_due'] ?? 0), 2)) ?></td>
+                                    <td>
+                                        <a class="btn-secondary btn-sm" href="view.php?visit=<?= (int)$match['visit_id'] ?>">Open Billing</a>
+                                        <?php if ($permissionService->canCreatePatientCharge($currentUser) && !in_array((string)($match['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)): ?>
+                                            <a class="btn-primary btn-sm" href="charge_create.php?visit=<?= (int)$match['visit_id'] ?>">Add Charge</a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 
     <div class="card">
         <h3>Open Invoices</h3>

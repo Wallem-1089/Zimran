@@ -75,12 +75,12 @@ $requestSource = $pharmacyRequestSource ?? 'Clinical';
         <div class="card">
             <h3>Latest Prescription</h3>
             <div class="summary-grid">
-                <div class="summary-item"><span class="summary-label">Medication</span><span class="summary-value"><?= e((string)$latest['medication_name']) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Source</span><span class="summary-value"><?= e((string)$latest['prescription_source']) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Quantity</span><span class="summary-value"><?= e((string)$latest['quantity']) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"><?= e((string)$latest['status']) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Stock Available</span><span class="summary-value"><?= number_format((float)($latest['pharmacy_stock_available'] ?? 0), 2) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Requested By</span><span class="summary-value"><?= e((string)($latest['created_by_name'] ?? 'Unknown')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Medication</span> <span class="summary-value"><?= e((string)$latest['medication_name']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Source</span> <span class="summary-value"><?= e((string)$latest['prescription_source']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Quantity</span> <span class="summary-value"><?= e((string)$latest['quantity']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)$latest['status']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Stock Available</span> <span class="summary-value"><?= number_format((float)($latest['pharmacy_stock_available'] ?? 0), 2) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Requested By</span> <span class="summary-value"><?= e((string)($latest['created_by_name'] ?? 'Unknown')) ?></span></div>
             </div>
             <div class="form-actions">
                 <a href="../pharmacy/view.php?id=<?= (int)$latest['id'] ?>" class="btn-secondary">View</a>
@@ -100,9 +100,9 @@ $requestSource = $pharmacyRequestSource ?? 'Clinical';
             <div class="card">
                 <h3>Latest Dispensing</h3>
                 <div class="summary-grid">
-                    <div class="summary-item"><span class="summary-label">Dispensed By</span><span class="summary-value"><?= e((string)($latest['dispensed_by_name'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Dispensed At</span><span class="summary-value"><?= e((string)($latest['dispensed_recorded_at'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Quantity Dispensed</span><span class="summary-value"><?= e((string)($latest['quantity_dispensed'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Dispensed By</span> <span class="summary-value"><?= e((string)($latest['dispensed_by_name'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Dispensed At</span> <span class="summary-value"><?= e((string)($latest['dispensed_recorded_at'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Quantity Dispensed</span> <span class="summary-value"><?= e((string)($latest['quantity_dispensed'] ?? '-')) ?></span></div>
                 </div>
                 <?php if (trim((string)($latest['dispensing_notes'] ?? '')) !== ''): ?>
                     <h4>Notes</h4>

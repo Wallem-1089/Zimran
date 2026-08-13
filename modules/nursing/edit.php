@@ -59,7 +59,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?php if (($clinicalSafetySummary['success'] ?? false) && !empty($clinicalSafetySummary['items'])): ?>
             <ul>
                 <?php foreach (array_slice($clinicalSafetySummary['items'], 0, 3) as $item): ?>
-                    <li><strong><?= e((string)($item['title'] ?? 'Safety item')) ?></strong><?= !empty($item['detail']) ? ': ' . e((string)$item['detail']) : '' ?></li>
+                    <li><strong><?= e((string)($item['title'] ?? 'Safety item')) ?><?= !empty($item['detail']) ? ':' : '' ?></strong> <?= !empty($item['detail']) ? e((string)$item['detail']) : '' ?></li>
                 <?php endforeach; ?>
             </ul>
         <?php else: ?>
@@ -70,8 +70,8 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="card">
         <h3>Clinical Context</h3>
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Problem List</span><span class="summary-value"><?= e((string)($problemSummary['summary'] ?? 'No active problems recorded.')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Medical History</span><span class="summary-value"><?= e((string)($medicalHistorySummary['summary'] ?? 'No structured medical history available.')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Problem List</span> <span class="summary-value"><?= e((string)($problemSummary['summary'] ?? 'No active problems recorded.')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Medical History</span> <span class="summary-value"><?= e((string)($medicalHistorySummary['summary'] ?? 'No structured medical history available.')) ?></span></div>
         </div>
     </div>
 

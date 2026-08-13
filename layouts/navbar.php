@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
-$currentDateTime = date('l, d F Y • h:i A');
+$currentDateTime = date('l, d F Y - h:i A');
 $currentUser ??= [];
+$config = require __DIR__ . '/../config/app.php';
+$baseUrl = rtrim($config['app']['base_url'], '/');
 
 ?>
 
@@ -43,7 +45,7 @@ $currentUser ??= [];
 
                     <?= e($currentUser['role_name'] ?? '') ?>
 
-                    •
+                    -
 
                     <?= e($currentUser['active_department_name'] ?? $currentUser['department_name'] ?? '') ?>
 
@@ -56,7 +58,7 @@ $currentUser ??= [];
         <div class="navbar-actions">
 
             <a
-                href="../authentication/logout.php"
+                href="<?= e($baseUrl) ?>/authentication/logout.php"
                 class="logout-link">
 
                 Logout

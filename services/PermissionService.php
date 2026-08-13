@@ -1676,6 +1676,23 @@ class PermissionService
             && $this->isEditable($encounter);
     }
 
+    public function canCancelEncounter(
+        array $encounter,
+        ?array $user = null
+    ): bool {
+        $user = $user ?? $this->currentUser();
+
+        if (!$user || !$this->isEditable($encounter)) {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        return $this->roleMatches($user, ['Receptionist', 'Records Officer', 'Doctor']);
+    }
+
     public function canReceiveEncounter(
         array $encounter,
         ?array $pendingTransfer = null,
@@ -1740,8 +1757,7 @@ class PermissionService
     ): bool {
         $user = $user ?? $this->currentUser();
 
-        return $this->hasPermission('view_encounter', $user)
-            && $this->sameCurrentDepartment($encounter, $user);
+        return $user !== null;
     }
 
     public function canManageUsers(?array $user = null): bool

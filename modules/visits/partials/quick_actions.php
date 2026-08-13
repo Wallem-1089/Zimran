@@ -170,7 +170,6 @@ if (!isset($visit)) {
             <select id="to_department_id" name="to_department_id" required>
                 <option value="">Select department</option>
                 <?php foreach ($departments as $department): ?>
-                    <?php if ((int)$department['id'] === (int)($visit['current_department_id'] ?? 0)) { continue; } ?>
                     <option value="<?= (int)$department['id'] ?>">
                         <?= e((string)$department['department_name']) ?>
                     </option>

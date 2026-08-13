@@ -43,16 +43,16 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="card">
         <h2>Hospital Management System</h2>
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Receipt No.</span><span class="summary-value">RCPT-<?= (int)$receipt['id'] ?></span></div>
-            <div class="summary-item"><span class="summary-label">Patient</span><span class="summary-value"><?= e((string)($receipt['patient_name'] ?? '—')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Hospital Number</span><span class="summary-value"><?= e((string)($receipt['hospital_number'] ?? '—')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Visit Number</span><span class="summary-value"><?= e((string)($receipt['visit_number'] ?? '—')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Invoice Number</span><span class="summary-value"><?= e((string)$receipt['invoice_number']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Amount Paid</span><span class="summary-value">₦<?= e(number_format((float)$receipt['amount'], 2)) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Payment Method</span><span class="summary-value"><?= e((string)$receipt['payment_method']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Received By</span><span class="summary-value"><?= e((string)($receipt['received_by_name'] ?? '—')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Date</span><span class="summary-value"><?= e((string)$receipt['created_at']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Remaining Balance</span><span class="summary-value">₦<?= e(number_format((float)$receipt['invoice_balance_due'], 2)) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Receipt No.</span> <span class="summary-value">RCPT-<?= (int)$receipt['id'] ?></span></div>
+            <div class="summary-item"><span class="summary-label">Patient</span> <span class="summary-value"><?= e((string)($receipt['patient_name'] ?? '—')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Hospital Number</span> <span class="summary-value"><?= e((string)($receipt['hospital_number'] ?? '—')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Visit Number</span> <span class="summary-value"><?= e((string)($receipt['visit_number'] ?? '—')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Invoice Number</span> <span class="summary-value"><?= e((string)$receipt['invoice_number']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Amount Paid</span> <span class="summary-value">₦<?= e(number_format((float)$receipt['amount'], 2)) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Payment Method</span> <span class="summary-value"><?= e((string)$receipt['payment_method']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Received By</span> <span class="summary-value"><?= e((string)($receipt['received_by_name'] ?? '—')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Date</span> <span class="summary-value"><?= e((string)$receipt['created_at']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Remaining Balance</span> <span class="summary-value">₦<?= e(number_format((float)$receipt['invoice_balance_due'], 2)) ?></span></div>
         </div>
         <?php if (!empty($receipt['notes'])): ?>
             <p><strong>Notes:</strong> <?= nl2br(e((string)$receipt['notes'])) ?></p>

@@ -222,32 +222,13 @@ $isClosedEncounter = in_array(
         <?php endif; ?>
 
         <?php if (!$isClosedEncounter && !empty($canChangeEncounterStatus)): ?>
-            <form
-                method="POST"
-                action="change_status.php"
-                style="margin-bottom:8px;">
+            <a
+                href="complete.php?visit=<?= (int)$visit['id'] ?>"
+                class="btn-primary">
 
-                <?= csrfField() ?>
+                Complete Visit
 
-                <input
-                    type="hidden"
-                    name="visit_id"
-                    value="<?= (int)$visit['id'] ?>">
-
-                <input
-                    type="hidden"
-                    name="visit_status"
-                    value="Completed">
-
-                <button
-                    type="submit"
-                    class="btn-primary">
-
-                    Complete Visit
-
-                </button>
-
-            </form>
+            </a>
         <?php endif; ?>
 
         <div class="status-badge <?= e($statusClass) ?>">

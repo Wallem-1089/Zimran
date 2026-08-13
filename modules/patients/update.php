@@ -85,6 +85,8 @@ $patient = [
 
     'occupation'        => trim($_POST['occupation'] ?? ''),
 
+    'place_of_work'     => trim($_POST['place_of_work'] ?? ''),
+
     'phone'             => trim($_POST['phone'] ?? ''),
 
     'email'             => trim($_POST['email'] ?? ''),
@@ -94,6 +96,10 @@ $patient = [
     'state_of_origin'   => trim($_POST['state_of_origin'] ?? ''),
 
     'nationality'       => trim($_POST['nationality'] ?? ''),
+
+    'ethnic_group'      => trim($_POST['ethnic_group'] ?? ''),
+
+    'religion'          => trim($_POST['religion'] ?? ''),
 
     'blood_group'       => trim($_POST['blood_group'] ?? ''),
 
@@ -107,6 +113,9 @@ $patient = [
                         => trim($_POST['next_of_kin_relationship'] ?? ''),
 
     'next_of_kin_phone' => trim($_POST['next_of_kin_phone'] ?? '')
+
+    ,'next_of_kin_address'
+                        => trim($_POST['next_of_kin_address'] ?? '')
 
 ];
 

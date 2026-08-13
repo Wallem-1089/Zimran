@@ -7,12 +7,12 @@ if (!isset($latest) || !is_array($latest)) {
 }
 ?>
 <div class="summary-grid">
-    <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"><?= e((string)($latest['status'] ?? '-')) ?></span></div>
-    <div class="summary-item"><span class="summary-label">Nurse</span><span class="summary-value"><?= e((string)($latest['nurse_name'] ?? '-')) ?></span></div>
-    <div class="summary-item"><span class="summary-label">Recorded By</span><span class="summary-value"><?= e((string)($latest['created_by_name'] ?? '-')) ?></span></div>
-    <div class="summary-item"><span class="summary-label">Recorded At</span><span class="summary-value"><?= e((string)($latest['created_at'] ?? '-')) ?></span></div>
-    <div class="summary-item"><span class="summary-label">Completed By</span><span class="summary-value"><?= e((string)($latest['completed_by_name'] ?? '-')) ?></span></div>
-    <div class="summary-item"><span class="summary-label">Completed At</span><span class="summary-value"><?= e((string)($latest['completed_at'] ?? '-')) ?></span></div>
+    <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)($latest['status'] ?? '-')) ?></span></div>
+    <div class="summary-item"><span class="summary-label">Nurse</span> <span class="summary-value"><?= e((string)($latest['nurse_name'] ?? '-')) ?></span></div>
+    <div class="summary-item"><span class="summary-label">Recorded By</span> <span class="summary-value"><?= e((string)($latest['created_by_name'] ?? '-')) ?></span></div>
+    <div class="summary-item"><span class="summary-label">Recorded At</span> <span class="summary-value"><?= e((string)($latest['created_at'] ?? '-')) ?></span></div>
+    <div class="summary-item"><span class="summary-label">Completed By</span> <span class="summary-value"><?= e((string)($latest['completed_by_name'] ?? '-')) ?></span></div>
+    <div class="summary-item"><span class="summary-label">Completed At</span> <span class="summary-value"><?= e((string)($latest['completed_at'] ?? '-')) ?></span></div>
 </div>
 <table>
     <tbody>

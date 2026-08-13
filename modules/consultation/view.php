@@ -93,10 +93,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Clinical Doctor</span><span class="summary-value"><?= e((string)$consultation['doctor_name']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Department</span><span class="summary-value"><?= e((string)$consultation['department_name']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Created By</span><span class="summary-value"><?= e((string)$consultation['created_by_name']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Completed</span><span class="summary-value"><?= e((string)($consultation['completed_at'] ?? 'Not completed')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Clinical Doctor</span> <span class="summary-value"><?= e((string)$consultation['doctor_name']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Department</span> <span class="summary-value"><?= e((string)$consultation['department_name']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Created By</span> <span class="summary-value"><?= e((string)$consultation['created_by_name']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Completed</span> <span class="summary-value"><?= e((string)($consultation['completed_at'] ?? 'Not completed')) ?></span></div>
         </div>
     </div>
 
@@ -133,9 +133,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             </ul>
             <?php if ($latestLaboratoryResult !== null && trim((string)($latestLaboratoryResult['result'] ?? '')) !== ''): ?>
                 <div class="summary-grid">
-                    <div class="summary-item"><span class="summary-label">Sample Taken</span><span class="summary-value"><?= e((string)($latestLaboratoryResult['sample_taken'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Findings</span><span class="summary-value"><?= e((string)($latestLaboratoryResult['findings'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Result</span><span class="summary-value"><?= e((string)$latestLaboratoryResult['result']) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Sample Taken</span> <span class="summary-value"><?= e((string)($latestLaboratoryResult['sample_taken'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?= e((string)($latestLaboratoryResult['findings'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Result</span> <span class="summary-value"><?= e((string)$latestLaboratoryResult['result']) ?></span></div>
                 </div>
             <?php endif; ?>
         <?php endif; ?>
@@ -165,9 +165,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             </ul>
                 <?php if ($latestRadiologyReport !== null && trim((string)($latestRadiologyReport['impression'] ?? '')) !== ''): ?>
                     <div class="summary-grid">
-                        <div class="summary-item"><span class="summary-label">Findings</span><span class="summary-value"><?= e((string)($latestRadiologyReport['findings'] ?? '-')) ?></span></div>
-                        <div class="summary-item"><span class="summary-label">Impression</span><span class="summary-value"><?= e((string)($latestRadiologyReport['impression'] ?? '-')) ?></span></div>
-                        <div class="summary-item"><span class="summary-label">Recommendation</span><span class="summary-value"><?= e((string)($latestRadiologyReport['recommendation'] ?? '-')) ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?= e((string)($latestRadiologyReport['findings'] ?? '-')) ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Impression</span> <span class="summary-value"><?= e((string)($latestRadiologyReport['impression'] ?? '-')) ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Recommendation</span> <span class="summary-value"><?= e((string)($latestRadiologyReport['recommendation'] ?? '-')) ?></span></div>
                     </div>
                 <?php endif; ?>
         <?php endif; ?>
@@ -199,9 +199,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             </ul>
             <?php if ($latestPharmacyPrescription !== null && (string)($latestPharmacyPrescription['status'] ?? '') === 'Dispensed'): ?>
                 <div class="summary-grid">
-                    <div class="summary-item"><span class="summary-label">Dispensed By</span><span class="summary-value"><?= e((string)($latestPharmacyPrescription['dispensed_by_name'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Dispensed At</span><span class="summary-value"><?= e((string)($latestPharmacyPrescription['dispensed_recorded_at'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Quantity Dispensed</span><span class="summary-value"><?= e((string)($latestPharmacyPrescription['quantity_dispensed'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Dispensed By</span> <span class="summary-value"><?= e((string)($latestPharmacyPrescription['dispensed_by_name'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Dispensed At</span> <span class="summary-value"><?= e((string)($latestPharmacyPrescription['dispensed_recorded_at'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Quantity Dispensed</span> <span class="summary-value"><?= e((string)($latestPharmacyPrescription['quantity_dispensed'] ?? '-')) ?></span></div>
                 </div>
             <?php endif; ?>
         <?php endif; ?>
@@ -241,9 +241,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 </ul>
                 <?php if ($latestPhysiotherapySession !== null && trim((string)($latestPhysiotherapySession['treatment_given'] ?? '')) !== ''): ?>
                     <div class="summary-grid">
-                        <div class="summary-item"><span class="summary-label">Treatment Given</span><span class="summary-value"><?= e((string)($latestPhysiotherapySession['treatment_given'] ?? '-')) ?></span></div>
-                        <div class="summary-item"><span class="summary-label">Patient Response</span><span class="summary-value"><?= e((string)($latestPhysiotherapySession['patient_response'] ?? '-')) ?></span></div>
-                        <div class="summary-item"><span class="summary-label">Next Plan</span><span class="summary-value"><?= e((string)($latestPhysiotherapySession['next_plan'] ?? '-')) ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Treatment Given</span> <span class="summary-value"><?= e((string)($latestPhysiotherapySession['treatment_given'] ?? '-')) ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Patient Response</span> <span class="summary-value"><?= e((string)($latestPhysiotherapySession['patient_response'] ?? '-')) ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Next Plan</span> <span class="summary-value"><?= e((string)($latestPhysiotherapySession['next_plan'] ?? '-')) ?></span></div>
                     </div>
                 <?php endif; ?>
             <?php endif; ?>
@@ -270,9 +270,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <p class="text-muted">No theatre record recorded.</p>
             <?php else: ?>
                 <div class="summary-grid">
-                    <div class="summary-item"><span class="summary-label">Procedure</span><span class="summary-value"><?= e((string)($existingTheatre['procedure_name'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Surgeon</span><span class="summary-value"><?= e((string)($existingTheatre['surgeon_name'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"><?= e((string)($existingTheatre['status'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Procedure</span> <span class="summary-value"><?= e((string)($existingTheatre['procedure_name'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Surgeon</span> <span class="summary-value"><?= e((string)($existingTheatre['surgeon_name'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)($existingTheatre['status'] ?? '-')) ?></span></div>
                 </div>
             <?php endif; ?>
         <?php endif; ?>

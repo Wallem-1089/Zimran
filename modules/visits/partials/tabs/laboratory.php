@@ -76,12 +76,12 @@ $requestSource = $laboratoryRequestSource ?? 'Clinical';
         <div class="card">
             <h3>Latest Request</h3>
             <div class="summary-grid">
-                <div class="summary-item"><span class="summary-label">Tests Requested</span><span class="summary-value"><?= e((string)$latest['tests_requested']) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Request Source</span><span class="summary-value"><?= e((string)$latest['request_source']) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Priority</span><span class="summary-value"><?= e((string)$latest['priority']) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Result Status</span><span class="summary-value"><?= e((string)($latest['result_status'] ?? 'Pending')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Requested By</span><span class="summary-value"><?= e((string)($latest['requested_by_name'] ?? 'Unknown')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Requested</span><span class="summary-value"><?= e((string)($latest['created_at'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Tests Requested</span> <span class="summary-value"><?= e((string)$latest['tests_requested']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Request Source</span> <span class="summary-value"><?= e((string)$latest['request_source']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Priority</span> <span class="summary-value"><?= e((string)$latest['priority']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Result Status</span> <span class="summary-value"><?= e((string)($latest['result_status'] ?? 'Pending')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Requested By</span> <span class="summary-value"><?= e((string)($latest['requested_by_name'] ?? 'Unknown')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Requested</span> <span class="summary-value"><?= e((string)($latest['created_at'] ?? '-')) ?></span></div>
             </div>
             <div class="form-actions">
                 <a href="../laboratory/view.php?id=<?= (int)$latest['id'] ?>" class="btn-secondary">View</a>
@@ -112,8 +112,8 @@ $requestSource = $laboratoryRequestSource ?? 'Clinical';
             <div class="card">
                 <h3>Latest Result</h3>
                 <div class="summary-grid">
-                    <div class="summary-item"><span class="summary-label">Performed By</span><span class="summary-value"><?= e((string)($result['performed_by_name'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Completed At</span><span class="summary-value"><?= e((string)($result['result_completed_at'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Performed By</span> <span class="summary-value"><?= e((string)($result['performed_by_name'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Completed At</span> <span class="summary-value"><?= e((string)($result['result_completed_at'] ?? '-')) ?></span></div>
                 </div>
                 <p><?= nl2br(e((string)$result['result'])) ?></p>
                 <?php if (trim((string)($result['interpretation'] ?? '')) !== ''): ?>

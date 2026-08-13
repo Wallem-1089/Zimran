@@ -32,9 +32,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
     </div>
 
     <div class="summary-grid">
-        <div class="summary-item"><span class="summary-label">Requested</span><span class="summary-value"><?= (int)($statusCounts['Requested'] ?? 0) ?></span></div>
-        <div class="summary-item"><span class="summary-label">In Progress</span><span class="summary-value"><?= (int)($statusCounts['In Progress'] ?? 0) ?></span></div>
-        <div class="summary-item"><span class="summary-label">Completed</span><span class="summary-value"><?= (int)($statusCounts['Completed'] ?? 0) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Requested</span> <span class="summary-value"><?= (int)($statusCounts['Requested'] ?? 0) ?></span></div>
+        <div class="summary-item"><span class="summary-label">In Progress</span> <span class="summary-value"><?= (int)($statusCounts['In Progress'] ?? 0) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Completed</span> <span class="summary-value"><?= (int)($statusCounts['Completed'] ?? 0) ?></span></div>
     </div>
 
     <div class="card">

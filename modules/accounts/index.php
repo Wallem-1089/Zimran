@@ -53,9 +53,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
     </div>
 
     <div class="summary-grid">
-        <div class="summary-item"><span class="summary-label">Catalogue Items</span><span class="summary-value"><?= count($allItems) ?></span></div>
-        <div class="summary-item"><span class="summary-label">Active Services</span><span class="summary-value"><?= $activeServices ?></span></div>
-        <div class="summary-item"><span class="summary-label">Active Products</span><span class="summary-value"><?= $activeProducts ?></span></div>
+        <div class="summary-item"><span class="summary-label">Catalogue Items</span> <span class="summary-value"><?= count($allItems) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Active Services</span> <span class="summary-value"><?= $activeServices ?></span></div>
+        <div class="summary-item"><span class="summary-label">Active Products</span> <span class="summary-value"><?= $activeProducts ?></span></div>
     </div>
 
     <form method="get" class="card">

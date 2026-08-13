@@ -24,10 +24,10 @@ $theatreRecord = $latestTheatreRecord ?? null;
         <div class="empty-state">No theatre record recorded.</div>
     <?php else: ?>
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Date</span><span class="summary-value"><?= e((string)($theatreRecord['created_at'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Procedure</span><span class="summary-value"><?= e((string)($theatreRecord['procedure_name'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Surgeon</span><span class="summary-value"><?= e((string)($theatreRecord['surgeon_name'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"><?= e((string)($theatreRecord['status'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Date</span> <span class="summary-value"><?= e((string)($theatreRecord['created_at'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Procedure</span> <span class="summary-value"><?= e((string)($theatreRecord['procedure_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Surgeon</span> <span class="summary-value"><?= e((string)($theatreRecord['surgeon_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)($theatreRecord['status'] ?? '-')) ?></span></div>
         </div>
         <div class="form-actions">
             <a class="btn-secondary" href="../theatre/view.php?id=<?= (int)$theatreRecord['id'] ?>">View</a>

@@ -27,11 +27,11 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <?php reportsFilterForm($filters, []); ?>
     <div class="card">
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Active Charges</span><span class="summary-value"><?= e(number_format((float)$report['charges'], 2)) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Invoice Value</span><span class="summary-value"><?= e(number_format((float)$report['invoices'], 2)) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Payments Received</span><span class="summary-value"><?= e(number_format((float)$report['payments'], 2)) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Open Invoices</span><span class="summary-value"><?= (int)$report['open_invoices'] ?></span></div>
-            <div class="summary-item"><span class="summary-label">Outstanding Balance</span><span class="summary-value"><?= e(number_format((float)$report['outstanding_balance'], 2)) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Active Charges</span> <span class="summary-value"><?= e(number_format((float)$report['charges'], 2)) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Invoice Value</span> <span class="summary-value"><?= e(number_format((float)$report['invoices'], 2)) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Payments Received</span> <span class="summary-value"><?= e(number_format((float)$report['payments'], 2)) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Open Invoices</span> <span class="summary-value"><?= (int)$report['open_invoices'] ?></span></div>
+            <div class="summary-item"><span class="summary-label">Outstanding Balance</span> <span class="summary-value"><?= e(number_format((float)$report['outstanding_balance'], 2)) ?></span></div>
         </div>
     </div>
 </main>

@@ -50,9 +50,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Unit</span><span class="summary-value"><?= e((string)$item['unit']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"><?= !empty($item['is_active']) ? 'Active' : 'Inactive' ?></span></div>
-            <div class="summary-item"><span class="summary-label">Billable Link</span><span class="summary-value">
+            <div class="summary-item"><span class="summary-label">Unit</span> <span class="summary-value"><?= e((string)$item['unit']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= !empty($item['is_active']) ? 'Active' : 'Inactive' ?></span></div>
+            <div class="summary-item"><span class="summary-label">Billable Link</span> <span class="summary-value">
                 <?php if (!empty($item['billable_item_id'])): ?>
                     <?= e((string)($item['billable_item_code'] ?? '-')) ?> — <?= e((string)($item['billable_item_name'] ?? '-')) ?>
                     <?php if (!empty($item['billable_item_price_display'])): ?>
@@ -62,9 +62,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
                     —
                 <?php endif; ?>
             </span></div>
-            <div class="summary-item"><span class="summary-label">Created By</span><span class="summary-value"><?= e((string)($item['created_by_name'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Created At</span><span class="summary-value"><?= e((string)($item['created_at'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Updated By</span><span class="summary-value"><?= e((string)($item['updated_by_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Created By</span> <span class="summary-value"><?= e((string)($item['created_by_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Created At</span> <span class="summary-value"><?= e((string)($item['created_at'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Updated By</span> <span class="summary-value"><?= e((string)($item['updated_by_name'] ?? '-')) ?></span></div>
         </div>
         <?php if (!empty($item['description'])): ?>
             <p><?= nl2br(e((string)$item['description'])) ?></p>

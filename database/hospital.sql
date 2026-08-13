@@ -295,6 +295,8 @@ CREATE TABLE patients (
 
     occupation VARCHAR(100) NULL,
 
+    place_of_work VARCHAR(150) NULL,
+
     phone VARCHAR(20) NULL,
 
     normalized_phone VARCHAR(30) NULL,
@@ -309,6 +311,10 @@ CREATE TABLE patients (
 
     nationality VARCHAR(100) NULL,
 
+    ethnic_group VARCHAR(100) NULL,
+
+    religion VARCHAR(100) NULL,
+
     blood_group VARCHAR(5) NULL,
 
     genotype VARCHAR(5) NULL,
@@ -320,6 +326,8 @@ CREATE TABLE patients (
     next_of_kin_relationship VARCHAR(100) NULL,
 
     next_of_kin_phone VARCHAR(20) NULL,
+
+    next_of_kin_address TEXT NULL,
 
     registered_by INT NULL,
 
@@ -463,6 +471,16 @@ DEFAULT 'Outpatient',
         DEFAULT NULL
         ON UPDATE CURRENT_TIMESTAMP,
 
+    completed_at DATETIME NULL,
+
+    completed_by INT NULL,
+
+    discharge_diagnosis TEXT NULL,
+
+    discharge_notes TEXT NULL,
+
+    follow_up_instructions TEXT NULL,
+
     CONSTRAINT uq_visits_number
         UNIQUE (visit_number),
 
@@ -486,6 +504,12 @@ DEFAULT 'Outpatient',
 
     INDEX idx_visits_date
         (visit_date),
+
+    INDEX idx_visits_completed_at
+        (completed_at),
+
+    INDEX idx_visits_completed_by
+        (completed_by),
 
     CONSTRAINT fk_visits_patient
 

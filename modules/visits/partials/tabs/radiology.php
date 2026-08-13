@@ -76,12 +76,12 @@ $requestSource = $radiologyRequestSource ?? 'Clinical';
         <div class="card">
             <h3>Latest Request</h3>
             <div class="summary-grid">
-                <div class="summary-item"><span class="summary-label">Study Requested</span><span class="summary-value"><?= e((string)($latest['study_requested'] ?? $latest['tests_requested'] ?? '')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Request Source</span><span class="summary-value"><?= e((string)$latest['request_source']) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Priority</span><span class="summary-value"><?= e((string)$latest['priority']) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Report Status</span><span class="summary-value"><?= e((string)($latest['result_status'] ?? 'Pending')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Requested By</span><span class="summary-value"><?= e((string)($latest['requested_by_name'] ?? 'Unknown')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Requested</span><span class="summary-value"><?= e((string)($latest['created_at'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Study Requested</span> <span class="summary-value"><?= e((string)($latest['study_requested'] ?? $latest['tests_requested'] ?? '')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Request Source</span> <span class="summary-value"><?= e((string)$latest['request_source']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Priority</span> <span class="summary-value"><?= e((string)$latest['priority']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Report Status</span> <span class="summary-value"><?= e((string)($latest['result_status'] ?? 'Pending')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Requested By</span> <span class="summary-value"><?= e((string)($latest['requested_by_name'] ?? 'Unknown')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Requested</span> <span class="summary-value"><?= e((string)($latest['created_at'] ?? '-')) ?></span></div>
             </div>
             <div class="form-actions">
                 <a href="../radiology/view.php?id=<?= (int)$latest['id'] ?>" class="btn-secondary">View</a>
@@ -112,11 +112,11 @@ $requestSource = $radiologyRequestSource ?? 'Clinical';
             <div class="card">
                 <h3>Latest Report</h3>
                 <div class="summary-grid">
-                    <div class="summary-item"><span class="summary-label">Findings</span><span class="summary-value"><?= e((string)($report['findings'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Impression</span><span class="summary-value"><?= e((string)($report['impression'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Recommendation</span><span class="summary-value"><?= e((string)($report['recommendation'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Reported By</span><span class="summary-value"><?= e((string)($report['result_performed_by_name'] ?? $report['performed_by_name'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Completed At</span><span class="summary-value"><?= e((string)($report['result_completed_at'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?= e((string)($report['findings'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Impression</span> <span class="summary-value"><?= e((string)($report['impression'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Recommendation</span> <span class="summary-value"><?= e((string)($report['recommendation'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Reported By</span> <span class="summary-value"><?= e((string)($report['result_performed_by_name'] ?? $report['performed_by_name'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Completed At</span> <span class="summary-value"><?= e((string)($report['result_completed_at'] ?? '-')) ?></span></div>
                 </div>
             </div>
         <?php else: ?>

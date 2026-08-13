@@ -22,16 +22,20 @@ class PatientService
         'date_of_birth',
         'marital_status',
         'occupation',
+        'place_of_work',
         'phone',
         'email',
         'address',
         'state_of_origin',
         'nationality',
+        'ethnic_group',
+        'religion',
         'blood_group',
         'genotype',
         'next_of_kin',
         'next_of_kin_relationship',
-        'next_of_kin_phone'
+        'next_of_kin_phone',
+        'next_of_kin_address'
     ];
 
     private PDO $pdo;
@@ -138,6 +142,8 @@ class PatientService
 
                     occupation,
 
+                    place_of_work,
+
                     phone,
 
                     normalized_phone,
@@ -152,6 +158,10 @@ class PatientService
 
                     nationality,
 
+                    ethnic_group,
+
+                    religion,
+
                     blood_group,
 
                     genotype,
@@ -163,6 +173,8 @@ class PatientService
                     next_of_kin_relationship,
 
                     next_of_kin_phone,
+
+                    next_of_kin_address,
 
                     registered_by
 
@@ -192,6 +204,8 @@ class PatientService
 
                     :occupation,
 
+                    :place_of_work,
+
                     :phone,
 
                     :normalized_phone,
@@ -206,6 +220,10 @@ class PatientService
 
                     :nationality,
 
+                    :ethnic_group,
+
+                    :religion,
+
                     :blood_group,
 
                     :genotype,
@@ -217,6 +235,8 @@ class PatientService
                     :next_of_kin_relationship,
 
                     :next_of_kin_phone,
+
+                    :next_of_kin_address,
 
                     :registered_by
 
@@ -238,6 +258,7 @@ class PatientService
                 ':date_of_birth'     => $patient['date_of_birth'],
                 ':marital_status'    => $patient['marital_status'],
                 ':occupation'        => $patient['occupation'],
+                ':place_of_work'     => $patient['place_of_work'],
                 ':phone'             => $patient['phone'],
                 ':normalized_phone'  => $this->normalizePhone($patient['phone']),
                 ':email'             => $patient['email'],
@@ -245,6 +266,8 @@ class PatientService
                 ':address'           => $patient['address'],
                 ':state_of_origin'   => $patient['state_of_origin'],
                 ':nationality'       => $patient['nationality'],
+                ':ethnic_group'      => $patient['ethnic_group'],
+                ':religion'          => $patient['religion'],
                 ':blood_group'       => $patient['blood_group'],
                 ':genotype'          => $patient['genotype'],
                 ':allergies'         => trim((string)($patient['allergies'] ?? '')),
@@ -252,6 +275,8 @@ class PatientService
                 ':next_of_kin_relationship'
                                       => $patient['next_of_kin_relationship'],
                 ':next_of_kin_phone' => $patient['next_of_kin_phone'],
+                ':next_of_kin_address'
+                                      => $patient['next_of_kin_address'],
                 ':registered_by'     => $registeredBy
 
             ]);
@@ -1109,6 +1134,7 @@ public function updatePatientWithContext(
                 date_of_birth = :date_of_birth,
                 marital_status = :marital_status,
                 occupation = :occupation,
+                place_of_work = :place_of_work,
                 phone = :phone,
                 normalized_phone = :normalized_phone,
                 email = :email,
@@ -1116,11 +1142,14 @@ public function updatePatientWithContext(
                 address = :address,
                 state_of_origin = :state_of_origin,
                 nationality = :nationality,
+                ethnic_group = :ethnic_group,
+                religion = :religion,
                 blood_group = :blood_group,
                 genotype = :genotype,
                 next_of_kin = :next_of_kin,
                 next_of_kin_relationship = :next_of_kin_relationship,
                 next_of_kin_phone = :next_of_kin_phone,
+                next_of_kin_address = :next_of_kin_address,
                 demographic_version = :demographic_version
             WHERE id = :id
         ');
@@ -1135,6 +1164,7 @@ public function updatePatientWithContext(
             ':date_of_birth' => $updated['date_of_birth'],
             ':marital_status' => $updated['marital_status'],
             ':occupation' => $updated['occupation'],
+            ':place_of_work' => $updated['place_of_work'],
             ':phone' => $updated['phone'],
             ':normalized_phone' => $this->normalizePhone($updated['phone']),
             ':email' => $updated['email'],
@@ -1142,11 +1172,14 @@ public function updatePatientWithContext(
             ':address' => $updated['address'],
             ':state_of_origin' => $updated['state_of_origin'],
             ':nationality' => $updated['nationality'],
+            ':ethnic_group' => $updated['ethnic_group'],
+            ':religion' => $updated['religion'],
             ':blood_group' => $updated['blood_group'],
             ':genotype' => $updated['genotype'],
             ':next_of_kin' => $updated['next_of_kin'],
             ':next_of_kin_relationship' => $updated['next_of_kin_relationship'],
             ':next_of_kin_phone' => $updated['next_of_kin_phone'],
+            ':next_of_kin_address' => $updated['next_of_kin_address'],
             ':demographic_version' => $newVersion,
             ':id' => $id
         ]);

@@ -74,14 +74,14 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Patient</span><span class="summary-value"><?= e((string)($prescription['patient_name'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Hospital Number</span><span class="summary-value"><?= e((string)($prescription['hospital_number'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Medication</span><span class="summary-value"><?= e((string)$prescription['medication_name']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Quantity</span><span class="summary-value"><?= e((string)$prescription['quantity']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Source</span><span class="summary-value"><?= e((string)$prescription['prescription_source']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"><?= e((string)$prescription['status']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Prescriber</span><span class="summary-value"><?= e((string)($prescription['prescribed_by_name'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Requested</span><span class="summary-value"><?= e((string)($prescription['created_at'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Patient</span> <span class="summary-value"><?= e((string)($prescription['patient_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Hospital Number</span> <span class="summary-value"><?= e((string)($prescription['hospital_number'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Medication</span> <span class="summary-value"><?= e((string)$prescription['medication_name']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Quantity</span> <span class="summary-value"><?= e((string)$prescription['quantity']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Source</span> <span class="summary-value"><?= e((string)$prescription['prescription_source']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)$prescription['status']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Prescriber</span> <span class="summary-value"><?= e((string)($prescription['prescribed_by_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Requested</span> <span class="summary-value"><?= e((string)($prescription['created_at'] ?? '-')) ?></span></div>
         </div>
     </div>
 
@@ -125,9 +125,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p class="text-muted">No dispensing record exists.</p>
         <?php else: ?>
             <div class="summary-grid">
-                <div class="summary-item"><span class="summary-label">Quantity Dispensed</span><span class="summary-value"><?= e((string)$dispensing['quantity_dispensed']) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Dispensed By</span><span class="summary-value"><?= e((string)($dispensing['dispensed_by_name'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Dispensed At</span><span class="summary-value"><?= e((string)($dispensing['created_at'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Quantity Dispensed</span> <span class="summary-value"><?= e((string)$dispensing['quantity_dispensed']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Dispensed By</span> <span class="summary-value"><?= e((string)($dispensing['dispensed_by_name'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Dispensed At</span> <span class="summary-value"><?= e((string)($dispensing['created_at'] ?? '-')) ?></span></div>
             </div>
             <?php if (trim((string)($dispensing['dispensing_notes'] ?? '')) !== ''): ?>
                 <h4>Dispensing Notes</h4>

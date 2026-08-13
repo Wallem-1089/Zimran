@@ -1,0 +1,194 @@
+.visit-workspace .timeline-card {
+    overflow: hidden;
+}
+
+.visit-workspace .timeline-panel {
+    border-radius: 18px;
+}
+
+.visit-workspace .timeline-summary {
+    align-items: center;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(14, 165, 233, 0.08));
+    cursor: pointer;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    list-style: none;
+    padding: 18px 22px;
+}
+
+.visit-workspace .timeline-summary::-webkit-details-marker {
+    display: none;
+}
+
+.visit-workspace .timeline-summary-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.visit-workspace .timeline-summary-title {
+    color: #0f172a;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.visit-workspace .timeline-summary-subtitle {
+    color: #64748b;
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+.visit-workspace .timeline-toggle-text {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    border-radius: 999px;
+    color: #2563eb;
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 0;
+    font-weight: 700;
+    justify-content: center;
+    min-width: 96px;
+    padding: 8px 14px;
+}
+
+.visit-workspace .timeline-toggle-text::before {
+    content: "Expand";
+    font-size: 0.9rem;
+}
+
+.visit-workspace .timeline-panel[open] .timeline-toggle-text::before {
+    content: "Collapse";
+}
+
+.visit-workspace .timeline-panel-body {
+    border-top: 1px solid rgba(148, 163, 184, 0.22);
+    padding: 20px 22px 24px;
+}
+
+.visit-workspace .timeline-meta {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+}
+
+.visit-workspace .timeline-meta span,
+.visit-workspace .summary-item,
+.visit-workspace .info-item,
+.visit-workspace .detail-item {
+    line-height: 1.55;
+}
+
+.visit-workspace .timeline-meta strong,
+.visit-workspace .summary-label,
+.visit-workspace .info-label,
+.visit-workspace .detail-label {
+    margin-right: 0.35rem;
+}
+
+.visit-workspace .summary-value,
+.visit-workspace .info-value,
+.visit-workspace .detail-value {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 768px) {
+    .visit-workspace .timeline-summary {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .visit-workspace .timeline-toggle-text {
+        width: 100%;
+    }
+}
+
+.encounter-workflow-actions {
+    align-items: stretch;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-top: 18px;
+}
+
+.cancel-encounter-form {
+    margin: 14px 0 16px;
+}
+
+.cancel-encounter-form .btn-danger {
+    min-width: 180px;
+    text-decoration: none;
+}
+
+.encounter-workflow-actions .btn-secondary {
+    align-items: center;
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    border-radius: 14px;
+    display: inline-flex;
+    justify-content: center;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    min-width: 190px;
+    padding: 13px 20px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.encounter-workflow-actions .btn-secondary + .btn-secondary {
+    margin-left: 18px;
+}
+
+@media (max-width: 640px) {
+    .encounter-workflow-actions {
+        flex-direction: column;
+    }
+
+    .encounter-workflow-actions .btn-secondary {
+        width: 100%;
+    }
+
+    .encounter-workflow-actions .btn-secondary + .btn-secondary {
+        margin-left: 0;
+    }
+}
+
+.encounter-summary-split {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    margin-bottom: 14px;
+}
+
+.encounter-summary-card {
+    margin-bottom: 0;
+    padding: 14px;
+}
+
+.encounter-summary-card h2 {
+    font-size: 1rem;
+    margin: 0 0 10px;
+}
+
+.encounter-summary-card .summary-grid {
+    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    margin-bottom: 0;
+}
+
+.encounter-summary-card .summary-item {
+    min-height: auto;
+    padding: 10px 12px;
+}
+
+.encounter-summary-card .summary-label {
+    font-size: 0.86rem;
+}
+
+.encounter-summary-card .summary-value {
+    font-size: 1rem;
+    line-height: 1.2;
+    margin-top: 2px;
+}

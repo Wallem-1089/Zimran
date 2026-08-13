@@ -11,10 +11,10 @@ declare(strict_types=1);
         <p class="text-muted">No nursing assessment recorded.</p>
     <?php else: ?>
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Recorded At</span><span class="summary-value"><?= e((string)($latestNursingAssessment['created_at'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Nurse</span><span class="summary-value"><?= e((string)($latestNursingAssessment['nurse_name'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"><?= e((string)($latestNursingAssessment['status'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Summary</span><span class="summary-value"><?= e((string)($latestNursingAssessment['summary'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Recorded At</span> <span class="summary-value"><?= e((string)($latestNursingAssessment['created_at'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Nurse</span> <span class="summary-value"><?= e((string)($latestNursingAssessment['nurse_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)($latestNursingAssessment['status'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Summary</span> <span class="summary-value"><?= e((string)($latestNursingAssessment['summary'] ?? '-')) ?></span></div>
         </div>
         <table>
             <thead>

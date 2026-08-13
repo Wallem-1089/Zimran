@@ -118,6 +118,18 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="review-item">
 
+        <div class="review-label">Other Names</div>
+
+        <div class="review-value">
+
+            <?= e((string)($patient['middle_name'] ?? '')) ?>
+
+        </div>
+
+    </div>
+
+    <div class="review-item">
+
         <div class="review-label">Last Name</div>
 
         <div class="review-value">
@@ -152,6 +164,66 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
     </div>
 
+    <div class="review-item">
+
+        <div class="review-label">Occupation</div>
+
+        <div class="review-value">
+
+            <?= e((string)($patient['occupation'] ?? '')) ?>
+
+        </div>
+
+    </div>
+
+    <div class="review-item">
+
+        <div class="review-label">Place of Work</div>
+
+        <div class="review-value">
+
+            <?= e((string)($patient['place_of_work'] ?? '')) ?>
+
+        </div>
+
+    </div>
+
+    <div class="review-item">
+
+        <div class="review-label">Nationality</div>
+
+        <div class="review-value">
+
+            <?= e((string)($patient['nationality'] ?? '')) ?>
+
+        </div>
+
+    </div>
+
+    <div class="review-item">
+
+        <div class="review-label">Ethnic Group</div>
+
+        <div class="review-value">
+
+            <?= e((string)($patient['ethnic_group'] ?? '')) ?>
+
+        </div>
+
+    </div>
+
+    <div class="review-item">
+
+        <div class="review-label">Religion</div>
+
+        <div class="review-value">
+
+            <?= e((string)($patient['religion'] ?? '')) ?>
+
+        </div>
+
+    </div>
+
 </div>
 
 <div class="card">
@@ -164,7 +236,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         <div class="review-value">
 
-            <?= e($patient['phone']) ?>
+            <?= e((string)($patient['phone'] ?? '')) ?>
 
         </div>
 
@@ -176,7 +248,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         <div class="review-value">
 
-            <?= e($patient['email']) ?>
+            <?= e((string)($patient['email'] ?? '')) ?>
 
         </div>
 
@@ -188,7 +260,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         <div class="review-value">
 
-            <?= nl2br(e($patient['address'])) ?>
+            <?= nl2br(e((string)($patient['address'] ?? ''))) ?>
 
         </div>
 
@@ -206,7 +278,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         <div class="review-value">
 
-            <?= e($patient['blood_group']) ?>
+            <?= e((string)($patient['blood_group'] ?? '')) ?>
 
         </div>
 
@@ -218,7 +290,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         <div class="review-value">
 
-            <?= e($patient['genotype']) ?>
+            <?= e((string)($patient['genotype'] ?? '')) ?>
 
         </div>
 
@@ -236,7 +308,19 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         <div class="review-value">
 
-            <?= e($patient['next_of_kin']) ?>
+            <?= e((string)($patient['next_of_kin'] ?? '')) ?>
+
+        </div>
+
+    </div>
+
+    <div class="review-item">
+
+        <div class="review-label">Relationship</div>
+
+        <div class="review-value">
+
+            <?= e((string)($patient['next_of_kin_relationship'] ?? '')) ?>
 
         </div>
 
@@ -248,7 +332,19 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         <div class="review-value">
 
-            <?= e($patient['next_of_kin_phone']) ?>
+            <?= e((string)($patient['next_of_kin_phone'] ?? '')) ?>
+
+        </div>
+
+    </div>
+
+    <div class="review-item">
+
+        <div class="review-label">Address</div>
+
+        <div class="review-value">
+
+            <?= nl2br(e((string)($patient['next_of_kin_address'] ?? ''))) ?>
 
         </div>
 

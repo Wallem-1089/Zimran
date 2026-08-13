@@ -44,10 +44,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Recorded By</span><span class="summary-value"><?= e((string)($vitalSigns['recorded_by_name'] ?? 'Unknown')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Recorded At</span><span class="summary-value"><?= e((string)($vitalSigns['created_at'] ?? 'Unknown')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Department</span><span class="summary-value"><?= e((string)($vitalSigns['department_name'] ?? '')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Visit Status</span><span class="summary-value"><?= e((string)($visit['visit_status'] ?? 'Unknown')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Recorded By</span> <span class="summary-value"><?= e((string)($vitalSigns['recorded_by_name'] ?? 'Unknown')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Recorded At</span> <span class="summary-value"><?= e((string)($vitalSigns['created_at'] ?? 'Unknown')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Department</span> <span class="summary-value"><?= e((string)($vitalSigns['department_name'] ?? '')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Visit Status</span> <span class="summary-value"><?= e((string)($visit['visit_status'] ?? 'Unknown')) ?></span></div>
         </div>
     </div>
 

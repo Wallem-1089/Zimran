@@ -70,10 +70,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
     </div>
 
     <div class="summary-grid">
-        <div class="summary-item"><span class="summary-label">Patient</span><span class="summary-value"><?= e((string)($patient['first_name'] . ' ' . $patient['last_name'])) ?></span></div>
-        <div class="summary-item"><span class="summary-label">Hospital Number</span><span class="summary-value"><?= e((string)$patient['hospital_number']) ?></span></div>
-        <div class="summary-item"><span class="summary-label">Request Source</span><span class="summary-value"><?= e($requestSource) ?></span></div>
-        <div class="summary-item"><span class="summary-label">Encounter Status</span><span class="summary-value"><?= e((string)($visit['visit_status'] ?? '-')) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Patient</span> <span class="summary-value"><?= e((string)($patient['first_name'] . ' ' . $patient['last_name'])) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Hospital Number</span> <span class="summary-value"><?= e((string)$patient['hospital_number']) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Request Source</span> <span class="summary-value"><?= e($requestSource) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Encounter Status</span> <span class="summary-value"><?= e((string)($visit['visit_status'] ?? '-')) ?></span></div>
     </div>
 
     <?php require __DIR__ . '/_form.php'; ?>

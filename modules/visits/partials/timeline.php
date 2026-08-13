@@ -1,264 +1,77 @@
 <?php
+$events = $visitService->getVisitTimeline((int)$visit['id']);
+$eventCount = count($events);
+$latestEvent = $events[0] ?? null;
+$latestLabel = null;
 
-declare(strict_types=1);
-
-/*
-|--------------------------------------------------------------------------
-| Required Variables
-|--------------------------------------------------------------------------
-|
-| Expected:
-| $visit
-| $visitService
-|
-*/
-
-if (
-
-    !isset($visit) ||
-
-    !isset($visitService)
-
-) {
-
-    return;
-
+if ($latestEvent && !empty($latestEvent['created_at'])) {
+    $latestLabel = date('M j, Y g:i A', strtotime((string)$latestEvent['created_at']));
 }
-
-/*
-|--------------------------------------------------------------------------
-| Timeline
-|--------------------------------------------------------------------------
-*/
-
-$events = $visitService->getVisitTimeline(
-
-    (int)$visit['id']
-
-);
-
 ?>
 
-<div class="card">
+<section class="card timeline-card">
+    <details class="timeline-panel">
+        <summary class="timeline-summary">
+            <span class="timeline-summary-main">
+                <span class="timeline-summary-title">Encounter Timeline</span>
+                <span class="timeline-summary-subtitle">
+                    <?php if ($eventCount > 0): ?>
+                        <?= (int)$eventCount ?> event<?= $eventCount === 1 ? '' : 's' ?> recorded<?= $latestLabel ? ' - latest ' . e($latestLabel) : '' ?>
+                    <?php else: ?>
+                        No timeline events recorded yet
+                    <?php endif; ?>
+                </span>
+            </span>
+            <span class="timeline-toggle-text" aria-hidden="true">Expand</span>
+        </summary>
 
-    <div class="card-header">
-
-        <h2>
-
-            Encounter Timeline
-
-        </h2>
-
-    </div>
-
-    <?php if (!empty($events)) : ?>
-
-        <div class="timeline">
-
-            <?php foreach ($events as $event) : ?>
-
-                <?php
-
-                /*
-                |--------------------------------------------------------------------------
-                | Timeline Marker
-                |--------------------------------------------------------------------------
-                */
-
-                $marker = match ($event['type']) {
-
-                    'creation' => 'success',
-
-                    'transfer' => 'info',
-
-                    'consultation' => 'doctor',
-
-                    'nursing' => 'nursing',
-
-                    'laboratory' => 'laboratory',
-
-                    'radiology' => 'radiology',
-
-                    'pharmacy' => 'pharmacy',
-
-                    'billing' => 'accounts',
-
-                    'physiotherapy' => 'physiotherapy',
-
-                    'theatre' => 'theatre',
-
-                    'document' => 'default',
-
-                    'note' => 'default',
-
-                    default => 'default'
-
-                };
-
-                ?>
-
-                <div class="timeline-item">
-
-                    <div class="timeline-marker timeline-<?= e($marker) ?>">
-
-                    </div>
-
-                    <div class="timeline-content">
-
-                        <div class="timeline-title">
-
-                            <?= e($event['title']) ?>
-
+        <div class="timeline-panel-body">
+            <?php if (!empty($events)) : ?>
+                <div class="timeline">
+                    <?php foreach ($events as $event) : ?>
+                        <?php
+                        $eventType = (string)($event['type'] ?? '');
+                        $eventClass = match ($eventType) {
+                            'visit_created' => 'created',
+                            'received' => 'received',
+                            'transfer' => 'transfer',
+                            'doctor_assignment' => 'assignment',
+                            'completed' => 'completed',
+                            'cancelled' => 'cancelled',
+                            default => 'default',
+                        };
+                        ?>
+                        <div class="timeline-item <?= e($eventClass) ?>">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h3><?= e((string)($event['title'] ?? 'Timeline Event')) ?></h3>
+                                <?php if (!empty($event['description'])) : ?>
+                                    <p><?= e((string)$event['description']) ?></p>
+                                <?php endif; ?>
+                                <div class="timeline-meta">
+                                    <span><strong>Performed By:</strong> <?= e((string)($event['performed_by_name'] ?? 'System')) ?></span>
+                                    <span><strong>Time:</strong> <?= e(date('M j, Y g:i A', strtotime((string)$event['created_at']))) ?></span>
+                                </div>
+                            </div>
                         </div>
+                    <?php endforeach; ?>
 
-                        <div class="timeline-description">
-
-                            <?= e($event['description']) ?>
-
+                    <div class="timeline-item future">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h3>Future Clinical Activities</h3>
+                            <p>Consultation, clinical notes, orders, and results will appear here as those modules are enabled.</p>
+                            <div class="timeline-meta">
+                                <span><strong>Status:</strong> Planned for future phases</span>
+                            </div>
                         </div>
-
-                        <?php if (!empty($event['performed_by'])) : ?>
-
-                            <div class="timeline-meta">
-
-                                <strong>
-
-                                    Performed By:
-
-                                </strong>
-
-                                <?= e($event['performed_by']) ?>
-
-                            </div>
-
-                        <?php endif; ?>
-
-                        <?php if (!empty($event['department'])) : ?>
-
-                            <div class="timeline-meta">
-
-                                <strong>
-
-                                    Department:
-
-                                </strong>
-
-                                <?= e($event['department']) ?>
-
-                            </div>
-
-                        <?php endif; ?>
-
-                        <?php if (!empty($event['transfer_type'])) : ?>
-
-                            <div class="timeline-meta">
-
-                                <strong>
-
-                                    Transfer Type:
-
-                                </strong>
-
-                                <?= e($event['transfer_type']) ?>
-
-                            </div>
-
-                        <?php endif; ?>
-
-                        <?php if (!empty($event['remarks'])) : ?>
-
-                            <div class="timeline-meta">
-
-                                <strong>
-
-                                    Remarks:
-
-                                </strong>
-
-                                <?= nl2br(e($event['remarks'])) ?>
-
-                            </div>
-
-                        <?php endif; ?>
-
-                        <div class="timeline-time">
-
-                            <?= !empty($event['created_at'])
-
-                                ? e(
-
-                                    date(
-
-                                        'd M Y, h:i A',
-
-                                        strtotime(
-
-                                            $event['created_at']
-
-                                        )
-
-                                    )
-
-                                )
-
-                                : '-' ?>
-
-                        </div>
-
                     </div>
-
                 </div>
-
-            <?php endforeach; ?>
-
-            <div class="timeline-item">
-
-                <div class="timeline-marker timeline-pending">
-
+            <?php else : ?>
+                <div class="empty-state">
+                    <p>No timeline events have been recorded for this encounter yet.</p>
                 </div>
-
-                <div class="timeline-content">
-
-                    <div class="timeline-title">
-
-                        Future Clinical Activities
-
-                    </div>
-
-                    <div class="timeline-description">
-
-                        Consultation, Nursing,
-                        Laboratory,
-                        Radiology,
-                        Pharmacy,
-                        Billing,
-                        Physiotherapy,
-                        Theatre,
-                        Documents and Clinical Notes
-                        will automatically appear here
-                        as they are completed during
-                        this encounter.
-
-                    </div>
-
-                </div>
-
-            </div>
-
+            <?php endif; ?>
         </div>
-
-    <?php else : ?>
-
-        <div class="empty-state">
-
-            <p>
-
-                No timeline events are available for this encounter.
-
-            </p>
-
-        </div>
-
-    <?php endif; ?>
-
-</div>
+    </details>
+</section>

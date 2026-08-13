@@ -86,18 +86,18 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="card">
             <h3>Clinical Safety</h3>
             <div class="summary-grid">
-                <div class="summary-item"><span class="summary-label">Allergies</span><span class="summary-value"><?= e((string)count($allergies)) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Alerts</span><span class="summary-value"><?= e((string)count($alerts)) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Allergies</span> <span class="summary-value"><?= e((string)count($allergies)) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Alerts</span> <span class="summary-value"><?= e((string)count($alerts)) ?></span></div>
             </div>
         </div>
     <?php endif; ?>
 
     <div class="card">
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Medication</span><span class="summary-value"><?= e((string)$prescription['medication_name']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Stock Available</span><span class="summary-value"><?= number_format((float)($stock['quantity'] ?? 0), 2) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Quantity</span><span class="summary-value"><?= e((string)$prescription['quantity']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Source</span><span class="summary-value"><?= e((string)$prescription['prescription_source']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Medication</span> <span class="summary-value"><?= e((string)$prescription['medication_name']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Stock Available</span> <span class="summary-value"><?= number_format((float)($stock['quantity'] ?? 0), 2) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Quantity</span> <span class="summary-value"><?= e((string)$prescription['quantity']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Source</span> <span class="summary-value"><?= e((string)$prescription['prescription_source']) ?></span></div>
         </div>
     </div>
 

@@ -14,7 +14,7 @@ require __DIR__ . '/../../../layouts/header.php'; require __DIR__ . '/../../../l
 ?><div class="main-container"><?php require __DIR__ . '/../../../layouts/navbar.php'; ?><main class="content">
 <h1><?= e($problem['problem_name']) ?></h1>
 <div class="card summary-grid">
-<?php foreach (['category' => 'Category','clinical_status' => 'Status','verification_status' => 'Verification','severity' => 'Severity','onset_date' => 'Onset','confidentiality_level' => 'Confidentiality','notes' => 'Notes'] as $field => $label): ?><div class="summary-item"><span class="summary-label"><?= e($label) ?></span><span class="summary-value"><?= e($problem[$field] ?? 'Not recorded') ?></span></div><?php endforeach; ?>
+<?php foreach (['category' => 'Category','clinical_status' => 'Status','verification_status' => 'Verification','severity' => 'Severity','onset_date' => 'Onset','confidentiality_level' => 'Confidentiality','notes' => 'Notes'] as $field => $label): ?><div class="summary-item"><span class="summary-label"><?= e($label) ?></span> <span class="summary-value"><?= e($problem[$field] ?? 'Not recorded') ?></span></div><?php endforeach; ?>
 </div>
 <div class="card"><h2>Actions</h2>
 <?php if ($canManage && !in_array($problem['clinical_status'], ['Resolved','Entered-in-error'], true)): ?><a class="btn-secondary" href="edit.php?id=<?= (int)$problem['id'] ?><?= e(longitudinalQuery($visitId)) ?>">Edit</a><?php endif; ?>

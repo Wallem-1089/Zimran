@@ -72,12 +72,12 @@ $isClosedEncounter = in_array((string)($visit['visit_status'] ?? ''), ['Complete
         <div class="card">
             <h3>Latest Vital Signs</h3>
             <div class="summary-grid">
-                <div class="summary-item"><span class="summary-label">Temperature</span><span class="summary-value"><?= e((string)($latest['temperature'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Pulse</span><span class="summary-value"><?= e((string)($latest['pulse'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Respiratory Rate</span><span class="summary-value"><?= e((string)($latest['respiratory_rate'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Blood Pressure</span><span class="summary-value"><?= e((string)($latest['blood_pressure'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Oxygen Saturation</span><span class="summary-value"><?= e((string)($latest['oxygen_saturation'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">BMI</span><span class="summary-value"><?= e((string)($latest['bmi'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Temperature</span> <span class="summary-value"><?= e((string)($latest['temperature'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Pulse</span> <span class="summary-value"><?= e((string)($latest['pulse'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Respiratory Rate</span> <span class="summary-value"><?= e((string)($latest['respiratory_rate'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Blood Pressure</span> <span class="summary-value"><?= e((string)($latest['blood_pressure'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Oxygen Saturation</span> <span class="summary-value"><?= e((string)($latest['oxygen_saturation'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">BMI</span> <span class="summary-value"><?= e((string)($latest['bmi'] ?? '-')) ?></span></div>
             </div>
         </div>
 

@@ -74,14 +74,14 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Patient</span><span class="summary-value"><?= e((string)($patient['first_name'] . ' ' . $patient['last_name'])) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Hospital Number</span><span class="summary-value"><?= e((string)($record['hospital_number'] ?? $patient['hospital_number'])) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Source</span><span class="summary-value"><?= e((string)$record['record_source']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"><?= e((string)$record['status']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Physiotherapist</span><span class="summary-value"><?= e((string)($record['physiotherapist_name'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Created By</span><span class="summary-value"><?= e((string)($record['created_by_name'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Created At</span><span class="summary-value"><?= e((string)($record['created_at'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Sessions</span><span class="summary-value"><?= e((string)($record['session_count'] ?? 0)) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Patient</span> <span class="summary-value"><?= e((string)($patient['first_name'] . ' ' . $patient['last_name'])) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Hospital Number</span> <span class="summary-value"><?= e((string)($record['hospital_number'] ?? $patient['hospital_number'])) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Source</span> <span class="summary-value"><?= e((string)$record['record_source']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)$record['status']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Physiotherapist</span> <span class="summary-value"><?= e((string)($record['physiotherapist_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Created By</span> <span class="summary-value"><?= e((string)($record['created_by_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Created At</span> <span class="summary-value"><?= e((string)($record['created_at'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Sessions</span> <span class="summary-value"><?= e((string)($record['session_count'] ?? 0)) ?></span></div>
         </div>
     </div>
 
@@ -180,10 +180,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p class="text-muted">No physiotherapy session recorded.</p>
         <?php else: ?>
             <div class="summary-grid">
-                <div class="summary-item"><span class="summary-label">Date</span><span class="summary-value"><?= e((string)($latestSession['session_date'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Treatment Given</span><span class="summary-value"><?= e((string)($latestSession['treatment_given'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Patient Response</span><span class="summary-value"><?= e((string)($latestSession['patient_response'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Recorded By</span><span class="summary-value"><?= e((string)($latestSession['recorded_by_name'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Date</span> <span class="summary-value"><?= e((string)($latestSession['session_date'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Treatment Given</span> <span class="summary-value"><?= e((string)($latestSession['treatment_given'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Patient Response</span> <span class="summary-value"><?= e((string)($latestSession['patient_response'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Recorded By</span> <span class="summary-value"><?= e((string)($latestSession['recorded_by_name'] ?? '-')) ?></span></div>
             </div>
         <?php endif; ?>
     </div>

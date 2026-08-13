@@ -285,3 +285,24 @@ created. Reports are generated from existing operational tables through
 bounded aggregate queries in `DashboardService`.
 
 The down migration removes only the Reports permission seeds and role grants.
+
+## Migration 035 - Patient Registration Demographics
+
+`035_patient_registration_demographics_up.sql` additively extends patient
+registration demographics with place of work, ethnic group, religion, and next
+of kin address. Existing other-name handling continues to use the established
+`middle_name` field for backward compatibility.
+
+The down migration removes only these four optional demographic columns and
+should be reviewed before execution on any database containing registered
+patients.
+
+## Migration 036 - Encounter Completion / Discharge Details
+
+`036_encounter_completion_discharge_up.sql` additively extends `visits` with
+encounter completion attribution and discharge fields: `completed_at`,
+`completed_by`, `discharge_diagnosis`, `discharge_notes`, and
+`follow_up_instructions`.
+
+The down migration removes only these optional completion/discharge columns and
+indexes. Review carefully before use on a database with completed encounters.

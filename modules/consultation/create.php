@@ -121,8 +121,8 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 </ul>
                 <?php if ($latestPhysiotherapySession !== null && trim((string)($latestPhysiotherapySession['treatment_given'] ?? '')) !== ''): ?>
                     <div class="summary-grid">
-                        <div class="summary-item"><span class="summary-label">Treatment Given</span><span class="summary-value"><?= e((string)($latestPhysiotherapySession['treatment_given'] ?? '-')) ?></span></div>
-                        <div class="summary-item"><span class="summary-label">Patient Response</span><span class="summary-value"><?= e((string)($latestPhysiotherapySession['patient_response'] ?? '-')) ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Treatment Given</span> <span class="summary-value"><?= e((string)($latestPhysiotherapySession['treatment_given'] ?? '-')) ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Patient Response</span> <span class="summary-value"><?= e((string)($latestPhysiotherapySession['patient_response'] ?? '-')) ?></span></div>
                     </div>
                 <?php endif; ?>
             <?php endif; ?>
@@ -149,9 +149,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <p class="text-muted">No theatre record recorded.</p>
             <?php else: ?>
                 <div class="summary-grid">
-                    <div class="summary-item"><span class="summary-label">Procedure</span><span class="summary-value"><?= e((string)($existingTheatre['procedure_name'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Surgeon</span><span class="summary-value"><?= e((string)($existingTheatre['surgeon_name'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"><?= e((string)($existingTheatre['status'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Procedure</span> <span class="summary-value"><?= e((string)($existingTheatre['procedure_name'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Surgeon</span> <span class="summary-value"><?= e((string)($existingTheatre['surgeon_name'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)($existingTheatre['status'] ?? '-')) ?></span></div>
                 </div>
             <?php endif; ?>
         <?php endif; ?>

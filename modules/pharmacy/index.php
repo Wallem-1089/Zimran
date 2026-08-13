@@ -36,9 +36,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
     </div>
 
     <div class="summary-grid">
-        <div class="summary-item"><span class="summary-label">Waiting</span><span class="summary-value"><?= (int)($statusCounts['Prescribed'] ?? 0) ?></span></div>
-        <div class="summary-item"><span class="summary-label">Dispensed</span><span class="summary-value"><?= (int)($statusCounts['Dispensed'] ?? 0) ?></span></div>
-        <div class="summary-item"><span class="summary-label">Cancelled</span><span class="summary-value"><?= (int)($statusCounts['Cancelled'] ?? 0) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Waiting</span> <span class="summary-value"><?= (int)($statusCounts['Prescribed'] ?? 0) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Dispensed</span> <span class="summary-value"><?= (int)($statusCounts['Dispensed'] ?? 0) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Cancelled</span> <span class="summary-value"><?= (int)($statusCounts['Cancelled'] ?? 0) ?></span></div>
     </div>
 
     <div class="card">

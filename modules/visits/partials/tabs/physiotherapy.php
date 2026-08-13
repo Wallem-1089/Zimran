@@ -76,12 +76,12 @@ $requestSource = $physiotherapyRequestSource ?? 'Clinical';
         <div class="card">
             <h3>Latest Record</h3>
             <div class="summary-grid">
-                <div class="summary-item"><span class="summary-label">Presenting Problem</span><span class="summary-value"><?= e((string)($record['presenting_problem'] ?? '')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Source</span><span class="summary-value"><?= e((string)$record['record_source']) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"><?= e((string)$record['status']) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Physiotherapist</span><span class="summary-value"><?= e((string)($record['physiotherapist_name'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Sessions</span><span class="summary-value"><?= e((string)($record['session_count'] ?? 0)) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Created</span><span class="summary-value"><?= e((string)($record['created_at'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Presenting Problem</span> <span class="summary-value"><?= e((string)($record['presenting_problem'] ?? '')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Source</span> <span class="summary-value"><?= e((string)$record['record_source']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)$record['status']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Physiotherapist</span> <span class="summary-value"><?= e((string)($record['physiotherapist_name'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Sessions</span> <span class="summary-value"><?= e((string)($record['session_count'] ?? 0)) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Created</span> <span class="summary-value"><?= e((string)($record['created_at'] ?? '-')) ?></span></div>
             </div>
 
             <div class="form-actions">
@@ -109,10 +109,10 @@ $requestSource = $physiotherapyRequestSource ?? 'Clinical';
             <div class="card">
                 <h3>Latest Session</h3>
                 <div class="summary-grid">
-                    <div class="summary-item"><span class="summary-label">Date</span><span class="summary-value"><?= e((string)($session['session_date'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Treatment Given</span><span class="summary-value"><?= e((string)($session['treatment_given'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Patient Response</span><span class="summary-value"><?= e((string)($session['patient_response'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Recorded By</span><span class="summary-value"><?= e((string)($session['recorded_by_name'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Date</span> <span class="summary-value"><?= e((string)($session['session_date'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Treatment Given</span> <span class="summary-value"><?= e((string)($session['treatment_given'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Patient Response</span> <span class="summary-value"><?= e((string)($session['patient_response'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Recorded By</span> <span class="summary-value"><?= e((string)($session['recorded_by_name'] ?? '-')) ?></span></div>
                 </div>
             </div>
         <?php else: ?>

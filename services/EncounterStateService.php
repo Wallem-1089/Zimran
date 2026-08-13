@@ -28,9 +28,7 @@ class EncounterStateService
         'Forward',
         'Return',
         'Referral',
-        'Discharge',
-        'Completion',
-        'Cancellation'
+        'Discharge'
     ];
 
     /*

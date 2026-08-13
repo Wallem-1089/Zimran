@@ -26,9 +26,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="card">
         <h3>Summary</h3>
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Encounters</span><span class="summary-value"><?= (int)($report['summary']['encounter_count'] ?? 0) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Completed</span><span class="summary-value"><?= (int)($report['summary']['completed_count'] ?? 0) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Active</span><span class="summary-value"><?= (int)($report['summary']['active_count'] ?? 0) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Encounters</span> <span class="summary-value"><?= (int)($report['summary']['encounter_count'] ?? 0) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Completed</span> <span class="summary-value"><?= (int)($report['summary']['completed_count'] ?? 0) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Active</span> <span class="summary-value"><?= (int)($report['summary']['active_count'] ?? 0) ?></span></div>
         </div>
     </div>
     <div class="card">

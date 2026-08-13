@@ -74,14 +74,14 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Patient</span><span class="summary-value"><?= e((string)($request['patient_name'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Hospital Number</span><span class="summary-value"><?= e((string)($request['hospital_number'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Source</span><span class="summary-value"><?= e((string)$request['request_source']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Priority</span><span class="summary-value"><?= e((string)$request['priority']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"><?= e((string)$request['status']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Requested By</span><span class="summary-value"><?= e((string)($request['requested_by_name'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Requested</span><span class="summary-value"><?= e((string)($request['created_at'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Department</span><span class="summary-value"><?= e((string)($request['department_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Patient</span> <span class="summary-value"><?= e((string)($request['patient_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Hospital Number</span> <span class="summary-value"><?= e((string)($request['hospital_number'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Source</span> <span class="summary-value"><?= e((string)$request['request_source']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Priority</span> <span class="summary-value"><?= e((string)$request['priority']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)$request['status']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Requested By</span> <span class="summary-value"><?= e((string)($request['requested_by_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Requested</span> <span class="summary-value"><?= e((string)($request['created_at'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Department</span> <span class="summary-value"><?= e((string)($request['department_name'] ?? '-')) ?></span></div>
         </div>
     </div>
 
@@ -134,11 +134,11 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p class="text-muted">No laboratory result recorded.</p>
         <?php else: ?>
             <div class="summary-grid">
-                <div class="summary-item"><span class="summary-label">Sample Taken</span><span class="summary-value"><?= e((string)($result['sample_taken'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Findings</span><span class="summary-value"><?= e((string)($result['findings'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Performed By</span><span class="summary-value"><?= e((string)($result['performed_by_name'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Completed By</span><span class="summary-value"><?= e((string)($result['completed_by_name'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Completed At</span><span class="summary-value"><?= e((string)($result['result_completed_at'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Sample Taken</span> <span class="summary-value"><?= e((string)($result['sample_taken'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?= e((string)($result['findings'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Performed By</span> <span class="summary-value"><?= e((string)($result['performed_by_name'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Completed By</span> <span class="summary-value"><?= e((string)($result['completed_by_name'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Completed At</span> <span class="summary-value"><?= e((string)($result['result_completed_at'] ?? '-')) ?></span></div>
             </div>
             <?php if (trim((string)($result['sample_taken'] ?? '')) !== ''): ?>
                 <h4>Sample Taken</h4>

@@ -48,10 +48,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Nurse</span><span class="summary-value"><?= e((string)($assessment['nurse_name'] ?? 'Unknown')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Recorded By</span><span class="summary-value"><?= e((string)($assessment['created_by_name'] ?? 'Unknown')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Recorded At</span><span class="summary-value"><?= e((string)($assessment['created_at'] ?? 'Unknown')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Completed At</span><span class="summary-value"><?= e((string)($assessment['completed_at'] ?? 'Not completed')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Nurse</span> <span class="summary-value"><?= e((string)($assessment['nurse_name'] ?? 'Unknown')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Recorded By</span> <span class="summary-value"><?= e((string)($assessment['created_by_name'] ?? 'Unknown')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Recorded At</span> <span class="summary-value"><?= e((string)($assessment['created_at'] ?? 'Unknown')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Completed At</span> <span class="summary-value"><?= e((string)($assessment['completed_at'] ?? 'Not completed')) ?></span></div>
         </div>
     </div>
 
@@ -70,7 +70,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?php if (($clinicalSafetySummary['success'] ?? false) && !empty($clinicalSafetySummary['items'])): ?>
             <ul>
                 <?php foreach (array_slice($clinicalSafetySummary['items'], 0, 3) as $item): ?>
-                    <li><strong><?= e((string)($item['title'] ?? 'Safety item')) ?></strong><?= !empty($item['detail']) ? ': ' . e((string)$item['detail']) : '' ?></li>
+                    <li><strong><?= e((string)($item['title'] ?? 'Safety item')) ?><?= !empty($item['detail']) ? ':' : '' ?></strong> <?= !empty($item['detail']) ? e((string)$item['detail']) : '' ?></li>
                 <?php endforeach; ?>
             </ul>
         <?php else: ?>

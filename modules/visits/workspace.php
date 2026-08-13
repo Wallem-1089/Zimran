@@ -125,7 +125,7 @@ if (!$permissionService->canViewEncounter($visit, $currentUser)) {
         isset($currentUser['id']) ? (int)$currentUser['id'] : null,
         $visitId,
         'WORKSPACE_ACCESS_DENIED',
-        'User attempted to access an encounter workspace outside their department.'
+        'User attempted to access an encounter workspace without authentication or view permission.'
     );
 
     http_response_code(403);
@@ -473,10 +473,10 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
         <div class="card">
             <h3>Latest Laboratory Result</h3>
             <div class="summary-grid">
-                <div class="summary-item"><span class="summary-label">Sample Taken</span><span class="summary-value"><?= e((string)($latestLaboratoryResult['sample_taken'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Findings</span><span class="summary-value"><?= e((string)($latestLaboratoryResult['findings'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Result</span><span class="summary-value"><?= e((string)$latestLaboratoryResult['result']) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Interpretation</span><span class="summary-value"><?= e((string)($latestLaboratoryResult['interpretation'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Sample Taken</span> <span class="summary-value"><?= e((string)($latestLaboratoryResult['sample_taken'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?= e((string)($latestLaboratoryResult['findings'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Result</span> <span class="summary-value"><?= e((string)$latestLaboratoryResult['result']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Interpretation</span> <span class="summary-value"><?= e((string)($latestLaboratoryResult['interpretation'] ?? '-')) ?></span></div>
             </div>
             <div class="form-actions">
                 <a class="btn-secondary" href="../laboratory/view.php?id=<?= (int)$latestLaboratoryRequest['id'] ?>">Open Result</a>

@@ -3,7 +3,7 @@
 <div class="card">
     <div class="card-header"><div><h2>Medical Documents</h2><p>Authorized documents linked to this encounter.</p></div>
     <?php if ($canUploadMedicalDocuments): ?><a class="btn-primary" href="../medical_records/documents/upload.php?patient=<?= (int)$patient['id'] ?>&visit=<?= (int)$visit['id'] ?>">Upload Document</a><?php endif; ?></div>
-    <div class="summary-grid"><div class="summary-item"><span class="summary-label">Encounter</span><span class="summary-value">#<?= (int)$visit['id'] ?></span></div><div class="summary-item"><span class="summary-label">Hospital Number</span><span class="summary-value"><?= e($patient['hospital_number']) ?></span></div><div class="summary-item"><span class="summary-label">Available Documents</span><span class="summary-value"><?= count($documents) ?></span></div></div>
+    <div class="summary-grid"><div class="summary-item"><span class="summary-label">Encounter</span> <span class="summary-value">#<?= (int)$visit['id'] ?></span></div><div class="summary-item"><span class="summary-label">Hospital Number</span> <span class="summary-value"><?= e($patient['hospital_number']) ?></span></div><div class="summary-item"><span class="summary-label">Available Documents</span> <span class="summary-value"><?= count($documents) ?></span></div></div>
 </div>
 <div class="card">
 <?php if (!$canViewMedicalDocuments): ?><p>You do not have permission to view Medical Documents.</p>

@@ -110,7 +110,7 @@ if (!isset($patient, $visit)) {
 
                 <span class="summary-value">
 
-                    <?= e($visit['status']) ?>
+                    <?= e((string)($visit['visit_status'] ?? $visit['status'] ?? 'Unknown')) ?>
 
                 </span>
 

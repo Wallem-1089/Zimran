@@ -48,10 +48,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Patient</span><span class="summary-value"><?= e((string)$visit['first_name']) ?> <?= e((string)$visit['last_name']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Hospital Number</span><span class="summary-value"><?= e((string)$visit['hospital_number']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Department</span><span class="summary-value"><?= e((string)($visit['department_name'] ?? '')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Encounter Status</span><span class="summary-value"><?= e((string)($visit['visit_status'] ?? 'Unknown')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Patient</span> <span class="summary-value"><?= e((string)$visit['first_name']) ?> <?= e((string)$visit['last_name']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Hospital Number</span> <span class="summary-value"><?= e((string)$visit['hospital_number']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Department</span> <span class="summary-value"><?= e((string)($visit['department_name'] ?? '')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Encounter Status</span> <span class="summary-value"><?= e((string)($visit['visit_status'] ?? 'Unknown')) ?></span></div>
         </div>
     </div>
 

@@ -98,10 +98,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <div class="summary-grid">
-            <div class="summary-item"><span class="summary-label">Patient</span><span class="summary-value"><?= e((string)($patient['first_name'] . ' ' . $patient['last_name'])) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Hospital Number</span><span class="summary-value"><?= e((string)$patient['hospital_number']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Record Source</span><span class="summary-value"><?= e((string)$record['record_source']) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Record Status</span><span class="summary-value"><?= e((string)$record['status']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Patient</span> <span class="summary-value"><?= e((string)($patient['first_name'] . ' ' . $patient['last_name'])) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Hospital Number</span> <span class="summary-value"><?= e((string)$patient['hospital_number']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Record Source</span> <span class="summary-value"><?= e((string)$record['record_source']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Record Status</span> <span class="summary-value"><?= e((string)$record['status']) ?></span></div>
         </div>
     </div>
 

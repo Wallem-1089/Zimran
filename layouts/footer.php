@@ -17,7 +17,7 @@ $baseUrl = rtrim($config['app']['base_url'], '/');
 
         <span>
 
-            © <?= $currentYear ?>
+            &copy; <?= $currentYear ?>
 
             All Rights Reserved.
 

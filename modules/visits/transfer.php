@@ -359,18 +359,6 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
             </option>
 
-            <option value="Completion">
-
-                Completion
-
-            </option>
-
-            <option value="Cancellation">
-
-                Cancellation
-
-            </option>
-
         </select>
 
     </div>
