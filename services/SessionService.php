@@ -434,7 +434,13 @@ class SessionService
             require_once __DIR__ . '/../config/database.php';
             require_once __DIR__ . '/AuditService.php';
 
-            (new AuditService($pdo))->log(
+            $auditPdo = $this->pdo ?? ($GLOBALS['pdo'] ?? null);
+
+            if (!$auditPdo instanceof PDO) {
+                throw new RuntimeException('Audit database connection is unavailable.');
+            }
+
+            (new AuditService($auditPdo))->log(
                 $userId,
                 null,
                 'Security',

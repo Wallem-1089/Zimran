@@ -858,12 +858,15 @@ public function updatePatient(
         $stmt = $this->pdo->prepare('
             SELECT id, classification, match_score
             FROM patient_duplicate_candidates
-            WHERE (patient_id_low = :patient_id OR patient_id_high = :patient_id)
+            WHERE (patient_id_low = :patient_id_low OR patient_id_high = :patient_id_high)
               AND status IN (\'Pending\', \'Deferred\', \'Merge Requested\')
               AND classification IN (\'Exact Match\', \'Strong Possible Match\')
             ORDER BY match_score DESC LIMIT 1
         ');
-        $stmt->execute([':patient_id' => $patientId]);
+        $stmt->execute([
+            ':patient_id_low' => $patientId,
+            ':patient_id_high' => $patientId,
+        ]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
     }

@@ -228,13 +228,7 @@ if (isset($_SESSION['success'])) {
             </form>
 
             <div class="links">
-
-                <a href="forgot_password.php">
-
-                    Forgot Password?
-
-                </a>
-
+                <span>Forgot password? Contact the System Administrator to reset your account.</span>
             </div>
 
         </div>

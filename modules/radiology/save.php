@@ -33,7 +33,7 @@ if (!($result['success'] ?? false)) {
         'clinical_indication' => (string)($_POST['clinical_indication'] ?? $_POST['clinical_information'] ?? ''),
     ];
 
-    header('Location: create.php?visit=' . $visitId . '&source=' . urlencode($requestSource));
+    header('Location: request.php?visit=' . $visitId . '&source=' . urlencode($requestSource));
     exit;
 }
 

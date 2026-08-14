@@ -44,7 +44,7 @@ $visitId = filter_input(
 
 if (!$visitId) {
 
-    header('Location: index.php');
+    header('Location: ../patients/search.php');
 
     exit;
 

@@ -22,7 +22,7 @@ require_once __DIR__ . '/../../services/VisitService.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
-    header('Location: index.php');
+    header('Location: ../patients/search.php');
 
     exit;
 
@@ -78,7 +78,7 @@ if (!$visitId) {
 
         'Invalid encounter selected.';
 
-    header('Location: index.php');
+    header('Location: ../patients/search.php');
 
     exit;
 
