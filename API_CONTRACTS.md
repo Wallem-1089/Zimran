@@ -1,11 +1,22 @@
 # API Contracts
 
+> Current coverage: **Phase 0 through Phase 4.5**, including Consultation,
+> Vital Signs, Nursing, Laboratory, Radiology, Physiotherapy, Theatre, Accounts,
+> Store, Pharmacy, Billing, Basic Reports, encounter completion/discharge, and
+> Consultation handwriting entry.
+
 > Current implementation coverage: **Phase 3.3**. Clinical Note contracts are
 > included below; the older generated overview text is retained for history.
 
 > Official reference for public PHP service contracts through Phase 3.2. “API” primarily means callable service methods and stable route-to-service behavior. Authorization keys are catalogued in [PERMISSION_MATRIX.md](PERMISSION_MATRIX.md); database details are in [DATABASE_RELATIONSHIPS.md](DATABASE_RELATIONSHIPS.md).
 
 ## Contract Philosophy
+
+> Current checkpoint note: the older coverage banner above is superseded by the
+> current repository state. API contracts now cover the implemented Phase 2
+> Medical Records modules, Phase 3 clinical CRUD modules, Phase 4 Accounts,
+> Store, Pharmacy, Billing, and Basic Reports, plus the current Encounter
+> completion/discharge and Consultation handwriting UI refinements.
 
 - Existing public methods are compatibility contracts. In particular, `VisitService::createVisit()`, `transferVisit()`, `receiveVisit()`, `assignDoctor()`, `updateStatus()`, `getVisitById()`, and `getVisitTimeline()` must remain callable with their current signatures and legacy response keys.
 - Controllers authenticate, validate CSRF/input, authorize through `PermissionService`, call a service, and redirect/render. Services repeat authoritative business/lifecycle checks where implemented.
@@ -56,10 +67,15 @@ Current extended results may additionally retain `user_id`, `role_id`, `permissi
 | `EncounterEventService` | Authoritative encounter-event writer and timeline reader. | Participates in caller transaction; starts/commits only when called standalone. |
 | `QueueService` | Queue ownership, ordering and transitions; collaborates with state, event, audit and permission services. | Owns queue mutations with row locking and atomic audit/event writes. |
 | `AuditService` | Append-only audit and audit/timeline/security queries. | `log()` joins caller transaction or owns a standalone statement; convenience methods are void wrappers. |
-| `DashboardService` | Aggregated administrator dashboard data from existing operational tables. | Read-only except explicit dashboard-view audit method. Administrator controller authorization expected. |
+| `DashboardService` | Aggregated administrator dashboard and reports data from existing operational tables. | Read-only except explicit dashboard/report-view audit methods. Controller authorization expected. |
 | `SettingsService` | Typed definitions, validation, history, export and request-local cache. | Owns settings write transactions; history/audit atomic; authorization remains controller-owned. |
 
-`BillingService.php`, `ConsultationService.php`, `LaboratoryService.php`, `RadiologyService.php`, `PhysiotherapyService.php`, `TheatreService.php`, and `PharmacyService.php` are service contracts with differing implementation maturity. `LaboratoryService.php`, `RadiologyService.php`, `PhysiotherapyService.php`, and `TheatreService.php` are implemented for their current CRUD/workflow operations; the others remain planned or partial depending on module status. There is no implemented `TimelineService`; timeline reads are exposed by `VisitService`, `EncounterEventService`, and `AuditService`.
+`ConsultationService`, `VitalSignsService`, `NursingService`,
+`LaboratoryService`, `RadiologyService`, `PhysiotherapyService`,
+`TheatreService`, `AccountsService`, `StoreService`, `PharmacyService`, and
+`BillingService` are implemented for their current CRUD-first scopes. There is
+no implemented `TimelineService`; timeline reads are exposed by `VisitService`,
+`EncounterEventService`, and `AuditService`.
 
 ## Public Method Contracts
 
@@ -1006,3 +1022,24 @@ Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?Permiss
 Store is a standalone sidebar destination for stock master data and
 operational movements only. It is not an Encounter Workspace tab and it does
 not create patient charges, invoices, payments, receipts, or dispensing.
+
+### Current UI route notes
+
+Consultation create/edit forms preserve the same POST fields and service calls
+while offering a Doctor/Admin-only entry-mode switch. `Type` remains the
+default. `Write` stores compact handwriting stroke data inside the existing
+consultation narrative fields and renders it back on review/view; no OCR,
+image storage table, or new API contract is introduced.
+
+Encounter completion uses `modules/visits/complete.php` and
+`modules/visits/complete_save.php` to collect discharge diagnosis, discharge
+notes, and follow-up instructions before calling the encounter completion
+service flow. Billing routes remain allowed to settle invoices after clinical
+completion, while clinical module mutations remain locked for Completed or
+Cancelled encounters.
+
+Known route cleanup items: user self-service `authentication/forgot_password.php`
+is not implemented; administrator reset-password remains the recovery path.
+The legacy `workspace/index.php`, zero-byte role dashboard pages, and empty
+legacy `includes/` / `workspace/` helper files are not current APIs. The active
+workspace contract remains `modules/visits/workspace.php?id=<visit_id>`.

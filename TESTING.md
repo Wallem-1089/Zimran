@@ -268,6 +268,37 @@ administrator override, unauthorized mutation denial, CSRF-aware controller
 wiring, audit generation, and sidebar visibility. It also confirms that no
 Store Encounter Workspace tab was introduced and that the module remains
 independent from Pharmacy dispensing and Billing.
+
+## Phase 4.3 Pharmacy
+
+```powershell
+$env:HMS_APP_ENV='testing'
+$env:HMS_TEST_DB_NAME='hms_test_hospital_management_system'
+php test\phase4_pharmacy_test.php
+```
+
+The focused suite verifies clinical prescriptions, direct Pharmacy
+prescriptions without Consultation, dispensing through existing Store stock,
+sufficient/insufficient stock behavior, duplicate dispensing rejection,
+cancelled-prescription protection, Accounts price read-only display,
+authorization, CSRF-aware controller wiring, audit/events, and Store stock
+integrity regression.
+
+## Phase 4.4 Billing / Patient Accounts
+
+```powershell
+$env:HMS_APP_ENV='testing'
+$env:HMS_TEST_DB_NAME='hms_test_hospital_management_system'
+php test\phase4_billing_test.php
+```
+
+The focused suite verifies manual charges from active billable items, price
+snapshot behavior, multiple charges, invoice creation/refresh, partial and full
+payments, invoice status transitions, receipt data, duplicate source-charge
+prevention, over-balance payment rejection, authorization, CSRF-aware
+controller wiring, audit, and directly affected Accounts/Store/Pharmacy and
+Workspace regressions.
+
 ## Phase 4.5 Basic Dashboards / Reports
 
 Run `php test/phase4_reports_test.php` against the dedicated test database.
@@ -275,3 +306,19 @@ The test applies the required Phase 4 migrations through the migration
 manager, verifies report permissions, administrator dashboard contract,
 report aggregate contracts, sidebar visibility, and guards against narrative
 PHI leakage in the basic report pages.
+
+## Current UI/route audit expectations
+
+Repo-wide PHP syntax validation currently passes. Known non-blocking cleanup
+targets should be tracked separately from feature tests:
+
+- `authentication/forgot_password.php` is not implemented; administrator
+  password reset remains the supported recovery path.
+- legacy zero-byte role dashboard files, legacy `includes/`, and old
+  `workspace/` helper files should not be treated as current routes.
+- the active Encounter Workspace route is `modules/visits/workspace.php`.
+- invalid-request fallback redirects should target real pages; known cleanup
+  candidates include Radiology validation failure and Visit edit/update invalid
+  fallback routes.
+- Consultation handwriting mode should be manually smoke-tested in create/edit,
+  review, and view pages because it is a browser pointer/canvas interaction.

@@ -173,9 +173,16 @@ Provides centralized typed system settings, grouped retrieval, validation, reque
 
 No `TimelineService.php` class is currently implemented. Timeline behavior is partially implemented through `VisitService::getVisitTimeline()`, `EncounterEventService::getTimelineEvents()`, and encounter timeline partials. A dedicated timeline service is planned when more modules contribute events.
 
-### Future or Empty Services
+### Current Department and Financial Services
 
-`BillingService.php`, `ConsultationService.php`, `LaboratoryService.php`, and `PharmacyService.php` are service contracts with different implementation maturity. `LaboratoryService.php` is implemented for laboratory request/result CRUD and worklist operations; the others remain planned or partial depending on module status.
+`ConsultationService`, `VitalSignsService`, `NursingService`,
+`LaboratoryService`, `RadiologyService`, `PhysiotherapyService`,
+`TheatreService`, `AccountsService`, `StoreService`, `PharmacyService`, and
+`BillingService` are implemented for their current CRUD-first scope. They are
+intentionally small module services, not broad workflow engines. Later advanced
+features such as admission/ward management, insurance, PACS, controlled-drug
+flows, procurement, or general-ledger accounting remain outside the current
+implementation.
 
 ## Module Architecture
 
@@ -193,14 +200,15 @@ No `TimelineService.php` class is currently implemented. Timeline behavior is pa
 | Encounter Events | Implemented | `EncounterEventService`, `encounter_events` |
 | Administration | Implemented | users, roles, permissions, departments, assignments, security, dashboard, and system settings |
 | Security Administration | Implemented | persistent sessions, login/security history, lockouts, password history, audit viewer |
-| Reporting | Planned | no reporting implementation |
-| Consultation | Planned | empty service placeholder and workspace tab only |
-| Nursing | Planned | workspace tab/directory only |
+| Reporting | Implemented | read-only reports module and administrator dashboard summaries |
+| Consultation | Implemented | `ConsultationService`, review/save flow, typed or handwritten narrative fields, workspace integration |
+| Vital Signs | Implemented | `VitalSignsService`, encounter vital-sign CRUD, workspace/chart/consultation context |
+| Nursing | Implemented | `NursingService`, single encounter assessment CRUD, workspace/chart integration |
 | Laboratory | Implemented | laboratory request/result CRUD, worklist, workspace integration |
-| Radiology | Planned | workspace tab/directory only |
-| Pharmacy | Planned | empty service placeholder and workspace tab |
+| Radiology | Implemented | radiology request/report CRUD, worklist, workspace integration |
+| Pharmacy | Implemented | prescriptions, direct/clinical flows, dispensing through Store stock |
 | Accounts | Implemented | standalone sidebar price catalogue (`billable_items`) |
-| Accounts/Billing | Planned | encounter-specific billing/charges later |
+| Billing | Implemented | encounter charges, invoices, payments, receipt view |
 | Physiotherapy | Implemented | `PhysiotherapyService`, record/session CRUD, worklist, workspace integration |
 | Theatre | Implemented | `TheatreService`, single-record CRUD, workspace integration |
 | Store/Inventory | Implemented | standalone sidebar inventory items, stock movements, and department balances |
@@ -607,26 +615,28 @@ handling remains review-only: exact unsafe duplicates are blocked, possible
 duplicates can be reviewed, and no patient records are merged. Full patient
 merge is postponed.
 
-## CRUD-First Future Roadmap
+## Current CRUD-First Operational Scope
 
-| Phase | Scope | Initial model |
-|---|---|---|
-| Phase 3 | Consultation and Nursing | `consultations`, `vital_signs`, one nursing assessment table |
-| Phase 4 | Radiology | `radiology_orders`, `radiology_reports` |
-| Phase 5 | Pharmacy and Inventory | prescriptions, dispensing, items, stock transactions |
-| Phase 6 | Billing | charges, invoices, payments, receipts |
-| Later / Optional | advanced analytics, integrations | Implement only when operationally required |
+| Scope | Current model |
+|---|---|
+| Consultation | `consultations`, narrative `TEXT`, review-before-save, typed or handwritten entry |
+| Vital Signs | `vital_signs`, structured measurements and BMI calculation |
+| Nursing | one `nursing_assessments` table |
+| Laboratory | `laboratory_requests`, `laboratory_results`, text results/details |
+| Radiology | `radiology_requests`, `radiology_reports`, text findings/impression |
+| Physiotherapy | `physiotherapy_records`, `physiotherapy_sessions` |
+| Theatre | one `theatre_records` table |
+| Accounts | `billable_items` price catalogue |
+| Store | `inventory_items`, `stock_transactions`, `department_stock_balances` |
+| Pharmacy | `prescriptions`, `pharmacy_dispensing`, Store stock consumption |
+| Billing | `patient_charges`, `invoices`, `payments`, receipt view |
+| Reports | read-only aggregate queries through `DashboardService` |
 
-Consultation is the next implementation target. Its first version should be a
-simple encounter-linked CRUD module with narrative `TEXT` fields for history,
-examination, assessment, treatment plan, advice, follow-up plan and referral
-notes. Do not create separate tables for every consultation section.
-
-Phase 3.2 Vital Signs is also implemented as a small CRUD module with one
-`vital_signs` table, doctor/nurse CRUD permissions, workspace and patient-chart
-read views, and read-only consultation context display. It remains encounter-
-centered and does not add workflow engines, history tables, or timeline events
-for routine measurement updates.
+The next future modules should continue the same CRUD-first approach. Remaining
+optional or later work includes admission/ward/bed management, advanced
+diagnosis coding, insurance/HMO, refunds, procurement/suppliers, pharmacy
+batch/expiry/partial dispensing, PACS/DICOM, advanced analytics, FHIR/HL7,
+patient portal, SMS/email integrations, and full patient merge.
 
 ## Phase 3.1 — Consultation and Department Notifications
 

@@ -1047,14 +1047,16 @@ and progress notes remain text fields. The workspace, consultation context,
 and patient chart all surface the same physiotherapy record and session
 summary without duplicating the data model.
 
-### Phase 5 - Pharmacy and Inventory
+### Phase 4.2 / 4.3 - Store and Pharmacy
 
-Pharmacy starts with prescriptions and dispensing. Inventory starts with items
-and stock transactions, with transaction-safe stock balance updates.
+Store is implemented as the operational stock owner. It uses inventory items,
+stock transactions, and transaction-safe department balance updates. Pharmacy is
+implemented with prescriptions and dispensing. Pharmacy consumes Store stock
+when dispensing and does not maintain a separate stock system.
 
-### Phase 6 - Billing
+### Phase 4.4 - Billing
 
-Billing starts with charges, invoices, and payments:
+Billing is implemented with charges, invoices, payments, and receipt views:
 
 ```text
 Charge -> Invoice -> Payment -> Receipt
@@ -1114,9 +1116,9 @@ vital-signs summary as read-only context, while the dedicated history view
 lists prior entries in reverse chronological order.
 
 Accounts owns the reusable price catalogue. It is a sidebar-only master-data
-module and does not live inside the Encounter Workspace. Billing/Charges will
-later consume `billable_items` when encounter-specific financial workflows are
-implemented.
+module and does not live inside the Encounter Workspace. Billing consumes
+`billable_items` by copying the current catalogue price into each posted
+patient charge.
 
 Store owns the operational stock ledger. It is a sidebar-only inventory
 module for item catalogue maintenance, stock receipt, issue, return,
@@ -1130,3 +1132,47 @@ timeline events and do not change clinical, inventory, or financial workflow
 ownership. Financial figures come from Billing, prices remain owned by
 Accounts, stock remains owned by Store, and dispensing remains owned by
 Pharmacy.
+
+## Current encounter completion and discharge workflow
+
+Encounter completion is exposed through a workspace action for authorized
+users. Completion opens a small review form rather than directly closing the
+encounter. The form captures:
+
+- final/discharge diagnosis;
+- discharge or completion notes;
+- follow-up instructions.
+
+The data is stored on `visits` for the current simple encounter model:
+`completed_at`, `completed_by`, `discharge_diagnosis`, `discharge_notes`, and
+`follow_up_instructions`. This is not a full admission, ward, bed-management,
+or inpatient-discharge module.
+
+Cancelled encounters are terminal for normal clinical CRUD. Cancellation is a
+workspace status action for Receptionist, Records Officer, Doctor, and System
+Administrator. Cancellation is not a transfer type and does not represent a
+department handoff.
+
+## Current ownership boundaries
+
+- Accounts owns PRICE through `billable_items`.
+- Store owns STOCK through inventory items, stock transactions, and maintained
+  department balances.
+- Pharmacy owns PRESCRIPTIONS and DISPENSING, and consumes Store stock when
+  dispensing.
+- Billing owns PATIENT CHARGES, INVOICES, PAYMENTS, and receipt views.
+- Reports are read-only summaries over already-posted operational records.
+
+Financial settlement may continue after clinical encounter completion. This is
+an intentional exception to the normal clinical CRUD lock: clinical records are
+read-only after completion/cancellation, while Billing may still receive
+payments against outstanding invoices.
+
+## Current UI and route cleanup notes
+
+The active Encounter Workspace is `modules/visits/workspace.php`; the older
+`workspace/index.php` contains legacy placeholder content and should not be
+treated as the current workspace. Empty legacy `dashboard/`, `includes/`, and
+`workspace/` helper files remain cleanup candidates. User self-service forgot
+password is not implemented; administrator password reset is the current
+recovery workflow.

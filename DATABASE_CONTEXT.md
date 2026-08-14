@@ -1165,6 +1165,26 @@ patient, nurse, department, status, and chronology queries. The down migration
 removes retained nursing assessment data and is therefore restricted to empty
 test databases or an explicitly approved archival recovery procedure.
 
+## Phase 3.4 Laboratory
+
+Migration 025 adds encounter-linked `laboratory_requests` and
+`laboratory_results`. Requests store patient, visit, requester, department,
+Clinical/Direct source, requested tests as `TEXT`, clinical information,
+priority, and lifecycle status. Results store patient, visit, request, result
+text, interpretation, performer/completer attribution, and timestamps.
+Migration 026 adds practical result-detail fields such as sample taken and
+findings. Laboratory requests do not transfer encounter ownership and direct
+Laboratory patients do not require a Consultation record.
+
+## Phase 3.5 Radiology
+
+Migration 027 adds encounter-linked `radiology_requests` and
+`radiology_reports`. Requests store study requested, clinical indication,
+Clinical/Direct source, priority, requester, department, and status. Reports
+store findings, impression, recommendation, reporter/completer attribution, and
+timestamps. Radiology remains text-report CRUD; PACS, DICOM, images, scheduling,
+and modality catalogues are not part of the current schema.
+
 ## Phase 3.6 Physiotherapy
 
 Migration 028 adds the encounter-linked `physiotherapy_records` and
@@ -1210,6 +1230,26 @@ departments, references, remarks, and performer attribution. The
 department quantities so Store and downstream department views can read
 balances without editing them directly. Store remains a sidebar operational
 module and does not create patient charges or dispensing workflows.
+
+## Phase 4.3 Pharmacy
+
+Migration 032 adds `prescriptions` and `pharmacy_dispensing`. Prescriptions
+store patient, visit, Clinical/Direct source, optional prescriber, optional
+inventory item linkage, medication-name snapshot, dosage/frequency/duration,
+quantity, instructions, and Prescribed/Dispensed/Cancelled status. Dispensing
+stores one dispensing record for the current version and reduces Pharmacy
+department stock through Store inventory logic rather than direct balance
+editing. Pharmacy does not own price and does not create patient charges.
+
+## Phase 4.4 Billing / Patient Accounts
+
+Migration 033 adds `patient_charges`, `invoices`, and `payments`. Charges copy
+the current Accounts catalogue price into `unit_price` and derive `amount`
+from quantity. Invoices derive totals from active charges and posted payments;
+users do not manually edit totals, amount paid, or balance. Payments are
+append-only posted records for the current version and receipts are generated
+as read-only views from payment data.
+
 ## Phase 4.5 Basic Dashboards / Reports
 
 Phase 4.5 does not add reporting tables. The Reports module uses indexed
@@ -1218,3 +1258,14 @@ summaries read `patient_charges`, `invoices`, and `payments`. Inventory
 summaries read `inventory_items`, `stock_transactions`, and
 `department_stock_balances`. Clinical reports count records only and do not
 expose narrative PHI.
+
+## Patient demographic and encounter completion additions
+
+Migration 035 expands patient registration demographics with additional
+administrative fields such as other names, nationality, ethnic group,
+occupation, place of work, religion, blood group, genotype, next-of-kin details,
+and related address fields. Migration 036 adds simple encounter
+completion/discharge fields directly to `visits`: `completed_at`,
+`completed_by`, `discharge_diagnosis`, `discharge_notes`, and
+`follow_up_instructions`. This is not a full admission or ward-management
+schema.

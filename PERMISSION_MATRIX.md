@@ -31,15 +31,15 @@ Current roles in the database:
 | System Administrator | Implemented | Full administrative access through explicit override. |
 | Receptionist | Implemented | Patient and encounter registration, reception workflow. |
 | Records Officer | Implemented | Records-oriented access; detailed records module implemented separately. |
-| Doctor | Implemented | Doctor assignment and future clinical work. |
-| Nurse | Implemented | Future nursing work. |
+| Doctor | Implemented | Doctor assignment, Consultation, clinical requests, prescriptions, and clinical view access. |
+| Nurse | Implemented | Nursing assessments, Vital Signs, and clinical view access. |
 | Laboratory Scientist | Implemented | Laboratory request/result worklist and CRUD. |
-| Pharmacist | Implemented | Future pharmacy work. |
-| Physiotherapist | Implemented | Future physiotherapy work. |
+| Pharmacist | Implemented | Pharmacy prescription worklist, direct prescriptions, and dispensing. |
+| Physiotherapist | Implemented | Physiotherapy records, sessions, and direct/clinical workflows. |
 | Radiographer | Implemented | Radiology request/report workflow. |
 | Theatre Staff | Implemented | Theatre workflow. |
-| Accountant | Implemented | Price catalogue ownership now implemented; future billing and payment work remains. |
-| Store Officer | Implemented | Future store/inventory work. |
+| Accountant | Implemented | Price catalogue and Billing / Patient Accounts. |
+| Store Officer | Implemented | Store inventory item catalogue, stock movements, ledger, and department balances. |
 
 Role activation/deactivation is implemented through `RoleService`. Role inheritance is not implemented.
 
@@ -59,7 +59,9 @@ Role activation/deactivation is implemented through `RoleService`. Role inherita
 | `manage_permissions` | Administration | Implemented for administrator override; role assignment available |
 | `manage_settings` | Administration | Implemented for administrator override; role assignment available |
 
-Future permissions will be added for radiology, pharmacy, billing, records, inventory, reporting, specialized dashboards, and granular security administration.
+Most current clinical, financial, inventory, and reporting permissions are now
+database-backed. Future permissions should be added only when a new workflow
+requires a distinct authorization decision.
 
 ## Current Permission Matrix
 
@@ -100,13 +102,13 @@ The matrix describes current seeded behavior, not a final clinical permission mo
 | Receive | `receive_encounter` plus destination department and pending transfer | Implemented |
 | Doctor assignment | `assign_doctor` plus Doctor department, receipt, and active state | Implemented |
 | Queue operations | Queue service permission and lifecycle checks | Partially implemented |
-| Consultation | Doctor-specific clinical permission | Planned |
+| Consultation | Doctor/Admin CRUD permissions and active encounter lock | Implemented |
 | Nursing | Nursing-specific clinical permission | Implemented |
-| Laboratory | Laboratory-specific permission | Planned |
+| Laboratory | Laboratory request/result permissions | Implemented |
 | Radiology | Radiology-specific permission | Implemented |
-| Pharmacy | Pharmacy-specific permission | Planned |
-| Billing | Billing-specific permission | Planned |
-| Reporting | Reporting permissions and data scopes | Planned |
+| Pharmacy | Prescription and dispensing permissions | Implemented |
+| Billing | Charge, invoice, payment, receipt permissions | Implemented |
+| Reporting | Reporting permissions and data scopes | Implemented |
 
 ## Department Authorization
 
@@ -138,22 +140,14 @@ All permission and matrix writes use transactions and audit events:
 - `PERMISSION_REMOVED`
 - `ROLE_PERMISSION_UPDATED`
 
-## Future Permissions
+## Remaining Future Permissions
 
-Planned permission groups include:
-
-- consultation: start, edit, diagnose, complete;
-- nursing: record vitals, assessments, medication administration;
-- laboratory: request, receive, collect, process, release results;
-- radiology: request, perform, report, approve;
-- pharmacy: verify, dispense, reverse dispense;
-- billing: create invoice, receive payment, void payment;
-- records: manage documents and release records;
-- inventory: receive stock, issue stock, adjust stock;
-- reporting: view operational, financial, clinical, and audit reports;
-- security: view sessions, lockouts, failed logins, and audit logs.
-
-These are planned and are not currently authorization keys in the database.
+Current Phase 2 through Phase 4.5 permissions are implemented for the practical
+CRUD-first workflow. Remaining future permission groups may include admission
+and ward management, advanced medication administration, refunds/reversals,
+insurance/HMO, report export governance, break-glass access, advanced security
+operations, and external integration administration. These should not be added
+until their workflows are implemented.
 
 ## Medical Records Foundation Permissions
 
@@ -331,6 +325,21 @@ Patient Chart only show the Vital Signs tab when `view_vital_signs` resolves
 true for the current patient context. Administrator override remains active,
 but the service still validates encounter status and patient/visit matching.
 
+## Phase 3.4 Laboratory permissions
+
+| Permission | Administrator | Laboratory Scientist | Doctor | Nurse | Other roles |
+|---|---:|---:|---:|---:|---:|
+| `view_laboratory` | Yes | Yes | Yes | Yes | No default |
+| `create_laboratory_request` | Yes | Direct requests | Clinical requests | No default | No default |
+| `process_laboratory_request` | Yes | Yes | No | No | No |
+| `enter_laboratory_result` | Yes | Yes | No | No | No |
+| `edit_laboratory_result` | Yes | Yes | No | No | No |
+| `complete_laboratory_request` | Yes | Yes | No | No | No |
+
+Laboratory requests remain encounter-linked. Direct Laboratory patients do not
+require a Consultation or Doctor assignment. Laboratory notifications request
+attention only and do not transfer encounter ownership.
+
 ## Phase 4.1 Accounts / Price Catalogue permissions
 
 | Permission | Administrator | Accountant | Doctor | Nurse | Laboratory | Radiology | Physiotherapy | Theatre | Pharmacy | Store | Other |
@@ -359,6 +368,41 @@ receipts.
 Store is a standalone sidebar module. It is not an Encounter Workspace tab.
 Store owns stock movements and department balances only. It does not own
 pricing, dispensing, patient charges, invoices, or receipts.
+
+## Phase 4.3 Pharmacy permissions
+
+| Permission | Administrator | Pharmacist | Doctor | Nurse | Other roles |
+|---|---:|---:|---:|---:|---:|
+| `view_pharmacy` | Yes | Yes | Yes | Yes | No default |
+| `create_prescription` | Yes | Direct prescriptions | Clinical prescriptions | No default | No default |
+| `edit_prescription` | Yes | Direct prescriptions before dispensing | Clinical prescriptions before dispensing | No | No |
+| `dispense_prescription` | Yes | Yes | No | No | No |
+
+Pharmacy owns prescriptions and dispensing only. Dispensing reduces Pharmacy
+department stock through Store inventory logic and does not create patient
+charges directly. Accounts remains the price owner.
+
+## Phase 4.4 Billing permissions
+
+| Permission | Administrator | Accountant | Reception | Clinical roles | Other |
+|---|---:|---:|---:|---:|---:|
+| `view_billing` | Yes | Yes | Limited/basic when granted | View only when granted | No default |
+| `create_patient_charge` | Yes | Yes | No default | No default | No |
+| `cancel_patient_charge` | Yes | Yes | No | No | No |
+| `create_invoice` | Yes | Yes | No default | No | No |
+| `record_payment` | Yes | Yes | No default | No | No |
+| `view_receipts` | Yes | Yes | No default | No default | No |
+
+Billing owns patient charges, invoices, payments, and receipt views. Financial
+totals are derived from posted charges and payments and cannot be manually
+edited. Billing can remain mutable after clinical encounter completion for
+settlement purposes.
+
+## Encounter cancellation permissions
+
+Only Receptionist, Records Officer, Doctor, and System Administrator may cancel
+an encounter through the exposed workspace action. Cancellation is no longer a
+transfer type; transfer remains department handoff only.
 ## Phase 4.5 Basic Dashboards / Reports permissions
 
 | Permission | Administrator | Accounts | Store Officer | Clinical Roles |

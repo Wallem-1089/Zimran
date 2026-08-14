@@ -236,11 +236,29 @@ AuditService
 
 UserService
 
-EncounterEventService (future)
+EncounterEventService
 
-BillingService (future)
+BillingService
 
 LaboratoryService
+
+ConsultationService
+
+NursingService
+
+VitalSignsService
+
+RadiologyService
+
+PhysiotherapyService
+
+TheatreService
+
+AccountsService
+
+StoreService
+
+PharmacyService
 ```
 
 Controllers should simply call services.
@@ -1097,3 +1115,39 @@ Administrator dashboard with current clinical activity, financial, inventory,
 and notification summaries. This is not a BI platform: there are no scheduled
 reports, report designer, warehouse tables, chart-library dependencies, or
 advanced analytics.
+
+## Current implementation checkpoint after Phase 4.5
+
+The current operational application includes:
+
+- Authentication, session handling, administrator password reset, user/role/
+  permission/department administration, settings, and audit/security views.
+- Patient registration/search, MPI duplicate-candidate review, expanded
+  demographics, patient chart, identifiers, demographic history, clinical
+  safety, problems, structured medical history, documents, and clinical notes.
+- Encounter creation, workspace, transfer/receive, doctor assignment,
+  department notifications, timeline, cancellation, and completion/discharge
+  capture.
+- Consultation, Vital Signs, Nursing, Laboratory, Radiology, Physiotherapy,
+  Theatre, Pharmacy, Billing, Accounts/Price Catalogue, Store/Inventory, and
+  Basic Reports/Dashboard summaries.
+
+Consultation supports both typed narrative entry and an optional Doctor/Admin
+handwriting pad. The handwriting feature stores compact stroke data in the
+existing narrative fields and renders it back on review/view; it does not
+perform OCR or convert handwriting into typed text.
+
+Known practical cleanup items that are not blockers:
+
+- `authentication/forgot_password.php` is not implemented; account recovery is
+  currently handled by administrator password reset.
+- legacy zero-byte department dashboard files under `dashboard/`, legacy
+  `includes/` files, and old `workspace/` helper files should be redirected,
+  removed, or retired in a cleanup pass.
+- `workspace/index.php` is legacy placeholder content; the active workspace is
+  `modules/visits/workspace.php`.
+- `modules/radiology/save.php` has a validation-failure redirect that should
+  return to `request.php`, not a missing `create.php`.
+- `modules/visits/edit.php` and `modules/visits/update.php` contain invalid
+  request fallbacks to a missing `modules/visits/index.php`; they should
+  redirect to patient search or another real route.
