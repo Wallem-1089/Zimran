@@ -70,7 +70,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <?php foreach ($fields as $field => $label): ?>
         <div class="card">
             <h3><?= e($label) ?></h3>
-            <p><?= nl2br(e((string)($_POST[$field] ?? ''))) ?></p>
+            <?php consultationRenderNarrative((string)($_POST[$field] ?? '')); ?>
         </div>
     <?php endforeach; ?>
 

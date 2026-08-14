@@ -281,7 +281,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <?php foreach ($fields as $field => $label): ?>
         <div class="card">
             <h3><?= e($label) ?></h3>
-            <p><?= nl2br(e((string)($consultation[$field] ?? ''))) ?></p>
+            <?php consultationRenderNarrative((string)($consultation[$field] ?? '')); ?>
         </div>
     <?php endforeach; ?>
 </main>

@@ -140,6 +140,8 @@
 
 @import url("workspace-polish.css");
 
+@import url("workspace-polish.css");
+
 .encounter-header{
     padding:22px;
     margin-bottom:18px;
@@ -282,3 +284,11 @@
         grid-template-columns:1fr;
     }
 }
+.encounter-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:40px;
+    flex-wrap:wrap;
+}
+*** End Patch
