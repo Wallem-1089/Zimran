@@ -930,6 +930,20 @@ erDiagram
     USERS ||--o{ THEATRE_RECORDS : owns
 ```
 
+## Inpatient Admission relational additions
+
+```mermaid
+erDiagram
+    PATIENTS ||--o{ ADMISSIONS : has
+    VISITS ||--o| ADMISSIONS : may_have
+    WARDS ||--o{ WARD_BEDS : contains
+    WARDS ||--o{ ADMISSIONS : hosts
+    WARD_BEDS ||--o{ ADMISSIONS : assigned_to
+    ADMISSIONS ||--o{ ADMISSION_MOVEMENTS : records
+    USERS ||--o{ ADMISSIONS : admits
+    USERS ||--o{ ADMISSION_MOVEMENTS : performs
+```
+
 ## Phase 4.1 relational additions
 
 | Table | Ownership | Lifecycle | Keys and query indexes |

@@ -1131,6 +1131,9 @@ The current operational application includes:
 - Consultation, Vital Signs, Nursing, Laboratory, Radiology, Physiotherapy,
   Theatre, Pharmacy, Billing, Accounts/Price Catalogue, Store/Inventory, and
   Basic Reports/Dashboard summaries.
+- Inpatient Admissions / Ward & Bed workflow: admit an active encounter to a
+  ward/bed, transfer ward/bed, discharge/cancel admission, view inpatient
+  census, and manage basic wards/beds.
 
 Consultation supports both typed narrative entry and an optional Doctor/Admin
 handwriting pad. The handwriting feature stores compact stroke data in the

@@ -270,6 +270,34 @@ function isActiveTab(
         </a>
 
         <a
+            href="workspace.php?id=<?= $visitId ?>&tab=admission"
+            class="workspace-card<?= isActiveTab('admission', $activeTab) ?>">
+
+            <div class="workspace-icon">
+
+                🛏️
+
+            </div>
+
+            <div class="workspace-content">
+
+                <strong>
+
+                    Admission
+
+                </strong>
+
+                <span>
+
+                    Ward & bed
+
+                </span>
+
+            </div>
+
+        </a>
+
+        <a
             href="workspace.php?id=<?= $visitId ?>&tab=physiotherapy"
             class="workspace-card<?= isActiveTab('physiotherapy', $activeTab) ?>">
 

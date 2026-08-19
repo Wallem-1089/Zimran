@@ -162,6 +162,10 @@ class EncounterEventService
             'PHYSIOTHERAPY_COMPLETED' => 'physiotherapy',
             'THEATRE_STARTED',
             'THEATRE_COMPLETED' => 'theatre',
+            'PATIENT_ADMITTED',
+            'ADMISSION_TRANSFERRED',
+            'PATIENT_DISCHARGED_FROM_WARD',
+            'ADMISSION_CANCELLED' => 'admission',
             default => 'default'
         };
     }

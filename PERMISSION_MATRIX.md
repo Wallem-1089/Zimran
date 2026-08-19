@@ -416,3 +416,16 @@ Reports are read-only. Financial reports use Billing records. Inventory
 reports use Store stock tables. Clinical reports show counts only and do not
 display clinical narratives, note text, laboratory result text, or radiology
 report text.
+
+## Inpatient Admissions permissions
+
+| Permission | Administrator | Receptionist | Records Officer | Doctor | Nurse | Other |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `view_admissions` | Yes | Yes | Yes | Yes | Yes | No default |
+| `create_admission` | Yes | Yes | Yes | Yes | Yes | No default |
+| `transfer_admission` | Yes | No | Yes | No default | Yes | No default |
+| `discharge_admission` | Yes | No default | Yes | Yes when granted | Yes | No default |
+| `manage_wards_beds` | Yes | No | Yes | No | Yes | No default |
+
+Admissions manage inpatient ward and bed occupancy for an existing encounter.
+They do not replace encounter completion/discharge documentation.

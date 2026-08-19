@@ -284,6 +284,21 @@ class PermissionService
                 ['Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist', 'Records Officer'],
                 true
             ) || in_array($department, ['Doctor', 'Nursing', 'Laboratory', 'Radiology', 'Physiotherapy', 'Theatre', 'Pharmacy', 'Records'], true),
+            'view_admissions' => in_array(
+                $role,
+                ['Receptionist', 'Records Officer', 'Doctor', 'Nurse'],
+                true
+            ) || in_array($department, ['Reception', 'Records', 'Doctor', 'Nursing'], true),
+            'create_admission' => in_array(
+                $role,
+                ['Receptionist', 'Records Officer', 'Doctor', 'Nurse'],
+                true
+            ) || in_array($department, ['Reception', 'Records', 'Doctor', 'Nursing'], true),
+            'transfer_admission', 'discharge_admission', 'manage_wards_beds' => in_array(
+                $role,
+                ['Records Officer', 'Nurse'],
+                true
+            ) || in_array($department, ['Records', 'Nursing'], true),
             'view_consultation', 'create_consultation',
             'edit_consultation', 'complete_consultation' => $role === 'Doctor',
             default => false
@@ -1587,6 +1602,35 @@ class PermissionService
             || $this->hasPermission('view_clinical_reports', $user);
     }
 
+    public function canViewAdmissions(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('view_admissions', $user);
+    }
+
+    public function canCreateAdmission(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateAdmission('create_admission', $encounter, $user);
+    }
+
+    public function canTransferAdmission(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateAdmission('transfer_admission', $encounter, $user);
+    }
+
+    public function canDischargeAdmission(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateAdmission('discharge_admission', $encounter, $user);
+    }
+
+    public function canManageWardsBeds(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('manage_wards_beds', $user);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Consultation Authorization
@@ -2274,6 +2318,28 @@ class PermissionService
 
         return $this->hasPermission($permission, $user)
             && $this->roleMatches($user, ['Doctor', 'Nurse'])
+            && $this->canViewEncounter($encounter, $user);
+    }
+
+    private function canMutateAdmission(
+        string $permission,
+        array $encounter,
+        ?array $user = null
+    ): bool {
+        $user = $user ?? $this->currentUser();
+        if (!$user) {
+            return false;
+        }
+
+        if (in_array((string)($encounter['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)) {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        return $this->hasPermission($permission, $user)
             && $this->canViewEncounter($encounter, $user);
     }
 

@@ -44,6 +44,7 @@ require_once __DIR__ . '/../../services/BillingService.php';
 require_once __DIR__ . '/../../services/StoreService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
+require_once __DIR__ . '/../../services/AdmissionService.php';
 
 function workspaceTableExists(PDO $pdo, string $table): bool
 {
@@ -401,6 +402,16 @@ $billingSummary = $canViewBilling && $billingService
 $billingCharges = $canViewBilling && $billingService ? $billingService->listChargesByVisit($visitId, $currentUser) : [];
 $billingPayments = $canViewBilling && $billingService ? $billingService->listPayments($visitId, $currentUser) : [];
 $billingInvoice = $billingSummary['invoice'] ?? null;
+$admissionTablesReady = workspaceTableExists($pdo, 'wards')
+    && workspaceTableExists($pdo, 'ward_beds')
+    && workspaceTableExists($pdo, 'admissions')
+    && workspaceTableExists($pdo, 'admission_movements');
+$admissionService = $admissionTablesReady ? new AdmissionService($pdo, null, null, $permissionService) : null;
+$canViewAdmissions = $permissionService->canViewAdmissions($currentUser);
+$canCreateAdmission = $permissionService->canCreateAdmission($visit, $currentUser);
+$canTransferAdmission = $permissionService->canTransferAdmission($visit, $currentUser);
+$canDischargeAdmission = $permissionService->canDischargeAdmission($visit, $currentUser);
+$admission = $canViewAdmissions && $admissionService ? $admissionService->getByVisit($visitId, $currentUser) : null;
 $physiotherapy = $latestPhysiotherapyRecord ? [$latestPhysiotherapyRecord] : [];
 $theatre = $latestTheatreRecord ? [$latestTheatreRecord] : [];
 
@@ -584,6 +595,12 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
             case 'billing':
 
                 require __DIR__ . '/partials/tabs/billing.php';
+
+                break;
+
+            case 'admission':
+
+                require __DIR__ . '/partials/tabs/admission.php';
 
                 break;
 

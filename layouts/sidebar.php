@@ -154,6 +154,20 @@ if ($currentUser && isset($pdo)) {
 
             <?php endif; ?>
 
+            <?php if ($currentUser && $sidebarPermissionService->canViewAdmissions($currentUser)): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/admissions/index.php">
+
+                        Admissions
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
             <?php if ($currentUser && $sidebarPermissionService->hasPermission('view_pharmacy', $currentUser)): ?>
 
                 <li>

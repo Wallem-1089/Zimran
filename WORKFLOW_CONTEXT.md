@@ -1162,6 +1162,10 @@ department handoff.
   dispensing.
 - Billing owns PATIENT CHARGES, INVOICES, PAYMENTS, and receipt views.
 - Reports are read-only summaries over already-posted operational records.
+- Admissions own inpatient ward and bed occupancy. An admission is attached to
+  an existing encounter; it does not replace the encounter, consultation, or
+  discharge-summary workflow. Admission movements record admit, transfer,
+  discharge, and cancellation actions.
 
 Financial settlement may continue after clinical encounter completion. This is
 an intentional exception to the normal clinical CRUD lock: clinical records are

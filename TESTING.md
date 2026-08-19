@@ -307,6 +307,14 @@ manager, verifies report permissions, administrator dashboard contract,
 report aggregate contracts, sidebar visibility, and guards against narrative
 PHI leakage in the basic report pages.
 
+## Inpatient Admissions / Ward & Bed Workflow
+
+Focused tests should verify ward and bed creation, admission to an active
+encounter, duplicate admission prevention, occupied-bed rejection, ward/bed
+transfer, discharge bed release, cancellation bed release,
+completed/cancelled-encounter mutation rejection, permissions, CSRF, audit, and
+encounter timeline events.
+
 ## Current UI/route audit expectations
 
 Repo-wide PHP syntax validation currently passes. Known non-blocking cleanup

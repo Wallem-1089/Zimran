@@ -77,6 +77,12 @@ Current extended results may additionally retain `user_id`, `role_id`, `permissi
 no implemented `TimelineService`; timeline reads are exposed by `VisitService`,
 `EncounterEventService`, and `AuditService`.
 
+`AdmissionService` owns the inpatient admission workflow for the current
+practical version: `createWard()`, `addBed()`, `admit()`, `transfer()`,
+`discharge()`, `cancel()`, `getAdmissionById()`, `getByVisit()`,
+`listByPatient()`, `listActive()`, `listMovements()`, `listWards()`,
+`listBedsByWard()`, and `listAvailableBeds()`.
+
 ## Public Method Contracts
 
 The method tables are normative summaries. Unless a row says otherwise, write failures use `['success' => false, 'errors' => [...]]`; administration authorization and CSRF are expected at the controller boundary; PDO read failures may propagate.

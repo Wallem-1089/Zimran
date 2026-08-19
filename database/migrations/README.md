@@ -306,3 +306,16 @@ encounter completion attribution and discharge fields: `completed_at`,
 
 The down migration removes only these optional completion/discharge columns and
 indexes. Review carefully before use on a database with completed encounters.
+
+## Migration 037 - Inpatient Admissions / Ward & Bed Workflow
+
+`037_inpatient_admissions_up.sql` creates the practical inpatient structures:
+`wards`, `ward_beds`, `admissions`, and `admission_movements`. Admissions are
+linked to an existing encounter, occupy exactly one active bed, support ward/bed
+transfer, and release the bed on discharge or cancellation. The movement table
+records admission, transfer, discharge, and cancellation events.
+
+The migration seeds `view_admissions`, `create_admission`,
+`transfer_admission`, `discharge_admission`, and `manage_wards_beds`.
+Administrator retains full access through the normal permission override.
+Reception, Records, Doctor, and Nursing roles receive practical access levels.

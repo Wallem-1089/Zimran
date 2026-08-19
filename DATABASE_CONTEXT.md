@@ -1269,3 +1269,14 @@ completion/discharge fields directly to `visits`: `completed_at`,
 `completed_by`, `discharge_diagnosis`, `discharge_notes`, and
 `follow_up_instructions`. This is not a full admission or ward-management
 schema.
+
+## Inpatient Admissions / Ward & Bed Workflow
+
+Migration 037 adds `wards`, `ward_beds`, `admissions`, and
+`admission_movements`.
+
+`wards` and `ward_beds` define basic inpatient locations. `admissions` links a
+patient and encounter to the current ward and bed. `admission_movements`
+preserves admission, transfer, discharge, and cancellation history. Bed
+occupancy is changed only by `AdmissionService`; there is no direct page for
+manually editing bed occupancy.
