@@ -65,7 +65,7 @@ requires a distinct authorization decision.
 
 ## Current Permission Matrix
 
-The migration seeds the common encounter permissions for non-administrator roles and gives `Receptionist` encounter creation and `Doctor` doctor-assignment permission. The administrator is not dependent on role-permission rows because of the explicit override.
+The migration seeds the common encounter permissions for non-administrator roles and gives `Receptionist` and `Nurse` encounter creation permission. `Doctor` has doctor-assignment permission. The administrator is not dependent on role-permission rows because of the explicit override. Encounter creation may place the patient into the selected active department queue, but that does not grant the creating user broad access to browse that department's full worklist.
 
 | Role | View | Create | Transfer | Receive | Assign doctor | Status | Edit | Manage users | Manage roles | Manage permissions | Manage settings |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -73,7 +73,7 @@ The migration seeds the common encounter permissions for non-administrator roles
 | Receptionist | Yes | Yes | Yes | Yes | No | Yes | Yes | No | No | No | No |
 | Records Officer | Yes | No | Yes | Yes | No | Yes | Yes | No | No | No | No |
 | Doctor | Yes | No | Yes | Yes | Yes | Yes | Yes | No | No | No | No |
-| Nurse | Yes | No | Yes | Yes | No | Yes | Yes | No | No | No | No |
+| Nurse | Yes | Yes | Yes | Yes | No | Yes | Yes | No | No | No | No |
 | Laboratory Scientist | Yes | No | Yes | Yes | No | Yes | Yes | No | No | No | No |
 | Pharmacist | Yes | No | Yes | Yes | No | Yes | Yes | No | No | No | No |
 | Physiotherapist | Yes | No | Yes | Yes | No | Yes | Yes | No | No | No | No |

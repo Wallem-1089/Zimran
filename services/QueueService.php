@@ -49,13 +49,17 @@ class QueueService
         int $departmentId,
         ?int $queuedBy = null,
         ?int $assignedUserId = null,
-        ?string $remarks = null
+        ?string $remarks = null,
+        bool $enforceDepartmentAccess = true
     ): array {
         if ($visitId <= 0 || $departmentId <= 0) {
             return $this->failure('Encounter and department are required.');
         }
 
-        if (!$this->permissionService->canAccessDepartment($departmentId)) {
+        if (
+            $enforceDepartmentAccess
+            && !$this->permissionService->canAccessDepartment($departmentId)
+        ) {
             $this->permissionService->logDenied(
                 $queuedBy,
                 $visitId,

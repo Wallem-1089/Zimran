@@ -43,7 +43,15 @@ class PermissionService
 
         return match ($permission) {
             'view_encounter' => true,
-            'create_encounter' => $department === 'Reception',
+            'create_encounter' => in_array(
+                $role,
+                ['Receptionist', 'Nurse'],
+                true
+            ) || in_array(
+                $department,
+                ['Reception', 'Nursing'],
+                true
+            ),
             'transfer_encounter' => $department !== '',
             'receive_encounter' => $department !== '',
             'assign_doctor' => $role === 'Doctor'

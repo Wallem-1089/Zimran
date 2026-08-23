@@ -141,6 +141,24 @@ class VisitService
     int $createdBy
 ): array {
 
+    if (!$this->permissionService->hasPermission('create_encounter')) {
+        $this->permissionService->logDenied(
+            $createdBy,
+            null,
+            'CREATE_ENCOUNTER_DENIED',
+            'User attempted to create an encounter without permission.'
+        );
+
+        return [
+            'success'      => false,
+            'visit_id'     => null,
+            'visit_number' => null,
+            'errors'       => [
+                'You do not have permission to create encounters.'
+            ]
+        ];
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Validate Input
@@ -337,7 +355,10 @@ class VisitService
         $queueResult = $this->queueService->enqueueEncounter(
             $visitId,
             (int)$visit['current_department_id'],
-            $createdBy
+            $createdBy,
+            null,
+            null,
+            false
         );
 
         if (!$queueResult['success']) {
@@ -382,9 +403,7 @@ class VisitService
             'visit_number' => null,
 
             'errors'       => [
-
-            'Unable to create encounter.'
-
+                $e->getMessage() ?: 'Unable to create encounter.'
             ]
 
         ];
@@ -2354,7 +2373,8 @@ public function canAccessDepartmentWorkspace(
             $departmentId,
             $transferredBy,
             null,
-            $remarks
+            $remarks,
+            false
         );
 
         if (!$queueResult['success']) {
