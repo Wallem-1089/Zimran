@@ -84,6 +84,32 @@ The migration seeds the common encounter permissions for non-administrator roles
 
 The matrix describes current seeded behavior, not a final clinical permission model. Future modules will narrow permissions to their specific department operations.
 
+## Sidebar Visibility Policy
+
+Sidebar destinations are permission-driven. Administrators control what a user
+sees by assigning role/user permissions; the application does not maintain a
+separate sidebar-customization table.
+
+| Sidebar destination | Visibility permission |
+|---|---|
+| Patients / Encounters | Authenticated user; encounter actions still require their own permissions |
+| Medical Records | `view_medical_record` |
+| Laboratory | `view_laboratory` |
+| Radiology | `view_radiology` |
+| Physiotherapy | `view_physiotherapy` |
+| Theatre | `view_theatre` |
+| Accounts | `view_billable_items` |
+| Store | `view_inventory` |
+| Admissions | `view_admissions` |
+| Pharmacy | `view_pharmacy` |
+| Billing | `view_billing` |
+| Reports | `view_reports`, `view_financial_reports`, `view_inventory_reports`, or `view_clinical_reports` |
+| Administration | System Administrator only |
+
+This keeps access simple: if a role should see Store, grant `view_inventory`;
+if it should not see Billing, remove `view_billing`. Page-level permission
+checks remain authoritative even when a sidebar link is visible.
+
 ## Module Permission Requirements
 
 | Module/action | Required authorization | Status |

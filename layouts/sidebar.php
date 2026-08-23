@@ -9,6 +9,10 @@ if (!isset($currentUser)) {
 $currentPage = basename($_SERVER['PHP_SELF']);
 
 $canAccessMedicalRecordsSidebar = false;
+$canAccessLaboratorySidebar = false;
+$canAccessRadiologySidebar = false;
+$canAccessPhysiotherapySidebar = false;
+$canAccessTheatreSidebar = false;
 $canAccessAccountsSidebar = false;
 $canAccessStoreSidebar = false;
 $canAccessAdmissionsSidebar = false;
@@ -32,30 +36,34 @@ if ($currentUser && isset($pdo)) {
         ?? ''
     );
     $sidebarIsAdmin = $sidebarPermissionService->isAdministrator($currentUser);
-    $sidebarRoleIn = static fn(array $roles): bool => in_array($sidebarRole, $roles, true);
-    $sidebarDepartmentIn = static fn(array $departments): bool => in_array($sidebarDepartment, $departments, true);
+    $sidebarCan = static function (string $permission) use (
+        $sidebarPermissionService,
+        $currentUser
+    ): bool {
+        try {
+            return $sidebarPermissionService->hasPermission(
+                $permission,
+                $currentUser
+            );
+        } catch (Throwable) {
+            return false;
+        }
+    };
 
-    $canAccessMedicalRecordsSidebar = $sidebarIsAdmin
-        || $sidebarRoleIn(['Records Officer'])
-        || $sidebarDepartmentIn(['Records']);
-    $canAccessAccountsSidebar = $sidebarIsAdmin
-        || $sidebarRoleIn(['Accountant', 'Accounts'])
-        || $sidebarDepartmentIn(['Accounts']);
-    $canAccessStoreSidebar = $sidebarIsAdmin
-        || $sidebarRoleIn(['Store Officer'])
-        || $sidebarDepartmentIn(['Store']);
-    $canAccessAdmissionsSidebar = $sidebarIsAdmin
-        || $sidebarRoleIn(['Receptionist', 'Records Officer', 'Doctor', 'Nurse'])
-        || $sidebarDepartmentIn(['Reception', 'Records', 'Doctor', 'Nursing']);
-    $canAccessPharmacySidebar = $sidebarIsAdmin
-        || $sidebarRoleIn(['Pharmacist'])
-        || $sidebarDepartmentIn(['Pharmacy']);
-    $canAccessBillingSidebar = $sidebarIsAdmin
-        || $sidebarRoleIn(['Accountant', 'Accounts'])
-        || $sidebarDepartmentIn(['Accounts']);
-    $canAccessReportsSidebar = $sidebarIsAdmin
-        || $sidebarRoleIn(['Accountant', 'Accounts', 'Store Officer', 'Records Officer'])
-        || $sidebarDepartmentIn(['Accounts', 'Store', 'Records']);
+    $canAccessMedicalRecordsSidebar = $sidebarCan('view_medical_record');
+    $canAccessLaboratorySidebar = $sidebarCan('view_laboratory');
+    $canAccessRadiologySidebar = $sidebarCan('view_radiology');
+    $canAccessPhysiotherapySidebar = $sidebarCan('view_physiotherapy');
+    $canAccessTheatreSidebar = $sidebarCan('view_theatre');
+    $canAccessAccountsSidebar = $sidebarCan('view_billable_items');
+    $canAccessStoreSidebar = $sidebarCan('view_inventory');
+    $canAccessAdmissionsSidebar = $sidebarCan('view_admissions');
+    $canAccessPharmacySidebar = $sidebarCan('view_pharmacy');
+    $canAccessBillingSidebar = $sidebarCan('view_billing');
+    $canAccessReportsSidebar = $sidebarCan('view_reports')
+        || $sidebarCan('view_financial_reports')
+        || $sidebarCan('view_inventory_reports')
+        || $sidebarCan('view_clinical_reports');
 
     $sidebarDepartmentId = (int)(
         $currentUser['active_department_id']
@@ -191,6 +199,62 @@ if ($currentUser && isset($pdo)) {
                     <a href="<?= e($baseUrl) ?>/modules/medical_records/index.php">
 
                         Medical Records
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
+            <?php if ($canAccessLaboratorySidebar): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/laboratory/index.php">
+
+                        Laboratory
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
+            <?php if ($canAccessRadiologySidebar): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/radiology/index.php">
+
+                        Radiology
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
+            <?php if ($canAccessPhysiotherapySidebar): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/physiotherapy/index.php">
+
+                        Physiotherapy
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
+            <?php if ($canAccessTheatreSidebar): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/theatre/index.php">
+
+                        Theatre
 
                     </a>
 
