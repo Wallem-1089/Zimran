@@ -13,6 +13,18 @@ if (!isset($patient, $visit)) {
     return;
 }
 
+$consultation = $consultation ?? null;
+$nursing = $nursing ?? null;
+$laboratoryRequests = $laboratoryRequests ?? [];
+$latestLaboratoryRequest = $latestLaboratoryRequest ?? ($laboratoryRequests[0] ?? null);
+$latestLaboratoryResult = $latestLaboratoryResult ?? null;
+$radiologyRequests = $radiologyRequests ?? [];
+$latestRadiologyRequest = $latestRadiologyRequest ?? ($radiologyRequests[0] ?? null);
+$latestRadiologyResult = $latestRadiologyResult ?? null;
+$pharmacy = $pharmacy ?? [];
+$latestPharmacyPrescription = $latestPharmacyPrescription ?? ($pharmacy[0] ?? null);
+$billingSummary = $billingSummary ?? ['total_charges' => 0, 'amount_paid' => 0, 'balance_due' => 0, 'status' => 'Unbilled'];
+$documents = $documents ?? [];
 
 ?>
 
@@ -148,11 +160,33 @@ if (!isset($patient, $visit)) {
 
         </h2>
 
-        <div class="empty-state">
-
-            No consultation has been recorded for this encounter.
-
-        </div>
+        <?php if (!empty($consultation)) : ?>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <span class="summary-label">Status</span>
+                    <span class="summary-value"><?= e((string)($consultation['status'] ?? 'Draft')) ?></span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Presenting Complaint</span>
+                    <span class="summary-value"><?= e((string)($consultation['presenting_complaint'] ?? '-')) ?></span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Diagnosis</span>
+                    <span class="summary-value"><?= e((string)($consultation['diagnosis'] ?? $consultation['diagnosis_summary'] ?? '-')) ?></span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Updated</span>
+                    <span class="summary-value"><?= e((string)($consultation['updated_at'] ?? $consultation['created_at'] ?? '-')) ?></span>
+                </div>
+            </div>
+            <div class="form-actions">
+                <a class="btn-secondary" href="../consultation/view.php?visit=<?= (int)$visit['id'] ?>">Open Consultation</a>
+            </div>
+        <?php else : ?>
+            <div class="empty-state">
+                No consultation has been recorded for this encounter.
+            </div>
+        <?php endif; ?>
 
     </div>
 
@@ -183,9 +217,13 @@ if (!isset($patient, $visit)) {
                     <span class="summary-value"><?= e((string)($nursing['created_at'] ?? '-')) ?></span>
                 </div>
                 <div class="summary-item">
-                    <span class="summary-label">Summary</span>
-                    <span class="summary-value"><?= e((string)($nursing['summary'] ?? '')) ?></span>
+                    <span class="summary-label">Observation</span>
+                    <span class="summary-value"><?= e((string)($nursing['nursing_observation'] ?? $nursing['general_condition'] ?? '-')) ?></span>
                 </div>
+            </div>
+            <div class="form-actions">
+                <a class="btn-secondary" href="../nursing/view.php?id=<?= (int)$nursing['id'] ?>">Open Nursing</a>
+                <a class="btn-secondary" href="../nursing/history.php?visit=<?= (int)$visit['id'] ?>">View History</a>
             </div>
         <?php else : ?>
             <div class="empty-state">
@@ -207,11 +245,22 @@ if (!isset($patient, $visit)) {
 
         </h2>
 
-        <div class="empty-state">
-
-            No laboratory requests.
-
-        </div>
+        <?php if (!empty($latestLaboratoryRequest)) : ?>
+            <div class="summary-grid">
+                <div class="summary-item"><span class="summary-label">Latest Tests</span> <span class="summary-value"><?= e((string)($latestLaboratoryRequest['tests_requested'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)($latestLaboratoryRequest['status'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Result</span> <span class="summary-value"><?= trim((string)($latestLaboratoryResult['result'] ?? '')) !== '' ? 'Recorded' : 'Pending' ?></span></div>
+                <div class="summary-item"><span class="summary-label">Total Requests</span> <span class="summary-value"><?= count($laboratoryRequests) ?></span></div>
+            </div>
+            <div class="form-actions">
+                <a class="btn-secondary" href="../laboratory/view.php?id=<?= (int)$latestLaboratoryRequest['id'] ?>">Open Laboratory</a>
+                <a class="btn-secondary" href="../laboratory/history.php?visit=<?= (int)$visit['id'] ?>">View History</a>
+            </div>
+        <?php else : ?>
+            <div class="empty-state">
+                No laboratory requests.
+            </div>
+        <?php endif; ?>
 
     </div>
 
@@ -227,11 +276,22 @@ if (!isset($patient, $visit)) {
 
         </h2>
 
-        <div class="empty-state">
-
-            No radiology investigations.
-
-        </div>
+        <?php if (!empty($latestRadiologyRequest)) : ?>
+            <div class="summary-grid">
+                <div class="summary-item"><span class="summary-label">Latest Study</span> <span class="summary-value"><?= e((string)($latestRadiologyRequest['study_requested'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)($latestRadiologyRequest['status'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Report</span> <span class="summary-value"><?= trim((string)($latestRadiologyResult['impression'] ?? '')) !== '' ? 'Recorded' : 'Pending' ?></span></div>
+                <div class="summary-item"><span class="summary-label">Total Requests</span> <span class="summary-value"><?= count($radiologyRequests) ?></span></div>
+            </div>
+            <div class="form-actions">
+                <a class="btn-secondary" href="../radiology/view.php?id=<?= (int)$latestRadiologyRequest['id'] ?>">Open Radiology</a>
+                <a class="btn-secondary" href="../radiology/history.php?visit=<?= (int)$visit['id'] ?>">View History</a>
+            </div>
+        <?php else : ?>
+            <div class="empty-state">
+                No radiology investigations.
+            </div>
+        <?php endif; ?>
 
     </div>
 
@@ -247,11 +307,22 @@ if (!isset($patient, $visit)) {
 
         </h2>
 
-        <div class="empty-state">
-
-            No medications have been prescribed.
-
-        </div>
+        <?php if (!empty($latestPharmacyPrescription)) : ?>
+            <div class="summary-grid">
+                <div class="summary-item"><span class="summary-label">Latest Medication</span> <span class="summary-value"><?= e((string)($latestPharmacyPrescription['medication_name'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Quantity</span> <span class="summary-value"><?= e((string)($latestPharmacyPrescription['quantity'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)($latestPharmacyPrescription['status'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Total Prescriptions</span> <span class="summary-value"><?= count($pharmacy) ?></span></div>
+            </div>
+            <div class="form-actions">
+                <a class="btn-secondary" href="../pharmacy/view.php?id=<?= (int)$latestPharmacyPrescription['id'] ?>">Open Pharmacy</a>
+                <a class="btn-secondary" href="../pharmacy/history.php?visit=<?= (int)$visit['id'] ?>">View History</a>
+            </div>
+        <?php else : ?>
+            <div class="empty-state">
+                No medications have been prescribed.
+            </div>
+        <?php endif; ?>
 
     </div>
 
@@ -279,7 +350,23 @@ if (!isset($patient, $visit)) {
 
                 <span class="summary-value">
 
-                    ₦0.00
+                    ₦<?= number_format((float)($billingSummary['balance_due'] ?? 0), 2) ?>
+
+                </span>
+
+            </div>
+
+            <div class="summary-item">
+
+                <span class="summary-label">
+
+                    Charges
+
+                </span>
+
+                <span class="summary-value">
+
+                    ₦<?= number_format((float)($billingSummary['total_charges'] ?? 0), 2) ?>
 
                 </span>
 
@@ -295,12 +382,32 @@ if (!isset($patient, $visit)) {
 
                 <span class="summary-value">
 
-                    ₦0.00
+                    ₦<?= number_format((float)($billingSummary['amount_paid'] ?? 0), 2) ?>
 
                 </span>
 
             </div>
 
+            <div class="summary-item">
+
+                <span class="summary-label">
+
+                    Status
+
+                </span>
+
+                <span class="summary-value">
+
+                    <?= e((string)($billingSummary['status'] ?? 'Unbilled')) ?>
+
+                </span>
+
+            </div>
+
+        </div>
+
+        <div class="form-actions">
+            <a class="btn-secondary" href="../billing/view.php?visit=<?= (int)$visit['id'] ?>">Open Billing</a>
         </div>
 
     </div>
@@ -317,11 +424,22 @@ if (!isset($patient, $visit)) {
 
         </h2>
 
-        <div class="empty-state">
-
-            No documents uploaded.
-
-        </div>
+        <?php if (!empty($documents)) : ?>
+            <?php $latestDocument = $documents[0]; ?>
+            <div class="summary-grid">
+                <div class="summary-item"><span class="summary-label">Total Documents</span> <span class="summary-value"><?= count($documents) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Latest Title</span> <span class="summary-value"><?= e((string)($latestDocument['title'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Type</span> <span class="summary-value"><?= e(ucwords(str_replace('_', ' ', (string)($latestDocument['document_type'] ?? '-')))) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)($latestDocument['document_status'] ?? '-')) ?></span></div>
+            </div>
+            <div class="form-actions">
+                <a class="btn-secondary" href="../medical_records/chart.php?patient=<?= (int)$patient['id'] ?>&tab=documents&visit=<?= (int)$visit['id'] ?>">Open Documents</a>
+            </div>
+        <?php else : ?>
+            <div class="empty-state">
+                No documents uploaded.
+            </div>
+        <?php endif; ?>
 
     </div>
 
