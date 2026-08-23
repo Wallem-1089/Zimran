@@ -22,7 +22,7 @@ $encounterLocked = in_array((string)($visit['visit_status'] ?? ''), ['Completed'
             <p>Inpatient ward and bed status for this encounter.</p>
         </div>
         <div class="form-actions">
-            <?php if ($admissionTablesReady && $canViewAdmissions): ?>
+            <?php if ($admissionTablesReady && $canViewAdmissions && !empty($canOpenAdmissionCensus)): ?>
                 <a class="btn-secondary" href="../admissions/index.php">Admission Census</a>
             <?php endif; ?>
         </div>

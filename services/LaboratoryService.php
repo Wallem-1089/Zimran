@@ -152,7 +152,7 @@ class LaboratoryService
 
     public function listWorklist(?array $user = null, array $filters = []): array
     {
-        if ($user !== null && !$this->permissionService->hasPermission('view_laboratory', $user)) {
+        if ($user !== null && !$this->permissionService->canViewLaboratoryWorklist($user)) {
             return [];
         }
 

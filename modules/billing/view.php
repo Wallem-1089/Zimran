@@ -35,6 +35,15 @@ $canCancelPatientCharge = $permissionService->canCancelPatientCharge($currentUse
 $canCreateInvoice = $permissionService->canCreateInvoice($currentUser);
 $canRecordPayment = $permissionService->canRecordPayment($currentUser);
 $canViewReceipts = $permissionService->canViewReceipts($currentUser);
+$patient = [
+    'id' => (int)($visit['patient_id'] ?? 0),
+    'hospital_number' => (string)($visit['hospital_number'] ?? ''),
+    'first_name' => (string)($visit['first_name'] ?? ''),
+    'last_name' => (string)($visit['last_name'] ?? ''),
+    'gender' => (string)($visit['gender'] ?? ''),
+    'phone' => (string)($visit['phone'] ?? ''),
+    'date_of_birth' => (string)($visit['date_of_birth'] ?? ''),
+];
 $billingPatientName = trim((string)($visit['patient_name'] ?? ''));
 if ($billingPatientName === '') {
     $billingPatientName = trim((string)($visit['first_name'] ?? '') . ' ' . (string)($visit['last_name'] ?? ''));
@@ -51,6 +60,26 @@ require __DIR__ . '/../../layouts/sidebar.php';
 <div class="main-container">
 <?php require __DIR__ . '/../../layouts/navbar.php'; ?>
 <main class="content">
+    <?php if (!empty($_SESSION['success_message'])): ?>
+        <div class="alert-success"><?= e((string)$_SESSION['success_message']) ?></div>
+        <?php unset($_SESSION['success_message']); ?>
+    <?php endif; ?>
+    <?php if (!empty($_SESSION['error_message'])): ?>
+        <div class="alert-danger"><?= e((string)$_SESSION['error_message']) ?></div>
+        <?php unset($_SESSION['error_message']); ?>
+    <?php endif; ?>
+    <?php if (!empty($_SESSION['validation_errors'])): ?>
+        <div class="alert-danger">
+            <strong>Please correct the following:</strong>
+            <ul>
+                <?php foreach ((array)$_SESSION['validation_errors'] as $error): ?>
+                    <li><?= e((string)$error) ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <?php unset($_SESSION['validation_errors']); ?>
+    <?php endif; ?>
+
     <div class="page-header">
         <div>
             <h1>Billing / Charges</h1>

@@ -19,7 +19,9 @@ $requestSource = $pharmacyRequestSource ?? 'Clinical';
                 <p>Prescriptions, medication dispensing and pharmacy records linked to this encounter.</p>
             </div>
             <div>
-                <a class="btn-secondary" href="../pharmacy/index.php">Worklist</a>
+                <?php if (!empty($canOpenPharmacyWorklist)): ?>
+                    <a class="btn-secondary" href="../pharmacy/index.php">Worklist</a>
+                <?php endif; ?>
                 <?php if (!$pharmacyTablesReady): ?>
                     <span class="badge badge-warning">Migration required</span>
                 <?php elseif (!$canViewPharmacy): ?>
@@ -84,7 +86,10 @@ $requestSource = $pharmacyRequestSource ?? 'Clinical';
             </div>
             <div class="form-actions">
                 <a href="../pharmacy/view.php?id=<?= (int)$latest['id'] ?>" class="btn-secondary">View</a>
-                <a href="../pharmacy/index.php" class="btn-secondary">View Worklist</a>
+                <a href="../pharmacy/history.php?visit=<?= (int)$visit['id'] ?>" class="btn-secondary">View History</a>
+                <?php if (!empty($canOpenPharmacyWorklist)): ?>
+                    <a href="../pharmacy/index.php" class="btn-secondary">View Worklist</a>
+                <?php endif; ?>
                 <?php if (!$isClosedEncounter && $canCreatePrescription): ?>
                     <a href="../pharmacy/prescribe.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-secondary">
                         <?= $requestSource === 'Direct' ? 'Create Direct Prescription' : 'Create Prescription' ?>

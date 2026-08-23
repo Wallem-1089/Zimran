@@ -66,7 +66,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p><?= e((string)($request['visit_number'] ?? ('Encounter #' . (int)$request['visit_id']))) ?></p>
         </div>
         <div class="form-actions">
-            <a class="btn-secondary" href="index.php">Worklist</a>
+            <?php if ($permissionService->canViewLaboratoryWorklist($currentUser)): ?>
+                <a class="btn-secondary" href="index.php">Worklist</a>
+            <?php endif; ?>
             <a class="btn-secondary" href="<?= e(laboratoryBackToWorkspace((int)$request['visit_id'])) ?>">Workspace</a>
             <a class="btn-secondary" href="history.php?visit=<?= (int)$request['visit_id'] ?>">History</a>
         </div>

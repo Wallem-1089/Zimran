@@ -66,7 +66,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p><?= e((string)($prescription['visit_number'] ?? ('Encounter #' . (int)$prescription['visit_id']))) ?></p>
         </div>
         <div class="form-actions">
-            <a class="btn-secondary" href="index.php">Worklist</a>
+            <?php if ($permissionService->canViewPharmacyWorklist($currentUser)): ?>
+                <a class="btn-secondary" href="index.php">Worklist</a>
+            <?php endif; ?>
             <a class="btn-secondary" href="<?= e(pharmacyBackToWorkspace((int)$prescription['visit_id'])) ?>">Workspace</a>
             <a class="btn-secondary" href="<?= e(pharmacyBackToConsultation((int)$prescription['visit_id'])) ?>">Consultation</a>
         </div>

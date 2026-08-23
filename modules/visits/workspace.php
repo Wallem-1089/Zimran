@@ -35,6 +35,7 @@ require_once __DIR__ . '/../../services/MedicalDocumentService.php';
 require_once __DIR__ . '/../../services/ClinicalNoteService.php';
 require_once __DIR__ . '/../../services/ConsultationService.php';
 require_once __DIR__ . '/../../services/DepartmentNotificationService.php';
+require_once __DIR__ . '/../../services/UserNotificationService.php';
 require_once __DIR__ . '/../../services/LaboratoryService.php';
 require_once __DIR__ . '/../../services/RadiologyService.php';
 require_once __DIR__ . '/../../services/PhysiotherapyService.php';
@@ -165,6 +166,21 @@ if (!$permissionService->canViewEncounter($visit, $currentUser)) {
 
 }
 
+$workspaceUserRole = (string)($currentUser['role_name'] ?? '');
+$workspaceUserDepartment = (string)(
+    $currentUser['active_department_name']
+    ?? $_SESSION['active_department_name']
+    ?? $currentUser['department_name']
+    ?? ''
+);
+$canOpenLaboratoryWorklist = $permissionService->canViewLaboratoryWorklist($currentUser);
+$canOpenRadiologyWorklist = $permissionService->canViewRadiologyWorklist($currentUser);
+$canOpenPharmacyWorklist = $permissionService->canViewPharmacyWorklist($currentUser);
+$canOpenPhysiotherapyWorklist = $permissionService->canViewPhysiotherapyWorklist($currentUser);
+$canOpenAdmissionCensus = $permissionService->isAdministrator($currentUser)
+    || in_array($workspaceUserRole, ['Receptionist', 'Records Officer', 'Nurse'], true)
+    || in_array($workspaceUserDepartment, ['Reception', 'Records', 'Nursing'], true);
+
 $canViewPatientChart = $permissionService->canViewMedicalRecord(
     (int)$visit['patient_id'],
     $currentUser
@@ -269,6 +285,7 @@ $workspaceMedicalHistorySummary = $canViewMedicalHistory
 
 $consultationTablesReady = workspaceTableExists($pdo, 'consultations');
 $notificationTablesReady = workspaceTableExists($pdo, 'department_notifications');
+$userNotificationTablesReady = workspaceTableExists($pdo, 'user_notifications');
 $vitalSignsTablesReady = workspaceTableExists($pdo, 'vital_signs');
 $nursingTablesReady = workspaceTableExists($pdo, 'nursing_assessments');
 $consultationService = $consultationTablesReady ? new ConsultationService($pdo) : null;
@@ -328,6 +345,8 @@ if ($activeTab === 'theatre' && !$canViewTheatre) {
 $departments = $visitService->getDepartments();
 $departmentNotificationService = $notificationTablesReady ? new DepartmentNotificationService($pdo) : null;
 $visitNotifications = $departmentNotificationService ? $departmentNotificationService->listForVisit($visitId) : [];
+$userNotificationService = $userNotificationTablesReady ? new UserNotificationService($pdo) : null;
+$notificationUsers = $userNotificationService ? $userNotificationService->listActiveUsers() : [];
 
 $laboratoryTablesReady = workspaceTableExists($pdo, 'laboratory_requests')
     && workspaceTableExists($pdo, 'laboratory_results');
@@ -430,6 +449,23 @@ $workspaceNotesResult = $canViewClinicalNotes
     ? $clinicalNoteService->listEncounterNotes($visitId, $currentUser, [], 1, 25)
     : ['success' => true, 'data' => ['records' => [], 'total_results' => 0], 'errors' => []];
 $notes = $workspaceNotesResult['data']['records'] ?? [];
+
+$workspaceTabTitles = [
+    'overview' => 'Encounter Overview',
+    'consultation' => 'Encounter Consultation',
+    'vitals' => 'Encounter Vital Signs',
+    'nursing' => 'Encounter Nurse',
+    'laboratory' => 'Encounter Laboratory',
+    'radiology' => 'Encounter X-Ray',
+    'pharmacy' => 'Encounter Pharmacy',
+    'billing' => 'Encounter Billing',
+    'admission' => 'Encounter Admission',
+    'physiotherapy' => 'Encounter Physiotherapy',
+    'theatre' => 'Encounter Theatre',
+    'documents' => 'Encounter Documents',
+    'notes' => 'Encounter Notes',
+];
+$pageTitle = $workspaceTabTitles[(string)$activeTab] ?? 'Encounter Workspace';
 
 /*
 |--------------------------------------------------------------------------

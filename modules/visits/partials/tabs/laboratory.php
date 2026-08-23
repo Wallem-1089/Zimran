@@ -20,7 +20,9 @@ $requestSource = $laboratoryRequestSource ?? 'Clinical';
                 <p>Laboratory requests and results linked to this encounter.</p>
             </div>
             <div>
-                <a class="btn-secondary" href="../laboratory/index.php">Worklist</a>
+                <?php if (!empty($canOpenLaboratoryWorklist)): ?>
+                    <a class="btn-secondary" href="../laboratory/index.php">Worklist</a>
+                <?php endif; ?>
                 <?php if (!$laboratoryTablesReady): ?>
                     <span class="badge badge-warning">Migration required</span>
                 <?php elseif (!$canViewLaboratory): ?>

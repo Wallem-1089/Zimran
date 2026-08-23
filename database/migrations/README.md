@@ -319,3 +319,49 @@ The migration seeds `view_admissions`, `create_admission`,
 `transfer_admission`, `discharge_admission`, and `manage_wards_beds`.
 Administrator retains full access through the normal permission override.
 Reception, Records, Doctor, and Nursing roles receive practical access levels.
+
+## Migration 038 - Clinical Cross-View Permissions
+
+`038_clinical_cross_view_permissions_up.sql` aligns role grants with the
+encounter-centered clinical viewing policy. Doctor, Nurse, Laboratory
+Scientist, Radiographer, Physiotherapist, Theatre Staff, Pharmacist, and
+Records Officer receive view-only access across the core clinical context
+permissions: Medical Records, Consultation, Vital Signs, Nursing, Laboratory,
+Radiology, Physiotherapy, Theatre, and Pharmacy.
+
+The migration does not grant additional create, edit, complete, dispense, or
+financial permissions. Department-owned mutation rules remain unchanged; Vital
+Signs mutation remains limited to Doctor, Nurse, and Administrator.
+
+The down migration removes only the added cross-view grants and preserves each
+role's original department-owned mutation permissions.
+
+## Migration 039 - Security Lockout Threshold
+
+`039_security_lockout_threshold_10_up.sql` updates the existing
+`security.lockout_threshold` setting from 5 to 10 failed login attempts and
+keeps the validation range at 1-20. The application fallback in `config/app.php`
+also uses 10.
+
+The down migration restores the original Phase 1 default of 5 attempts.
+
+## Migration 040 - Receptionist Admission Permission Repair
+
+`040_receptionist_admission_permission_repair_up.sql` idempotently ensures the
+Receptionist role has `view_admissions` and `create_admission`. This matches
+the intended inpatient admission policy from Migration 037 and repairs any live
+permission ledger drift.
+
+The down migration is intentionally a no-op so it does not remove the baseline
+Migration 037 admission grants.
+
+## Migration 041 - User Notifications
+
+`041_user_notifications_up.sql` creates `user_notifications` for direct
+staff-to-staff encounter attention requests. These notifications link to an
+existing patient and visit, target one user account, and support
+Unread/Read/Resolved statuses. They do not transfer encounter ownership, alter
+queues, or replace Department Notifications.
+
+The down migration drops only the `user_notifications` table and should be
+reviewed before use on databases containing notification history.

@@ -330,3 +330,15 @@ targets should be tracked separately from feature tests:
   fallback routes.
 - Consultation handwriting mode should be manually smoke-tested in create/edit,
   review, and view pages because it is a browser pointer/canvas interaction.
+
+## Migration 038 Clinical Cross-View Permissions
+
+When testing clinical module access, verify both sides of the current policy:
+
+- Doctor, Nurse, Laboratory Scientist, Radiographer/X-Ray, Physiotherapist,
+  Theatre Staff, Pharmacist, and Records Officer can view the core clinical
+  encounter context where patient/encounter scope permits it.
+- Create/edit/complete/process/dispense permissions remain department-owned.
+- Vital Signs create/edit remains limited to Doctor, Nurse, and Administrator.
+
+Migration 038 was applied live with guarded backup flow on 2026-08-23.

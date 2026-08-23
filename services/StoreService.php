@@ -251,7 +251,7 @@ class StoreService
             $balance = $this->fetchBalance($item['id'], $payload['data']['department_id']);
             if (!$balance || (float)$balance['quantity'] < (float)$payload['data']['quantity']) {
                 $this->rollback();
-                return $this->failure(['Insufficient stock for the selected department.']);
+                return $this->failure(['Insufficient stock in the selected department for dispensing.']);
             }
 
             $stmt = $this->pdo->prepare('
@@ -494,7 +494,7 @@ class StoreService
                 && (float)$fromBalance['quantity'] < (float)$movement['data']['quantity']
             ) {
                 $this->rollback();
-                return $this->failure(['Insufficient stock for the selected department.']);
+                return $this->failure([$this->insufficientStockMessage($transactionType)]);
             }
 
             $stmt = $this->pdo->prepare('
@@ -629,6 +629,16 @@ class StoreService
                 'audit_description' => $auditDescription,
             ],
         ];
+    }
+
+    private function insufficientStockMessage(string $transactionType): string
+    {
+        return match ($transactionType) {
+            'Issue' => 'Insufficient Central Store stock to issue this quantity.',
+            'Return' => 'Insufficient stock in the returning department.',
+            'Adjustment' => 'Insufficient stock in the selected department to decrease this quantity.',
+            default => 'Insufficient stock for this movement.',
+        };
     }
 
     private function normalizeMovementPayload(string $transactionType, array $data): array

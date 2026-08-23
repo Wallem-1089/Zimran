@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-if (!csrfVerify($_POST['csrf_token'] ?? null)) {
+if (!verifyCsrfToken($_POST['csrf_token'] ?? null)) {
     $_SESSION['validation_errors'] = ['Invalid CSRF token.'];
     $_SESSION['old_store_item'] = $_POST;
     header('Location: edit.php?id=' . (int)($_POST['id'] ?? 0));
@@ -36,4 +36,3 @@ if (($result['success'] ?? false) !== true) {
 $_SESSION['success_message'] = 'Inventory item updated successfully.';
 header('Location: view.php?id=' . $itemId);
 exit;
-

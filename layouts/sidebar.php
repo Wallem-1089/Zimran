@@ -9,16 +9,54 @@ if (!isset($currentUser)) {
 $currentPage = basename($_SERVER['PHP_SELF']);
 
 $canAccessMedicalRecordsSidebar = false;
+$canAccessAccountsSidebar = false;
+$canAccessStoreSidebar = false;
+$canAccessAdmissionsSidebar = false;
+$canAccessPharmacySidebar = false;
+$canAccessBillingSidebar = false;
+$canAccessReportsSidebar = false;
+$canAccessDepartmentSwitchSidebar = false;
 $departmentNotificationCount = 0;
+$userNotificationCount = 0;
 
 if ($currentUser && isset($pdo)) {
     require_once __DIR__ . '/../services/PermissionService.php';
     require_once __DIR__ . '/../services/DepartmentNotificationService.php';
+    require_once __DIR__ . '/../services/UserNotificationService.php';
     $sidebarPermissionService = new PermissionService($pdo);
-    $canAccessMedicalRecordsSidebar = $sidebarPermissionService->hasPermission(
-        'view_medical_record',
-        $currentUser
+    $sidebarRole = (string)($currentUser['role_name'] ?? '');
+    $sidebarDepartment = (string)(
+        $currentUser['active_department_name']
+        ?? $_SESSION['active_department_name']
+        ?? $currentUser['department_name']
+        ?? ''
     );
+    $sidebarIsAdmin = $sidebarPermissionService->isAdministrator($currentUser);
+    $sidebarRoleIn = static fn(array $roles): bool => in_array($sidebarRole, $roles, true);
+    $sidebarDepartmentIn = static fn(array $departments): bool => in_array($sidebarDepartment, $departments, true);
+
+    $canAccessMedicalRecordsSidebar = $sidebarIsAdmin
+        || $sidebarRoleIn(['Records Officer'])
+        || $sidebarDepartmentIn(['Records']);
+    $canAccessAccountsSidebar = $sidebarIsAdmin
+        || $sidebarRoleIn(['Accountant', 'Accounts'])
+        || $sidebarDepartmentIn(['Accounts']);
+    $canAccessStoreSidebar = $sidebarIsAdmin
+        || $sidebarRoleIn(['Store Officer'])
+        || $sidebarDepartmentIn(['Store']);
+    $canAccessAdmissionsSidebar = $sidebarIsAdmin
+        || $sidebarRoleIn(['Receptionist', 'Records Officer', 'Doctor', 'Nurse'])
+        || $sidebarDepartmentIn(['Reception', 'Records', 'Doctor', 'Nursing']);
+    $canAccessPharmacySidebar = $sidebarIsAdmin
+        || $sidebarRoleIn(['Pharmacist'])
+        || $sidebarDepartmentIn(['Pharmacy']);
+    $canAccessBillingSidebar = $sidebarIsAdmin
+        || $sidebarRoleIn(['Accountant', 'Accounts'])
+        || $sidebarDepartmentIn(['Accounts']);
+    $canAccessReportsSidebar = $sidebarIsAdmin
+        || $sidebarRoleIn(['Accountant', 'Accounts', 'Store Officer', 'Records Officer'])
+        || $sidebarDepartmentIn(['Accounts', 'Store', 'Records']);
+
     $sidebarDepartmentId = (int)(
         $currentUser['active_department_id']
         ?? $_SESSION['active_department_id']
@@ -27,6 +65,30 @@ if ($currentUser && isset($pdo)) {
     );
     if ($sidebarDepartmentId > 0) {
         $departmentNotificationCount = (new DepartmentNotificationService($pdo))->getUnreadCount($sidebarDepartmentId);
+    }
+    try {
+        $userNotificationCount = (new UserNotificationService($pdo))->getUnreadCount((int)($currentUser['id'] ?? 0));
+    } catch (Throwable) {
+        $userNotificationCount = 0;
+    }
+
+    if ($sidebarIsAdmin) {
+        $canAccessDepartmentSwitchSidebar = true;
+    } else {
+        try {
+            $stmt = $pdo->prepare('
+                SELECT COUNT(*)
+                FROM user_departments ud
+                INNER JOIN departments d ON d.id = ud.department_id
+                WHERE ud.user_id = :user_id
+                  AND ud.is_active = 1
+                  AND d.is_active = 1
+            ');
+            $stmt->execute([':user_id' => (int)($currentUser['id'] ?? 0)]);
+            $canAccessDepartmentSwitchSidebar = (int)$stmt->fetchColumn() > 1;
+        } catch (Throwable) {
+            $canAccessDepartmentSwitchSidebar = false;
+        }
     }
 }
 
@@ -112,6 +174,16 @@ if ($currentUser && isset($pdo)) {
 
             </li>
 
+            <li>
+
+                <a href="<?= e($baseUrl) ?>/modules/user_notifications/index.php">
+
+                    My Notifications<?= $userNotificationCount > 0 ? ' (' . (int)$userNotificationCount . ')' : '' ?>
+
+                </a>
+
+            </li>
+
             <?php if ($canAccessMedicalRecordsSidebar): ?>
 
                 <li>
@@ -126,7 +198,7 @@ if ($currentUser && isset($pdo)) {
 
             <?php endif; ?>
 
-            <?php if ($currentUser && $sidebarPermissionService->canViewBillableItems($currentUser)): ?>
+            <?php if ($canAccessAccountsSidebar): ?>
 
                 <li>
 
@@ -140,7 +212,7 @@ if ($currentUser && isset($pdo)) {
 
             <?php endif; ?>
 
-            <?php if ($currentUser && $sidebarPermissionService->canViewInventory($currentUser)): ?>
+            <?php if ($canAccessStoreSidebar): ?>
 
                 <li>
 
@@ -154,7 +226,7 @@ if ($currentUser && isset($pdo)) {
 
             <?php endif; ?>
 
-            <?php if ($currentUser && $sidebarPermissionService->canViewAdmissions($currentUser)): ?>
+            <?php if ($canAccessAdmissionsSidebar): ?>
 
                 <li>
 
@@ -168,7 +240,7 @@ if ($currentUser && isset($pdo)) {
 
             <?php endif; ?>
 
-            <?php if ($currentUser && $sidebarPermissionService->hasPermission('view_pharmacy', $currentUser)): ?>
+            <?php if ($canAccessPharmacySidebar): ?>
 
                 <li>
 
@@ -182,7 +254,7 @@ if ($currentUser && isset($pdo)) {
 
             <?php endif; ?>
 
-            <?php if ($currentUser && $sidebarPermissionService->canViewBilling($currentUser)): ?>
+            <?php if ($canAccessBillingSidebar): ?>
 
                 <li>
 
@@ -196,7 +268,7 @@ if ($currentUser && isset($pdo)) {
 
             <?php endif; ?>
 
-            <?php if ($currentUser && $sidebarPermissionService->canViewReports($currentUser)): ?>
+            <?php if ($canAccessReportsSidebar): ?>
 
                 <li>
 
@@ -224,15 +296,19 @@ if ($currentUser && isset($pdo)) {
 
             <?php endif; ?>
 
-            <li>
+            <?php if ($canAccessDepartmentSwitchSidebar): ?>
 
-                <a href="<?= e($baseUrl) ?>/modules/administration/department_switch.php">
+                <li>
 
-                    Switch Department
+                    <a href="<?= e($baseUrl) ?>/modules/administration/department_switch.php">
 
-                </a>
+                        Switch Department
 
-            </li>
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
 
         </ul>
 

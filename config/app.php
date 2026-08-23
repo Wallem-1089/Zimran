@@ -90,7 +90,7 @@ return [
 
     'security' => [
 
-        'max_failed_login_attempts' => 5,
+        'max_failed_login_attempts' => 10,
 
         'session_timeout_seconds' => 1800
 

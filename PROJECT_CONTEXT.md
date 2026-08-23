@@ -1134,6 +1134,12 @@ The current operational application includes:
 - Inpatient Admissions / Ward & Bed workflow: admit an active encounter to a
   ward/bed, transfer ward/bed, discharge/cancel admission, view inpatient
   census, and manage basic wards/beds.
+- Clinical cross-view permissions from Migration 038 are live: Doctor, Nurse,
+  Laboratory Scientist, Radiographer/X-Ray, Physiotherapist, Theatre Staff,
+  Pharmacist, and Records Officer can view core clinical context across the
+  active encounter while create/edit/complete rights remain owned by each
+  department module. Vital Signs mutation remains limited to Doctor, Nurse, and
+  Administrator.
 
 Consultation supports both typed narrative entry and an optional Doctor/Admin
 handwriting pad. The handwriting feature stores compact stroke data in the

@@ -127,10 +127,18 @@ class AuthService
 
         if (!password_verify($password, $user['password'])) {
 
-            $this->userService->recordFailedLogin(
+            $failedLogin = $this->userService->recordFailedLogin(
                 (int)$user['id'],
                 $this->lockoutThreshold()
             );
+
+            $message = 'Invalid username, employee ID or password.';
+            if (($failedLogin['locked'] ?? false) === true) {
+                $message = 'Invalid username, employee ID or password. Your account is now locked. Contact an administrator.';
+            } elseif (isset($failedLogin['remaining']) && (int)$failedLogin['remaining'] > 0) {
+                $remaining = (int)$failedLogin['remaining'];
+                $message .= ' ' . $remaining . ' login ' . ($remaining === 1 ? 'attempt' : 'attempts') . ' remaining before account lock.';
+            }
 
             return [
 
@@ -140,7 +148,7 @@ class AuthService
 
             'code' => 401,
 
-            'message' => 'Invalid username, employee ID or password.',
+            'message' => $message,
 
             'user' => null,
 

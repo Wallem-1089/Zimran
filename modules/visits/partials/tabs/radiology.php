@@ -20,7 +20,9 @@ $requestSource = $radiologyRequestSource ?? 'Clinical';
                 <p>Radiology requests and reports linked to this encounter.</p>
             </div>
             <div>
-                <a class="btn-secondary" href="../radiology/index.php">Worklist</a>
+                <?php if (!empty($canOpenRadiologyWorklist)): ?>
+                    <a class="btn-secondary" href="../radiology/index.php">Worklist</a>
+                <?php endif; ?>
                 <?php if (!$radiologyTablesReady): ?>
                     <span class="badge badge-warning">Migration required</span>
                 <?php elseif (!$canViewRadiology): ?>

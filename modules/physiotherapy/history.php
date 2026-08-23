@@ -39,7 +39,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p><?= e((string)$patient['first_name']) ?> <?= e((string)$patient['last_name']) ?> — <?= e((string)$patient['hospital_number']) ?></p>
         </div>
         <div class="form-actions">
-            <a class="btn-secondary" href="index.php">Worklist</a>
+            <?php if ($permissionService->canViewPhysiotherapyWorklist($currentUser)): ?>
+                <a class="btn-secondary" href="index.php">Worklist</a>
+            <?php endif; ?>
             <?php if ($visitId > 0): ?>
                 <a class="btn-secondary" href="<?= e(physiotherapyBackToWorkspace($visitId)) ?>">Workspace</a>
             <?php endif; ?>

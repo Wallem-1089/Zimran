@@ -385,7 +385,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         <a
 
-            href="workspace.php?id=<?= $visitId ?>"
+            href="workspace.php?id=<?= (int)$visitId ?>"
 
             class="btn-secondary">
 

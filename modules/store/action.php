@@ -11,7 +11,7 @@ if (!$storeTablesReady) {
 
 storeRequireManageAccess($permissionService, $currentUser);
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !csrfVerify($_POST['csrf_token'] ?? null)) {
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verifyCsrfToken($_POST['csrf_token'] ?? null)) {
     http_response_code(400);
     exit('Invalid request.');
 }
@@ -36,4 +36,3 @@ $_SESSION['success_message'] = $action === 'activate'
     : 'Inventory item deactivated successfully.';
 header('Location: view.php?id=' . $itemId);
 exit;
-

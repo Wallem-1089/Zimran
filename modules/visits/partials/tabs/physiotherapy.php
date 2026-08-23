@@ -20,7 +20,9 @@ $requestSource = $physiotherapyRequestSource ?? 'Clinical';
                 <p>Physiotherapy records and sessions linked to this encounter.</p>
             </div>
             <div>
-                <a class="btn-secondary" href="../physiotherapy/index.php">Worklist</a>
+                <?php if (!empty($canOpenPhysiotherapyWorklist)): ?>
+                    <a class="btn-secondary" href="../physiotherapy/index.php">Worklist</a>
+                <?php endif; ?>
                 <?php if (!$physiotherapyTablesReady): ?>
                     <span class="badge badge-warning">Migration required</span>
                 <?php elseif (!$canViewPhysiotherapy): ?>

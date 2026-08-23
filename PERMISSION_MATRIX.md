@@ -166,7 +166,7 @@ doctor. Patient audit history remains more restrictive than general chart view.
 
 | Permission | Status | Seeded roles |
 |---|---|---|
-| `view_radiology` | Implemented | Records Officer, Doctor, Nurse, Radiographer |
+| `view_radiology` | Implemented | Records Officer plus clinical roles: Doctor, Nurse, Laboratory Scientist, Radiographer, Physiotherapist, Theatre Staff, Pharmacist |
 | `create_radiology_request` | Implemented | Doctor, Radiographer |
 | `process_radiology_request` | Implemented | Radiographer |
 | `enter_radiology_report` | Implemented | Radiographer |
@@ -177,7 +177,7 @@ doctor. Patient audit history remains more restrictive than general chart view.
 
 | Permission | Status | Seeded roles |
 |---|---|---|
-| `view_physiotherapy` | Implemented | Records Officer, Doctor, Nurse, Physiotherapist |
+| `view_physiotherapy` | Implemented | Records Officer plus clinical roles: Doctor, Nurse, Laboratory Scientist, Radiographer, Physiotherapist, Theatre Staff, Pharmacist |
 | `create_physiotherapy` | Implemented | Doctor, Physiotherapist |
 | `edit_physiotherapy` | Implemented | Physiotherapist |
 | `manage_physiotherapy_sessions` | Implemented | Physiotherapist |
@@ -187,7 +187,7 @@ doctor. Patient audit history remains more restrictive than general chart view.
 
 | Permission | Status | Seeded roles |
 |---|---|---|
-| `view_theatre` | Implemented | Doctor, Nurse, Theatre Staff |
+| `view_theatre` | Implemented | Records Officer plus clinical roles: Doctor, Nurse, Laboratory Scientist, Radiographer, Physiotherapist, Theatre Staff, Pharmacist |
 | `create_theatre` | Implemented | Doctor, Theatre Staff |
 | `edit_theatre` | Implemented | Doctor, Theatre Staff |
 | `complete_theatre` | Implemented | Doctor, Theatre Staff |
@@ -295,12 +295,12 @@ confidentiality checks remain additive to permission keys.
 
 ## Phase 3.1 Consultation permissions
 
-| Permission | Administrator | Doctor | Other roles |
-|---|---:|---:|---:|
-| `view_consultation` | Yes | Yes | No by default |
-| `create_consultation` | Active encounters only | Active assigned/accessible encounters | No by default |
-| `edit_consultation` | Draft + active encounters only | Draft + active assigned/accessible encounters | No by default |
-| `complete_consultation` | Draft + active encounters only | Draft + active assigned/accessible encounters | No by default |
+| Permission | Administrator | Doctor | Nurse | Laboratory | Radiology/X-Ray | Pharmacy | Other clinical roles | Other roles |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `view_consultation` | Yes | Yes | Yes | Yes | Yes | Yes | Yes | No default |
+| `create_consultation` | Active encounters only | Active assigned/accessible encounters | No | No | No | No | No | No |
+| `edit_consultation` | Draft + active encounters only | Draft + active assigned/accessible encounters | No | No | No | No | No | No |
+| `complete_consultation` | Draft + active encounters only | Draft + active assigned/accessible encounters | No | No | No | No | No | No |
 
 Administrator actions are actor-attributed but do not replace the assigned
 clinical doctor. Completed and cancelled encounters are read-only for normal
@@ -313,11 +313,11 @@ override remains available for development/testing.
 
 ## Phase 3.2 Vital Signs permissions
 
-| Permission | Administrator | Doctor | Nurse | Records Officer | Other roles |
-|---|---:|---:|---:|---:|---:|
-| `view_vital_signs` | Yes | Yes | Yes | Yes | No default |
-| `create_vital_signs` | Yes | Yes | Yes | No default | No default |
-| `edit_vital_signs` | Yes | Yes | Yes | No default | No default |
+| Permission | Administrator | Doctor | Nurse | Laboratory | Radiology/X-Ray | Pharmacy | Other clinical roles | Records Officer | Other roles |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `view_vital_signs` | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | No default |
+| `create_vital_signs` | Yes | Yes | Yes | No | No | No | No | No default | No default |
+| `edit_vital_signs` | Yes | Yes | Yes | No | No | No | No | No default | No default |
 
 All three permissions still require an accessible encounter for mutation.
 Completed/cancelled encounters remain read-only. The Encounter Workspace and
@@ -327,14 +327,14 @@ but the service still validates encounter status and patient/visit matching.
 
 ## Phase 3.4 Laboratory permissions
 
-| Permission | Administrator | Laboratory Scientist | Doctor | Nurse | Other roles |
-|---|---:|---:|---:|---:|---:|
-| `view_laboratory` | Yes | Yes | Yes | Yes | No default |
-| `create_laboratory_request` | Yes | Direct requests | Clinical requests | No default | No default |
-| `process_laboratory_request` | Yes | Yes | No | No | No |
-| `enter_laboratory_result` | Yes | Yes | No | No | No |
-| `edit_laboratory_result` | Yes | Yes | No | No | No |
-| `complete_laboratory_request` | Yes | Yes | No | No | No |
+| Permission | Administrator | Laboratory Scientist | Doctor | Nurse | Radiology/X-Ray | Pharmacy | Other clinical roles | Other roles |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `view_laboratory` | Yes | Yes | Yes | Yes | Yes | Yes | Yes | No default |
+| `create_laboratory_request` | Yes | Direct requests | Clinical requests | No | No | No | No | No |
+| `process_laboratory_request` | Yes | Yes | No | No | No | No | No | No |
+| `enter_laboratory_result` | Yes | Yes | No | No | No | No | No | No |
+| `edit_laboratory_result` | Yes | Yes | No | No | No | No | No | No |
+| `complete_laboratory_request` | Yes | Yes | No | No | No | No | No | No |
 
 Laboratory requests remain encounter-linked. Direct Laboratory patients do not
 require a Consultation or Doctor assignment. Laboratory notifications request
@@ -371,12 +371,12 @@ pricing, dispensing, patient charges, invoices, or receipts.
 
 ## Phase 4.3 Pharmacy permissions
 
-| Permission | Administrator | Pharmacist | Doctor | Nurse | Other roles |
-|---|---:|---:|---:|---:|---:|
-| `view_pharmacy` | Yes | Yes | Yes | Yes | No default |
-| `create_prescription` | Yes | Direct prescriptions | Clinical prescriptions | No default | No default |
-| `edit_prescription` | Yes | Direct prescriptions before dispensing | Clinical prescriptions before dispensing | No | No |
-| `dispense_prescription` | Yes | Yes | No | No | No |
+| Permission | Administrator | Pharmacist | Doctor | Nurse | Laboratory | Radiology/X-Ray | Other clinical roles | Other roles |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `view_pharmacy` | Yes | Yes | Yes | Yes | Yes | Yes | Yes | No default |
+| `create_prescription` | Yes | Direct prescriptions | Clinical prescriptions | No | No | No | No | No |
+| `edit_prescription` | Yes | Direct prescriptions before dispensing | Clinical prescriptions before dispensing | No | No | No | No | No |
+| `dispense_prescription` | Yes | Yes | No | No | No | No | No | No |
 
 Pharmacy owns prescriptions and dispensing only. Dispensing reduces Pharmacy
 department stock through Store inventory logic and does not create patient

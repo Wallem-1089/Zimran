@@ -407,17 +407,21 @@ $canAssignDoctor = !isset($permissionService)
 
         <?php endif; ?>
 
-        <?php if (!$isClosedEncounter && $canTransfer): ?>
+        <?php if (!$isClosedEncounter && ($canTransfer || $canAssignDoctor)): ?>
 
         <div class="form-actions encounter-workflow-actions">
 
-            <a
-                href="transfer.php?visit=<?= (int)$visit['id'] ?>"
-                class="btn-secondary">
+            <?php if ($canTransfer): ?>
 
-                Transfer Department
+                <a
+                    href="transfer.php?visit=<?= (int)$visit['id'] ?>"
+                    class="btn-secondary">
 
-            </a>
+                    Transfer Department
+
+                </a>
+
+            <?php endif; ?>
 
             <?php if ($canAssignDoctor): ?>
 

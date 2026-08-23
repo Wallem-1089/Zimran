@@ -69,7 +69,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
         <div class="form-actions">
             <a class="btn-secondary" href="<?= e(physiotherapyBackToWorkspace($visitId)) ?>">Workspace</a>
-            <a class="btn-secondary" href="index.php">Worklist</a>
+            <?php if ($permissionService->canViewPhysiotherapyWorklist($currentUser)): ?>
+                <a class="btn-secondary" href="index.php">Worklist</a>
+            <?php endif; ?>
         </div>
     </div>
 

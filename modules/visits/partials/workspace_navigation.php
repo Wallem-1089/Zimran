@@ -46,7 +46,7 @@ function isActiveTab(
     <div class="workspace-grid">
 
         <a
-            href="workspace.php?id=<?= $visitId ?>&tab=overview"
+            href="workspace.php?id=<?= (int)$visitId ?>&tab=overview"
             class="workspace-card<?= isActiveTab('overview', $activeTab) ?>">
 
             <div class="workspace-icon">
@@ -74,7 +74,7 @@ function isActiveTab(
         </a>
 
         <a
-            href="workspace.php?id=<?= $visitId ?>&tab=consultation"
+            href="workspace.php?id=<?= (int)$visitId ?>&tab=consultation"
             class="workspace-card<?= isActiveTab('consultation', $activeTab) ?>">
 
             <div class="workspace-icon">
@@ -102,7 +102,7 @@ function isActiveTab(
         </a>
 
         <a
-            href="workspace.php?id=<?= $visitId ?>&tab=vitals"
+            href="workspace.php?id=<?= (int)$visitId ?>&tab=vitals"
             class="workspace-card<?= isActiveTab('vitals', $activeTab) ?>">
 
             <div class="workspace-icon">
@@ -130,7 +130,7 @@ function isActiveTab(
         </a>
 
         <a
-            href="workspace.php?id=<?= $visitId ?>&tab=nursing"
+            href="workspace.php?id=<?= (int)$visitId ?>&tab=nursing"
             class="workspace-card<?= isActiveTab('nursing', $activeTab) ?>">
 
             <div class="workspace-icon">
@@ -158,7 +158,7 @@ function isActiveTab(
         </a>
 
         <a
-            href="workspace.php?id=<?= $visitId ?>&tab=laboratory"
+            href="workspace.php?id=<?= (int)$visitId ?>&tab=laboratory"
             class="workspace-card<?= isActiveTab('laboratory', $activeTab) ?>">
 
             <div class="workspace-icon">
@@ -186,7 +186,7 @@ function isActiveTab(
         </a>
 
         <a
-            href="workspace.php?id=<?= $visitId ?>&tab=radiology"
+            href="workspace.php?id=<?= (int)$visitId ?>&tab=radiology"
             class="workspace-card<?= isActiveTab('radiology', $activeTab) ?>">
 
             <div class="workspace-icon">
@@ -214,7 +214,7 @@ function isActiveTab(
         </a>
 
         <a
-            href="workspace.php?id=<?= $visitId ?>&tab=pharmacy"
+            href="workspace.php?id=<?= (int)$visitId ?>&tab=pharmacy"
             class="workspace-card<?= isActiveTab('pharmacy', $activeTab) ?>">
 
             <div class="workspace-icon">
@@ -242,7 +242,7 @@ function isActiveTab(
         </a>
 
         <a
-            href="workspace.php?id=<?= $visitId ?>&tab=billing"
+            href="workspace.php?id=<?= (int)$visitId ?>&tab=billing"
             class="workspace-card<?= isActiveTab('billing', $activeTab) ?>">
 
             <div class="workspace-icon">
@@ -270,7 +270,7 @@ function isActiveTab(
         </a>
 
         <a
-            href="workspace.php?id=<?= $visitId ?>&tab=admission"
+            href="workspace.php?id=<?= (int)$visitId ?>&tab=admission"
             class="workspace-card<?= isActiveTab('admission', $activeTab) ?>">
 
             <div class="workspace-icon">
@@ -298,7 +298,7 @@ function isActiveTab(
         </a>
 
         <a
-            href="workspace.php?id=<?= $visitId ?>&tab=physiotherapy"
+            href="workspace.php?id=<?= (int)$visitId ?>&tab=physiotherapy"
             class="workspace-card<?= isActiveTab('physiotherapy', $activeTab) ?>">
 
             <div class="workspace-icon">
@@ -326,7 +326,7 @@ function isActiveTab(
         </a>
 
         <a
-            href="workspace.php?id=<?= $visitId ?>&tab=theatre"
+            href="workspace.php?id=<?= (int)$visitId ?>&tab=theatre"
             class="workspace-card<?= isActiveTab('theatre', $activeTab) ?>">
 
             <div class="workspace-icon">
@@ -354,7 +354,7 @@ function isActiveTab(
         </a>
 
         <a
-            href="workspace.php?id=<?= $visitId ?>&tab=documents"
+            href="workspace.php?id=<?= (int)$visitId ?>&tab=documents"
             class="workspace-card<?= isActiveTab('documents', $activeTab) ?>">
 
             <div class="workspace-icon">
@@ -382,7 +382,7 @@ function isActiveTab(
         </a>
 
         <a
-            href="workspace.php?id=<?= $visitId ?>&tab=notes"
+            href="workspace.php?id=<?= (int)$visitId ?>&tab=notes"
             class="workspace-card<?= isActiveTab('notes', $activeTab) ?>">
 
             <div class="workspace-icon">

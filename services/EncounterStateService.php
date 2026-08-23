@@ -153,6 +153,17 @@ class EncounterStateService
             ];
         }
 
+        if (($encounter['current_department_received_status'] ?? 'Pending')
+            !== 'Received'
+        ) {
+            return [
+                'success' => false,
+                'errors' => [
+                    'The current department must receive this encounter before it can be transferred again.'
+                ]
+            ];
+        }
+
         if (!in_array($transferType, self::TRANSFER_TYPES, true)) {
             return [
                 'success' => false,

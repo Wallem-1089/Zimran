@@ -95,32 +95,6 @@ if (!$stateValidation['success']) {
 
 /*
 |--------------------------------------------------------------------------
-| Only Doctor Department
-|--------------------------------------------------------------------------
-*/
-
-if (
-
-    $visit['department_name'] !== 'Doctor'
-
-) {
-
-    $_SESSION['error_message'] =
-
-        'Doctor assignment is only available in the Doctor department.';
-
-    header(
-
-        'Location: workspace.php?id=' . $visitId
-
-    );
-
-    exit;
-
-}
-
-/*
-|--------------------------------------------------------------------------
 | Doctors
 |--------------------------------------------------------------------------
 */
@@ -129,7 +103,7 @@ $doctors =
 
     $visitService->getAvailableDoctors(
 
-        (int)$visit['current_department_id']
+        null
 
     );
 
@@ -285,7 +259,7 @@ Assign Doctor
 
 <a
 
-    href="workspace.php?id=<?= $visitId ?>"
+    href="workspace.php?id=<?= (int)$visitId ?>"
 
     class="btn btn-secondary"
 

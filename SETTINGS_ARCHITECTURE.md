@@ -245,7 +245,7 @@ The import page is an explicit non-functional placeholder and accepts no file. E
 
 | Consumer | Keys | Behavior |
 |---|---|---|
-| `AuthService` | `security.lockout_threshold` | Database value with `config/app.php` maximum-failure value passed as fallback. |
+| `AuthService` | `security.lockout_threshold` | Database value with `config/app.php` maximum-failure value passed as fallback. Current default is 10 failed attempts; login feedback shows remaining attempts for recognized active accounts before lockout. |
 | `SessionService` | `security.session_timeout_minutes` | Database minutes with configured timeout seconds converted/passed as fallback. |
 | Administration settings pages | All definitions, groups, history, search and export | Full management subject to permission and CSRF. |
 

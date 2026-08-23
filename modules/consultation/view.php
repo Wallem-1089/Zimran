@@ -5,7 +5,10 @@ declare(strict_types=1);
 require __DIR__ . '/_bootstrap.php';
 
 $consultationId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: 0;
-$consultation = $consultationService->getById($consultationId);
+$visitId = filter_input(INPUT_GET, 'visit', FILTER_VALIDATE_INT) ?: 0;
+$consultation = $consultationId > 0
+    ? $consultationService->getById($consultationId)
+    : ($visitId > 0 ? $consultationService->getByVisit($visitId) : null);
 if (!$consultation) {
     http_response_code(404);
     exit('Consultation not found.');

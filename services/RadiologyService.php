@@ -152,7 +152,7 @@ class RadiologyService
 
     public function listWorklist(?array $user = null, array $filters = []): array
     {
-        if ($user !== null && !$this->permissionService->hasPermission('view_radiology', $user)) {
+        if ($user !== null && !$this->permissionService->canViewRadiologyWorklist($user)) {
             return [];
         }
 

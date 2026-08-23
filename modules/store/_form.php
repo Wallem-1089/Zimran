@@ -31,6 +31,7 @@ $buttonLabel ??= 'Save Item';
         <div class="form-group">
             <label for="unit">Unit</label>
             <input type="text" id="unit" name="unit" maxlength="50" required value="<?= e((string)($item['unit'] ?? '')) ?>">
+            <small class="text-muted">Measurement unit only, for example tablet, capsule, box, vial, or pack. Do not enter stock quantity here.</small>
         </div>
         <div class="form-group">
             <label for="billable_item_id">Billable Item</label>
@@ -62,4 +63,3 @@ $buttonLabel ??= 'Save Item';
         <a class="btn-secondary" href="<?= e(storeBackToIndex()) ?>">Cancel</a>
     </div>
 </form>
-

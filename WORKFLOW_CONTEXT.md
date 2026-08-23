@@ -1172,6 +1172,21 @@ an intentional exception to the normal clinical CRUD lock: clinical records are
 read-only after completion/cancellation, while Billing may still receive
 payments against outstanding invoices.
 
+## Clinical cross-view policy
+
+Migration 038 aligns the live role matrix with the encounter-centered workflow:
+Doctor, Nurse, Laboratory Scientist, Radiographer/X-Ray, Physiotherapist,
+Theatre Staff, Pharmacist, and Records Officer may view the core clinical
+context needed to safely handle a patient encounter. This includes
+Consultation, Vital Signs, Nursing, Laboratory, Radiology, Physiotherapy,
+Theatre, Pharmacy, and Medical Records view context where the normal encounter
+or treatment relationship allows it.
+
+Mutation remains department-owned. Users can only create, edit, complete,
+dispense, or process the tab/workflow their role is responsible for.
+Vital Signs are the shared exception for mutation and can only be created or
+edited by Doctor, Nurse, and Administrator.
+
 ## Current UI and route cleanup notes
 
 The active Encounter Workspace is `modules/visits/workspace.php`; the older

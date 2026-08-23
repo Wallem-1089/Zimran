@@ -119,10 +119,12 @@ class UserService
      * Record a failed login attempt.
      *
      * @param int $userId
-     * @return void
+     * @return array{attempts:int,remaining:int,locked:bool}
      */
-    public function recordFailedLogin(int $userId, int $maxAttempts = 5): void
+    public function recordFailedLogin(int $userId, int $maxAttempts = 10): array
     {
+        $maxAttempts = max(1, $maxAttempts);
+
         try {
             $this->db->beginTransaction();
             $stmt = $this->db->prepare(
@@ -136,7 +138,8 @@ class UserService
             }
 
             $attempts = (int)$attempts + 1;
-            $locked = $attempts >= max(1, $maxAttempts);
+            $locked = $attempts >= $maxAttempts;
+            $remaining = max(0, $maxAttempts - $attempts);
             $update = $this->db->prepare('
                 UPDATE users
                 SET failed_login_attempts = :attempts,
@@ -167,8 +170,18 @@ class UserService
             }
 
             $this->db->commit();
+            return [
+                'attempts' => $attempts,
+                'remaining' => $remaining,
+                'locked' => $locked,
+            ];
         } catch (Throwable $exception) {
             $this->rollback();
+            return [
+                'attempts' => 0,
+                'remaining' => 0,
+                'locked' => false,
+            ];
         }
     }
 

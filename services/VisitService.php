@@ -1303,8 +1303,12 @@ public function canAccessDepartmentWorkspace(
     }
 
     public function getAvailableDoctors(
-    int $departmentId
+    ?int $departmentId = null
 ): array {
+
+    $departmentClause = $departmentId !== null && $departmentId > 0
+        ? 'AND u.department_id = :department'
+        : '';
 
     $stmt = $this->pdo->prepare("
 
@@ -1333,11 +1337,9 @@ public function canAccessDepartmentWorkspace(
 
         WHERE
 
-            u.department_id = :department
-
-        AND
-
             LOWER(r.role_name) = 'doctor'
+
+        $departmentClause
 
         AND
 
@@ -1350,11 +1352,12 @@ public function canAccessDepartmentWorkspace(
 
     ");
 
-    $stmt->execute([
+    $parameters = [];
+    if ($departmentId !== null && $departmentId > 0) {
+        $parameters[':department'] = $departmentId;
+    }
 
-        ':department' => $departmentId
-
-    ]);
+    $stmt->execute($parameters);
 
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -1535,36 +1538,6 @@ public function canAccessDepartmentWorkspace(
             'errors' => [
 
                 'Selected doctor is inactive.'
-
-            ]
-
-        ];
-
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Department Validation
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-
-        (int)$doctor['department_id']
-
-        !==
-
-        (int)$visit['current_department_id']
-
-    ) {
-
-        return [
-
-            'success' => false,
-
-            'errors' => [
-
-                'Doctor does not belong to the current department.'
 
             ]
 

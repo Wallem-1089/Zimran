@@ -188,7 +188,7 @@ class PhysiotherapyService
 
     public function listWorklist(?array $user = null, array $filters = []): array
     {
-        if ($user !== null && !$this->permissionService->hasPermission('view_physiotherapy', $user) && !$this->permissionService->isAdministrator($user)) {
+        if ($user !== null && !$this->permissionService->canViewPhysiotherapyWorklist($user)) {
             return [];
         }
 

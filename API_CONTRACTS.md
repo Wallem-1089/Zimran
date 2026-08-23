@@ -187,6 +187,16 @@ Constructor: `__construct(PDO $db)`. Uses permissions, role permissions, users/d
 | `isAdministrator(?array $user = null): bool` | Administrator role predicate. | Administrator override anchor. |
 | `logDenied(?int $userId, ?int $visitId, string $action, string $description): void` | Writes security denial audit. | No token/payload logging; participates in caller DB state as `AuditService` permits. |
 
+Clinical view permissions are intentionally broader than clinical mutation
+permissions after Migration 038. Doctor, Nurse, Laboratory Scientist,
+Radiographer/X-Ray, Physiotherapist, Theatre Staff, Pharmacist, and Records
+Officer can view core encounter clinical context when the encounter/patient
+scope permits it. Department-specific write helpers remain narrow:
+Consultation writes are Doctor/Admin, Vital Signs writes are Doctor/Nurse/Admin,
+Laboratory writes are Laboratory Scientist/Admin, Radiology writes are
+Radiographer/Admin, Pharmacy dispensing is Pharmacist/Admin, and equivalent
+department ownership remains in place for the other clinical modules.
+
 See [PERMISSION_MATRIX.md](PERMISSION_MATRIX.md) for the implemented permission catalogue and module requirements.
 
 ### `DepartmentService`

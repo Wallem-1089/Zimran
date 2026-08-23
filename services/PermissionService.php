@@ -53,9 +53,9 @@ class PermissionService
             'manage_users' => false,
             'view_medical_record' => in_array(
                 $role,
-                ['Records Officer', 'Doctor', 'Nurse', 'Receptionist'],
+                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist', 'Receptionist'],
                 true
-            ) || in_array($department, ['Records', 'Reception'], true),
+            ) || in_array($department, ['Records', 'Reception', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'view_patient_identifiers' => in_array(
                 $role,
                 ['Records Officer', 'Doctor', 'Nurse', 'Receptionist'],
@@ -99,9 +99,9 @@ class PermissionService
             'view_confidential_notes' => in_array($role, ['Records Officer', 'Doctor'], true),
             'view_vital_signs' => in_array(
                 $role,
-                ['Records Officer', 'Doctor', 'Nurse'],
+                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
                 true
-            ) || in_array($department, ['Records', 'Doctor', 'Nursing'], true),
+            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'create_vital_signs', 'edit_vital_signs' => in_array(
                 $role,
                 ['Doctor', 'Nurse'],
@@ -109,15 +109,15 @@ class PermissionService
             ),
             'view_nursing' => in_array(
                 $role,
-                ['Records Officer', 'Doctor', 'Nurse'],
+                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
                 true
-            ) || in_array($department, ['Records', 'Nursing'], true),
+            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'create_nursing', 'edit_nursing', 'complete_nursing' => $role === 'Nurse',
             'view_laboratory' => in_array(
                 $role,
-                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist'],
+                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
                 true
-            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory'], true),
+            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'create_laboratory_request' => in_array(
                 $role,
                 ['Doctor', 'Laboratory Scientist'],
@@ -127,9 +127,9 @@ class PermissionService
             'edit_laboratory_result', 'complete_laboratory_request' => $role === 'Laboratory Scientist',
             'view_radiology' => in_array(
                 $role,
-                ['Records Officer', 'Doctor', 'Nurse', 'Radiographer'],
+                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
                 true
-            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Radiology'], true),
+            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'create_radiology_request' => in_array(
                 $role,
                 ['Doctor', 'Radiographer'],
@@ -137,11 +137,16 @@ class PermissionService
             ),
             'process_radiology_request', 'enter_radiology_report',
             'edit_radiology_report', 'complete_radiology_request' => $role === 'Radiographer',
+            'view_physiotherapy' => in_array(
+                $role,
+                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
+                true
+            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'Physiotherapy', 'Physio', 'Rehabilitation', 'Theatre', 'Pharmacy'], true),
             'view_theatre' => in_array(
                 $role,
-                ['Doctor', 'Nurse', 'Theatre Staff'],
+                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
                 true
-            ) || in_array($department, ['Doctor', 'Nursing', 'Theatre'], true),
+            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'create_theatre', 'edit_theatre', 'complete_theatre' => in_array(
                 $role,
                 ['Doctor', 'Theatre Staff'],
@@ -149,9 +154,9 @@ class PermissionService
             ) || in_array($department, ['Doctor', 'Theatre'], true),
             'view_pharmacy' => in_array(
                 $role,
-                ['Pharmacist', 'Doctor', 'Nurse', 'Records Officer'],
+                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
                 true
-            ) || in_array($department, ['Pharmacy', 'Doctor', 'Nursing', 'Records'], true),
+            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'create_prescription', 'edit_prescription' => in_array(
                 $role,
                 ['Doctor', 'Pharmacist'],
@@ -299,8 +304,12 @@ class PermissionService
                 ['Records Officer', 'Nurse'],
                 true
             ) || in_array($department, ['Records', 'Nursing'], true),
-            'view_consultation', 'create_consultation',
-            'edit_consultation', 'complete_consultation' => $role === 'Doctor',
+            'view_consultation' => in_array(
+                $role,
+                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
+                true
+            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
+            'create_consultation', 'edit_consultation', 'complete_consultation' => $role === 'Doctor',
             default => false
         };
     }
@@ -557,6 +566,10 @@ class PermissionService
         if ($role === 'Records Officer'
             || in_array($department, ['Records', 'Reception'], true)
         ) {
+            return true;
+        }
+
+        if ($this->isClinicalCrossViewRole($user)) {
             return true;
         }
 
@@ -1097,7 +1110,7 @@ class PermissionService
         return $this->canPerformLongitudinalAction(
             'view_vital_signs',
             $patientId,
-            ['Records Officer', 'Doctor', 'Nurse'],
+            ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
             $user
         );
     }
@@ -1117,7 +1130,7 @@ class PermissionService
         return $this->canPerformLongitudinalAction(
             'view_nursing',
             $patientId,
-            ['Records Officer', 'Doctor', 'Nurse'],
+            ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
             $user
         );
     }
@@ -1145,29 +1158,7 @@ class PermissionService
 
     public function canViewLaboratory(int $patientId, ?array $user = null): bool
     {
-        $user = $user ?? $this->currentUser();
-        if (!$user || $patientId <= 0) {
-            return false;
-        }
-
-        if ($this->isAdministrator($user)) {
-            return true;
-        }
-
-        if (!$this->hasPermission('view_laboratory', $user)) {
-            return false;
-        }
-
-        if ($this->roleMatches($user, ['Laboratory Scientist'])) {
-            return true;
-        }
-
-        if ($this->roleMatches($user, ['Records Officer', 'Doctor', 'Nurse'])) {
-            return $this->canViewMedicalRecord($patientId, $user);
-        }
-
-        return in_array((string)($user['department_name'] ?? ''), ['Records', 'Doctor', 'Nursing', 'Laboratory'], true)
-            && $this->canViewMedicalRecord($patientId, $user);
+        return $this->canViewClinicalContext('view_laboratory', $patientId, $user);
     }
 
     public function canCreateLaboratoryRequest(
@@ -1229,29 +1220,7 @@ class PermissionService
 
     public function canViewRadiology(int $patientId, ?array $user = null): bool
     {
-        $user = $user ?? $this->currentUser();
-        if (!$user || $patientId <= 0) {
-            return false;
-        }
-
-        if ($this->isAdministrator($user)) {
-            return true;
-        }
-
-        if (!$this->hasPermission('view_radiology', $user)) {
-            return false;
-        }
-
-        if ($this->roleMatches($user, ['Radiographer'])) {
-            return true;
-        }
-
-        if ($this->roleMatches($user, ['Records Officer', 'Doctor', 'Nurse'])) {
-            return $this->canViewMedicalRecord($patientId, $user);
-        }
-
-        return in_array((string)($user['department_name'] ?? ''), ['Records', 'Doctor', 'Nursing', 'Radiology'], true)
-            && $this->canViewMedicalRecord($patientId, $user);
+        return $this->canViewClinicalContext('view_radiology', $patientId, $user);
     }
 
     public function canCreateRadiologyRequest(
@@ -1300,29 +1269,7 @@ class PermissionService
 
     public function canViewPhysiotherapy(int $patientId, ?array $user = null): bool
     {
-        $user = $user ?? $this->currentUser();
-        if (!$user || $patientId <= 0) {
-            return false;
-        }
-
-        if ($this->isAdministrator($user)) {
-            return true;
-        }
-
-        if (!$this->hasPermission('view_physiotherapy', $user)) {
-            return false;
-        }
-
-        if ($this->roleMatches($user, ['Physiotherapist'])) {
-            return true;
-        }
-
-        if ($this->roleMatches($user, ['Records Officer', 'Doctor', 'Nurse'])) {
-            return $this->canViewMedicalRecord($patientId, $user);
-        }
-
-        return in_array((string)($user['department_name'] ?? ''), ['Records', 'Doctor', 'Nursing', 'Physiotherapy', 'Physio', 'Rehabilitation'], true)
-            && $this->canViewMedicalRecord($patientId, $user);
+        return $this->canViewClinicalContext('view_physiotherapy', $patientId, $user);
     }
 
     public function canCreatePhysiotherapy(
@@ -1407,29 +1354,43 @@ class PermissionService
 
     public function canViewPharmacy(int $patientId, ?array $user = null): bool
     {
-        $user = $user ?? $this->currentUser();
-        if (!$user || $patientId <= 0) {
-            return false;
-        }
+        return $this->canViewClinicalContext('view_pharmacy', $patientId, $user);
+    }
 
-        if ($this->isAdministrator($user)) {
-            return true;
-        }
+    public function canViewLaboratoryWorklist(?array $user = null): bool
+    {
+        return $this->canViewDepartmentWorklist(
+            $user,
+            ['Laboratory Scientist'],
+            ['Laboratory']
+        );
+    }
 
-        if (!$this->hasPermission('view_pharmacy', $user)) {
-            return false;
-        }
+    public function canViewRadiologyWorklist(?array $user = null): bool
+    {
+        return $this->canViewDepartmentWorklist(
+            $user,
+            ['Radiographer'],
+            ['Radiology', 'X-Ray']
+        );
+    }
 
-        if ($this->roleMatches($user, ['Pharmacist'])) {
-            return true;
-        }
+    public function canViewPhysiotherapyWorklist(?array $user = null): bool
+    {
+        return $this->canViewDepartmentWorklist(
+            $user,
+            ['Physiotherapist'],
+            ['Physiotherapy', 'Physio', 'Rehabilitation']
+        );
+    }
 
-        if ($this->roleMatches($user, ['Records Officer', 'Doctor', 'Nurse'])) {
-            return $this->canViewMedicalRecord($patientId, $user);
-        }
-
-        return in_array((string)($user['department_name'] ?? ''), ['Pharmacy', 'Records', 'Doctor', 'Nursing'], true)
-            && $this->canViewMedicalRecord($patientId, $user);
+    public function canViewPharmacyWorklist(?array $user = null): bool
+    {
+        return $this->canViewDepartmentWorklist(
+            $user,
+            ['Pharmacist'],
+            ['Pharmacy']
+        );
     }
 
     public function canCreatePrescription(
@@ -1716,7 +1677,8 @@ class PermissionService
         $user = $user ?? $this->currentUser();
 
         return $this->hasPermission('transfer_encounter', $user)
-            && $this->sameCurrentDepartment($encounter, $user)
+            && ($encounter['current_department_received_status'] ?? '')
+                === 'Received'
             && $this->isEditable($encounter);
     }
 
@@ -1763,8 +1725,6 @@ class PermissionService
         $user = $user ?? $this->currentUser();
 
         return $this->hasPermission('assign_doctor', $user)
-            && $this->sameCurrentDepartment($encounter, $user)
-            && ($encounter['department_name'] ?? '') === 'Doctor'
             && ($encounter['current_department_received_status'] ?? '')
                 === 'Received'
             && $this->isEditable($encounter);
@@ -1946,6 +1906,34 @@ class PermissionService
         return (int)($user['department_id'] ?? 0);
     }
 
+    private function activeDepartmentName(array $user): string
+    {
+        return (string)(
+            $user['active_department_name']
+            ?? $_SESSION['active_department_name']
+            ?? $user['department_name']
+            ?? ''
+        );
+    }
+
+    private function canViewDepartmentWorklist(
+        ?array $user,
+        array $ownerRoles,
+        array $ownerDepartments
+    ): bool {
+        $user = $user ?? $this->currentUser();
+        if (!$user) {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        return $this->roleMatches($user, $ownerRoles)
+            || in_array($this->activeDepartmentName($user), $ownerDepartments, true);
+    }
+
     private function isEditable(array $encounter): bool
     {
         return !in_array(
@@ -2058,6 +2046,41 @@ class PermissionService
     {
         $roleName = trim((string)($user['role_name'] ?? ''));
         return in_array($roleName, $canonicalNames, true);
+    }
+
+    private function isClinicalCrossViewRole(array $user): bool
+    {
+        return $this->roleMatches($user, [
+            'Doctor',
+            'Nurse',
+            'Laboratory Scientist',
+            'Radiographer',
+            'Physiotherapist',
+            'Theatre Staff',
+            'Pharmacist',
+            'Records Officer',
+        ]);
+    }
+
+    private function canViewClinicalContext(
+        string $permission,
+        int $patientId,
+        ?array $user = null
+    ): bool {
+        $user = $user ?? $this->currentUser();
+        if (!$user || $patientId <= 0) {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        if (!$this->hasPermission($permission, $user)) {
+            return false;
+        }
+
+        return $this->canViewMedicalRecord($patientId, $user);
     }
 
     private function canPerformLongitudinalAction(

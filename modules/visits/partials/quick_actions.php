@@ -188,3 +188,47 @@ if (!isset($visit)) {
     </form>
 </div>
 <?php endif; ?>
+
+<?php if (($userNotificationTablesReady ?? false) && !in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true) && isset($notificationUsers)): ?>
+<div class="card">
+    <h2>Notify User</h2>
+    <p class="text-muted">
+        Send a direct attention request to a specific staff account. This does not transfer encounter ownership.
+    </p>
+
+    <form method="post" action="notify_user_save.php" class="form-grid">
+        <?= csrfField() ?>
+        <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
+
+        <div class="form-group">
+            <label for="to_user_id">User Account</label>
+            <select id="to_user_id" name="to_user_id" required>
+                <option value="">Select user</option>
+                <?php foreach ($notificationUsers as $notificationUser): ?>
+                    <?php if ((int)$notificationUser['id'] === (int)($currentUser['id'] ?? 0)) { continue; } ?>
+                    <option value="<?= (int)$notificationUser['id'] ?>">
+                        <?= e(trim((string)$notificationUser['first_name'] . ' ' . (string)$notificationUser['last_name'])) ?>
+                        — <?= e((string)$notificationUser['role_name']) ?>
+                        / <?= e((string)$notificationUser['department_name']) ?>
+                        (<?= e((string)$notificationUser['employee_id']) ?>)
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="user_notification_message">Message</label>
+            <textarea id="user_notification_message" name="message" rows="3" required></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Send User Notification</button>
+        </div>
+    </form>
+</div>
+<?php elseif (!($userNotificationTablesReady ?? false)): ?>
+<div class="card">
+    <h2>Notify User</h2>
+    <p class="text-muted">User notification tables are not available yet. Apply Migration 041 to enable this section.</p>
+</div>
+<?php endif; ?>

@@ -23,6 +23,17 @@ $selectedDepartmentId = (int)($movement['department_id'] ?? 0);
         <div class="form-group">
             <label for="quantity">Quantity</label>
             <input type="number" id="quantity" name="quantity" min="0.01" step="0.01" required value="<?= e((string)($movement['quantity'] ?? '')) ?>">
+            <small class="text-muted">
+                <?php if ($movementType === 'receive'): ?>
+                    Adds this quantity to Central Store stock.
+                <?php elseif ($movementType === 'issue'): ?>
+                    Moves this quantity from Central Store to the selected destination department.
+                <?php elseif ($movementType === 'return'): ?>
+                    Moves this quantity from the selected department back to Central Store.
+                <?php else: ?>
+                    Adjusts the selected department stock by this quantity.
+                <?php endif; ?>
+            </small>
         </div>
         <?php if ($movementType !== 'receive'): ?>
             <div class="form-group">
@@ -62,4 +73,3 @@ $selectedDepartmentId = (int)($movement['department_id'] ?? 0);
         <a class="btn-secondary" href="<?= e(storeBackToView((int)($item['id'] ?? 0))) ?>">Cancel</a>
     </div>
 </form>
-
