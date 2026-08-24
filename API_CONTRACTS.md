@@ -1002,6 +1002,29 @@ Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?Encount
 | `modules/nursing/complete.php` | POST | Complete a draft assessment. |
 | `modules/nursing/history.php` | GET | Visit or patient history list. |
 
+### DressingRecordService — Nursing Dressing Book
+
+Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?PermissionService $permissionService = null)`. Uses `dressing_records`, `visits`, `patients`, `users`, audit and the existing Nursing permission model.
+
+| Signature | Purpose/return | Contract |
+|---|---|---|
+| `create(array $data, array $user): array` | Inserts a dressing record for an active encounter. | Validates patient/visit consistency, active encounter, Nursing create permission, wound site, text lengths and optional next dressing date; writes `DRESSING_RECORD_CREATED` audit. |
+| `getById(int $recordId, ?array $user = null): ?array` | Read one dressing record. | Returns `null` when a supplied user lacks Nursing view permission. |
+| `listByVisit(int $visitId, ?array $user = null): array` | Dressing Book history for one encounter. | Used by the Nursing workspace card and visit-level history. |
+| `listByPatient(int $patientId, ?array $user = null): array` | Patient Dressing Book history across encounters. | Used by the Patient Chart Dressing tab. |
+| `update(int $recordId, array $data, array $user): array` | Updates an existing dressing record while the encounter is active. | Revalidates permission/status and writes `DRESSING_RECORD_UPDATED` audit. |
+
+### Dressing Book route map
+
+| Route | HTTP | Purpose |
+|---|---|---|
+| `modules/nursing/dressings/create.php` | GET | Render dressing record form for a visit. |
+| `modules/nursing/dressings/save.php` | POST | Persist a new dressing record. |
+| `modules/nursing/dressings/view.php` | GET | Read one dressing record. |
+| `modules/nursing/dressings/edit.php` | GET | Render edit form. |
+| `modules/nursing/dressings/update.php` | POST | Persist edits. |
+| `modules/nursing/dressings/history.php` | GET | Visit or patient Dressing Book history. |
+
 ### `AccountsService`
 
 Constructor: `__construct(PDO $db, ?AuditService $auditService = null, ?PermissionService $permissionService = null)`. Uses `billable_items`, departments, users, permissions and audit.

@@ -186,6 +186,16 @@ Vital Signs, Clinical Safety, Problem List, and Medical History integration;
 patient-chart/workspace wiring; audit and encounter-event generation; and
 existing Consultation/Vital Signs regression coverage.
 
+## Nursing Dressing Book
+
+Focused verification should cover Nurse and Administrator create/update/view
+flows; Doctor and other permitted clinical view-only access through the
+Encounter Workspace and Patient Chart; patient/visit mismatch rejection;
+completed/cancelled encounter mutation denial; CSRF-aware save/update routes;
+audit generation for `DRESSING_RECORD_CREATED` and `DRESSING_RECORD_UPDATED`;
+workspace Nursing-tab summary; patient-chart Dressing history; and printable
+Dressing Book/detail views.
+
 ## Phase 3.5 Radiology
 
 ```powershell

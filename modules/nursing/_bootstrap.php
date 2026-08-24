@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/ClinicalSafetyService.php';
+require_once __DIR__ . '/../../services/DressingRecordService.php';
 require_once __DIR__ . '/../../services/MedicalRecordService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
 require_once __DIR__ . '/../../services/PatientService.php';
@@ -83,6 +84,10 @@ $patientService = new PatientService($pdo);
 $permissionService = new PermissionService($pdo);
 $visitService = new VisitService($pdo);
 $nursingService = new NursingService($pdo, null, null, $permissionService);
+$dressingTablesReady = nursingTableExists($pdo, 'dressing_records');
+$dressingRecordService = $dressingTablesReady
+    ? new DressingRecordService($pdo, null, $permissionService)
+    : null;
 $vitalSignsTablesReady = nursingTableExists($pdo, 'vital_signs');
 $vitalSignsService = $vitalSignsTablesReady ? new VitalSignsService($pdo, null, $permissionService) : null;
 $clinicalSafetyService = new ClinicalSafetyService($pdo);

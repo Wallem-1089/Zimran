@@ -45,6 +45,7 @@ require_once __DIR__ . '/../../services/BillingService.php';
 require_once __DIR__ . '/../../services/StoreService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
+require_once __DIR__ . '/../../services/DressingRecordService.php';
 require_once __DIR__ . '/../../services/AdmissionService.php';
 
 function workspaceTableExists(PDO $pdo, string $table): bool
@@ -288,6 +289,7 @@ $notificationTablesReady = workspaceTableExists($pdo, 'department_notifications'
 $userNotificationTablesReady = workspaceTableExists($pdo, 'user_notifications');
 $vitalSignsTablesReady = workspaceTableExists($pdo, 'vital_signs');
 $nursingTablesReady = workspaceTableExists($pdo, 'nursing_assessments');
+$dressingTablesReady = workspaceTableExists($pdo, 'dressing_records');
 $consultationService = $consultationTablesReady ? new ConsultationService($pdo) : null;
 $consultation = $consultationService ? $consultationService->getByVisit($visitId) : null;
 $canViewConsultation = $permissionService->canViewConsultation($visit, $currentUser);
@@ -303,6 +305,9 @@ $canEditVitalSigns = $permissionService->canEditVitalSigns($visit, $currentUser)
 $nursingService = $nursingTablesReady ? new NursingService($pdo, null, null, $permissionService) : null;
 $nursingHistory = $nursingService ? $nursingService->listByVisit($visitId, $currentUser) : [];
 $nursing = $nursingHistory[0] ?? null;
+$dressingRecordService = $dressingTablesReady ? new DressingRecordService($pdo, null, $permissionService) : null;
+$dressingRecords = $dressingRecordService ? $dressingRecordService->listByVisit($visitId, $currentUser) : [];
+$latestDressingRecord = $dressingRecords[0] ?? null;
 $canViewNursing = $permissionService->canViewNursing((int)$visit['patient_id'], $currentUser);
 $canCreateNursing = $permissionService->canCreateNursing($visit, $currentUser);
 $canEditNursing = $permissionService->canEditNursing($visit, $currentUser);

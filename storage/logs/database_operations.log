@@ -39,3 +39,4 @@
 2026-08-23T15:06:17+02:00	target=hospital_management_system	reason=Additive controlled live development database reconstruction	authorization=verified-backup:hms_before_migration_042_20260823_reopen_encounter.sql
 2026-08-24T11:27:44+02:00	target=hospital_management_system	reason=Additive controlled live development database reconstruction	authorization=verified-backup:hms_before_migration_043_20260824_external_store_sales.sql
 2026-08-24T14:38:36+02:00	target=hospital_management_system	reason=Additive controlled live development database reconstruction	authorization=verified-backup:hms_before_migration_044_20260824_billing_requests.sql
+2026-08-24T17:23:57+02:00	target=hospital_management_system	reason=Additive controlled live development database reconstruction	authorization=verified-backup:before_045_dressing_records_20260824_162341.sql

@@ -842,6 +842,7 @@ ordered visit ledger.
 | Table | Ownership | Lifecycle | Keys and query indexes |
 |---|---|---|---|
 | `nursing_assessments` | Encounter workflow / `NursingService` | Mutable draft current record; one primary assessment per visit | PK `id`; unique `visit_id`; patient/nurse/department/status/created_at indexes; narrative nursing sections remain `TEXT` fields rather than normalized sub-tables |
+| `dressing_records` | Nursing / `DressingRecordService` | Repeated encounter-linked dressing entries; mutable while encounter remains active | PK `id`; visit/patient/recorded-by/next-dressing-date/created-at indexes; wound condition, dressing performed, and supplies used remain `TEXT` fields |
 | `radiology_requests` / `radiology_reports` | Encounter workflow / `RadiologyService` | Mutable request with immutable text report; multiple requests per visit allowed | PK `id`; visit/patient/requester/department/status/source indexes; report unique on request; study requested, clinical indication, findings, impression, and recommendation remain `TEXT` fields |
 
 | FK | Source -> target | Update/delete |
@@ -853,6 +854,9 @@ ordered visit ledger.
 | `fk_nursing_assessments_created_by` | `nursing_assessments.created_by -> users.id` | CASCADE / RESTRICT |
 | `fk_nursing_assessments_updated_by` | `nursing_assessments.updated_by -> users.id` | CASCADE / SET NULL |
 | `fk_nursing_assessments_completed_by` | `nursing_assessments.completed_by -> users.id` | CASCADE / SET NULL |
+| `fk_dressing_records_visit` | `dressing_records.visit_id -> visits.id` | CASCADE / RESTRICT |
+| `fk_dressing_records_patient` | `dressing_records.patient_id -> patients.id` | CASCADE / RESTRICT |
+| `fk_dressing_records_recorded_by` | `dressing_records.recorded_by -> users.id` | CASCADE / RESTRICT |
 | `fk_radiology_requests_visit` | `radiology_requests.visit_id -> visits.id` | CASCADE / RESTRICT |
 | `fk_radiology_requests_patient` | `radiology_requests.patient_id -> patients.id` | CASCADE / RESTRICT |
 | `fk_radiology_requests_requested_by` | `radiology_requests.requested_by -> users.id` | CASCADE / RESTRICT |
@@ -869,6 +873,9 @@ erDiagram
     VISITS ||--o{ NURSING_ASSESSMENTS : contextualizes
     DEPARTMENTS o|--o{ NURSING_ASSESSMENTS : attributes
     USERS ||--o{ NURSING_ASSESSMENTS : records
+    PATIENTS ||--o{ DRESSING_RECORDS : has
+    VISITS ||--o{ DRESSING_RECORDS : contextualizes
+    USERS ||--o{ DRESSING_RECORDS : records
 ```
 
 ## Phase 3.6 relational additions

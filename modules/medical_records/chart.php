@@ -23,6 +23,7 @@ require_once __DIR__ . '/../../services/TheatreService.php';
 require_once __DIR__ . '/../../services/VisitService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
+require_once __DIR__ . '/../../services/DressingRecordService.php';
 
 function chartTableExists(PDO $pdo, string $table): bool
 {
@@ -99,6 +100,7 @@ $allowedTabs = [
     'documents',
     'notes',
     'nursing',
+    'dressings',
     'encounters',
     'history',
     'audit'
@@ -185,6 +187,11 @@ $canViewNursing = $nursingTablesReady && $permissionService->canViewNursing($pat
 $nursingService = $nursingTablesReady ? new NursingService($pdo, null, null, $permissionService) : null;
 $nursingHistory = [];
 $latestNursingAssessment = null;
+$dressingTablesReady = chartTableExists($pdo, 'dressing_records');
+$canViewDressings = $dressingTablesReady && $permissionService->canViewNursing($patientId, $currentUser);
+$dressingRecordService = $dressingTablesReady ? new DressingRecordService($pdo, null, $permissionService) : null;
+$dressingHistory = [];
+$latestDressingRecord = null;
 
 if ($activeTab === 'problems' && !$canViewProblemList) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'PROBLEM_LIST_ACCESS_DENIED', 'Problem List access denied.');
@@ -215,6 +222,11 @@ if ($activeTab === 'nursing' && !$canViewNursing) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'NURSING_ACCESS_DENIED', 'Nursing access denied.');
     http_response_code(403);
     exit('You do not have permission to view Nursing assessments.');
+}
+if ($activeTab === 'dressings' && !$canViewDressings) {
+    $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'DRESSING_BOOK_ACCESS_DENIED', 'Dressing Book access denied.');
+    http_response_code(403);
+    exit('You do not have permission to view Dressing Book.');
 }
 if ($activeTab === 'physiotherapy' && !$canViewPhysiotherapy) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'PHYSIOTHERAPY_ACCESS_DENIED', 'Physiotherapy access denied.');
@@ -285,6 +297,11 @@ if ($canViewTheatre) {
 if ($canViewNursing) {
     $nursingHistory = $nursingService->listByPatient($patientId, $currentUser);
     $latestNursingAssessment = $nursingHistory[0] ?? null;
+}
+
+if ($canViewDressings) {
+    $dressingHistory = $dressingRecordService->listByPatient($patientId, $currentUser);
+    $latestDressingRecord = $dressingHistory[0] ?? null;
 }
 
 if ($activeTab === 'identifiers' && !$canViewIdentifiers) {
@@ -432,6 +449,10 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         case 'nursing':
             require __DIR__ . '/partials/nursing.php';
+            break;
+
+        case 'dressings':
+            require __DIR__ . '/partials/dressings.php';
             break;
 
         case 'problems':

@@ -1126,6 +1126,21 @@ mutation. Patient Chart and Consultation views reuse the latest encounter
 vital-signs summary as read-only context, while the dedicated history view
 lists prior entries in reverse chronological order.
 
+## Nursing Dressing Book
+
+Dressing Book is a small Nursing-owned repeated-care workflow:
+
+```text
+Workspace -> Nursing tab -> New Dressing Record
+-> Save -> View / Edit -> Dressing Book History
+```
+
+Dressing records are linked to the same patient and encounter, remain visible
+from the Nursing workspace tab, and appear as read-only history in the Patient
+Chart. They do not create separate encounter ownership, transfer, billing, or
+timeline workflows. Create/edit uses the existing Nursing permissions and is
+blocked when the encounter is completed or cancelled.
+
 Accounts owns the reusable price catalogue. It is a sidebar-only master-data
 module and does not live inside the Encounter Workspace. Billing consumes
 `billable_items` by copying the current catalogue price into each posted

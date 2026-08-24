@@ -1298,3 +1298,13 @@ patient and encounter to the current ward and bed. `admission_movements`
 preserves admission, transfer, discharge, and cancellation history. Bed
 occupancy is changed only by `AdmissionService`; there is no direct page for
 manually editing bed occupancy.
+
+## Nursing Dressing Book
+
+Migration 045 adds `dressing_records`, a simple Nursing-owned Dressing Book
+for repeated wound/dressing care within an encounter. Each record stores the
+patient, visit, wound site, wound condition, dressing performed, supplies used,
+optional next dressing date, recorder attribution, and timestamps. Records are
+encounter-linked and queryable by patient, visit, recorder, next dressing date,
+and created date. Dressing Book does not duplicate Vital Signs or create a new
+workflow engine.

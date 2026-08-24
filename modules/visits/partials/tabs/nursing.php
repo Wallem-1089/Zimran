@@ -8,6 +8,9 @@ if (!isset($visit, $patient)) {
 
 $assessment = $nursing ?? null;
 $latestVitals = $latestVitalSigns ?? null;
+$dressingTablesReady = $dressingTablesReady ?? false;
+$dressingRecords = $dressingRecords ?? [];
+$latestDressingRecord = $latestDressingRecord ?? ($dressingRecords[0] ?? null);
 $isClosedEncounter = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
 ?>
 
@@ -95,4 +98,44 @@ $isClosedEncounter = in_array((string)($visit['visit_status'] ?? ''), ['Complete
             <?php $latest = $latestVitals; require __DIR__ . '/../../../vital_signs/partials/record_card.php'; ?>
         </div>
     <?php endif; ?>
+
+    <div class="card">
+        <div class="section-heading">
+            <div>
+                <h3>Dressing Book</h3>
+                <p>Wound care, dressing done, supplies used, and follow-up date.</p>
+            </div>
+            <div class="form-actions">
+                <?php if ($dressingTablesReady && $canViewNursing): ?>
+                    <a href="../nursing/dressings/history.php?visit=<?= (int)$visit['id'] ?>" class="btn-secondary">View Dressing Book</a>
+                <?php endif; ?>
+                <?php if ($dressingTablesReady && $canCreateNursing && (!$isClosedEncounter || $permissionService->isAdministrator($currentUser))): ?>
+                    <a href="../nursing/dressings/create.php?visit=<?= (int)$visit['id'] ?>" class="btn-primary">New Dressing Record</a>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <?php if (!$dressingTablesReady): ?>
+            <p>Dressing Book tables are not available yet. Apply Migration 045 to enable this section.</p>
+        <?php elseif (!$canViewNursing): ?>
+            <p class="text-muted">You do not have permission to view Dressing Book.</p>
+        <?php elseif ($latestDressingRecord === null): ?>
+            <p class="text-muted">No dressing records found for this encounter.</p>
+        <?php else: ?>
+            <div class="summary-grid">
+                <div class="summary-item"><span class="summary-label">Latest Wound Site</span> <span class="summary-value"><?= e((string)$latestDressingRecord['wound_site']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Recorded At</span> <span class="summary-value"><?= e((string)($latestDressingRecord['created_at'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Recorded By</span> <span class="summary-value"><?= e((string)($latestDressingRecord['recorded_by_name'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Next Dressing</span> <span class="summary-value"><?= e((string)($latestDressingRecord['next_dressing_date'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Total Records</span> <span class="summary-value"><?= count($dressingRecords) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Summary</span> <span class="summary-value"><?= e((string)($latestDressingRecord['summary'] ?? '-')) ?></span></div>
+            </div>
+            <div class="form-actions">
+                <a href="../nursing/dressings/view.php?id=<?= (int)$latestDressingRecord['id'] ?>" class="btn-secondary">View Latest</a>
+                <?php if ($canEditNursing && !$isClosedEncounter): ?>
+                    <a href="../nursing/dressings/edit.php?id=<?= (int)$latestDressingRecord['id'] ?>" class="btn-secondary">Edit Latest</a>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+    </div>
 </section>

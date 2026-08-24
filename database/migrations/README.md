@@ -380,3 +380,15 @@ payments, or receipts.
 
 The migration seeds `create_billing_request`, `view_billing_requests`,
 `review_billing_request`, and `cancel_billing_request`.
+
+## Migration 045 - Dressing Records
+
+`045_dressing_records_up.sql` creates `dressing_records` for a simple Nursing
+Dressing Book. Records link to an existing patient encounter and store wound
+site, wound condition, dressing done, supplies used, next dressing date,
+recorded user, and timestamps.
+
+The feature reuses existing Nursing permissions instead of adding new
+permission keys: users who can view Nursing can view dressing history, while
+Nurse/Admin users with Nursing create/edit access can record or update
+dressings during active encounters.

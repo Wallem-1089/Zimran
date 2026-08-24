@@ -36,6 +36,10 @@ if (!empty($canViewTheatre)) {
     $chartTabs['theatre'] = 'Theatre';
 }
 
+if (!empty($canViewDressings)) {
+    $chartTabs['dressings'] = 'Dressings';
+}
+
 if ($canViewAudit) {
     $chartTabs['audit'] = 'Audit History';
 }

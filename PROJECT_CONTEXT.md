@@ -765,10 +765,11 @@ Structured values are justified because they need trending and calculation:
 Use one primary nursing assessment table. Narrative nursing sections remain
 `TEXT`; do not normalize every nursing question into its own table.
 
-Phase 3.3 Nursing CRUD is implemented and live-verified. Phase 3.4
-Laboratory CRUD is implemented and live-verified. Phase 3.5 Radiology CRUD
-is implemented and live-verified. Phase 3.6 Physiotherapy CRUD is
-implemented and live-verified. The next module target after the current
+Phase 3.3 Nursing CRUD is implemented and live-verified. Nursing also owns
+the Dressing Book for repeated wound/dressing records. Phase 3.4 Laboratory
+CRUD is implemented and live-verified. Phase 3.5 Radiology CRUD is
+implemented and live-verified. Phase 3.6 Physiotherapy CRUD is implemented
+and live-verified. The next module target after the current
 Consultation/Nursing/Laboratory/Radiology/Physiotherapy slice is now one of
 the remaining later operational modules.
 
@@ -1132,7 +1133,7 @@ The current operational application includes:
 - Encounter creation, workspace, transfer/receive, doctor assignment,
   department notifications, timeline, cancellation, and completion/discharge
   capture.
-- Consultation, Vital Signs, Nursing, Laboratory, Radiology, Physiotherapy,
+- Consultation, Vital Signs, Nursing with Dressing Book, Laboratory, Radiology, Physiotherapy,
   Theatre, Pharmacy, Billing with department billing requests,
   Accounts/Price Catalogue, Store/Inventory, and
   Basic Reports/Dashboard summaries.
