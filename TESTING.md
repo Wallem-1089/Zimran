@@ -269,6 +269,14 @@ wiring, audit generation, and sidebar visibility. It also confirms that no
 Store Encounter Workspace tab was introduced and that the module remains
 independent from Pharmacy dispensing and Billing.
 
+Migration 043 adds External Store Sales. Practical verification should cover:
+sale creation from Store stock with an active Accounts price link, price
+snapshot behavior, Store stock reduction through the stock ledger, receipt
+view/print page, cancellation with reason, Store Officer permissions,
+Accountant view/receipt access, unauthorized mutation denial, CSRF, and audit.
+External sales must not create patients, encounters, patient charges, invoices,
+Billing payments, or Pharmacy dispensing records.
+
 ## Phase 4.3 Pharmacy
 
 ```powershell

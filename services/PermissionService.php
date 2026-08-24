@@ -1544,6 +1544,34 @@ class PermissionService
             || $this->hasPermission('view_stock_ledger', $user);
     }
 
+    public function canViewExternalSales(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('view_external_sales', $user);
+    }
+
+    public function canCreateExternalSale(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('create_external_sale', $user);
+    }
+
+    public function canCancelExternalSale(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('cancel_external_sale', $user);
+    }
+
+    public function canViewExternalSaleReceipts(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('view_external_sale_receipts', $user);
+    }
+
     public function canViewReports(?array $user = null): bool
     {
         $user = $user ?? $this->currentUser();

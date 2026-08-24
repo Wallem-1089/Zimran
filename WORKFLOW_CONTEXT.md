@@ -1158,6 +1158,9 @@ department handoff.
 - Accounts owns PRICE through `billable_items`.
 - Store owns STOCK through inventory items, stock transactions, and maintained
   department balances.
+- Store may sell stock to external non-patient customers through External
+  Store Sales. External sales reduce Store stock and produce a receipt, but do
+  not create fake patients, encounters, invoices, or patient charges.
 - Pharmacy owns PRESCRIPTIONS and DISPENSING, and consumes Store stock when
   dispensing.
 - Billing owns PATIENT CHARGES, INVOICES, PAYMENTS, and receipt views.

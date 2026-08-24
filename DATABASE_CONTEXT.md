@@ -1231,6 +1231,17 @@ department quantities so Store and downstream department views can read
 balances without editing them directly. Store remains a sidebar operational
 module and does not create patient charges or dispensing workflows.
 
+Migration 043 adds simple external Store sales for non-patient customers.
+`external_sales` stores the sale number, optional customer name/phone, payment
+method/reference, total amount, sold-by attribution, status, cancellation
+metadata, and timestamp. `external_sale_items` stores item snapshots with
+inventory item, optional billable item, item name, quantity, unit price, and
+amount. Unit price is copied from the linked active Accounts `billable_items`
+record at sale time. Sale completion reduces Store stock through
+`StoreService::consumeDepartmentStock()` and the immutable stock ledger.
+External sales do not create visits, patient charges, invoices, payments, or
+Pharmacy dispensing records.
+
 ## Phase 4.3 Pharmacy
 
 Migration 032 adds `prescriptions` and `pharmacy_dispensing`. Prescriptions

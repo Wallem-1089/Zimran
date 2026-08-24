@@ -395,10 +395,15 @@ receipts.
 | `return_stock` | Yes | Yes | No | No | No | No | No | No | No | No | No | No | No |
 | `adjust_stock` | Yes | Yes | No | No | No | No | No | No | No | No | No | No | No |
 | `view_stock_ledger` | Yes | Yes | Yes | No | No | No | No | No | No | No | No | No | No |
+| `view_external_sales` | Yes | Yes | Yes | No | No | No | No | No | No | No | No | No | No |
+| `create_external_sale` | Yes | Yes | No | No | No | No | No | No | No | No | No | No | No |
+| `cancel_external_sale` | Yes | Yes | No | No | No | No | No | No | No | No | No | No | No |
+| `view_external_sale_receipts` | Yes | Yes | Yes | No | No | No | No | No | No | No | No | No | No |
 
 Store is a standalone sidebar module. It is not an Encounter Workspace tab.
-Store owns stock movements and department balances only. It does not own
-pricing, dispensing, patient charges, invoices, or receipts.
+Store owns stock movements, department balances, inventory item catalogue, and
+external non-patient sales receipts. It does not own patient pricing,
+dispensing, patient charges, invoices, or patient Billing receipts.
 
 ## Phase 4.3 Pharmacy permissions
 

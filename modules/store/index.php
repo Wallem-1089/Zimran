@@ -50,6 +50,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
             <a class="btn-secondary" href="ledger.php">Stock Ledger</a>
             <a class="btn-secondary" href="department_stock.php">Stock by Department</a>
+            <?php if (($storeExternalSalesReady ?? false) && $permissionService->canViewExternalSales($currentUser)): ?>
+                <a class="btn-secondary" href="external_sales.php">External Sales</a>
+            <?php endif; ?>
         </div>
     </div>
 

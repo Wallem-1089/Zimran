@@ -106,6 +106,30 @@ function storeRequireMovementAccess(PermissionService $permissionService, array 
     }
 }
 
+function storeRequireExternalSalesAccess(PermissionService $permissionService, array $currentUser): void
+{
+    if (!$permissionService->canViewExternalSales($currentUser)) {
+        http_response_code(403);
+        exit('External sales access denied.');
+    }
+}
+
+function storeRequireCreateExternalSaleAccess(PermissionService $permissionService, array $currentUser): void
+{
+    if (!$permissionService->canCreateExternalSale($currentUser)) {
+        http_response_code(403);
+        exit('External sale creation denied.');
+    }
+}
+
+function storeRequireExternalSaleReceiptAccess(PermissionService $permissionService, array $currentUser): void
+{
+    if (!$permissionService->canViewExternalSaleReceipts($currentUser)) {
+        http_response_code(403);
+        exit('External sale receipt access denied.');
+    }
+}
+
 function storeRequireItem(StoreService $storeService, int $itemId, array $currentUser): array
 {
     $item = $storeService->getItemById($itemId, $currentUser);
@@ -134,6 +158,7 @@ $storeService = new StoreService($pdo, null, $permissionService);
 $storeTablesReady = storeTableExists($pdo, 'inventory_items')
     && storeTableExists($pdo, 'stock_transactions')
     && storeTableExists($pdo, 'department_stock_balances');
+$storeExternalSalesReady = storeTableExists($pdo, 'external_sales')
+    && storeTableExists($pdo, 'external_sale_items');
 $storeDepartmentOptions = storeDepartments($pdo);
 $storeBillableItemOptions = storeBillableItems($pdo);
-

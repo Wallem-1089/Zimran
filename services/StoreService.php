@@ -312,6 +312,261 @@ class StoreService
         }
     }
 
+    public function createExternalSale(array $data, array $user): array
+    {
+        try {
+            $this->assertCanCreateExternalSale($user);
+
+            $payload = $this->normalizeExternalSalePayload($data);
+            if ($payload['errors'] !== []) {
+                return $this->failure($payload['errors']);
+            }
+
+            $storeDepartmentId = $this->getStoreDepartmentId();
+            if ($storeDepartmentId === null) {
+                return $this->failure(['Store department is not configured.']);
+            }
+
+            $this->pdo->beginTransaction();
+
+            $item = $this->fetchSaleableItemForUpdate(
+                $payload['data']['inventory_item_id']
+            );
+
+            if (!$item) {
+                $this->rollback();
+                return $this->failure(['Selected item is not available for external sale.']);
+            }
+
+            $quantity = (float)$payload['data']['quantity'];
+            $unitPrice = (float)$item['unit_price'];
+            $amount = round($quantity * $unitPrice, 2);
+            $saleNumber = $this->generateExternalSaleNumber();
+
+            $stmt = $this->pdo->prepare('
+                INSERT INTO external_sales (
+                    sale_number,
+                    customer_name,
+                    customer_phone,
+                    total_amount,
+                    payment_method,
+                    reference,
+                    sold_by,
+                    status,
+                    created_at
+                ) VALUES (
+                    :sale_number,
+                    :customer_name,
+                    :customer_phone,
+                    :total_amount,
+                    :payment_method,
+                    :reference,
+                    :sold_by,
+                    "Completed",
+                    NOW()
+                )
+            ');
+            $stmt->execute([
+                ':sale_number' => $saleNumber,
+                ':customer_name' => $payload['data']['customer_name'],
+                ':customer_phone' => $payload['data']['customer_phone'],
+                ':total_amount' => number_format($amount, 2, '.', ''),
+                ':payment_method' => $payload['data']['payment_method'],
+                ':reference' => $payload['data']['reference'],
+                ':sold_by' => (int)$user['id'],
+            ]);
+            $saleId = (int)$this->pdo->lastInsertId();
+
+            $stmt = $this->pdo->prepare('
+                INSERT INTO external_sale_items (
+                    external_sale_id,
+                    inventory_item_id,
+                    billable_item_id,
+                    item_name,
+                    quantity,
+                    unit_price,
+                    amount,
+                    created_at
+                ) VALUES (
+                    :external_sale_id,
+                    :inventory_item_id,
+                    :billable_item_id,
+                    :item_name,
+                    :quantity,
+                    :unit_price,
+                    :amount,
+                    NOW()
+                )
+            ');
+            $stmt->execute([
+                ':external_sale_id' => $saleId,
+                ':inventory_item_id' => (int)$item['inventory_item_id'],
+                ':billable_item_id' => (int)$item['billable_item_id'],
+                ':item_name' => (string)$item['item_name'],
+                ':quantity' => number_format($quantity, 2, '.', ''),
+                ':unit_price' => number_format($unitPrice, 2, '.', ''),
+                ':amount' => number_format($amount, 2, '.', ''),
+            ]);
+
+            $stockResult = $this->consumeDepartmentStock([
+                'inventory_item_id' => (int)$item['inventory_item_id'],
+                'department_id' => $storeDepartmentId,
+                'quantity' => number_format($quantity, 2, '.', ''),
+                'reference' => 'External Sale ' . $saleNumber,
+                'remarks' => 'External sale #' . $saleId,
+            ], $user);
+
+            if (!($stockResult['success'] ?? false)) {
+                throw new RuntimeException(
+                    $stockResult['errors'][0]
+                    ?? 'Unable to reduce store stock.'
+                );
+            }
+
+            if (!$this->audit((int)$user['id'], null, 'EXTERNAL_SALE_CREATED', 'Created external sale ' . $saleNumber . '.')) {
+                throw new RuntimeException('Unable to audit external sale.');
+            }
+
+            $this->pdo->commit();
+
+            return [
+                'success' => true,
+                'external_sale_id' => $saleId,
+                'sale_number' => $saleNumber,
+                'errors' => [],
+            ];
+        } catch (Throwable $e) {
+            $this->rollback();
+            return $this->failure([$e->getMessage() ?: 'Unable to create external sale.']);
+        }
+    }
+
+    public function listExternalSales(array $filters = [], ?array $user = null): array
+    {
+        if ($user !== null && !$this->permissionService->canViewExternalSales($user)) {
+            return [];
+        }
+
+        $where = [];
+        $params = [];
+
+        $status = trim((string)($filters['status'] ?? ''));
+        if (in_array($status, ['Completed', 'Cancelled'], true)) {
+            $where[] = 'es.status = :status';
+            $params[':status'] = $status;
+        }
+
+        $search = trim((string)($filters['search'] ?? ''));
+        if ($search !== '') {
+            $where[] = '(es.sale_number LIKE :search OR es.customer_name LIKE :search OR es.customer_phone LIKE :search)';
+            $params[':search'] = '%' . $search . '%';
+        }
+
+        $sql = $this->externalSaleSelect()
+            . ($where === [] ? '' : ' WHERE ' . implode(' AND ', $where))
+            . ' ORDER BY es.created_at DESC, es.id DESC';
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return array_map([$this, 'decorateExternalSale'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    public function getExternalSaleById(int $saleId, ?array $user = null): ?array
+    {
+        if ($saleId <= 0) {
+            return null;
+        }
+
+        if ($user !== null
+            && !$this->permissionService->canViewExternalSales($user)
+            && !$this->permissionService->canViewExternalSaleReceipts($user)
+        ) {
+            return null;
+        }
+
+        $stmt = $this->pdo->prepare($this->externalSaleSelect() . ' WHERE es.id = :id LIMIT 1');
+        $stmt->execute([':id' => $saleId]);
+        $sale = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$sale) {
+            return null;
+        }
+
+        $sale = $this->decorateExternalSale($sale);
+        $sale['items'] = $this->listExternalSaleItems($saleId);
+
+        return $sale;
+    }
+
+    public function cancelExternalSale(int $saleId, string $reason, array $user): array
+    {
+        try {
+            if (!$this->permissionService->canCancelExternalSale($user)) {
+                return $this->failure(['You are not allowed to cancel external sales.']);
+            }
+
+            $reason = trim($reason);
+            if ($reason === '') {
+                return $this->failure(['Cancellation reason is required.']);
+            }
+
+            if (mb_strlen($reason) > 2000) {
+                return $this->failure(['Cancellation reason must not exceed 2000 characters.']);
+            }
+
+            $this->pdo->beginTransaction();
+
+            $stmt = $this->pdo->prepare('
+                SELECT *
+                FROM external_sales
+                WHERE id = :id
+                LIMIT 1
+                FOR UPDATE
+            ');
+            $stmt->execute([':id' => $saleId]);
+            $sale = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$sale) {
+                $this->rollback();
+                return $this->failure(['External sale not found.']);
+            }
+
+            if ((string)$sale['status'] === 'Cancelled') {
+                $this->rollback();
+                return $this->failure(['External sale is already cancelled.']);
+            }
+
+            $stmt = $this->pdo->prepare('
+                UPDATE external_sales
+                SET status = "Cancelled",
+                    cancelled_by = :cancelled_by,
+                    cancelled_at = NOW(),
+                    cancel_reason = :cancel_reason
+                WHERE id = :id
+            ');
+            $stmt->execute([
+                ':cancelled_by' => (int)$user['id'],
+                ':cancel_reason' => $reason,
+                ':id' => $saleId,
+            ]);
+
+            if (!$this->audit((int)$user['id'], null, 'EXTERNAL_SALE_CANCELLED', 'Cancelled external sale ' . $sale['sale_number'] . '.')) {
+                throw new RuntimeException('Unable to audit external sale cancellation.');
+            }
+
+            $this->pdo->commit();
+
+            return [
+                'success' => true,
+                'external_sale_id' => $saleId,
+                'errors' => [],
+            ];
+        } catch (Throwable $e) {
+            $this->rollback();
+            return $this->failure([$e->getMessage() ?: 'Unable to cancel external sale.']);
+        }
+    }
+
     public function getDepartmentBalance(int $itemId, int $departmentId, ?array $user = null): ?array
     {
         if ($user !== null && !$this->permissionService->canViewInventory($user)) {
@@ -895,6 +1150,143 @@ class StoreService
         return $row;
     }
 
+    private function normalizeExternalSalePayload(array $data): array
+    {
+        $errors = [];
+        $itemId = (int)($data['inventory_item_id'] ?? 0);
+        $quantityRaw = $data['quantity'] ?? null;
+        $customerName = trim((string)($data['customer_name'] ?? ''));
+        $customerPhone = trim((string)($data['customer_phone'] ?? ''));
+        $paymentMethod = trim((string)($data['payment_method'] ?? 'Cash'));
+        $reference = trim((string)($data['reference'] ?? ''));
+
+        if ($itemId <= 0) {
+            $errors[] = 'Inventory item is required.';
+        }
+
+        if (!is_numeric($quantityRaw) || (float)$quantityRaw <= 0) {
+            $errors[] = 'Quantity must be greater than zero.';
+        }
+
+        if (!in_array($paymentMethod, ['Cash', 'Card', 'Transfer', 'Other'], true)) {
+            $errors[] = 'Invalid payment method.';
+        }
+
+        if (mb_strlen($customerName) > 150) {
+            $errors[] = 'Customer name must not exceed 150 characters.';
+        }
+
+        if (mb_strlen($customerPhone) > 50) {
+            $errors[] = 'Customer phone must not exceed 50 characters.';
+        }
+
+        if (mb_strlen($reference) > 255) {
+            $errors[] = 'Reference must not exceed 255 characters.';
+        }
+
+        return [
+            'errors' => $errors,
+            'data' => [
+                'inventory_item_id' => $itemId,
+                'quantity' => number_format((float)$quantityRaw, 2, '.', ''),
+                'customer_name' => $customerName === '' ? null : $customerName,
+                'customer_phone' => $customerPhone === '' ? null : $customerPhone,
+                'payment_method' => $paymentMethod,
+                'reference' => $reference === '' ? null : $reference,
+            ],
+        ];
+    }
+
+    private function fetchSaleableItemForUpdate(int $itemId): ?array
+    {
+        $stmt = $this->pdo->prepare('
+            SELECT
+                ii.id AS inventory_item_id,
+                ii.item_name,
+                ii.unit,
+                ii.is_active,
+                bi.id AS billable_item_id,
+                bi.unit_price,
+                bi.is_active AS billable_is_active
+            FROM inventory_items ii
+            INNER JOIN billable_items bi ON bi.id = ii.billable_item_id
+            WHERE ii.id = :id
+              AND ii.is_active = 1
+              AND bi.is_active = 1
+            LIMIT 1
+            FOR UPDATE
+        ');
+        $stmt->execute([':id' => $itemId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
+    }
+
+    private function generateExternalSaleNumber(): string
+    {
+        $prefix = 'EXT';
+        $year = date('Y');
+
+        $stmt = $this->pdo->prepare("
+            SELECT sale_number
+            FROM external_sales
+            WHERE sale_number LIKE :prefix
+            ORDER BY id DESC
+            LIMIT 1
+        ");
+        $stmt->execute([':prefix' => $prefix . '-' . $year . '-%']);
+        $last = (string)($stmt->fetchColumn() ?: '');
+
+        $next = 1;
+        if (preg_match('/-(\d{6})$/', $last, $matches)) {
+            $next = ((int)$matches[1]) + 1;
+        }
+
+        return sprintf('%s-%s-%06d', $prefix, $year, $next);
+    }
+
+    private function externalSaleSelect(): string
+    {
+        return '
+            SELECT
+                es.*,
+                CONCAT(sold_by.first_name, " ", sold_by.last_name) AS sold_by_name,
+                CONCAT(cancelled_by.first_name, " ", cancelled_by.last_name) AS cancelled_by_name
+            FROM external_sales es
+            LEFT JOIN users sold_by ON sold_by.id = es.sold_by
+            LEFT JOIN users cancelled_by ON cancelled_by.id = es.cancelled_by
+        ';
+    }
+
+    private function listExternalSaleItems(int $saleId): array
+    {
+        $stmt = $this->pdo->prepare('
+            SELECT
+                esi.*,
+                ii.item_code,
+                ii.unit,
+                bi.item_code AS billable_item_code
+            FROM external_sale_items esi
+            LEFT JOIN inventory_items ii ON ii.id = esi.inventory_item_id
+            LEFT JOIN billable_items bi ON bi.id = esi.billable_item_id
+            WHERE esi.external_sale_id = :sale_id
+            ORDER BY esi.id ASC
+        ');
+        $stmt->execute([':sale_id' => $saleId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function decorateExternalSale(array $row): array
+    {
+        $row['total_amount_display'] = number_format(
+            (float)($row['total_amount'] ?? 0),
+            2
+        );
+
+        return $row;
+    }
+
     private function ensureBalanceRow(int $itemId, int $departmentId): void
     {
         $stmt = $this->pdo->prepare('
@@ -1020,6 +1412,13 @@ class StoreService
     {
         if (!$this->permissionService->canViewInventory($user)) {
             throw new RuntimeException('You are not allowed to access inventory items.');
+        }
+    }
+
+    private function assertCanCreateExternalSale(array $user): void
+    {
+        if (!$this->permissionService->canCreateExternalSale($user)) {
+            throw new RuntimeException('You are not allowed to create external sales.');
         }
     }
 

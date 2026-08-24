@@ -1107,7 +1107,11 @@ consume those prices at the encounter level.
 Store / Inventory is also implemented as a standalone sidebar module. It owns
 stock receipts, issues, returns, adjustments, department balances, and the
 inventory item catalogue. Store does not live inside the Encounter Workspace,
-and it does not create patient charges or dispensing workflows.
+and it does not create patient charges or dispensing workflows. Store also
+supports simple external walk-in sales for non-patient customers: the sale uses
+Accounts catalogue price snapshots, reduces Store stock through the stock
+ledger, and produces a printable receipt without creating a patient encounter,
+invoice, or patient charge.
 ## Phase 4.5 Basic Dashboards / Reports
 
 Phase 4.5 adds a small read-only Reports module and enhances the

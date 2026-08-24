@@ -1034,10 +1034,16 @@ Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?Permiss
 | `getDepartmentBalance(int $itemId, int $departmentId, ?array $user = null): ?array` | Current maintained quantity for a department/item pair. | Read; null when inaccessible. |
 | `listDepartmentStock(?int $departmentId = null, ?array $user = null): array` | Department stock listing. | Read; returns maintained balance rows. |
 | `getItemLedger(int $itemId, ?array $user = null): array` | Immutable movement ledger for one item. | Read; returns chronological transaction rows. |
+| `createExternalSale(array $data, array $user): array` | Completes a non-patient Store sale. | Transaction; validates item/quantity/payment; snapshots Accounts price; consumes Store stock; records `EXTERNAL_SALE_CREATED`. |
+| `listExternalSales(array $filters = [], ?array $user = null): array` | Lists external sales. | Read; supports status and search filters; requires `view_external_sales`. |
+| `getExternalSaleById(int $saleId, ?array $user = null): ?array` | Returns sale header and items for receipt/view. | Read; requires sale view or receipt permission. |
+| `cancelExternalSale(int $saleId, string $reason, array $user): array` | Soft-cancels an external sale. | Transaction; reason required; does not delete sale or automatically reverse stock; records `EXTERNAL_SALE_CANCELLED`. |
 
 Store is a standalone sidebar destination for stock master data and
 operational movements only. It is not an Encounter Workspace tab and it does
-not create patient charges, invoices, payments, receipts, or dispensing.
+not create patient charges, invoices, patient payments, or dispensing.
+External Store Sales are non-patient receipts only and remain outside the
+Encounter Workspace.
 
 ### Current UI route notes
 
