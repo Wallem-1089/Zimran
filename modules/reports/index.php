@@ -8,6 +8,7 @@ reportsRequireAccess($permissionService, $currentUser);
 $dashboardService->recordReportView((int)($currentUser['id'] ?? 0), 'REPORT_VIEWED');
 $reportCards = [
     ['Patient / Encounter Activity', 'activity.php', 'Encounter counts by date, department, and status.', true],
+    ['Emergency Register', 'emergency_register.php', 'Printable emergency book from Emergency encounters.', true],
     ['Clinical Activity', 'clinical.php', 'Consultation, nursing, diagnostic, theatre, and pharmacy counts.', $permissionService->canViewClinicalReports($currentUser)],
     ['Financial Summary', 'financial.php', 'Charges, invoices, payments, and outstanding balances.', $permissionService->canViewFinancialReports($currentUser)],
     ['Inventory Summary', 'inventory.php', 'Department balances and stock movement counts.', $permissionService->canViewInventoryReports($currentUser)],

@@ -113,6 +113,66 @@ class DashboardService
         ];
     }
 
+    public function getEmergencyRegister(array $filters = []): array
+    {
+        $range = $this->dateRange($filters);
+        $params = [
+            ':from' => $range['from'],
+            ':to' => $range['to'],
+            ':visit_type' => 'Emergency',
+        ];
+        $where = 'v.visit_type = :visit_type AND v.visit_date BETWEEN :from AND :to';
+
+        if (!empty($filters['department_id'])) {
+            $where .= ' AND v.current_department_id = :department_id';
+            $params[':department_id'] = (int)$filters['department_id'];
+        }
+
+        if (!empty($filters['status'])) {
+            $where .= ' AND v.visit_status = :status';
+            $params[':status'] = (string)$filters['status'];
+        }
+
+        $summary = $this->fetchOne(
+            "SELECT COUNT(*) AS emergency_count,
+                    SUM(v.visit_status = 'Completed') AS completed_count,
+                    SUM(v.visit_status NOT IN ('Completed','Cancelled')) AS active_count
+             FROM visits v
+             WHERE {$where}",
+            $params
+        );
+
+        $rows = $this->fetchAll(
+            "SELECT
+                v.id,
+                v.visit_number,
+                v.visit_date,
+                v.visit_status,
+                v.completed_at,
+                v.discharge_diagnosis,
+                p.hospital_number,
+                CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
+                d.department_name,
+                CONCAT(doc.first_name, ' ', doc.last_name) AS doctor_name,
+                c.presenting_complaint
+             FROM visits v
+             INNER JOIN patients p ON p.id = v.patient_id
+             LEFT JOIN departments d ON d.id = v.current_department_id
+             LEFT JOIN users doc ON doc.id = v.attending_doctor_id
+             LEFT JOIN consultations c ON c.visit_id = v.id
+             WHERE {$where}
+             ORDER BY v.visit_date ASC, v.id ASC
+             LIMIT 500",
+            $params
+        );
+
+        return [
+            'filters' => $range,
+            'summary' => $summary,
+            'rows' => $rows,
+        ];
+    }
+
     public function getClinicalActivityReport(array $filters = []): array
     {
         $range = $this->dateRange($filters);
