@@ -91,6 +91,12 @@ $canCancelEncounter = isset($permissionService)
         $currentUser ?? null
     );
 
+$canReopenEncounter = isset($permissionService)
+    && $permissionService->canReopenEncounter(
+        $visit,
+        $currentUser ?? null
+    );
+
 $canAssignDoctor = !isset($permissionService)
     || $permissionService->canAssignDoctor(
         $visit,
@@ -364,6 +370,18 @@ $canAssignDoctor = !isset($permissionService)
                 This encounter has been completed.
 
             </div>
+
+            <?php if ($canReopenEncounter): ?>
+
+                <a
+                    href="reopen.php?visit=<?= (int)$visit['id'] ?>"
+                    class="btn-secondary">
+
+                    Reopen Encounter
+
+                </a>
+
+            <?php endif; ?>
 
         <?php elseif ($status === 'Cancelled'): ?>
 

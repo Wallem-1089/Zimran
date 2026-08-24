@@ -130,6 +130,84 @@ class VisitService
         );
     }
 
+    public function listDepartmentWorklist(int $departmentId): array
+    {
+        if ($departmentId <= 0) {
+            return [];
+        }
+
+        $queueRows = $this->queueService->getDepartmentQueue(
+            $departmentId,
+            ['Waiting', 'Called', 'In Progress']
+        );
+
+        $rowsByVisit = [];
+
+        foreach ($queueRows as $row) {
+            $row['worklist_status'] =
+                ($row['current_department_received_status'] ?? '') === 'Pending'
+                    ? 'Awaiting Receive'
+                    : (string)($row['queue_status'] ?? 'Waiting');
+            $row['can_receive'] =
+                ($row['current_department_received_status'] ?? '') === 'Pending';
+            $rowsByVisit[(int)$row['visit_id']] = $row;
+        }
+
+        $stmt = $this->pdo->prepare("
+            SELECT
+                NULL AS id,
+                v.id AS visit_id,
+                v.current_department_id AS department_id,
+                NULL AS assigned_user_id,
+                NULL AS position,
+                'Waiting' AS queue_status,
+                NULL AS remarks,
+                v.created_at AS queued_at,
+                v.visit_number,
+                v.visit_status,
+                v.current_department_received_status,
+                v.patient_id,
+                p.hospital_number,
+                p.first_name,
+                p.last_name,
+                d.department_name,
+                NULL AS assigned_user_name,
+                'Awaiting Receive' AS worklist_status,
+                1 AS can_receive
+            FROM visits v
+            INNER JOIN patients p ON p.id = v.patient_id
+            INNER JOIN departments d ON d.id = v.current_department_id
+            WHERE v.current_department_id = :department_id
+              AND v.current_department_received_status = 'Pending'
+              AND v.visit_status NOT IN ('Completed', 'Cancelled')
+            ORDER BY v.updated_at DESC, v.id DESC
+        ");
+
+        $stmt->execute([':department_id' => $departmentId]);
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $rowsByVisit[(int)$row['visit_id']] ??= $row;
+        }
+
+        $rows = array_values($rowsByVisit);
+
+        usort($rows, static function (array $a, array $b): int {
+            $aPending = (string)($a['worklist_status'] ?? '') === 'Awaiting Receive';
+            $bPending = (string)($b['worklist_status'] ?? '') === 'Awaiting Receive';
+
+            if ($aPending !== $bPending) {
+                return $aPending ? -1 : 1;
+            }
+
+            return strcmp(
+                (string)($a['queued_at'] ?? ''),
+                (string)($b['queued_at'] ?? '')
+            );
+        });
+
+        return $rows;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Create Encounter
@@ -1852,6 +1930,127 @@ public function canAccessDepartmentWorkspace(
 
         );
 
+    }
+
+    public function reopenVisit(
+        int $visitId,
+        string $reason,
+        array $user
+    ): array {
+        $visit = $this->getVisitById($visitId);
+
+        if (!$visit
+            || !$this->permissionService->canReopenEncounter($visit, $user)
+        ) {
+            $this->permissionService->logDenied(
+                (int)($user['id'] ?? 0) ?: null,
+                $visitId,
+                'REOPEN_ENCOUNTER_DENIED',
+                'User attempted to reopen an encounter without permission.'
+            );
+
+            return [
+                'success' => false,
+                'errors' => ['You do not have permission to reopen this encounter.']
+            ];
+        }
+
+        $reason = trim($reason);
+
+        if ($reason === '') {
+            return [
+                'success' => false,
+                'errors' => ['Reopen reason is required.']
+            ];
+        }
+
+        if (strlen($reason) > 2000) {
+            return [
+                'success' => false,
+                'errors' => ['Reopen reason is too long.']
+            ];
+        }
+
+        $departmentId = (int)($visit['current_department_id'] ?? 0);
+        $restoredStatus = trim((string)($visit['department_name'] ?? ''));
+
+        if ($departmentId <= 0 || $restoredStatus === '') {
+            return [
+                'success' => false,
+                'errors' => ['Encounter does not have a valid department to reopen into.']
+            ];
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            $userId = (int)($user['id'] ?? 0);
+
+            $stmt = $this->pdo->prepare("
+                UPDATE visits
+                SET visit_status = :status,
+                    completed_at = NULL,
+                    completed_by = NULL,
+                    current_department_received_status = 'Received',
+                    current_department_received_at = NOW(),
+                    current_department_received_by = :received_by
+                WHERE id = :id
+                  AND visit_status = 'Completed'
+            ");
+
+            $stmt->execute([
+                ':status' => $restoredStatus,
+                ':received_by' => $userId > 0 ? $userId : null,
+                ':id' => $visitId
+            ]);
+
+            if ($stmt->rowCount() === 0) {
+                throw new RuntimeException('Unable to reopen encounter.');
+            }
+
+            $queueResult = $this->queueService->enqueueEncounter(
+                $visitId,
+                $departmentId,
+                $userId > 0 ? $userId : null,
+                null,
+                'Encounter reopened: ' . $reason,
+                false
+            );
+
+            if (!$queueResult['success']) {
+                throw new RuntimeException(
+                    $queueResult['errors'][0]
+                    ?? 'Unable to queue reopened encounter.'
+                );
+            }
+
+            $this->recordWorkflowHistory(
+                $visitId,
+                'ENCOUNTER_REOPENED',
+                'Encounter Reopened',
+                'Encounter reopened. Reason: ' . $reason,
+                $departmentId,
+                $userId > 0 ? $userId : null,
+                'Encounter',
+                'ENCOUNTER_REOPENED'
+            );
+
+            $this->pdo->commit();
+
+            return [
+                'success' => true,
+                'errors' => []
+            ];
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            return [
+                'success' => false,
+                'errors' => [$e->getMessage() ?: 'Unable to reopen encounter.']
+            ];
+        }
     }
 
     /*

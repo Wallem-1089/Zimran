@@ -53,6 +53,7 @@ Role activation/deactivation is implemented through `RoleService`. Role inherita
 | `receive_encounter` | Visits | Implemented |
 | `assign_doctor` | Visits | Implemented |
 | `change_encounter_status` | Visits | Implemented |
+| `reopen_encounter` | Visits | Implemented |
 | `edit_encounter` | Visits | Implemented |
 | `manage_users` | Administration | Implemented for administrator override; role assignment available |
 | `manage_roles` | Administration | Implemented for administrator override; role assignment available |
@@ -429,6 +430,27 @@ settlement purposes.
 Only Receptionist, Records Officer, Doctor, and System Administrator may cancel
 an encounter through the exposed workspace action. Cancellation is no longer a
 transfer type; transfer remains department handoff only.
+
+## Encounter reopen permissions
+
+Reopen is a controlled lifecycle correction, not ordinary department CRUD.
+Only completed encounters can be reopened; cancelled encounters remain closed.
+A reopen reason is required, and the action writes audit and encounter timeline
+records.
+
+Default access:
+
+- System Administrator: full override.
+- Records Officer: may reopen completed encounters for record correction.
+- Doctor: may reopen only when granted `reopen_encounter` and assigned as the
+  encounter's attending doctor.
+- Receptionist, Nurse, Laboratory, Radiology, Pharmacy, Store, Accounts, and
+  other roles: no default reopen access.
+
+Reopening returns the encounter to its current department status and queue.
+Clinical records, discharge text, financial records, charges, invoices, and
+payments are not reversed or deleted automatically.
+
 ## Phase 4.5 Basic Dashboards / Reports permissions
 
 | Permission | Administrator | Accounts | Store Officer | Clinical Roles |

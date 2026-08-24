@@ -54,6 +54,7 @@ class PermissionService
             ),
             'transfer_encounter' => $department !== '',
             'receive_encounter' => $department !== '',
+            'reopen_encounter' => $role === 'Records Officer',
             'assign_doctor' => $role === 'Doctor'
                 || $department === 'Doctor',
             'change_encounter_status' => $department !== '',
@@ -1705,6 +1706,34 @@ class PermissionService
         }
 
         return $this->roleMatches($user, ['Receptionist', 'Records Officer', 'Doctor']);
+    }
+
+    public function canReopenEncounter(
+        array $encounter,
+        ?array $user = null
+    ): bool {
+        $user = $user ?? $this->currentUser();
+
+        if (!$user || (string)($encounter['visit_status'] ?? '') !== 'Completed') {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        if (!$this->hasPermission('reopen_encounter', $user)) {
+            return false;
+        }
+
+        if ($this->roleMatches($user, ['Records Officer'])) {
+            return true;
+        }
+
+        return $this->roleMatches($user, ['Doctor'])
+            && (int)($encounter['attending_doctor_id'] ?? 0) > 0
+            && (int)($encounter['attending_doctor_id'] ?? 0)
+                === (int)($user['id'] ?? 0);
     }
 
     public function canReceiveEncounter(

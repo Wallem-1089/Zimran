@@ -174,6 +174,16 @@ if ($currentUser && isset($pdo)) {
 
             <li>
 
+                <a href="<?= e($baseUrl) ?>/modules/visits/department_worklist.php">
+
+                    Department Worklist
+
+                </a>
+
+            </li>
+
+            <li>
+
                 <a href="<?= e($baseUrl) ?>/modules/department_notifications/index.php">
 
                     Notifications<?= $departmentNotificationCount > 0 ? ' (' . (int)$departmentNotificationCount . ')' : '' ?>
