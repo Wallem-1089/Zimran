@@ -18,18 +18,32 @@ $activeEncounters = (int)$pdo
     ->query("SELECT COUNT(*) FROM visits WHERE visit_status NOT IN ('Completed', 'Cancelled')")
     ->fetchColumn();
 
-$pendingLaboratory = 0;
-if ((int)$pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'laboratory_requests'")->fetchColumn() > 0) {
-    $pendingLaboratory = (int)$pdo
-        ->query("SELECT COUNT(*) FROM laboratory_requests WHERE status IN ('Requested', 'In Progress')")
-        ->fetchColumn();
+$activeDepartmentId = (int)($currentUser['active_department_id'] ?? $currentUser['department_id'] ?? 0);
+$activeDepartmentName = trim((string)($currentUser['active_department_name'] ?? $currentUser['department_name'] ?? 'Department'));
+$pendingDepartmentEncounters = 0;
+
+if ($activeDepartmentId > 0) {
+    $pendingDepartmentStmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM visits
+        WHERE current_department_id = :department_id
+          AND visit_status NOT IN ('Completed', 'Cancelled')
+    ");
+    $pendingDepartmentStmt->execute([':department_id' => $activeDepartmentId]);
+    $pendingDepartmentEncounters = (int)$pendingDepartmentStmt->fetchColumn();
 }
 
 $pendingBills = '0.00';
 if ((int)$pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'invoices'")->fetchColumn() > 0) {
-    $pendingBills = number_format((float)$pdo
-        ->query("SELECT COALESCE(SUM(balance_due), 0) FROM invoices WHERE status IN ('Unpaid', 'Partially Paid')")
-        ->fetchColumn(), 2);
+    $pendingBillsStmt = $pdo->prepare("
+        SELECT COALESCE(SUM(i.balance_due), 0)
+        FROM invoices i
+        INNER JOIN visits v ON v.id = i.visit_id
+        WHERE i.status IN ('Unpaid', 'Partially Paid')
+          AND v.current_department_id = :department_id
+    ");
+    $pendingBillsStmt->execute([':department_id' => $activeDepartmentId]);
+    $pendingBills = number_format((float)$pendingBillsStmt->fetchColumn(), 2);
 }
 
 $activeEncounterStmt = $pdo->prepare("
@@ -80,12 +94,12 @@ require_once __DIR__ . '/../layouts/sidebar.php';
         </div>
 
         <div class="card">
-            <h3>Pending Laboratory</h3>
-            <h2><?= (int)$pendingLaboratory ?></h2>
+            <h3><?= e($activeDepartmentName) ?> Pending Encounters</h3>
+            <h2><?= (int)$pendingDepartmentEncounters ?></h2>
         </div>
 
         <div class="card">
-            <h3>Pending Bills</h3>
+            <h3><?= e($activeDepartmentName) ?> Pending Bills</h3>
             <h2>₦<?= e($pendingBills) ?></h2>
         </div>
     </section>

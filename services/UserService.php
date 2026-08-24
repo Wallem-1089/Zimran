@@ -6,6 +6,8 @@ require_once __DIR__ . '/AuditService.php';
 
 class UserService
 {
+    private const PROTECTED_ADMIN_USERNAMES = ['admin', 'walter'];
+
     /**
      * PDO database connection.
      *
@@ -535,6 +537,14 @@ class UserService
                 throw new RuntimeException('User not found.');
             }
 
+            if ($this->isProtectedAdminUser($locked)) {
+                $protectedErrors = $this->validateProtectedAdminUpdate($locked, $user);
+                if ($protectedErrors !== []) {
+                    $this->rollback();
+                    return $this->failure($protectedErrors);
+                }
+            }
+
             $stmt = $this->db->prepare('
                 UPDATE users
                 SET employee_id = :employee_id,
@@ -681,8 +691,14 @@ class UserService
     {
         try {
             $this->db->beginTransaction();
-            if (!$this->lockUserRow($userId)) {
+            $locked = $this->lockUserRow($userId);
+            if (!$locked) {
                 throw new RuntimeException('User not found.');
+            }
+
+            if ($this->isProtectedAdminUser($locked)) {
+                $this->rollback();
+                return $this->failure(['Protected administrator accounts cannot be forced to change password.']);
             }
 
             $stmt = $this->db->prepare(
@@ -713,8 +729,14 @@ class UserService
     {
         try {
             $this->db->beginTransaction();
-            if (!$this->lockUserRow($userId)) {
+            $locked = $this->lockUserRow($userId);
+            if (!$locked) {
                 throw new RuntimeException('User not found.');
+            }
+
+            if ($status !== 'Active' && $this->isProtectedAdminUser($locked)) {
+                $this->rollback();
+                return $this->failure(['Protected administrator accounts cannot be deactivated.']);
             }
 
             $stmt = $this->db->prepare(
@@ -746,8 +768,14 @@ class UserService
     ): array {
         try {
             $this->db->beginTransaction();
-            if (!$this->lockUserRow($userId)) {
+            $lockedUser = $this->lockUserRow($userId);
+            if (!$lockedUser) {
                 throw new RuntimeException('User not found.');
+            }
+
+            if ($locked && $this->isProtectedAdminUser($lockedUser)) {
+                $this->rollback();
+                return $this->failure(['Protected administrator accounts cannot be locked.']);
             }
 
             $stmt = $this->db->prepare($locked
@@ -830,11 +858,54 @@ class UserService
     private function lockUserRow(int $userId): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT id FROM users WHERE id = :id FOR UPDATE'
+            'SELECT id, username, role_id, status FROM users WHERE id = :id FOR UPDATE'
         );
         $stmt->execute([':id' => $userId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
+    }
+
+    private function isProtectedAdminUser(array $user): bool
+    {
+        return in_array(
+            strtolower((string)($user['username'] ?? '')),
+            self::PROTECTED_ADMIN_USERNAMES,
+            true
+        );
+    }
+
+    private function validateProtectedAdminUpdate(array $existingUser, array $newUser): array
+    {
+        $errors = [];
+
+        if (strtolower(trim((string)($newUser['username'] ?? ''))) !== strtolower((string)$existingUser['username'])) {
+            $errors[] = 'Protected administrator usernames cannot be changed.';
+        }
+
+        if (($newUser['status'] ?? 'Active') !== 'Active') {
+            $errors[] = 'Protected administrator accounts must remain active.';
+        }
+
+        $newRoleId = (int)($newUser['role_id'] ?? 0);
+        if ($newRoleId !== (int)$existingUser['role_id'] || !$this->roleIsSystemAdministrator($newRoleId)) {
+            $errors[] = 'Protected administrator accounts must keep the System Administrator role.';
+        }
+
+        return $errors;
+    }
+
+    private function roleIsSystemAdministrator(int $roleId): bool
+    {
+        if ($roleId <= 0) {
+            return false;
+        }
+
+        $stmt = $this->db->prepare(
+            'SELECT role_name FROM roles WHERE id = :id LIMIT 1'
+        );
+        $stmt->execute([':id' => $roleId]);
+
+        return (string)$stmt->fetchColumn() === 'System Administrator';
     }
 
     /**
