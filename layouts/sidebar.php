@@ -293,7 +293,7 @@ if ($currentUser && isset($pdo)) {
 
                 <a href="<?= e($baseUrl) ?>/modules/department_notifications/index.php">
 
-                    Notifications<?= $departmentNotificationCount > 0 ? ' (' . (int)$departmentNotificationCount . ')' : '' ?>
+                    Department Notifications<?= $departmentNotificationCount > 0 ? ' (' . (int)$departmentNotificationCount . ')' : '' ?>
 
                 </a>
 
