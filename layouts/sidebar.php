@@ -20,6 +20,7 @@ $canAccessPharmacySidebar = false;
 $canAccessBillingSidebar = false;
 $canAccessReportsSidebar = false;
 $canAccessDepartmentSwitchSidebar = false;
+$departmentWorklistCount = 0;
 $departmentNotificationCount = 0;
 $userNotificationCount = 0;
 
@@ -27,6 +28,7 @@ if ($currentUser && isset($pdo)) {
     require_once __DIR__ . '/../services/PermissionService.php';
     require_once __DIR__ . '/../services/DepartmentNotificationService.php';
     require_once __DIR__ . '/../services/UserNotificationService.php';
+    require_once __DIR__ . '/../services/VisitService.php';
     $sidebarPermissionService = new PermissionService($pdo);
     $sidebarRole = (string)($currentUser['role_name'] ?? '');
     $sidebarDepartment = (string)(
@@ -179,7 +181,47 @@ if ($currentUser && isset($pdo)) {
         ?? 0
     );
     if ($sidebarDepartmentId > 0) {
-        $departmentNotificationCount = (new DepartmentNotificationService($pdo))->getUnreadCount($sidebarDepartmentId);
+        try {
+            if ($sidebarPermissionService->hasPermission('view_encounter', $currentUser)
+                && (
+                    $sidebarIsAdmin
+                    || $sidebarPermissionService->canAccessDepartment($sidebarDepartmentId, $currentUser)
+                )
+            ) {
+                $departmentWorklistCount = count((new VisitService($pdo))->listDepartmentWorklist($sidebarDepartmentId));
+            }
+        } catch (Throwable) {
+            $departmentWorklistCount = 0;
+        }
+
+        try {
+            $departmentNotificationCount = (new DepartmentNotificationService($pdo))->getUnreadCount($sidebarDepartmentId);
+        } catch (Throwable) {
+            $departmentNotificationCount = 0;
+        }
+
+        if ($sidebarDepartmentIn(['Accounts'])
+            && $sidebarPermissionService->canViewBillingRequests($currentUser)
+        ) {
+            try {
+                $stmt = $pdo->prepare(
+                    'SELECT COUNT(*)
+                     FROM information_schema.tables
+                     WHERE table_schema = DATABASE()
+                       AND table_name = :table'
+                );
+                $stmt->execute([':table' => 'billing_requests']);
+                if ((int)$stmt->fetchColumn() > 0) {
+                    $pendingBillingRequests = $pdo->query(
+                        "SELECT COUNT(*) FROM billing_requests WHERE status = 'Pending'"
+                    )->fetchColumn();
+                    $departmentWorklistCount += (int)$pendingBillingRequests;
+                }
+            } catch (Throwable) {
+                // Keep the sidebar usable even if the optional Billing Request
+                // table is not present yet.
+            }
+        }
     }
     try {
         $userNotificationCount = (new UserNotificationService($pdo))->getUnreadCount((int)($currentUser['id'] ?? 0));
@@ -285,7 +327,7 @@ $sidebarBranding = appBranding($pdo ?? null);
 
                 <a href="<?= e($baseUrl) ?>/modules/visits/department_worklist.php">
 
-                    Department Worklist
+                    Department Worklist<?= $departmentWorklistCount > 0 ? ' (' . (int)$departmentWorklistCount . ')' : '' ?>
 
                 </a>
 

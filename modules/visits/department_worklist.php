@@ -10,6 +10,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/VisitService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
+require_once __DIR__ . '/../../services/BillingService.php';
 
 $currentUser = $currentUser ?? ($_SESSION['user'] ?? null);
 $departmentId = (int)(
@@ -27,6 +28,7 @@ $departmentName = (string)(
 
 $permissionService = new PermissionService($pdo);
 $visitService = new VisitService($pdo);
+$billingService = new BillingService($pdo);
 
 if (
     !$currentUser
@@ -41,6 +43,32 @@ if (
 }
 
 $rows = $visitService->listDepartmentWorklist($departmentId);
+$isAccountsDepartment = strcasecmp($departmentName, 'Accounts') === 0;
+$billingRequestsReady = false;
+$pendingBillingRequests = [];
+
+if ($isAccountsDepartment && $permissionService->canViewBillingRequests($currentUser)) {
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT COUNT(*)
+             FROM information_schema.tables
+             WHERE table_schema = DATABASE()
+               AND table_name = :table'
+        );
+        $stmt->execute([':table' => 'billing_requests']);
+        $billingRequestsReady = (int)$stmt->fetchColumn() > 0;
+
+        if ($billingRequestsReady) {
+            $pendingBillingRequests = $billingService->listBillingRequests(
+                ['status' => 'Pending'],
+                $currentUser
+            );
+        }
+    } catch (Throwable) {
+        $billingRequestsReady = false;
+        $pendingBillingRequests = [];
+    }
+}
 
 require_once __DIR__ . '/../../layouts/header.php';
 require_once __DIR__ . '/../../layouts/sidebar.php';
@@ -81,6 +109,62 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
             <p><?= e($departmentName) ?> encounters awaiting receive or active queue action.</p>
         </div>
     </div>
+
+    <?php if ($isAccountsDepartment && $permissionService->canViewBillingRequests($currentUser)): ?>
+        <section class="card">
+            <div class="card-header">
+                <div>
+                    <h2>Pending Billing Requests</h2>
+                    <p>Department recommendations that need Accounts review. These do not transfer encounter ownership.</p>
+                </div>
+                <div class="form-actions">
+                    <a class="btn-secondary" href="../billing/billing_requests.php">Open Billing Requests</a>
+                </div>
+            </div>
+
+            <?php if (!$billingRequestsReady): ?>
+                <div class="empty-state">Billing request tables are not available yet. Apply Migration 044 to enable this section.</div>
+            <?php elseif ($pendingBillingRequests === []): ?>
+                <div class="empty-state">No pending billing requests.</div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="summary-table department-worklist-table">
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Hospital No.</th>
+                                <th>Visit No.</th>
+                                <th>Requesting Department</th>
+                                <th>Description</th>
+                                <th>Suggested Item</th>
+                                <th>Qty</th>
+                                <th>Requested By</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($pendingBillingRequests as $request): ?>
+                                <tr>
+                                    <td><?= e((string)($request['patient_name'] ?? 'Unnamed Patient')) ?></td>
+                                    <td><?= e((string)($request['hospital_number'] ?? '—')) ?></td>
+                                    <td><?= e((string)($request['visit_number'] ?? ('#' . (int)($request['visit_id'] ?? 0)))) ?></td>
+                                    <td><?= e((string)($request['department_name'] ?? '—')) ?></td>
+                                    <td><?= e((string)($request['description'] ?? '—')) ?></td>
+                                    <td><?= e((string)($request['suggested_item_name'] ?? '—')) ?></td>
+                                    <td><?= e((string)($request['display_quantity'] ?? '1')) ?></td>
+                                    <td><?= e((string)($request['requested_by_name'] ?? '—')) ?></td>
+                                    <td class="table-actions">
+                                        <a class="btn-primary" href="../billing/request_review.php?id=<?= (int)$request['id'] ?>">Create Charge</a>
+                                        <a class="btn-secondary" href="workspace.php?id=<?= (int)$request['visit_id'] ?>&tab=billing">Open Encounter</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </section>
+    <?php endif; ?>
 
     <section class="card">
         <?php if ($rows === []): ?>
