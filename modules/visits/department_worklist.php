@@ -45,6 +45,31 @@ $rows = $visitService->listDepartmentWorklist($departmentId);
 require_once __DIR__ . '/../../layouts/header.php';
 require_once __DIR__ . '/../../layouts/sidebar.php';
 ?>
+<style>
+    .department-worklist-table {
+        min-width: 980px;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .department-worklist-table th,
+    .department-worklist-table td {
+        padding: .85rem 1rem;
+        vertical-align: middle;
+    }
+
+    .department-worklist-table th {
+        white-space: nowrap;
+        letter-spacing: .01em;
+    }
+
+    .department-worklist-table .table-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+        align-items: center;
+    }
+</style>
 
 <div class="main-container">
 <?php require_once __DIR__ . '/../../layouts/navbar.php'; ?>
@@ -64,7 +89,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
             </div>
         <?php else: ?>
             <div class="table-responsive">
-                <table class="summary-table">
+                <table class="summary-table department-worklist-table">
                     <thead>
                         <tr>
                             <th>Patient</th>

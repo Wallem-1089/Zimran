@@ -36,6 +36,16 @@ if ($currentUser && isset($pdo)) {
         ?? ''
     );
     $sidebarIsAdmin = $sidebarPermissionService->isAdministrator($currentUser);
+    $sidebarRoleIn = static fn(array $roles): bool => in_array(
+        $sidebarRole,
+        $roles,
+        true
+    );
+    $sidebarDepartmentIn = static fn(array $departments): bool => in_array(
+        $sidebarDepartment,
+        $departments,
+        true
+    );
     $sidebarCan = static function (string $permission) use (
         $sidebarPermissionService,
         $currentUser
@@ -50,20 +60,117 @@ if ($currentUser && isset($pdo)) {
         }
     };
 
-    $canAccessMedicalRecordsSidebar = $sidebarCan('view_medical_record');
-    $canAccessLaboratorySidebar = $sidebarCan('view_laboratory');
-    $canAccessRadiologySidebar = $sidebarCan('view_radiology');
-    $canAccessPhysiotherapySidebar = $sidebarCan('view_physiotherapy');
-    $canAccessTheatreSidebar = $sidebarCan('view_theatre');
-    $canAccessAccountsSidebar = $sidebarCan('view_billable_items');
-    $canAccessStoreSidebar = $sidebarCan('view_inventory');
-    $canAccessAdmissionsSidebar = $sidebarCan('view_admissions');
-    $canAccessPharmacySidebar = $sidebarCan('view_pharmacy');
-    $canAccessBillingSidebar = $sidebarCan('view_billing');
-    $canAccessReportsSidebar = $sidebarCan('view_reports')
-        || $sidebarCan('view_financial_reports')
-        || $sidebarCan('view_inventory_reports')
-        || $sidebarCan('view_clinical_reports');
+    /*
+    |--------------------------------------------------------------------------
+    | Sidebar Visibility
+    |--------------------------------------------------------------------------
+    |
+    | Patient-specific cross-view permissions are intentionally broader inside
+    | the Encounter Workspace. Sidebar module links expose department-wide
+    | worklists/master-data screens, so they stay department-owned.
+    |
+    */
+
+    $canAccessMedicalRecordsSidebar = $sidebarIsAdmin
+        || (
+            $sidebarCan('view_medical_record')
+            && (
+                $sidebarRoleIn(['Records Officer'])
+                || $sidebarDepartmentIn(['Records'])
+            )
+        );
+
+    $canAccessLaboratorySidebar = $sidebarIsAdmin
+        || (
+            $sidebarCan('view_laboratory')
+            && $sidebarDepartmentIn(['Laboratory'])
+        );
+
+    $canAccessRadiologySidebar = $sidebarIsAdmin
+        || (
+            $sidebarCan('view_radiology')
+            && $sidebarDepartmentIn(['X-Ray', 'Radiology'])
+        );
+
+    $canAccessPhysiotherapySidebar = $sidebarIsAdmin
+        || (
+            $sidebarCan('view_physiotherapy')
+            && $sidebarDepartmentIn(['Physiotherapy'])
+        );
+
+    $canAccessTheatreSidebar = $sidebarIsAdmin
+        || (
+            $sidebarCan('view_theatre')
+            && $sidebarDepartmentIn(['Theatre'])
+        );
+
+    $canAccessAccountsSidebar = $sidebarIsAdmin
+        || (
+            $sidebarCan('view_billable_items')
+            && (
+                $sidebarRoleIn(['Accountant'])
+                || $sidebarDepartmentIn(['Accounts'])
+            )
+        );
+
+    $canAccessStoreSidebar = $sidebarIsAdmin
+        || (
+            $sidebarCan('view_inventory')
+            && (
+                $sidebarRoleIn(['Store Officer'])
+                || $sidebarDepartmentIn(['Store'])
+            )
+        );
+
+    $canAccessAdmissionsSidebar = $sidebarIsAdmin
+        || (
+            $sidebarCan('view_admissions')
+            && (
+                $sidebarRoleIn(['Receptionist', 'Records Officer', 'Doctor', 'Nurse'])
+                || $sidebarDepartmentIn(['Reception', 'Records', 'Doctor', 'Nursing'])
+            )
+        );
+
+    $canAccessPharmacySidebar = $sidebarIsAdmin
+        || (
+            $sidebarCan('view_pharmacy')
+            && (
+                $sidebarRoleIn(['Pharmacist'])
+                || $sidebarDepartmentIn(['Pharmacy'])
+            )
+        );
+
+    $canAccessBillingSidebar = $sidebarIsAdmin
+        || (
+            $sidebarCan('view_billing')
+            && (
+                $sidebarRoleIn(['Accountant'])
+                || $sidebarDepartmentIn(['Accounts'])
+            )
+        );
+
+    $canAccessReportsSidebar = $sidebarIsAdmin
+        || (
+            $sidebarDepartmentIn(['Accounts'])
+            && (
+                $sidebarCan('view_reports')
+                || $sidebarCan('view_financial_reports')
+            )
+        )
+        || (
+            $sidebarDepartmentIn(['Store'])
+            && (
+                $sidebarCan('view_reports')
+                || $sidebarCan('view_inventory_reports')
+            )
+        )
+        || (
+            $sidebarDepartmentIn(['Records'])
+            && (
+                $sidebarCan('view_reports')
+                || $sidebarCan('view_clinical_reports')
+            )
+        );
 
     $sidebarDepartmentId = (int)(
         $currentUser['active_department_id']

@@ -87,29 +87,33 @@ The matrix describes current seeded behavior, not a final clinical permission mo
 
 ## Sidebar Visibility Policy
 
-Sidebar destinations are permission-driven. Administrators control what a user
-sees by assigning role/user permissions; the application does not maintain a
-separate sidebar-customization table.
+Sidebar destinations are permission-driven, but department-wide module links
+also respect ownership. Patient-specific cross-view permissions may allow a
+user to see another department's record inside the Encounter Workspace, but
+that does not automatically expose the other department's full sidebar
+worklist. The application does not maintain a separate sidebar-customization
+table.
 
-| Sidebar destination | Visibility permission |
+| Sidebar destination | Visibility rule |
 |---|---|
 | Patients / Encounters | Authenticated user; encounter actions still require their own permissions |
-| Medical Records | `view_medical_record` |
-| Laboratory | `view_laboratory` |
-| Radiology | `view_radiology` |
-| Physiotherapy | `view_physiotherapy` |
-| Theatre | `view_theatre` |
-| Accounts | `view_billable_items` |
-| Store | `view_inventory` |
-| Admissions | `view_admissions` |
-| Pharmacy | `view_pharmacy` |
-| Billing | `view_billing` |
-| Reports | `view_reports`, `view_financial_reports`, `view_inventory_reports`, or `view_clinical_reports` |
+| Department Worklist | Authenticated user with active department context |
+| Medical Records | `view_medical_record` plus Records ownership; Administrator override |
+| Laboratory | `view_laboratory` plus Laboratory department ownership; Administrator override |
+| Radiology | `view_radiology` plus X-Ray/Radiology department ownership; Administrator override |
+| Physiotherapy | `view_physiotherapy` plus Physiotherapy department ownership; Administrator override |
+| Theatre | `view_theatre` plus Theatre department ownership; Administrator override |
+| Accounts | `view_billable_items` plus Accounts ownership; Administrator override |
+| Store | `view_inventory` plus Store ownership; Administrator override |
+| Admissions | `view_admissions` plus Reception/Records/Doctor/Nursing ownership; Administrator override |
+| Pharmacy | `view_pharmacy` plus Pharmacy ownership; Administrator override |
+| Billing | `view_billing` plus Accounts ownership; Administrator override |
+| Reports | Report permission plus Accounts, Store, or Records ownership depending on report type; Administrator override |
 | Administration | System Administrator only |
 
-This keeps access simple: if a role should see Store, grant `view_inventory`;
-if it should not see Billing, remove `view_billing`. Page-level permission
-checks remain authoritative even when a sidebar link is visible.
+This keeps patient-specific clinical context useful without giving every
+clinical user every department's full worklist. Page-level permission checks
+remain authoritative even when a sidebar link is visible.
 
 ## Module Permission Requirements
 
