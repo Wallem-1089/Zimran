@@ -66,6 +66,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p><?= e((string)($request['visit_number'] ?? ('Encounter #' . (int)$request['visit_id']))) ?></p>
         </div>
         <div class="form-actions">
+            <button class="btn-secondary" type="button" onclick="window.print()">Print Lab Result</button>
             <?php if ($permissionService->canViewLaboratoryWorklist($currentUser)): ?>
                 <a class="btn-secondary" href="index.php">Worklist</a>
             <?php endif; ?>

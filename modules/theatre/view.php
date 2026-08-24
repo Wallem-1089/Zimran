@@ -48,7 +48,8 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <h1>Theatre Record</h1>
             <p><?= e((string)$theatre['visit_number']) ?> | <?= e((string)$theatre['status']) ?></p>
         </div>
-        <div>
+        <div class="form-actions no-print">
+            <button class="btn-secondary" type="button" onclick="window.print()">Print Operation Note</button>
             <a class="btn-secondary" href="<?= e(theatreBackToWorkspace((int)$theatre['visit_id'])) ?>">Workspace</a>
             <a class="btn-secondary" href="history.php?patient=<?= (int)$theatre['patient_id'] ?>">History</a>
             <?php if (!in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true) && $permissionService->canCreateBillingRequest($currentUser)): ?>

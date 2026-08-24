@@ -91,6 +91,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p><?= e((string)$visit['visit_number']) ?> | <?= e($billingPatientName) ?></p>
         </div>
         <div class="form-actions">
+            <button class="btn-secondary" type="button" onclick="window.print()">Print Invoice</button>
             <a class="btn-secondary" href="index.php">Billing Home</a>
             <?php if ($canCreateBillingRequest): ?>
                 <a class="btn-secondary" href="request_create.php?visit=<?= (int)$visit['id'] ?>">Request Billing</a>

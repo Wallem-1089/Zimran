@@ -136,6 +136,76 @@ body{
 }
 
 /* ==========================================================================
+   Browser Print
+   ========================================================================== */
+
+@media print{
+
+    @page{
+
+        margin:12mm;
+
+    }
+
+    body{
+
+        background:#ffffff !important;
+
+        color:#111827 !important;
+
+    }
+
+    .sidebar,
+    .navbar,
+    .footer,
+    .form-actions,
+    .no-print,
+    .logout-btn{
+
+        display:none !important;
+
+    }
+
+    .main-container,
+    .content{
+
+        width:100% !important;
+
+        max-width:none !important;
+
+        min-height:auto !important;
+
+        margin:0 !important;
+
+        padding:0 !important;
+
+        background:#ffffff !important;
+
+    }
+
+    .card,
+    .summary-item,
+    .table,
+    .data-table,
+    .summary-table{
+
+        box-shadow:none !important;
+
+        break-inside:avoid;
+
+    }
+
+    a{
+
+        color:#111827 !important;
+
+        text-decoration:none !important;
+
+    }
+
+}
+
+/* ==========================================================================
    Final shared UI overrides
    ========================================================================== */
 

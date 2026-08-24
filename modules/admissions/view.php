@@ -21,6 +21,8 @@ $movements = $admissionService->listMovements((int)$admission['id']);
 $activeAdmission = in_array((string)$admission['status'], ['Admitted','Transferred'], true);
 $canTransfer = $activeAdmission && $permissionService->canTransferAdmission($visit, $currentUser);
 $canDischarge = $activeAdmission && $permissionService->canDischargeAdmission($visit, $currentUser);
+$encounterLocked = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
+$canRequestBilling = !$encounterLocked && $permissionService->canCreateBillingRequest($currentUser);
 
 $pageTitle = 'Admission';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -35,7 +37,11 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="page-header">
         <div><h1>Admission</h1><p><?= e((string)$admission['patient_name']) ?> · <?= e((string)$admission['visit_number']) ?></p></div>
         <div class="form-actions">
+            <button class="btn-secondary" type="button" onclick="window.print()">Print Admission Slip</button>
             <a class="btn-secondary" href="<?= e(admissionBackToWorkspace((int)$admission['visit_id'])) ?>">Workspace</a>
+            <?php if ($canRequestBilling): ?>
+                <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$admission['visit_id'] ?>&source_module=Admission&source_record_id=<?= (int)$admission['id'] ?>&description=<?= urlencode('Admission: ' . (string)($admission['admission_type'] ?? 'Inpatient care')) ?>">Request Billing</a>
+            <?php endif; ?>
             <?php if ($canTransfer): ?><a class="btn-secondary" href="transfer.php?id=<?= (int)$admission['id'] ?>">Transfer Bed/Ward</a><?php endif; ?>
             <?php if ($canDischarge): ?><a class="btn-primary" href="discharge.php?id=<?= (int)$admission['id'] ?>">Discharge</a><?php endif; ?>
             <?php if ($canDischarge): ?><a class="btn-secondary" href="cancel.php?id=<?= (int)$admission['id'] ?>">Cancel Admission</a><?php endif; ?>

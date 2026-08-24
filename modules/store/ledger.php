@@ -29,6 +29,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p><?php if ($item): ?><?= e((string)$item['item_code']) ?> — <?= e((string)$item['item_name']) ?><?php else: ?>All item movements<?php endif; ?></p>
         </div>
         <div class="form-actions">
+            <button class="btn-secondary" type="button" onclick="window.print()">Print Bin Card / Ledger</button>
             <a class="btn-secondary" href="index.php">Inventory Items</a>
             <?php if ($item): ?><a class="btn-secondary" href="view.php?id=<?= $itemId ?>">Item</a><?php endif; ?>
         </div>
@@ -74,4 +75,3 @@ require __DIR__ . '/../../layouts/sidebar.php';
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
-

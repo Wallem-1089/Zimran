@@ -209,6 +209,15 @@ $isClosedEncounter = in_array(
 
     <div class="encounter-header-right">
 
+        <button
+            class="btn-secondary no-print"
+            type="button"
+            onclick="window.print()">
+
+            Print Encounter Summary
+
+        </button>
+
         <?php if (!empty($canViewPatientChart)): ?>
 
             <a

@@ -77,6 +77,12 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
     </div>
 
+    <div class="form-actions">
+
+        <button class="btn-secondary" type="button" onclick="window.print()">Print Patient Face Sheet</button>
+
+    </div>
+
 </div>
 
 <?php if (isset($_SESSION['success_message'])) : ?>

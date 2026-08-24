@@ -12,6 +12,7 @@ $canViewAdmissions = $canViewAdmissions ?? false;
 $canCreateAdmission = $canCreateAdmission ?? false;
 $canTransferAdmission = $canTransferAdmission ?? false;
 $canDischargeAdmission = $canDischargeAdmission ?? false;
+$canCreateBillingRequest = $canCreateBillingRequest ?? false;
 $encounterLocked = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
 ?>
 
@@ -53,6 +54,9 @@ $encounterLocked = in_array((string)($visit['visit_status'] ?? ''), ['Completed'
 
         <div class="form-actions">
             <a class="btn-secondary" href="../admissions/view.php?id=<?= (int)$admission['id'] ?>">View Admission</a>
+            <?php if (!$encounterLocked && $canCreateBillingRequest): ?>
+                <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$visit['id'] ?>&source_module=Admission&source_record_id=<?= (int)$admission['id'] ?>&description=<?= urlencode('Admission: ' . (string)($admission['admission_type'] ?? 'Inpatient care')) ?>">Request Billing</a>
+            <?php endif; ?>
             <?php if (!$encounterLocked && in_array((string)$admission['status'], ['Admitted','Transferred'], true)): ?>
                 <?php if ($canTransferAdmission): ?>
                     <a class="btn-secondary" href="../admissions/transfer.php?id=<?= (int)$admission['id'] ?>">Transfer Bed/Ward</a>
