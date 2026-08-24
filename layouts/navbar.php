@@ -6,6 +6,7 @@ $currentDateTime = date('l, d F Y - h:i A');
 $currentUser ??= [];
 $config = require __DIR__ . '/../config/app.php';
 $baseUrl = rtrim($config['app']['base_url'], '/');
+$branding = appBranding($GLOBALS['pdo'] ?? null);
 
 ?>
 
@@ -15,7 +16,7 @@ $baseUrl = rtrim($config['app']['base_url'], '/');
 
         <h1>
 
-            <?= e($pageTitle ?? 'Hospital Management System') ?>
+            <?= e($pageTitle ?? $branding['full_name']) ?>
 
         </h1>
 

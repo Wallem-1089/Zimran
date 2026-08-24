@@ -83,6 +83,12 @@ practical version: `createWard()`, `addBed()`, `admit()`, `transfer()`,
 `listByPatient()`, `listActive()`, `listMovements()`, `listWards()`,
 `listBedsByWard()`, and `listAvailableBeds()`.
 
+`BillingService` also owns the Billing Request / Charge Recommendation flow:
+`createBillingRequest()`, `getBillingRequestById()`, `listBillingRequests()`,
+`chargeBillingRequest()`, and `cancelBillingRequest()`. Billing Requests are
+non-financial until Accounts/Admin converts them into `patient_charges` through
+the existing price-snapshot charge path.
+
 ## Public Method Contracts
 
 The method tables are normative summaries. Unless a row says otherwise, write failures use `['success' => false, 'errors' => [...]]`; administration authorization and CSRF are expected at the controller boundary; PDO read failures may propagate.
@@ -1059,6 +1065,12 @@ notes, and follow-up instructions before calling the encounter completion
 service flow. Billing routes remain allowed to settle invoices after clinical
 completion, while clinical module mutations remain locked for Completed or
 Cancelled encounters.
+
+Billing Requests use `modules/billing/request_create.php` and
+`request_save.php` for department recommendations, `billing_requests.php` for
+Accounts review, `request_review.php` / `request_charge_save.php` to create
+official charges, and `request_cancel.php` for pending-request cancellation.
+They do not alter invoices, balances, payments, or receipts until converted.
 
 Known route cleanup items: user self-service `authentication/forgot_password.php`
 is not implemented; administrator reset-password remains the recovery path.

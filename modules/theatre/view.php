@@ -51,6 +51,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div>
             <a class="btn-secondary" href="<?= e(theatreBackToWorkspace((int)$theatre['visit_id'])) ?>">Workspace</a>
             <a class="btn-secondary" href="history.php?patient=<?= (int)$theatre['patient_id'] ?>">History</a>
+            <?php if (!in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true) && $permissionService->canCreateBillingRequest($currentUser)): ?>
+                <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$theatre['visit_id'] ?>&source_module=Theatre&source_record_id=<?= (int)$theatre['id'] ?>&description=<?= urlencode('Theatre: ' . (string)($theatre['procedure_name'] ?? '')) ?>">Request Billing</a>
+            <?php endif; ?>
             <?php if ($canEdit): ?>
                 <a class="btn-secondary" href="edit.php?id=<?= (int)$theatre['id'] ?>">Edit</a>
             <?php endif; ?>
@@ -97,4 +100,3 @@ require __DIR__ . '/../../layouts/sidebar.php';
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
-

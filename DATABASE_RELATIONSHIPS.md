@@ -952,6 +952,7 @@ erDiagram
 | `inventory_items` | Store / `StoreService` | Mutable inventory master data with soft activation | PK `id`; unique `item_code`; item name, category, billable-item link, active, created_at, created_by and updated_by indexes |
 | `stock_transactions` | Store / `StoreService` | Immutable stock movement ledger | PK `id`; inventory item, transaction type, quantity, from/to department, created_at, performer indexes |
 | `department_stock_balances` | Store / `StoreService` | Maintained cache of current department quantities | Composite PK `(inventory_item_id, department_id)`; quantity and updated_at |
+| `billing_requests` | Billing / `BillingService` | Non-financial department recommendation queue; Pending -> Charged/Cancelled | PK `id`; visit, patient, department, status, requested_by, source, suggested billable item, patient charge, and created_at indexes |
 
 | FK | Source -> target | Update/delete |
 |---|---|---|
@@ -967,6 +968,13 @@ erDiagram
 | `fk_stock_transactions_performed_by` | `stock_transactions.performed_by -> users.id` | CASCADE / RESTRICT |
 | `fk_department_stock_balances_item` | `department_stock_balances.inventory_item_id -> inventory_items.id` | CASCADE / CASCADE |
 | `fk_department_stock_balances_department` | `department_stock_balances.department_id -> departments.id` | CASCADE / CASCADE |
+| `fk_billing_requests_visit` | `billing_requests.visit_id -> visits.id` | CASCADE / RESTRICT |
+| `fk_billing_requests_patient` | `billing_requests.patient_id -> patients.id` | CASCADE / RESTRICT |
+| `fk_billing_requests_department` | `billing_requests.department_id -> departments.id` | CASCADE / RESTRICT |
+| `fk_billing_requests_requested_by` | `billing_requests.requested_by -> users.id` | CASCADE / RESTRICT |
+| `fk_billing_requests_suggested_item` | `billing_requests.suggested_billable_item_id -> billable_items.id` | CASCADE / SET NULL |
+| `fk_billing_requests_reviewed_by` | `billing_requests.reviewed_by -> users.id` | CASCADE / SET NULL |
+| `fk_billing_requests_patient_charge` | `billing_requests.patient_charge_id -> patient_charges.id` | CASCADE / SET NULL |
 
 ```mermaid
 erDiagram
@@ -981,4 +989,8 @@ erDiagram
     USERS ||--o{ STOCK_TRANSACTIONS : performs
     INVENTORY_ITEMS ||--o{ DEPARTMENT_STOCK_BALANCES : balances
     DEPARTMENTS ||--o{ DEPARTMENT_STOCK_BALANCES : holds
+    VISITS ||--o{ BILLING_REQUESTS : recommends
+    PATIENTS ||--o{ BILLING_REQUESTS : has
+    DEPARTMENTS ||--o{ BILLING_REQUESTS : requests
+    BILLABLE_ITEMS o|--o{ BILLING_REQUESTS : suggested_for
 ```

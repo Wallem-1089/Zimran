@@ -425,6 +425,10 @@ charges directly. Accounts remains the price owner.
 | `view_billing` | Yes | Yes | Limited/basic when granted | View only when granted | No default |
 | `create_patient_charge` | Yes | Yes | No default | No default | No |
 | `cancel_patient_charge` | Yes | Yes | No | No | No |
+| `create_billing_request` | Yes | No default | No default | Yes | No |
+| `view_billing_requests` | Yes | Yes | No default | Own/current encounter only through workflow | No |
+| `review_billing_request` | Yes | Yes | No | No | No |
+| `cancel_billing_request` | Yes | Yes | No | No | No |
 | `create_invoice` | Yes | Yes | No default | No | No |
 | `record_payment` | Yes | Yes | No default | No | No |
 | `view_receipts` | Yes | Yes | No default | No default | No |
@@ -433,6 +437,10 @@ Billing owns patient charges, invoices, payments, and receipt views. Financial
 totals are derived from posted charges and payments and cannot be manually
 edited. Billing can remain mutable after clinical encounter completion for
 settlement purposes.
+
+Billing Requests are recommendations only. Clinical/department roles may create
+requests, but Accounts/Admin must review them and create the official charge
+from `billable_items`.
 
 ## Encounter cancellation permissions
 

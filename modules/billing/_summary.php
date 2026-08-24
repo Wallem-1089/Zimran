@@ -11,6 +11,8 @@ $billingChargesTotal = (float)($billingSummary['total_charges'] ?? 0);
 $billingPaymentsTotal = (float)($billingSummary['amount_paid'] ?? 0);
 $billingBalanceDue = (float)($billingSummary['balance_due'] ?? 0);
 $billingStatus = (string)($billingSummary['status'] ?? 'Unbilled');
+$billingRequests = $billingRequests ?? [];
+$billingRequestsReady = $billingRequestsReady ?? false;
 ?>
 
 <div class="card">
@@ -21,6 +23,12 @@ $billingStatus = (string)($billingSummary['status'] ?? 'Unbilled');
         </div>
         <div class="form-actions">
             <a class="btn-secondary" href="../billing/view.php?visit=<?= (int)$visit['id'] ?>">Open Billing</a>
+            <?php if (!empty($canCreateBillingRequest)): ?>
+                <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$visit['id'] ?>">Request Billing</a>
+            <?php endif; ?>
+            <?php if (!empty($canViewBillingRequests)): ?>
+                <a class="btn-secondary" href="../billing/billing_requests.php">Billing Requests</a>
+            <?php endif; ?>
             <?php if (!empty($canCreatePatientCharge)): ?>
                 <a class="btn-primary" href="../billing/charge_create.php?visit=<?= (int)$visit['id'] ?>">Add Charge</a>
             <?php endif; ?>
@@ -64,6 +72,57 @@ $billingStatus = (string)($billingSummary['status'] ?? 'Unbilled');
             <span class="summary-value"><?= e($billingBalanceDue <= 0 && $billingChargesTotal > 0 ? 'Paid' : ($billingChargesTotal > 0 ? 'Open' : 'No Charges')) ?></span>
         </div>
     </div>
+</div>
+
+<div class="card">
+    <h3>Billing Requests</h3>
+    <?php if (!$billingRequestsReady): ?>
+        <div class="empty-state">Billing request tables are not available yet. Apply Migration 044 to enable recommendations.</div>
+    <?php elseif (empty($billingRequests)): ?>
+        <div class="empty-state">No billing requests for this encounter.</div>
+    <?php else: ?>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Department</th>
+                        <th>Suggested Item</th>
+                        <th>Qty</th>
+                        <th>Status</th>
+                        <th>Requested By</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($billingRequests as $request): ?>
+                        <tr>
+                            <td><?= e((string)($request['description'] ?? '—')) ?></td>
+                            <td><?= e((string)($request['department_name'] ?? '—')) ?></td>
+                            <td><?= e((string)($request['suggested_item_name'] ?? '—')) ?></td>
+                            <td><?= e((string)($request['display_quantity'] ?? '1')) ?></td>
+                            <td><?= e((string)($request['status'] ?? 'Pending')) ?></td>
+                            <td><?= e((string)($request['requested_by_name'] ?? '—')) ?></td>
+                            <td>
+                                <?php if (!empty($canReviewBillingRequest) && (string)($request['status'] ?? '') === 'Pending'): ?>
+                                    <a class="btn-primary btn-sm" href="../billing/request_review.php?id=<?= (int)$request['id'] ?>">Create Charge</a>
+                                <?php endif; ?>
+                                <?php if (!empty($canCancelBillingRequest) && (string)($request['status'] ?? '') === 'Pending'): ?>
+                                    <form method="post" action="../billing/request_cancel.php" style="display:inline">
+                                        <?= csrfField() ?>
+                                        <input type="hidden" name="billing_request_id" value="<?= (int)$request['id'] ?>">
+                                        <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
+                                        <input type="hidden" name="reason" value="Cancelled from billing workspace.">
+                                        <button class="btn-secondary btn-sm" type="submit">Cancel</button>
+                                    </form>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif; ?>
 </div>
 
 <div class="card">

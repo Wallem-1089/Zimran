@@ -6,6 +6,7 @@ $currentYear = date('Y');
 $config = require __DIR__ . '/../config/app.php';
 
 $baseUrl = rtrim($config['app']['base_url'], '/');
+$branding = appBranding($GLOBALS['pdo'] ?? null);
 
 ?>
 
@@ -13,7 +14,7 @@ $baseUrl = rtrim($config['app']['base_url'], '/');
 
     <div class="footer-left">
 
-        <strong>Hospital Management System</strong>
+        <strong><?= e($branding['full_name']) ?></strong>
 
         <span>
 

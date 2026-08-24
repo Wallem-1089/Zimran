@@ -1,6 +1,6 @@
 <?php
 
-define("APP_NAME","Hospital Management System");
+define("APP_NAME","Zimran E-HMIS");
 
 define("APP_VERSION","1.0");
 

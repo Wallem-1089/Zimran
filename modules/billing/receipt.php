@@ -25,6 +25,7 @@ $pageTitle = 'Receipt';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 require __DIR__ . '/../../layouts/header.php';
 require __DIR__ . '/../../layouts/sidebar.php';
+$branding = appBranding($GLOBALS['pdo'] ?? null);
 ?>
 <div class="main-container">
 <?php require __DIR__ . '/../../layouts/navbar.php'; ?>
@@ -41,7 +42,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     </div>
 
     <div class="card">
-        <h2>Hospital Management System</h2>
+        <h2><?= e($branding['full_name']) ?></h2>
         <div class="summary-grid">
             <div class="summary-item"><span class="summary-label">Receipt No.</span> <span class="summary-value">RCPT-<?= (int)$receipt['id'] ?></span></div>
             <div class="summary-item"><span class="summary-label">Patient</span> <span class="summary-value"><?= e((string)($receipt['patient_name'] ?? '—')) ?></span></div>

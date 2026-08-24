@@ -29,6 +29,15 @@ $documentStorageRoot = $configuredDocumentStorageRoot !== ''
     ? $configuredDocumentStorageRoot
     : dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'hms_secure_documents';
 
+$configuredBaseUrl = '/' . trim(
+    (string)getenv('HMS_BASE_URL'),
+    "/ \t\n\r\0\x0B"
+);
+
+$baseUrl = $configuredBaseUrl !== '/'
+    ? $configuredBaseUrl
+    : '/zimran';
+
 return [
 
     /*
@@ -39,7 +48,7 @@ return [
 
     'app' => [
 
-        'name' => 'Hospital Management System',
+        'name' => 'E-HMIS',
 
         'version' => '1.0.0',
 
@@ -49,7 +58,7 @@ return [
 
         'development_auth_bypass' => $developmentAuthBypass,
 
-        'base_url' => '/hospital_management_system'
+        'base_url' => $baseUrl
 
 
     ],
@@ -62,9 +71,9 @@ return [
 
     'hospital' => [
 
-        'code' => 'HMS',
+        'code' => 'Zimran',
 
-        'name' => 'Hospital Management System',
+        'name' => 'Zimran',
 
         'currency' => '₦'
 

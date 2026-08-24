@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 if (!isset($pageTitle)) {
-    $pageTitle = 'Hospital Management System';
+    $pageTitle = 'E-HMIS';
 }
 
 require_once __DIR__ . '/../config/helpers.php';
@@ -14,6 +14,9 @@ $baseUrl = rtrim(
     $config['app']['base_url'],
     '/'
 );
+
+$branding = appBranding($GLOBALS['pdo'] ?? null);
+$appMetaName = $branding['full_name'];
 
 ?>
 
@@ -31,17 +34,17 @@ $baseUrl = rtrim(
 
     <meta
         name="description"
-        content="Hospital Management System">
+        content="<?= e($appMetaName) ?>">
 
     <meta
         name="author"
-        content="Hospital Management System">
+        content="<?= e($branding['display_name']) ?>">
 
     <meta
         http-equiv="X-UA-Compatible"
         content="IE=edge">
 
-    <title><?= e($pageTitle) ?></title>
+    <title><?= e($pageTitle . ' | ' . $appMetaName) ?></title>
 
     <!-- Global Stylesheet -->
 

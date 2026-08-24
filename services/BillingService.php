@@ -610,6 +610,316 @@ class BillingService
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
+    public function createBillingRequest(array $data, array $user): array
+    {
+        try {
+            $this->assertCanCreateBillingRequest($user);
+
+            $visitId = (int)($data['visit_id'] ?? 0);
+            $transactionStarted = $this->beginTransactionIfNeeded();
+            $visit = $this->lockVisit($visitId);
+            if (!$visit) {
+                $this->rollback();
+                return $this->failure(['Encounter not found.']);
+            }
+
+            if (!$this->canMutateBilling($visit)) {
+                $this->rollback();
+                return $this->failure(['This encounter is closed to new billing requests.']);
+            }
+
+            $description = trim((string)($data['description'] ?? ''));
+            if ($description === '') {
+                $this->rollback();
+                return $this->failure(['Billing request description is required.']);
+            }
+            if (mb_strlen($description) > 2000) {
+                $this->rollback();
+                return $this->failure(['Billing request description is too long.']);
+            }
+
+            $quantity = (float)($data['quantity'] ?? 1);
+            if ($quantity <= 0) {
+                $this->rollback();
+                return $this->failure(['Quantity must be greater than zero.']);
+            }
+
+            $sourceModule = trim((string)($data['source_module'] ?? 'General'));
+            if ($sourceModule === '') {
+                $sourceModule = 'General';
+            }
+            if (mb_strlen($sourceModule) > 100) {
+                $this->rollback();
+                return $this->failure(['Source module is too long.']);
+            }
+
+            $sourceRecordId = isset($data['source_record_id']) && $data['source_record_id'] !== ''
+                ? (int)$data['source_record_id']
+                : null;
+            if ($sourceRecordId !== null && $sourceRecordId <= 0) {
+                $this->rollback();
+                return $this->failure(['Source record is invalid.']);
+            }
+
+            $departmentId = (int)(
+                $data['department_id']
+                ?? $user['active_department_id']
+                ?? $_SESSION['active_department_id']
+                ?? $user['department_id']
+                ?? $visit['current_department_id']
+                ?? 0
+            );
+            if ($departmentId <= 0 || !$this->departmentExists($departmentId)) {
+                $this->rollback();
+                return $this->failure(['A valid department is required for the billing request.']);
+            }
+
+            $suggestedBillableItemId = isset($data['suggested_billable_item_id']) && $data['suggested_billable_item_id'] !== ''
+                ? (int)$data['suggested_billable_item_id']
+                : null;
+            if ($suggestedBillableItemId !== null) {
+                $suggestedItem = $this->accountsService->getItemById($suggestedBillableItemId);
+                if (!$suggestedItem || empty($suggestedItem['is_active'])) {
+                    $this->rollback();
+                    return $this->failure(['Suggested billable item is unavailable.']);
+                }
+            }
+
+            $stmt = $this->pdo->prepare('
+                INSERT INTO billing_requests (
+                    visit_id, patient_id, department_id, source_module, source_record_id,
+                    requested_by, description, suggested_billable_item_id, quantity, status,
+                    created_at, updated_at
+                ) VALUES (
+                    :visit_id, :patient_id, :department_id, :source_module, :source_record_id,
+                    :requested_by, :description, :suggested_billable_item_id, :quantity, \'Pending\',
+                    NOW(), NOW()
+                )
+            ');
+            $stmt->execute([
+                ':visit_id' => $visitId,
+                ':patient_id' => (int)$visit['patient_id'],
+                ':department_id' => $departmentId,
+                ':source_module' => $sourceModule,
+                ':source_record_id' => $sourceRecordId,
+                ':requested_by' => (int)$user['id'],
+                ':description' => $description,
+                ':suggested_billable_item_id' => $suggestedBillableItemId,
+                ':quantity' => number_format($quantity, 2, '.', ''),
+            ]);
+            $requestId = (int)$this->pdo->lastInsertId();
+
+            if (!$this->audit(
+                (int)$user['id'],
+                (int)$visit['patient_id'],
+                $visitId,
+                'BILLING_REQUEST_CREATED',
+                'Created billing request #' . $requestId . '.',
+                $departmentId
+            )) {
+                throw new RuntimeException('Unable to audit billing request creation.');
+            }
+
+            if ($transactionStarted) {
+                $this->pdo->commit();
+            }
+
+            return ['success' => true, 'billing_request_id' => $requestId, 'errors' => []];
+        } catch (Throwable) {
+            $this->rollback();
+            return $this->failure(['Unable to create billing request.']);
+        }
+    }
+
+    public function getBillingRequestById(int $requestId, ?array $user = null): ?array
+    {
+        $stmt = $this->pdo->prepare($this->billingRequestBaseSelect() . ' WHERE br.id = :id LIMIT 1');
+        $stmt->execute([':id' => $requestId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+
+        if ($user !== null && !$this->canViewBillingRequestRow($row, $user)) {
+            return null;
+        }
+
+        return $this->decorateBillingRequest($row);
+    }
+
+    public function listBillingRequests(array $filters = [], ?array $user = null): array
+    {
+        $visitId = (int)($filters['visit_id'] ?? 0);
+        if ($user !== null && !$this->permissionService->canViewBillingRequests($user)) {
+            if ($visitId <= 0 || !$this->permissionService->canCreateBillingRequest($user)) {
+                return [];
+            }
+        }
+
+        [$where, $params] = $this->buildBillingRequestFilters($filters);
+        $stmt = $this->pdo->prepare($this->billingRequestBaseSelect() . $where . ' ORDER BY br.created_at DESC, br.id DESC LIMIT 100');
+        $stmt->execute($params);
+
+        $rows = array_map([$this, 'decorateBillingRequest'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+        if ($user !== null && !$this->permissionService->canViewBillingRequests($user)) {
+            return array_values(array_filter(
+                $rows,
+                fn (array $row): bool => $this->canViewBillingRequestRow($row, $user)
+            ));
+        }
+
+        return $rows;
+    }
+
+    public function chargeBillingRequest(array $data, array $user): array
+    {
+        try {
+            $this->assertCanReviewBillingRequest($user);
+            $requestId = (int)($data['billing_request_id'] ?? 0);
+            $billableItemId = (int)($data['billable_item_id'] ?? 0);
+            $quantity = (float)($data['quantity'] ?? 0);
+            $notes = trim((string)($data['notes'] ?? ''));
+
+            $transactionStarted = $this->beginTransactionIfNeeded();
+            $request = $this->lockBillingRequest($requestId);
+            if (!$request) {
+                $this->rollback();
+                return $this->failure(['Billing request not found.']);
+            }
+
+            if ((string)$request['status'] !== 'Pending') {
+                $this->rollback();
+                return $this->failure(['Only pending billing requests can be charged.']);
+            }
+
+            $chargeResult = $this->createChargeFromBillableItem(
+                (int)$request['visit_id'],
+                $billableItemId,
+                $quantity > 0 ? $quantity : (float)$request['quantity'],
+                'BillingRequest',
+                $requestId,
+                trim((string)($data['description'] ?? '')) ?: (string)$request['description'],
+                $user
+            );
+
+            if (empty($chargeResult['success'])) {
+                $this->rollback();
+                return $chargeResult;
+            }
+
+            $patientChargeId = (int)($chargeResult['patient_charge_id'] ?? 0);
+            $stmt = $this->pdo->prepare('
+                UPDATE billing_requests
+                SET status = \'Charged\',
+                    reviewed_by = :reviewed_by,
+                    reviewed_at = NOW(),
+                    patient_charge_id = :patient_charge_id,
+                    notes = :notes,
+                    updated_at = NOW()
+                WHERE id = :id
+                  AND status = \'Pending\'
+            ');
+            $stmt->execute([
+                ':reviewed_by' => (int)$user['id'],
+                ':patient_charge_id' => $patientChargeId > 0 ? $patientChargeId : null,
+                ':notes' => $notes === '' ? null : $notes,
+                ':id' => $requestId,
+            ]);
+
+            if ($stmt->rowCount() !== 1) {
+                throw new RuntimeException('Unable to update billing request status.');
+            }
+
+            if (!$this->audit(
+                (int)$user['id'],
+                (int)$request['patient_id'],
+                (int)$request['visit_id'],
+                'BILLING_REQUEST_CHARGED',
+                'Converted billing request #' . $requestId . ' to patient charge #' . $patientChargeId . '.',
+                (int)($request['department_id'] ?? 0) ?: null
+            )) {
+                throw new RuntimeException('Unable to audit billing request charge.');
+            }
+
+            if ($transactionStarted) {
+                $this->pdo->commit();
+            }
+
+            return [
+                'success' => true,
+                'billing_request_id' => $requestId,
+                'patient_charge_id' => $patientChargeId,
+                'errors' => [],
+            ];
+        } catch (Throwable) {
+            $this->rollback();
+            return $this->failure(['Unable to create charge from billing request.']);
+        }
+    }
+
+    public function cancelBillingRequest(int $requestId, string $reason, array $user): array
+    {
+        try {
+            $this->assertCanCancelBillingRequest($user);
+            $reason = trim($reason);
+            if ($reason === '') {
+                return $this->failure(['Cancellation reason is required.']);
+            }
+
+            $transactionStarted = $this->beginTransactionIfNeeded();
+            $request = $this->lockBillingRequest($requestId);
+            if (!$request) {
+                $this->rollback();
+                return $this->failure(['Billing request not found.']);
+            }
+
+            if ((string)$request['status'] !== 'Pending') {
+                $this->rollback();
+                return $this->failure(['Only pending billing requests can be cancelled.']);
+            }
+
+            $stmt = $this->pdo->prepare('
+                UPDATE billing_requests
+                SET status = \'Cancelled\',
+                    reviewed_by = :reviewed_by,
+                    reviewed_at = NOW(),
+                    notes = :notes,
+                    updated_at = NOW()
+                WHERE id = :id
+                  AND status = \'Pending\'
+            ');
+            $stmt->execute([
+                ':reviewed_by' => (int)$user['id'],
+                ':notes' => $reason,
+                ':id' => $requestId,
+            ]);
+
+            if ($stmt->rowCount() !== 1) {
+                throw new RuntimeException('Unable to cancel billing request.');
+            }
+
+            if (!$this->audit(
+                (int)$user['id'],
+                (int)$request['patient_id'],
+                (int)$request['visit_id'],
+                'BILLING_REQUEST_CANCELLED',
+                'Cancelled billing request #' . $requestId . '.',
+                (int)($request['department_id'] ?? 0) ?: null
+            )) {
+                throw new RuntimeException('Unable to audit billing request cancellation.');
+            }
+
+            if ($transactionStarted) {
+                $this->pdo->commit();
+            }
+
+            return ['success' => true, 'billing_request_id' => $requestId, 'errors' => []];
+        } catch (Throwable) {
+            $this->rollback();
+            return $this->failure(['Unable to cancel billing request.']);
+        }
+    }
+
     private function canMutateBilling(array $visit): bool
     {
         return !in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
@@ -631,6 +941,27 @@ class BillingService
     {
         if (!$this->permissionService->canCancelPatientCharge($user)) {
             throw new RuntimeException('You are not allowed to cancel patient charges.');
+        }
+    }
+
+    private function assertCanCreateBillingRequest(array $user): void
+    {
+        if (!$this->permissionService->canCreateBillingRequest($user)) {
+            throw new RuntimeException('You are not allowed to create billing requests.');
+        }
+    }
+
+    private function assertCanReviewBillingRequest(array $user): void
+    {
+        if (!$this->permissionService->canReviewBillingRequest($user)) {
+            throw new RuntimeException('You are not allowed to review billing requests.');
+        }
+    }
+
+    private function assertCanCancelBillingRequest(array $user): void
+    {
+        if (!$this->permissionService->canCancelBillingRequest($user)) {
+            throw new RuntimeException('You are not allowed to cancel billing requests.');
         }
     }
 
@@ -890,6 +1221,56 @@ class BillingService
         ];
     }
 
+    private function buildBillingRequestFilters(array $filters): array
+    {
+        $where = [];
+        $params = [];
+
+        $visitId = (int)($filters['visit_id'] ?? 0);
+        if ($visitId > 0) {
+            $where[] = 'br.visit_id = :visit_id';
+            $params[':visit_id'] = $visitId;
+        }
+
+        $departmentId = (int)($filters['department_id'] ?? 0);
+        if ($departmentId > 0) {
+            $where[] = 'br.department_id = :department_id';
+            $params[':department_id'] = $departmentId;
+        }
+
+        $status = trim((string)($filters['status'] ?? ''));
+        if ($status !== '' && in_array($status, ['Pending', 'Charged', 'Cancelled'], true)) {
+            $where[] = 'br.status = :status';
+            $params[':status'] = $status;
+        }
+
+        $sourceModule = trim((string)($filters['source_module'] ?? ''));
+        if ($sourceModule !== '') {
+            $where[] = 'br.source_module = :source_module';
+            $params[':source_module'] = $sourceModule;
+        }
+
+        if (!empty($filters['patient_name'])) {
+            $where[] = '(CONCAT(p.first_name, " ", p.last_name) LIKE :patient_name OR p.first_name LIKE :patient_name OR p.last_name LIKE :patient_name)';
+            $params[':patient_name'] = '%' . trim((string)$filters['patient_name']) . '%';
+        }
+
+        if (!empty($filters['hospital_number'])) {
+            $where[] = 'p.hospital_number LIKE :hospital_number';
+            $params[':hospital_number'] = '%' . trim((string)$filters['hospital_number']) . '%';
+        }
+
+        if (!empty($filters['visit_number'])) {
+            $where[] = 'v.visit_number LIKE :visit_number';
+            $params[':visit_number'] = '%' . trim((string)$filters['visit_number']) . '%';
+        }
+
+        return [
+            $where === [] ? '' : ' WHERE ' . implode(' AND ', $where),
+            $params,
+        ];
+    }
+
     private function paymentMethodAllowlist(): array
     {
         return ['Cash', 'Card', 'Transfer', 'Other'];
@@ -963,6 +1344,34 @@ class BillingService
         ';
     }
 
+    private function billingRequestBaseSelect(): string
+    {
+        return '
+            SELECT
+                br.*,
+                v.visit_number,
+                v.visit_status,
+                p.hospital_number,
+                CONCAT(p.first_name, " ", p.last_name) AS patient_name,
+                d.department_name,
+                bi.item_code AS suggested_item_code,
+                bi.item_name AS suggested_item_name,
+                bi.unit_price AS suggested_unit_price,
+                charged_item.item_name AS charged_item_name,
+                CONCAT(requested_by.first_name, " ", requested_by.last_name) AS requested_by_name,
+                CONCAT(reviewed_by.first_name, " ", reviewed_by.last_name) AS reviewed_by_name
+            FROM billing_requests br
+            INNER JOIN visits v ON v.id = br.visit_id
+            INNER JOIN patients p ON p.id = br.patient_id
+            INNER JOIN departments d ON d.id = br.department_id
+            LEFT JOIN billable_items bi ON bi.id = br.suggested_billable_item_id
+            LEFT JOIN patient_charges pc ON pc.id = br.patient_charge_id
+            LEFT JOIN billable_items charged_item ON charged_item.id = pc.billable_item_id
+            LEFT JOIN users requested_by ON requested_by.id = br.requested_by
+            LEFT JOIN users reviewed_by ON reviewed_by.id = br.reviewed_by
+        ';
+    }
+
     private function decorateCharge(array $row): array
     {
         $row['display_unit_price'] = number_format((float)($row['unit_price'] ?? 0), 2);
@@ -983,6 +1392,55 @@ class BillingService
     {
         $row['display_amount'] = number_format((float)($row['amount'] ?? 0), 2);
         return $row;
+    }
+
+    private function decorateBillingRequest(array $row): array
+    {
+        $row['display_quantity'] = rtrim(rtrim(number_format((float)($row['quantity'] ?? 0), 2, '.', ''), '0'), '.');
+        $row['display_suggested_unit_price'] = isset($row['suggested_unit_price'])
+            ? number_format((float)$row['suggested_unit_price'], 2)
+            : null;
+        return $row;
+    }
+
+    private function lockBillingRequest(int $requestId): ?array
+    {
+        if ($requestId <= 0) {
+            return null;
+        }
+
+        $stmt = $this->pdo->prepare($this->billingRequestBaseSelect() . ' WHERE br.id = :id LIMIT 1 FOR UPDATE');
+        $stmt->execute([':id' => $requestId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $this->decorateBillingRequest($row) : null;
+    }
+
+    private function canViewBillingRequestRow(array $row, array $user): bool
+    {
+        if ($this->permissionService->canViewBillingRequests($user)) {
+            return true;
+        }
+
+        if (!$this->permissionService->canCreateBillingRequest($user)) {
+            return false;
+        }
+
+        $userDepartmentId = (int)(
+            $user['active_department_id']
+            ?? $_SESSION['active_department_id']
+            ?? $user['department_id']
+            ?? 0
+        );
+
+        return (int)($row['requested_by'] ?? 0) === (int)($user['id'] ?? 0)
+            || ($userDepartmentId > 0 && (int)($row['department_id'] ?? 0) === $userDepartmentId);
+    }
+
+    private function departmentExists(int $departmentId): bool
+    {
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM departments WHERE id = :id');
+        $stmt->execute([':id' => $departmentId]);
+        return (int)$stmt->fetchColumn() > 0;
     }
 
     private function audit(

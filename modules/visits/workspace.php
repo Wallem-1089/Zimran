@@ -408,12 +408,17 @@ $canDispensePrescription = $permissionService->canDispensePrescription($visit, $
 $canViewBilling = $permissionService->canViewBilling($currentUser);
 $canCreatePatientCharge = $permissionService->canCreatePatientCharge($currentUser);
 $canCancelPatientCharge = $permissionService->canCancelPatientCharge($currentUser);
+$canCreateBillingRequest = $permissionService->canCreateBillingRequest($currentUser);
+$canViewBillingRequests = $permissionService->canViewBillingRequests($currentUser);
+$canReviewBillingRequest = $permissionService->canReviewBillingRequest($currentUser);
+$canCancelBillingRequest = $permissionService->canCancelBillingRequest($currentUser);
 $canCreateInvoice = $permissionService->canCreateInvoice($currentUser);
 $canRecordPayment = $permissionService->canRecordPayment($currentUser);
 $canViewReceipts = $permissionService->canViewReceipts($currentUser);
 $billingTablesReady = workspaceTableExists($pdo, 'patient_charges')
     && workspaceTableExists($pdo, 'invoices')
     && workspaceTableExists($pdo, 'payments');
+$billingRequestsReady = workspaceTableExists($pdo, 'billing_requests');
 $billingService = $billingTablesReady ? new BillingService($pdo) : null;
 $billingSummary = $canViewBilling && $billingService
     ? $billingService->getEncounterBalance($visitId, $currentUser)
@@ -421,6 +426,9 @@ $billingSummary = $canViewBilling && $billingService
 $billingCharges = $canViewBilling && $billingService ? $billingService->listChargesByVisit($visitId, $currentUser) : [];
 $billingPayments = $canViewBilling && $billingService ? $billingService->listPayments($visitId, $currentUser) : [];
 $billingInvoice = $billingSummary['invoice'] ?? null;
+$billingRequests = $billingRequestsReady && $billingService
+    ? $billingService->listBillingRequests(['visit_id' => $visitId], $currentUser)
+    : [];
 $admissionTablesReady = workspaceTableExists($pdo, 'wards')
     && workspaceTableExists($pdo, 'ward_beds')
     && workspaceTableExists($pdo, 'admissions')

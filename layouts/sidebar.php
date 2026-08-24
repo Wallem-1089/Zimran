@@ -207,6 +207,8 @@ if ($currentUser && isset($pdo)) {
     }
 }
 
+$sidebarBranding = appBranding($pdo ?? null);
+
 ?>
 
 <!-- Sidebar -->
@@ -215,9 +217,9 @@ if ($currentUser && isset($pdo)) {
 
     <div class="sidebar-header">
 
-        <h2>HMS</h2>
+        <h2><?= e($sidebarBranding['hospital_code']) ?></h2>
 
-        <p>Hospital Management System</p>
+        <p><?= e($sidebarBranding['product_name']) ?></p>
 
     </div>
 

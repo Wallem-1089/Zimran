@@ -79,7 +79,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
             <p>
 
-                Register a new patient into the Hospital Management System.
+                Register a new patient into <?= e(appBranding($GLOBALS['pdo'] ?? null)['full_name']) ?>.
 
             </p>
 

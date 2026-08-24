@@ -71,6 +71,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
             <a class="btn-secondary" href="<?= e(laboratoryBackToWorkspace((int)$request['visit_id'])) ?>">Workspace</a>
             <a class="btn-secondary" href="history.php?visit=<?= (int)$request['visit_id'] ?>">History</a>
+            <?php if (!$isClosed && $permissionService->canCreateBillingRequest($currentUser)): ?>
+                <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$request['visit_id'] ?>&source_module=Laboratory&source_record_id=<?= (int)$request['id'] ?>&description=<?= urlencode('Laboratory: ' . (string)($request['tests_requested'] ?? '')) ?>">Request Billing</a>
+            <?php endif; ?>
         </div>
     </div>
 

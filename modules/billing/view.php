@@ -29,9 +29,14 @@ if (!$billingTablesReady) {
 $billingSummary = $billingTablesReady ? $billingService->getEncounterBalance($visitId, $currentUser) : ['success' => true, 'invoice' => null, 'total_charges' => 0, 'amount_paid' => 0, 'balance_due' => 0, 'status' => 'Unbilled', 'errors' => []];
 $billingCharges = $billingTablesReady ? $billingService->listChargesByVisit($visitId, $currentUser) : [];
 $billingPayments = $billingTablesReady ? $billingService->listPayments($visitId, $currentUser) : [];
+$billingRequests = $billingRequestsReady && $billingTablesReady ? $billingService->listBillingRequests(['visit_id' => $visitId], $currentUser) : [];
 $billingInvoice = $billingSummary['invoice'] ?? null;
 $canCreatePatientCharge = $permissionService->canCreatePatientCharge($currentUser);
 $canCancelPatientCharge = $permissionService->canCancelPatientCharge($currentUser);
+$canCreateBillingRequest = $permissionService->canCreateBillingRequest($currentUser);
+$canViewBillingRequests = $permissionService->canViewBillingRequests($currentUser);
+$canReviewBillingRequest = $permissionService->canReviewBillingRequest($currentUser);
+$canCancelBillingRequest = $permissionService->canCancelBillingRequest($currentUser);
 $canCreateInvoice = $permissionService->canCreateInvoice($currentUser);
 $canRecordPayment = $permissionService->canRecordPayment($currentUser);
 $canViewReceipts = $permissionService->canViewReceipts($currentUser);
@@ -87,6 +92,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
         <div class="form-actions">
             <a class="btn-secondary" href="index.php">Billing Home</a>
+            <?php if ($canCreateBillingRequest): ?>
+                <a class="btn-secondary" href="request_create.php?visit=<?= (int)$visit['id'] ?>">Request Billing</a>
+            <?php endif; ?>
+            <?php if ($canViewBillingRequests): ?>
+                <a class="btn-secondary" href="billing_requests.php">Billing Requests</a>
+            <?php endif; ?>
             <?php if ($canCreatePatientCharge): ?>
                 <a class="btn-primary" href="charge_create.php?visit=<?= (int)$visit['id'] ?>">Add Charge</a>
             <?php endif; ?>

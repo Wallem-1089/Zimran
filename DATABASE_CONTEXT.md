@@ -1261,6 +1261,13 @@ users do not manually edit totals, amount paid, or balance. Payments are
 append-only posted records for the current version and receipts are generated
 as read-only views from payment data.
 
+Migration 044 adds `billing_requests`, a non-financial recommendation queue
+used by departments to ask Accounts to create charges. Billing requests link to
+the patient, encounter, requesting department/user, optional source module and
+record, optional suggested `billable_item`, quantity, review status, and the
+resulting `patient_charge_id` once Accounts converts the request. Pending
+requests do not alter invoices or balances.
+
 ## Phase 4.5 Basic Dashboards / Reports
 
 Phase 4.5 does not add reporting tables. The Reports module uses indexed

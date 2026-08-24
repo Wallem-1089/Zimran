@@ -307,6 +307,12 @@ prevention, over-balance payment rejection, authorization, CSRF-aware
 controller wiring, audit, and directly affected Accounts/Store/Pharmacy and
 Workspace regressions.
 
+Billing Request testing should verify that department users can create
+non-financial requests, Accounts/Admin can list pending requests, convert one
+request into exactly one patient charge using `billable_items`, cancel pending
+requests, and that pending/cancelled requests do not change invoice totals or
+patient balances.
+
 ## Phase 4.5 Basic Dashboards / Reports
 
 Run `php test/phase4_reports_test.php` against the dedicated test database.

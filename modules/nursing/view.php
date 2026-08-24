@@ -40,6 +40,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div>
             <a class="btn-secondary" href="<?= e(nursingBackToWorkspace((int)$visit['id'])) ?>">Workspace</a>
             <a class="btn-secondary" href="<?= e(nursingBackToChart((int)$visit['patient_id'])) ?>">Patient Chart</a>
+            <?php if (!in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true) && $permissionService->canCreateBillingRequest($currentUser)): ?>
+                <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$visit['id'] ?>&source_module=Nursing&source_record_id=<?= (int)$assessment['id'] ?>&description=<?= urlencode('Nursing: assessment/support services for encounter ' . (string)($visit['visit_number'] ?? ('#' . (int)$visit['id']))) ?>">Request Billing</a>
+            <?php endif; ?>
             <?php if ($canEdit && (string)$assessment['status'] === 'Draft'): ?>
                 <a class="btn-primary" href="edit.php?id=<?= (int)$assessment['id'] ?>">Edit</a>
             <?php endif; ?>

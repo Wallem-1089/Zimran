@@ -25,6 +25,58 @@ function e($value): string
 }
 
 /**
+ * Resolve hospital/application branding for UI layouts.
+ */
+function appBranding(?PDO $pdo = null): array
+{
+    static $cache = [];
+
+    $cacheKey = $pdo ? (string)spl_object_id($pdo) : 'config';
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
+    }
+
+    $config = require __DIR__ . '/app.php';
+
+    $branding = [
+        'hospital_name' => (string)($config['hospital']['name'] ?? 'Zimran'),
+        'hospital_code' => (string)($config['hospital']['code'] ?? 'Zimran'),
+        'product_name' => (string)($config['app']['name'] ?? 'E-HMIS'),
+    ];
+
+    if ($pdo instanceof PDO) {
+        try {
+            require_once __DIR__ . '/../services/SettingsService.php';
+            $settings = new SettingsService($pdo);
+            $branding['hospital_name'] = (string)$settings->get(
+                'hospital.name',
+                $branding['hospital_name']
+            );
+            $branding['hospital_code'] = (string)$settings->get(
+                'hospital.code',
+                $branding['hospital_code']
+            );
+            $branding['product_name'] = (string)$settings->get(
+                'app.product_name',
+                $branding['product_name']
+            );
+        } catch (Throwable) {
+            // Fall back to config branding when settings are unavailable.
+        }
+    }
+
+    $branding['display_name'] = trim($branding['hospital_name']) !== ''
+        ? $branding['hospital_name']
+        : $branding['product_name'];
+
+    $branding['full_name'] = trim($branding['product_name']) !== ''
+        ? trim($branding['display_name'] . ' ' . $branding['product_name'])
+        : $branding['display_name'];
+
+    return $cache[$cacheKey] = $branding;
+}
+
+/**
  * Redirect to another page.
  *
  * @param string $url

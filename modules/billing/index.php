@@ -24,6 +24,9 @@ $encounterMatches = ($filters['patient_name'] !== '' || $filters['hospital_numbe
     ? $billingService->searchEncountersForBilling($filters, $currentUser)
     : [];
 $recentPayments = $billingTablesReady ? $billingService->listPayments(null, $currentUser) : [];
+$billingRequestCount = ($billingTablesReady && $billingRequestsReady && $permissionService->canViewBillingRequests($currentUser))
+    ? count($billingService->listBillingRequests(['status' => 'Pending'], $currentUser))
+    : 0;
 $openInvoices = count(array_filter($invoices, static fn (array $invoice): bool => in_array((string)($invoice['status'] ?? ''), ['Unpaid', 'Partially Paid'], true)));
 
 $pageTitle = 'Billing';
@@ -39,12 +42,20 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <h1>Billing</h1>
             <p>Patient Accounts, invoices, and payments.</p>
         </div>
+        <?php if ($permissionService->canViewBillingRequests($currentUser)): ?>
+            <div class="form-actions">
+                <a class="btn-primary" href="billing_requests.php">Billing Requests</a>
+            </div>
+        <?php endif; ?>
     </div>
 
     <div class="summary-grid">
         <div class="summary-item"><span class="summary-label">Open Invoices</span> <span class="summary-value"><?= $openInvoices ?></span></div>
         <div class="summary-item"><span class="summary-label">Recent Payments</span> <span class="summary-value"><?= count($recentPayments) ?></span></div>
         <div class="summary-item"><span class="summary-label">Filtered Invoices</span> <span class="summary-value"><?= count($invoices) ?></span></div>
+        <?php if ($permissionService->canViewBillingRequests($currentUser)): ?>
+            <div class="summary-item"><span class="summary-label">Pending Requests</span> <span class="summary-value"><?= $billingRequestCount ?></span></div>
+        <?php endif; ?>
     </div>
 
     <form method="get" class="card">

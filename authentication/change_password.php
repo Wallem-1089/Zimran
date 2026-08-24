@@ -39,6 +39,7 @@ unset($_SESSION['success_message']);
 $user = $sessionService->user();
 
 require_once __DIR__ . '/../layouts/header.php';
+$branding = appBranding($GLOBALS['pdo'] ?? null);
 
 ?>
 
@@ -54,7 +55,7 @@ require_once __DIR__ . '/../layouts/header.php';
             <strong><?= e($user['first_name']) ?></strong>,
 
             you must change your password before you can continue
-            using the Hospital Management System.
+            using <?= e($branding['full_name']) ?>.
 
         </p>
 

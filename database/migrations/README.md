@@ -365,3 +365,18 @@ queues, or replace Department Notifications.
 
 The down migration drops only the `user_notifications` table and should be
 reviewed before use on databases containing notification history.
+
+## Migration 044 - Billing Requests / Charge Recommendations
+
+`044_billing_requests_up.sql` creates `billing_requests`, a non-financial queue
+where department users can recommend charges for Accounts review. Pending
+requests link to the encounter, patient, requesting department/user, optional
+source module/record, optional suggested Accounts billable item, and quantity.
+
+Accounts/Admin can convert a pending request into an official `patient_charges`
+row through `BillingService`; the request is then marked `Charged` and linked
+to the charge. Pending or cancelled requests do not affect invoices, balances,
+payments, or receipts.
+
+The migration seeds `create_billing_request`, `view_billing_requests`,
+`review_billing_request`, and `cancel_billing_request`.

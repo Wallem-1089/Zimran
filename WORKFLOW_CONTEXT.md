@@ -1062,6 +1062,17 @@ Billing is implemented with charges, invoices, payments, and receipt views:
 Charge -> Invoice -> Payment -> Receipt
 ```
 
+Departments may create non-financial Billing Requests when they need Accounts
+to add a charge for work performed or items/services used:
+
+```text
+Department work -> Billing Request -> Accounts review -> Patient Charge
+```
+
+A Billing Request is only a recommendation. It does not affect invoice totals,
+patient balance, payments, or receipts until Accounts/Admin converts it into an
+official patient charge using the Accounts price catalogue.
+
 Advanced insurance and financial approval chains are postponed.
 
 ### Later / Optional
@@ -1163,7 +1174,8 @@ department handoff.
   not create fake patients, encounters, invoices, or patient charges.
 - Pharmacy owns PRESCRIPTIONS and DISPENSING, and consumes Store stock when
   dispensing.
-- Billing owns PATIENT CHARGES, INVOICES, PAYMENTS, and receipt views.
+- Billing owns PATIENT CHARGES, INVOICES, PAYMENTS, receipt views, and
+  non-financial Billing Requests awaiting Accounts review.
 - Reports are read-only summaries over already-posted operational records.
 - Admissions own inpatient ward and bed occupancy. An admission is attached to
   an existing encounter; it does not replace the encounter, consultation, or

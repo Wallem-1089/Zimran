@@ -197,6 +197,29 @@ class PermissionService
                 ['Accounts', 'Accountant'],
                 true
             ) || $department === 'Accounts',
+            'create_billing_request' => in_array(
+                $role,
+                [
+                    'Doctor',
+                    'Nurse',
+                    'Laboratory Scientist',
+                    'Radiographer',
+                    'Physiotherapist',
+                    'Theatre Staff',
+                    'Pharmacist',
+                ],
+                true
+            ) || in_array(
+                $department,
+                ['Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'Physiotherapy', 'Theatre', 'Pharmacy'],
+                true
+            ),
+            'view_billing_requests', 'review_billing_request',
+            'cancel_billing_request' => in_array(
+                $role,
+                ['Accounts', 'Accountant'],
+                true
+            ) || $department === 'Accounts',
             'view_receipts' => in_array(
                 $role,
                 ['Accounts', 'Accountant', 'Receptionist', 'Records Officer'],
@@ -1451,6 +1474,34 @@ class PermissionService
         $user = $user ?? $this->currentUser();
         return $this->isAdministrator($user)
             || $this->hasPermission('cancel_patient_charge', $user);
+    }
+
+    public function canCreateBillingRequest(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('create_billing_request', $user);
+    }
+
+    public function canViewBillingRequests(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('view_billing_requests', $user);
+    }
+
+    public function canReviewBillingRequest(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('review_billing_request', $user);
+    }
+
+    public function canCancelBillingRequest(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('cancel_billing_request', $user);
     }
 
     public function canCreateInvoice(?array $user = null): bool

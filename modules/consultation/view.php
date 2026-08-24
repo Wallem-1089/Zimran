@@ -81,6 +81,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
         <div>
             <a class="btn-secondary" href="<?= e(consultationBackToWorkspace((int)$consultation['visit_id'])) ?>">Workspace</a>
+            <?php if (!in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true) && $permissionService->canCreateBillingRequest($currentUser)): ?>
+                <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$consultation['visit_id'] ?>&source_module=Consultation&source_record_id=<?= (int)$consultation['id'] ?>&description=<?= urlencode('Consultation: ' . (string)($consultation['diagnosis'] ?? $consultation['presenting_complaint'] ?? '')) ?>">Request Billing</a>
+            <?php endif; ?>
             <?php if ($canEdit): ?>
                 <a class="btn-secondary" href="edit.php?id=<?= (int)$consultation['id'] ?>">Edit</a>
             <?php endif; ?>

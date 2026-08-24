@@ -71,6 +71,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
             <a class="btn-secondary" href="<?= e(physiotherapyBackToWorkspace((int)$record['visit_id'])) ?>">Workspace</a>
             <a class="btn-secondary" href="history.php?visit=<?= (int)$record['visit_id'] ?>">History</a>
+            <?php if (!$isClosed && $permissionService->canCreateBillingRequest($currentUser)): ?>
+                <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$record['visit_id'] ?>&source_module=Physiotherapy&source_record_id=<?= (int)$record['id'] ?>&description=<?= urlencode('Physiotherapy: ' . (string)($record['presenting_problem'] ?? '')) ?>">Request Billing</a>
+            <?php endif; ?>
         </div>
     </div>
 

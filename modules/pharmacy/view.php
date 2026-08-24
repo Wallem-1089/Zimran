@@ -71,6 +71,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
             <a class="btn-secondary" href="<?= e(pharmacyBackToWorkspace((int)$prescription['visit_id'])) ?>">Workspace</a>
             <a class="btn-secondary" href="<?= e(pharmacyBackToConsultation((int)$prescription['visit_id'])) ?>">Consultation</a>
+            <?php if (!in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true) && $permissionService->canCreateBillingRequest($currentUser)): ?>
+                <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$prescription['visit_id'] ?>&source_module=Pharmacy&source_record_id=<?= (int)$prescription['id'] ?>&description=<?= urlencode('Pharmacy: ' . (string)($prescription['medication_name'] ?? '') . ' x ' . (string)($prescription['quantity'] ?? '')) ?>">Request Billing</a>
+            <?php endif; ?>
         </div>
     </div>
 

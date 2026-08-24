@@ -1133,7 +1133,8 @@ The current operational application includes:
   department notifications, timeline, cancellation, and completion/discharge
   capture.
 - Consultation, Vital Signs, Nursing, Laboratory, Radiology, Physiotherapy,
-  Theatre, Pharmacy, Billing, Accounts/Price Catalogue, Store/Inventory, and
+  Theatre, Pharmacy, Billing with department billing requests,
+  Accounts/Price Catalogue, Store/Inventory, and
   Basic Reports/Dashboard summaries.
 - Inpatient Admissions / Ward & Bed workflow: admit an active encounter to a
   ward/bed, transfer ward/bed, discharge/cancel admission, view inpatient

@@ -68,7 +68,9 @@ $manager->apply(__DIR__ . '/../database/migrations/030_phase4_accounts_price_cat
 $manager->apply(__DIR__ . '/../database/migrations/031_phase4_store_inventory_up.sql', 31);
 $manager->apply(__DIR__ . '/../database/migrations/032_phase4_pharmacy_up.sql', 32);
 $manager->apply(__DIR__ . '/../database/migrations/033_phase4_billing_up.sql', 33);
+$manager->apply(__DIR__ . '/../database/migrations/044_billing_requests_up.sql', 44);
 
+$pdo->exec("DELETE FROM billing_requests WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
 $pdo->exec("DELETE FROM payments WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
 $pdo->exec("DELETE FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
 $pdo->exec("DELETE FROM patient_charges WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
@@ -114,6 +116,11 @@ try {
     assertBilling($permissionService->canViewBilling($nurse), 'Nurse should be able to view billing.');
     assertBilling($permissionService->canCreatePatientCharge($accounts), 'Accounts should be able to create charges.');
     assertBilling(!$permissionService->canCreatePatientCharge($doctor), 'Doctor should not create charges.');
+    assertBilling($permissionService->canCreateBillingRequest($doctor), 'Doctor should be able to create billing requests.');
+    assertBilling($permissionService->canCreateBillingRequest($nurse), 'Nurse should be able to create billing requests.');
+    assertBilling($permissionService->canViewBillingRequests($accounts), 'Accounts should view billing requests.');
+    assertBilling($permissionService->canReviewBillingRequest($accounts), 'Accounts should review billing requests.');
+    assertBilling(!$permissionService->canReviewBillingRequest($doctor), 'Doctor should not review billing requests.');
     assertBilling(!$permissionService->canRecordPayment($nurse), 'Nurse should not record payments.');
     assertBilling($permissionService->canViewReceipts($accounts), 'Accounts should view receipts.');
 
@@ -148,6 +155,22 @@ try {
     $visitId = createBillingEncounter($pdo, $admin, $patientId, $doctorDepartmentId, '001');
     $visitId2 = createBillingEncounter($pdo, $admin, $patientId2, $doctorDepartmentId, '002');
 
+    $pendingRequest = requireBillingSuccess($billingService->createBillingRequest([
+        'visit_id' => $visitId,
+        'department_id' => $doctorDepartmentId,
+        'source_module' => 'Consultation',
+        'source_record_id' => 9001,
+        'description' => 'General consultation completed; please bill consultation fee.',
+        'suggested_billable_item_id' => null,
+        'quantity' => 1,
+    ], $doctor), 'Doctor creates billing request');
+    $pendingRequestId = (int)$pendingRequest['billing_request_id'];
+
+    $billingRequestRows = $billingService->listBillingRequests(['visit_id' => $visitId], $accounts);
+    assertBilling(count($billingRequestRows) === 1, 'Accounts did not see pending billing request.');
+    assertBilling((string)$billingRequestRows[0]['status'] === 'Pending', 'Billing request should be pending.');
+    assertBilling(abs((float)$billingService->getEncounterBalance($visitId, $accounts)['total_charges']) < 0.01, 'Pending billing request changed charge totals.');
+
     $manualCharge = requireBillingSuccess($billingService->createCharge([
         'visit_id' => $visitId,
         'billable_item_id' => $consultationItemId,
@@ -159,6 +182,48 @@ try {
 
     $chargeCountAfterManual = (int)$pdo->query("SELECT COUNT(*) FROM patient_charges WHERE visit_id = {$visitId}")->fetchColumn();
     assertBilling($chargeCountAfterManual === 1, 'Manual charge was not recorded.');
+
+    $requestCharge = requireBillingSuccess($billingService->chargeBillingRequest([
+        'billing_request_id' => $pendingRequestId,
+        'billable_item_id' => $consultationItemId,
+        'quantity' => 1,
+        'description' => 'Consultation fee from billing request.',
+        'notes' => 'Approved by Accounts.',
+    ], $accounts), 'Charge billing request');
+    assertBilling((int)$requestCharge['patient_charge_id'] > 0, 'Billing request did not create a patient charge.');
+
+    $requestAfterCharge = $billingService->getBillingRequestById($pendingRequestId, $accounts);
+    assertBilling($requestAfterCharge !== null && (string)$requestAfterCharge['status'] === 'Charged', 'Billing request was not marked Charged.');
+    assertBilling((int)$requestAfterCharge['patient_charge_id'] === (int)$requestCharge['patient_charge_id'], 'Billing request charge link was not stored.');
+
+    $duplicateRequestCharge = $billingService->chargeBillingRequest([
+        'billing_request_id' => $pendingRequestId,
+        'billable_item_id' => $consultationItemId,
+        'quantity' => 1,
+        'description' => 'Duplicate should fail.',
+    ], $accounts);
+    assertBilling(($duplicateRequestCharge['success'] ?? false) === false, 'Charged billing request was converted twice.');
+
+    $cancelRequest = requireBillingSuccess($billingService->createBillingRequest([
+        'visit_id' => $visitId2,
+        'department_id' => $doctorDepartmentId,
+        'source_module' => 'Nursing',
+        'description' => 'Nursing supply used; please review.',
+        'quantity' => 2,
+    ], $nurse), 'Nurse creates billing request');
+    requireBillingSuccess(
+        $billingService->cancelBillingRequest((int)$cancelRequest['billing_request_id'], 'Not billable after review.', $accounts),
+        'Cancel billing request'
+    );
+    $cancelledRequest = $billingService->getBillingRequestById((int)$cancelRequest['billing_request_id'], $accounts);
+    assertBilling($cancelledRequest !== null && (string)$cancelledRequest['status'] === 'Cancelled', 'Billing request was not cancelled.');
+
+    $doctorReviewAttempt = $billingService->chargeBillingRequest([
+        'billing_request_id' => (int)$cancelRequest['billing_request_id'],
+        'billable_item_id' => $consultationItemId,
+        'quantity' => 1,
+    ], $doctor);
+    assertBilling(($doctorReviewAttempt['success'] ?? false) === false, 'Doctor should not review billing requests.');
 
     $snapshotCharge = requireBillingSuccess($billingService->createChargeFromBillableItem(
         $visitId,
@@ -181,7 +246,7 @@ try {
         $accounts
     ), 'Duplicate source charge');
     assertBilling((int)$duplicateSource['patient_charge_id'] === $snapshotChargeId, 'Duplicate source charge was not deduplicated.');
-    assertBilling((int)$pdo->query("SELECT COUNT(*) FROM patient_charges WHERE visit_id = {$visitId}")->fetchColumn() === 2, 'Duplicate source charge inserted a second row.');
+    assertBilling((int)$pdo->query("SELECT COUNT(*) FROM patient_charges WHERE visit_id = {$visitId}")->fetchColumn() === 3, 'Duplicate source charge inserted a second row.');
 
     $chargeRow = $pdo->query("SELECT amount FROM patient_charges WHERE id = {$manualChargeId}")->fetch(PDO::FETCH_ASSOC);
     assertBilling(abs((float)$chargeRow['amount'] - 2000.0) < 0.01, 'Manual charge amount is incorrect.');
@@ -204,8 +269,8 @@ try {
     $invoice = requireBillingSuccess($billingService->createInvoice($visitId, $accounts), 'Create invoice');
     $invoiceRow = $billingService->getInvoiceByVisit($visitId, $accounts);
     assertBilling($invoiceRow !== null, 'Invoice not found after creation.');
-    assertBilling(abs((float)$invoiceRow['total_amount'] - 3500.0) < 0.01, 'Invoice total is incorrect.');
-    assertBilling(abs((float)$invoiceRow['balance_due'] - 3500.0) < 0.01, 'Invoice balance is incorrect.');
+    assertBilling(abs((float)$invoiceRow['total_amount'] - 5500.0) < 0.01, 'Invoice total is incorrect.');
+    assertBilling(abs((float)$invoiceRow['balance_due'] - 5500.0) < 0.01, 'Invoice balance is incorrect.');
     assertBilling((string)$invoiceRow['status'] === 'Unpaid', 'Invoice status should be Unpaid before payment.');
 
     $invoiceSearch = $billingService->listInvoices(['invoice_number' => $invoiceRow['invoice_number']], $accounts);
@@ -215,7 +280,7 @@ try {
     assertBilling(($cancelCharge['success'] ?? false) === true, 'Charge cancellation failed.');
 
     $invoiceAfterCancel = $billingService->getInvoiceByVisit($visitId, $accounts);
-    assertBilling(abs((float)$invoiceAfterCancel['total_amount'] - 2000.0) < 0.01, 'Invoice total did not refresh after charge cancellation.');
+    assertBilling(abs((float)$invoiceAfterCancel['total_amount'] - 4000.0) < 0.01, 'Invoice total did not refresh after charge cancellation.');
 
     $paymentOne = requireBillingSuccess($billingService->recordPayment([
         'invoice_id' => (int)$invoiceAfterCancel['id'],
@@ -233,9 +298,21 @@ try {
         'amount' => 1000,
         'payment_method' => 'Transfer',
         'reference' => 'RCPT-002',
-        'notes' => 'Final settlement.',
+        'notes' => 'Second partial payment.',
     ], $accounts), 'Full payment');
     $paymentId = (int)$paymentTwo['payment_id'];
+    $invoiceAfterFull = $billingService->getInvoiceByVisit($visitId, $accounts);
+    assertBilling((string)$invoiceAfterFull['status'] === 'Partially Paid', 'Invoice status should remain Partially Paid.');
+    assertBilling(abs((float)$invoiceAfterFull['balance_due'] - 2000.0) < 0.01, 'Invoice should have remaining balance.');
+
+    $paymentThree = requireBillingSuccess($billingService->recordPayment([
+        'invoice_id' => (int)$invoiceAfterFull['id'],
+        'amount' => 2000,
+        'payment_method' => 'Transfer',
+        'reference' => 'RCPT-003',
+        'notes' => 'Final settlement.',
+    ], $accounts), 'Final payment');
+    $paymentId = (int)$paymentThree['payment_id'];
     $invoiceAfterFull = $billingService->getInvoiceByVisit($visitId, $accounts);
     assertBilling((string)$invoiceAfterFull['status'] === 'Paid', 'Invoice status should be Paid.');
     assertBilling(abs((float)$invoiceAfterFull['balance_due']) < 0.01, 'Invoice should be settled.');
@@ -288,10 +365,10 @@ try {
     assertBilling(str_contains(file_get_contents(__DIR__ . '/../modules/visits/partials/tabs/billing.php'), 'Billing / Charges') || str_contains(file_get_contents(__DIR__ . '/../modules/visits/partials/tabs/billing.php'), '_summary.php'), 'Workspace billing tab not wired.');
 
     $charges = $billingService->listChargesByVisit($visitId, $accounts);
-    assertBilling(count($charges) === 2, 'Unexpected billing charge count.');
+    assertBilling(count($charges) === 3, 'Unexpected billing charge count.');
 
     $payments = $billingService->listPayments($visitId, $accounts);
-    assertBilling(count($payments) === 2, 'Unexpected payment count.');
+    assertBilling(count($payments) === 3, 'Unexpected payment count.');
 
     $auditCount = (int)$pdo->query("SELECT COUNT(*) FROM audit_logs WHERE visit_id = {$visitId}")->fetchColumn();
     assertBilling($auditCount >= 4, 'Billing audit entries were not written.');
@@ -301,6 +378,13 @@ try {
 
     $completedVisit = createBillingEncounter($pdo, $admin, $patientId2, $doctorDepartmentId, '003');
     $pdo->prepare("UPDATE visits SET visit_status = 'Completed' WHERE id = :id")->execute([':id' => $completedVisit]);
+    $completedRequest = $billingService->createBillingRequest([
+        'visit_id' => $completedVisit,
+        'department_id' => $doctorDepartmentId,
+        'description' => 'Should fail on completed encounter.',
+        'quantity' => 1,
+    ], $doctor);
+    assertBilling(($completedRequest['success'] ?? false) === false, 'Completed encounter accepted a billing request.');
     $completedCharge = $billingService->createCharge([
         'visit_id' => $completedVisit,
         'billable_item_id' => $consultationItemId,
@@ -321,6 +405,7 @@ try {
     ], $accounts);
     assertBilling(($cancelledPayment['success'] ?? false) === false, 'Cancelled encounter accepted a payment.');
 
+    $pdo->exec("DELETE FROM billing_requests WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
     $pdo->exec("DELETE FROM payments WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
     $pdo->exec("DELETE FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
     $pdo->exec("DELETE FROM patient_charges WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
