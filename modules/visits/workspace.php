@@ -46,6 +46,7 @@ require_once __DIR__ . '/../../services/StoreService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
 require_once __DIR__ . '/../../services/DressingRecordService.php';
+require_once __DIR__ . '/../../services/MedicationAdministrationService.php';
 require_once __DIR__ . '/../../services/AdmissionService.php';
 
 function workspaceTableExists(PDO $pdo, string $table): bool
@@ -290,6 +291,8 @@ $userNotificationTablesReady = workspaceTableExists($pdo, 'user_notifications');
 $vitalSignsTablesReady = workspaceTableExists($pdo, 'vital_signs');
 $nursingTablesReady = workspaceTableExists($pdo, 'nursing_assessments');
 $dressingTablesReady = workspaceTableExists($pdo, 'dressing_records');
+$medicationAdministrationTablesReady = workspaceTableExists($pdo, 'medication_administration_records')
+    && workspaceTableExists($pdo, 'prescriptions');
 $consultationService = $consultationTablesReady ? new ConsultationService($pdo) : null;
 $consultation = $consultationService ? $consultationService->getByVisit($visitId) : null;
 $canViewConsultation = $permissionService->canViewConsultation($visit, $currentUser);
@@ -308,6 +311,10 @@ $nursing = $nursingHistory[0] ?? null;
 $dressingRecordService = $dressingTablesReady ? new DressingRecordService($pdo, null, $permissionService) : null;
 $dressingRecords = $dressingRecordService ? $dressingRecordService->listByVisit($visitId, $currentUser) : [];
 $latestDressingRecord = $dressingRecords[0] ?? null;
+$medicationAdministrationService = $medicationAdministrationTablesReady ? new MedicationAdministrationService($pdo, null, $permissionService) : null;
+$medicationAdministrationRecords = $medicationAdministrationService ? $medicationAdministrationService->listByVisit($visitId, $currentUser) : [];
+$latestMedicationAdministrationRecord = $medicationAdministrationRecords[0] ?? null;
+$drugChartPrescriptions = $medicationAdministrationService ? $medicationAdministrationService->listPrescriptionsForVisit($visitId, $currentUser) : [];
 $canViewNursing = $permissionService->canViewNursing((int)$visit['patient_id'], $currentUser);
 $canCreateNursing = $permissionService->canCreateNursing($visit, $currentUser);
 $canEditNursing = $permissionService->canEditNursing($visit, $currentUser);

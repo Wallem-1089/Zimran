@@ -1308,3 +1308,10 @@ optional next dressing date, recorder attribution, and timestamps. Records are
 encounter-linked and queryable by patient, visit, recorder, next dressing date,
 and created date. Dressing Book does not duplicate Vital Signs or create a new
 workflow engine.
+
+Migration 046 adds `medication_administration_records`, a Nursing-owned Drug
+Chart / MAR table. Each row links to patient and encounter, optionally links to
+a Pharmacy prescription, and stores a medication-name snapshot, scheduled or
+administered time, dose given, route, Given/Missed/Refused/Held status, notes,
+administering user, and timestamps. Pharmacy remains responsible for
+prescriptions/dispensing; this table records bedside administration only.

@@ -392,3 +392,26 @@ The feature reuses existing Nursing permissions instead of adding new
 permission keys: users who can view Nursing can view dressing history, while
 Nurse/Admin users with Nursing create/edit access can record or update
 dressings during active encounters.
+
+## Migration 046 - Medication Administration Records / Drug Chart
+
+`046_medication_administration_records_up.sql` creates
+`medication_administration_records` for a simple Nursing Drug Chart / MAR.
+Entries link to a patient encounter and may optionally link to a Pharmacy
+prescription. The table stores a medication snapshot, scheduled/administered
+time, dose given, route, Given/Missed/Refused/Held status, notes, administering
+user, and timestamps.
+
+The feature reuses existing Nursing permissions: users who can view Nursing can
+view Drug Chart history, while Nurse/Admin users with Nursing create/edit access
+can record or update medication administration entries during active
+encounters. Pharmacy prescriptions are read as context only; this migration does
+not change dispensing or stock logic.
+
+## Migration 047 - Blood Medical Document Types
+
+`047_blood_document_types_up.sql` adds `blood_card`, `blood_group_result`,
+`crossmatch_form`, and `transfusion_record` to the existing
+`documents.allowed_types` setting and validation schema. This lets Medical
+Records upload blood-related documents as first-class types while the structured
+Blood Bank workflow remains future Laboratory work.

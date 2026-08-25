@@ -843,6 +843,7 @@ ordered visit ledger.
 |---|---|---|---|
 | `nursing_assessments` | Encounter workflow / `NursingService` | Mutable draft current record; one primary assessment per visit | PK `id`; unique `visit_id`; patient/nurse/department/status/created_at indexes; narrative nursing sections remain `TEXT` fields rather than normalized sub-tables |
 | `dressing_records` | Nursing / `DressingRecordService` | Repeated encounter-linked dressing entries; mutable while encounter remains active | PK `id`; visit/patient/recorded-by/next-dressing-date/created-at indexes; wound condition, dressing performed, and supplies used remain `TEXT` fields |
+| `medication_administration_records` | Nursing / `MedicationAdministrationService` | Repeated encounter-linked medication administration entries; mutable while encounter remains active | PK `id`; prescription/visit-time/patient-time/status-time/administered-by indexes; dose, route, status, and notes remain simple fields |
 | `radiology_requests` / `radiology_reports` | Encounter workflow / `RadiologyService` | Mutable request with immutable text report; multiple requests per visit allowed | PK `id`; visit/patient/requester/department/status/source indexes; report unique on request; study requested, clinical indication, findings, impression, and recommendation remain `TEXT` fields |
 
 | FK | Source -> target | Update/delete |
@@ -857,6 +858,10 @@ ordered visit ledger.
 | `fk_dressing_records_visit` | `dressing_records.visit_id -> visits.id` | CASCADE / RESTRICT |
 | `fk_dressing_records_patient` | `dressing_records.patient_id -> patients.id` | CASCADE / RESTRICT |
 | `fk_dressing_records_recorded_by` | `dressing_records.recorded_by -> users.id` | CASCADE / RESTRICT |
+| `fk_mar_prescription` | `medication_administration_records.prescription_id -> prescriptions.id` | CASCADE / SET NULL |
+| `fk_mar_visit` | `medication_administration_records.visit_id -> visits.id` | CASCADE / RESTRICT |
+| `fk_mar_patient` | `medication_administration_records.patient_id -> patients.id` | CASCADE / RESTRICT |
+| `fk_mar_administered_by` | `medication_administration_records.administered_by -> users.id` | CASCADE / RESTRICT |
 | `fk_radiology_requests_visit` | `radiology_requests.visit_id -> visits.id` | CASCADE / RESTRICT |
 | `fk_radiology_requests_patient` | `radiology_requests.patient_id -> patients.id` | CASCADE / RESTRICT |
 | `fk_radiology_requests_requested_by` | `radiology_requests.requested_by -> users.id` | CASCADE / RESTRICT |
@@ -876,6 +881,10 @@ erDiagram
     PATIENTS ||--o{ DRESSING_RECORDS : has
     VISITS ||--o{ DRESSING_RECORDS : contextualizes
     USERS ||--o{ DRESSING_RECORDS : records
+    PRESCRIPTIONS o|--o{ MEDICATION_ADMINISTRATION_RECORDS : may_link
+    PATIENTS ||--o{ MEDICATION_ADMINISTRATION_RECORDS : has
+    VISITS ||--o{ MEDICATION_ADMINISTRATION_RECORDS : contextualizes
+    USERS ||--o{ MEDICATION_ADMINISTRATION_RECORDS : administers
 ```
 
 ## Phase 3.6 relational additions

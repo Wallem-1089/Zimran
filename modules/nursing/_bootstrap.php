@@ -6,8 +6,10 @@ require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/ClinicalSafetyService.php';
+require_once __DIR__ . '/../../services/DiabetesMonitoringService.php';
 require_once __DIR__ . '/../../services/DressingRecordService.php';
 require_once __DIR__ . '/../../services/MedicalRecordService.php';
+require_once __DIR__ . '/../../services/MedicationAdministrationService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
 require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
@@ -87,6 +89,15 @@ $nursingService = new NursingService($pdo, null, null, $permissionService);
 $dressingTablesReady = nursingTableExists($pdo, 'dressing_records');
 $dressingRecordService = $dressingTablesReady
     ? new DressingRecordService($pdo, null, $permissionService)
+    : null;
+$medicationAdministrationTablesReady = nursingTableExists($pdo, 'medication_administration_records')
+    && nursingTableExists($pdo, 'prescriptions');
+$medicationAdministrationService = $medicationAdministrationTablesReady
+    ? new MedicationAdministrationService($pdo, null, $permissionService)
+    : null;
+$diabetesMonitoringTablesReady = nursingTableExists($pdo, 'diabetes_monitoring');
+$diabetesMonitoringService = $diabetesMonitoringTablesReady
+    ? new DiabetesMonitoringService($pdo, null, $permissionService)
     : null;
 $vitalSignsTablesReady = nursingTableExists($pdo, 'vital_signs');
 $vitalSignsService = $vitalSignsTablesReady ? new VitalSignsService($pdo, null, $permissionService) : null;

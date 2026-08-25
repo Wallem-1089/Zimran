@@ -20,6 +20,10 @@ if (!empty($canViewVitalSigns)) {
     $chartTabs['vitals'] = 'Vital Signs';
 }
 
+if (!empty($canViewBloodCard)) {
+    $chartTabs['blood_card'] = 'Blood Card';
+}
+
 if (!empty($canViewLaboratory)) {
     $chartTabs['laboratory'] = 'Laboratory';
 }
@@ -38,6 +42,10 @@ if (!empty($canViewTheatre)) {
 
 if (!empty($canViewDressings)) {
     $chartTabs['dressings'] = 'Dressings';
+}
+
+if (!empty($canViewDrugChart)) {
+    $chartTabs['drug_chart'] = 'Drug Chart';
 }
 
 if ($canViewAudit) {

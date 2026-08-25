@@ -11,6 +11,10 @@ $latestVitals = $latestVitalSigns ?? null;
 $dressingTablesReady = $dressingTablesReady ?? false;
 $dressingRecords = $dressingRecords ?? [];
 $latestDressingRecord = $latestDressingRecord ?? ($dressingRecords[0] ?? null);
+$medicationAdministrationTablesReady = $medicationAdministrationTablesReady ?? false;
+$medicationAdministrationRecords = $medicationAdministrationRecords ?? [];
+$latestMedicationAdministrationRecord = $latestMedicationAdministrationRecord ?? ($medicationAdministrationRecords[0] ?? null);
+$drugChartPrescriptions = $drugChartPrescriptions ?? [];
 $isClosedEncounter = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
 ?>
 
@@ -98,6 +102,50 @@ $isClosedEncounter = in_array((string)($visit['visit_status'] ?? ''), ['Complete
             <?php $latest = $latestVitals; require __DIR__ . '/../../../vital_signs/partials/record_card.php'; ?>
         </div>
     <?php endif; ?>
+
+    <div class="card">
+        <div class="section-heading">
+            <div>
+                <h3>Drug Chart / MAR</h3>
+                <p>Medication administration records linked to Pharmacy prescriptions where available.</p>
+            </div>
+            <div class="form-actions">
+                <?php if ($medicationAdministrationTablesReady && $canViewNursing): ?>
+                    <a href="../nursing/drug_chart/history.php?visit=<?= (int)$visit['id'] ?>" class="btn-secondary">View Drug Chart</a>
+                <?php endif; ?>
+                <?php if ($medicationAdministrationTablesReady && $canCreateNursing && (!$isClosedEncounter || $permissionService->isAdministrator($currentUser))): ?>
+                    <a href="../nursing/drug_chart/create.php?visit=<?= (int)$visit['id'] ?>" class="btn-primary">New Drug Chart Entry</a>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <?php if (!$medicationAdministrationTablesReady): ?>
+            <p>Drug Chart tables are not available yet. Apply Migration 046 to enable this section.</p>
+        <?php elseif (!$canViewNursing): ?>
+            <p class="text-muted">You do not have permission to view Drug Chart.</p>
+        <?php elseif ($latestMedicationAdministrationRecord === null): ?>
+            <p class="text-muted">No drug chart entries found for this encounter.</p>
+            <?php if (!empty($drugChartPrescriptions)): ?>
+                <p class="text-muted"><?= count($drugChartPrescriptions) ?> prescription(s) available to link when recording administration.</p>
+            <?php endif; ?>
+        <?php else: ?>
+            <div class="summary-grid">
+                <div class="summary-item"><span class="summary-label">Medication</span> <span class="summary-value"><?= e((string)$latestMedicationAdministrationRecord['medication_name']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Dose</span> <span class="summary-value"><?= e((string)$latestMedicationAdministrationRecord['dose_given']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Route</span> <span class="summary-value"><?= e((string)($latestMedicationAdministrationRecord['route'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)$latestMedicationAdministrationRecord['administration_status']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Time</span> <span class="summary-value"><?= e((string)$latestMedicationAdministrationRecord['scheduled_time']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Administered By</span> <span class="summary-value"><?= e((string)($latestMedicationAdministrationRecord['administered_by_name'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Total Entries</span> <span class="summary-value"><?= count($medicationAdministrationRecords) ?></span></div>
+            </div>
+            <div class="form-actions">
+                <a href="../nursing/drug_chart/view.php?id=<?= (int)$latestMedicationAdministrationRecord['id'] ?>" class="btn-secondary">View Latest</a>
+                <?php if ($canEditNursing && !$isClosedEncounter): ?>
+                    <a href="../nursing/drug_chart/edit.php?id=<?= (int)$latestMedicationAdministrationRecord['id'] ?>" class="btn-secondary">Edit Latest</a>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+    </div>
 
     <div class="card">
         <div class="section-heading">

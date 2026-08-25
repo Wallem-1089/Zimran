@@ -196,6 +196,31 @@ audit generation for `DRESSING_RECORD_CREATED` and `DRESSING_RECORD_UPDATED`;
 workspace Nursing-tab summary; patient-chart Dressing history; and printable
 Dressing Book/detail views.
 
+## Nursing Drug Chart / MAR
+
+Focused verification should cover Nurse and Administrator create/update/view
+flows; Doctor and other permitted clinical view-only access through the
+Encounter Workspace and Patient Chart; optional Pharmacy prescription linking;
+patient/visit/prescription mismatch rejection; completed/cancelled encounter
+mutation denial; Given/Missed/Refused/Held status validation; CSRF-aware
+save/update routes; audit generation for `MEDICATION_ADMINISTRATION_RECORDED`
+and `MEDICATION_ADMINISTRATION_UPDATED`; workspace Nursing-tab summary;
+patient-chart Drug Chart history; and printable Drug Chart/detail views.
+
+## Patient Chart Blood Card
+
+Focused verification should cover Patient Chart Blood Card loading for users
+who can view the chart; blood group/genotype display from demographics;
+blood-related Laboratory result filtering; blood-related Medical Document
+filtering; empty states when no matching records exist; print button rendering;
+and no leakage of Laboratory or Medical Document rows the user cannot already
+view through existing permissions.
+
+Medical Document upload testing should also verify the blood-related document
+types `blood_card`, `blood_group_result`, `crossmatch_form`, and
+`transfusion_record` appear in the upload selector and are accepted by
+server-side document-type validation.
+
 ## Phase 3.5 Radiology
 
 ```powershell

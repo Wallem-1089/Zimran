@@ -1025,6 +1025,43 @@ Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?Permiss
 | `modules/nursing/dressings/update.php` | POST | Persist edits. |
 | `modules/nursing/dressings/history.php` | GET | Visit or patient Dressing Book history. |
 
+### MedicationAdministrationService — Nursing Drug Chart / MAR
+
+Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?PermissionService $permissionService = null)`. Uses `medication_administration_records`, `prescriptions`, `visits`, `patients`, `users`, audit and the existing Nursing permission model.
+
+| Signature | Purpose/return | Contract |
+|---|---|---|
+| `create(array $data, array $user): array` | Inserts a Drug Chart/MAR entry for an active encounter. | Validates patient/visit consistency, active encounter, Nursing create permission, optional prescription ownership, medication, time, dose, route, status and notes; writes `MEDICATION_ADMINISTRATION_RECORDED` audit. |
+| `getById(int $recordId, ?array $user = null): ?array` | Read one MAR entry. | Returns `null` when a supplied user lacks Nursing view permission. |
+| `listByVisit(int $visitId, ?array $user = null): array` | Drug Chart history for one encounter. | Used by the Nursing workspace card and visit-level history. |
+| `listByPatient(int $patientId, ?array $user = null): array` | Drug Chart history across encounters. | Used by the Patient Chart Drug Chart tab. |
+| `listPrescriptionsForVisit(int $visitId, ?array $user = null): array` | Reads non-cancelled Pharmacy prescriptions for linking/context. | Does not change Pharmacy, dispensing, stock or Billing state. |
+| `update(int $recordId, array $data, array $user): array` | Updates an existing MAR entry while the encounter is active. | Revalidates permission/status and writes `MEDICATION_ADMINISTRATION_UPDATED` audit. |
+
+### Drug Chart route map
+
+| Route | HTTP | Purpose |
+|---|---|---|
+| `modules/nursing/drug_chart/create.php` | GET | Render MAR form for a visit. |
+| `modules/nursing/drug_chart/save.php` | POST | Persist a new MAR entry. |
+| `modules/nursing/drug_chart/view.php` | GET | Read one MAR entry. |
+| `modules/nursing/drug_chart/edit.php` | GET | Render edit form. |
+| `modules/nursing/drug_chart/update.php` | POST | Persist edits. |
+| `modules/nursing/drug_chart/history.php` | GET | Visit or patient Drug Chart history. |
+
+### Patient Chart Blood Card view
+
+`modules/medical_records/chart.php?patient={id}&tab=blood_card` is a read-only
+Patient Chart view. It introduces no new service or table. It composes existing
+patient demographics (`blood_group`, `genotype`), visible Laboratory
+request/result history, and visible Medical Documents filtered for blood-related
+terms. Structured blood-bank workflows remain future Laboratory functionality.
+
+Medical Document uploads accept the additional document type keys `blood_card`,
+`blood_group_result`, `crossmatch_form`, and `transfusion_record` through the
+existing `MedicalDocumentService::getAllowedDocumentTypes()` contract and
+`documents.allowed_types` setting.
+
 ### `AccountsService`
 
 Constructor: `__construct(PDO $db, ?AuditService $auditService = null, ?PermissionService $permissionService = null)`. Uses `billable_items`, departments, users, permissions and audit.

@@ -24,6 +24,7 @@ require_once __DIR__ . '/../../services/VisitService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
 require_once __DIR__ . '/../../services/DressingRecordService.php';
+require_once __DIR__ . '/../../services/MedicationAdministrationService.php';
 
 function chartTableExists(PDO $pdo, string $table): bool
 {
@@ -91,6 +92,7 @@ $allowedTabs = [
     'demographics',
     'identifiers',
     'safety',
+    'blood_card',
     'vitals',
     'laboratory',
     'radiology',
@@ -101,6 +103,7 @@ $allowedTabs = [
     'notes',
     'nursing',
     'dressings',
+    'drug_chart',
     'encounters',
     'history',
     'audit'
@@ -150,6 +153,8 @@ $canManageMedicalHistory = $permissionService->canManageStructuredMedicalHistory
 $canViewMedicalDocuments = $permissionService->canViewMedicalDocuments($patientId, $currentUser);
 $canUploadMedicalDocuments = $permissionService->canUploadMedicalDocuments($patientId, null, $currentUser);
 $medicalDocuments = [];
+$bloodCardDocuments = [];
+$canViewBloodCard = true;
 $canViewClinicalNotes = $permissionService->canViewClinicalNotes($patientId, $currentUser);
 $canCreatePatientNotes = $permissionService->canCreateClinicalNote($patientId, false, null, $currentUser);
 $clinicalNotes = ['success' => true, 'data' => ['records' => [], 'total_results' => 0], 'errors' => []];
@@ -159,6 +164,7 @@ $laboratoryTablesReady = chartTableExists($pdo, 'laboratory_requests')
 $canViewLaboratory = $laboratoryTablesReady && $permissionService->canViewLaboratory($patientId, $currentUser);
 $laboratoryService = $laboratoryTablesReady ? new LaboratoryService($pdo, null, null, $permissionService) : null;
 $laboratoryHistory = [];
+$bloodCardLaboratoryHistory = [];
 $latestLaboratoryRequest = null;
 $radiologyTablesReady = chartTableExists($pdo, 'radiology_requests')
     && chartTableExists($pdo, 'radiology_reports');
@@ -192,6 +198,12 @@ $canViewDressings = $dressingTablesReady && $permissionService->canViewNursing($
 $dressingRecordService = $dressingTablesReady ? new DressingRecordService($pdo, null, $permissionService) : null;
 $dressingHistory = [];
 $latestDressingRecord = null;
+$medicationAdministrationTablesReady = chartTableExists($pdo, 'medication_administration_records')
+    && chartTableExists($pdo, 'prescriptions');
+$canViewDrugChart = $medicationAdministrationTablesReady && $permissionService->canViewNursing($patientId, $currentUser);
+$medicationAdministrationService = $medicationAdministrationTablesReady ? new MedicationAdministrationService($pdo, null, $permissionService) : null;
+$medicationAdministrationHistory = [];
+$latestMedicationAdministrationRecord = null;
 
 if ($activeTab === 'problems' && !$canViewProblemList) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'PROBLEM_LIST_ACCESS_DENIED', 'Problem List access denied.');
@@ -227,6 +239,11 @@ if ($activeTab === 'dressings' && !$canViewDressings) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'DRESSING_BOOK_ACCESS_DENIED', 'Dressing Book access denied.');
     http_response_code(403);
     exit('You do not have permission to view Dressing Book.');
+}
+if ($activeTab === 'drug_chart' && !$canViewDrugChart) {
+    $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'DRUG_CHART_ACCESS_DENIED', 'Drug Chart access denied.');
+    http_response_code(403);
+    exit('You do not have permission to view Drug Chart.');
 }
 if ($activeTab === 'physiotherapy' && !$canViewPhysiotherapy) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'PHYSIOTHERAPY_ACCESS_DENIED', 'Physiotherapy access denied.');
@@ -279,6 +296,38 @@ if ($canViewLaboratory) {
     $laboratoryHistory = $laboratoryService->listByPatient($patientId, $currentUser);
     $latestLaboratoryRequest = $laboratoryHistory[0] ?? null;
 }
+
+$bloodCardTerms = [
+    'blood', 'group', 'genotype', 'hb', 'haemoglobin', 'hemoglobin',
+    'fbc', 'full blood count', 'crossmatch', 'cross match', 'transfusion',
+    'packed cell', 'pcv', 'platelet', 'sickle'
+];
+$matchesBloodCard = static function (array $row, array $fields) use ($bloodCardTerms): bool {
+    $haystack = '';
+    foreach ($fields as $field) {
+        $haystack .= ' ' . strtolower((string)($row[$field] ?? ''));
+    }
+    foreach ($bloodCardTerms as $term) {
+        if ($term !== '' && str_contains($haystack, $term)) {
+            return true;
+        }
+    }
+    return false;
+};
+
+$bloodCardLaboratoryHistory = array_values(array_filter(
+    $laboratoryHistory,
+    static fn (array $row): bool => $matchesBloodCard($row, [
+        'tests_requested', 'clinical_information', 'sample_taken',
+        'findings', 'result', 'interpretation'
+    ])
+));
+$bloodCardDocuments = array_values(array_filter(
+    $medicalDocuments,
+    static fn (array $row): bool => $matchesBloodCard($row, [
+        'document_type', 'title', 'description'
+    ])
+));
 if ($canViewRadiology) {
     $radiologyHistory = $radiologyService->listByPatient($patientId, $currentUser);
     $latestRadiologyRequest = $radiologyHistory[0] ?? null;
@@ -302,6 +351,11 @@ if ($canViewNursing) {
 if ($canViewDressings) {
     $dressingHistory = $dressingRecordService->listByPatient($patientId, $currentUser);
     $latestDressingRecord = $dressingHistory[0] ?? null;
+}
+
+if ($canViewDrugChart) {
+    $medicationAdministrationHistory = $medicationAdministrationService->listByPatient($patientId, $currentUser);
+    $latestMedicationAdministrationRecord = $medicationAdministrationHistory[0] ?? null;
 }
 
 if ($activeTab === 'identifiers' && !$canViewIdentifiers) {
@@ -431,6 +485,10 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
             require __DIR__ . '/partials/vital_signs.php';
             break;
 
+        case 'blood_card':
+            require __DIR__ . '/partials/blood_card.php';
+            break;
+
         case 'laboratory':
             require __DIR__ . '/partials/laboratory.php';
             break;
@@ -453,6 +511,10 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         case 'dressings':
             require __DIR__ . '/partials/dressings.php';
+            break;
+
+        case 'drug_chart':
+            require __DIR__ . '/partials/drug_chart.php';
             break;
 
         case 'problems':

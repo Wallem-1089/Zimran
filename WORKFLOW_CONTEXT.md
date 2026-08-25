@@ -1141,6 +1141,40 @@ Chart. They do not create separate encounter ownership, transfer, billing, or
 timeline workflows. Create/edit uses the existing Nursing permissions and is
 blocked when the encounter is completed or cancelled.
 
+## Nursing Drug Chart / MAR
+
+Drug Chart is a Nursing-owned medication administration workflow that reads
+Pharmacy prescriptions where available:
+
+```text
+Pharmacy Prescription -> Workspace Nursing tab -> New Drug Chart Entry
+-> Given / Missed / Refused / Held -> Drug Chart History
+```
+
+Entries are stored in `medication_administration_records`, linked to the
+patient and encounter, and may optionally link to a prescription. Nursing can
+record the administered dose, route, time, status, and notes. This does not
+dispense medication, reduce stock, create charges, or replace Pharmacy. It is
+the bedside/administered-dose record and appears in the Nursing workspace tab
+and Patient Chart Drug Chart tab.
+
+## Patient Chart Blood Card
+
+Blood Card is currently a read-only Patient Chart summary, not a separate
+Laboratory/Blood Bank workflow. It shows:
+
+- blood group and genotype from patient demographics;
+- blood-related Laboratory requests/results when visible to the user;
+- blood-related Medical Documents when visible to the user.
+
+Medical Documents now supports first-class blood-related document types:
+`blood_card`, `blood_group_result`, `crossmatch_form`, and
+`transfusion_record`. These uploads can appear in the Blood Card summary
+without creating a structured Blood Bank workflow yet.
+
+Structured blood requests, crossmatch records, transfusion records, and
+Blood Bank workflow remain later Laboratory-owned work.
+
 Accounts owns the reusable price catalogue. It is a sidebar-only master-data
 module and does not live inside the Encounter Workspace. Billing consumes
 `billable_items` by copying the current catalogue price into each posted

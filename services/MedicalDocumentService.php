@@ -14,6 +14,8 @@ class MedicalDocumentService
     private const DOCUMENT_TYPES = [
         'referral_letter', 'identity_document', 'insurance_document',
         'consent_form', 'external_laboratory_result',
+        'blood_card', 'blood_group_result', 'crossmatch_form',
+        'transfusion_record',
         'external_radiology_report', 'discharge_document',
         'clinical_photograph', 'medical_certificate', 'correspondence', 'other'
     ];
