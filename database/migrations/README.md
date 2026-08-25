@@ -415,3 +415,14 @@ not change dispensing or stock logic.
 `documents.allowed_types` setting and validation schema. This lets Medical
 Records upload blood-related documents as first-class types while the structured
 Blood Bank workflow remains future Laboratory work.
+
+## Migration 048 - Diabetes Monitoring / DM Sheet
+
+`048_diabetes_monitoring_up.sql` creates `diabetes_monitoring` for a simple
+Nursing-owned DM Sheet. Records link to an existing patient encounter and store
+recorded time, blood glucose, insulin given, meal status, symptoms, notes,
+recording user, and timestamps.
+
+The feature reuses existing Nursing permissions. Users who can view Nursing can
+view DM Sheet history, while Nurse/Admin users with Nursing create/edit access
+can record or update DM Sheet entries during active encounters.

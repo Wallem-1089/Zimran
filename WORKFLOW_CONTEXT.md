@@ -1158,6 +1158,21 @@ dispense medication, reduce stock, create charges, or replace Pharmacy. It is
 the bedside/administered-dose record and appears in the Nursing workspace tab
 and Patient Chart Drug Chart tab.
 
+## Nursing DM Sheet
+
+DM Sheet is a Nursing-owned repeated monitoring workflow:
+
+```text
+Workspace -> Nursing tab -> New DM Entry
+-> blood glucose / insulin / meal status / symptoms -> DM Sheet History
+```
+
+Entries are stored in `diabetes_monitoring`, linked to the patient and
+encounter. The sheet captures blood glucose, insulin given, meal status,
+symptoms, notes, recorded time, and recorder attribution. It appears in the
+Nursing workspace tab and as read-only history in the Patient Chart DM Sheet
+tab. It does not replace Vital Signs, Pharmacy dispensing, or Drug Chart/MAR.
+
 ## Patient Chart Blood Card
 
 Blood Card is currently a read-only Patient Chart summary, not a separate

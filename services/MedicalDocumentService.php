@@ -16,6 +16,10 @@ class MedicalDocumentService
         'consent_form', 'external_laboratory_result',
         'blood_card', 'blood_group_result', 'crossmatch_form',
         'transfusion_record',
+        'operation_consent_form', 'theatre_operation_note',
+        'continuation_sheet', 'observation_chart', 'nursing_checklist',
+        'dressing_record', 'drug_chart', 'dm_sheet', 'emergency_record',
+        'department_report_book',
         'external_radiology_report', 'discharge_document',
         'clinical_photograph', 'medical_certificate', 'correspondence', 'other'
     ];

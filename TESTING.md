@@ -207,6 +207,17 @@ save/update routes; audit generation for `MEDICATION_ADMINISTRATION_RECORDED`
 and `MEDICATION_ADMINISTRATION_UPDATED`; workspace Nursing-tab summary;
 patient-chart Drug Chart history; and printable Drug Chart/detail views.
 
+## Nursing DM Sheet
+
+Focused verification should cover Nurse and Administrator create/update/view
+flows; Doctor and other permitted clinical view-only access through the
+Encounter Workspace and Patient Chart; patient/visit mismatch rejection;
+completed/cancelled encounter mutation denial; blood glucose validation; meal
+status validation; CSRF-aware save/update routes; audit generation for
+`DIABETES_MONITORING_RECORDED` and `DIABETES_MONITORING_UPDATED`; workspace
+Nursing-tab summary; patient-chart DM Sheet history; and printable DM
+Sheet/detail views.
+
 ## Patient Chart Blood Card
 
 Focused verification should cover Patient Chart Blood Card loading for users

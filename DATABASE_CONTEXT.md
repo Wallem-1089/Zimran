@@ -1315,3 +1315,9 @@ a Pharmacy prescription, and stores a medication-name snapshot, scheduled or
 administered time, dose given, route, Given/Missed/Refused/Held status, notes,
 administering user, and timestamps. Pharmacy remains responsible for
 prescriptions/dispensing; this table records bedside administration only.
+
+Migration 048 adds `diabetes_monitoring`, a Nursing-owned DM Sheet table. Each
+row links to patient and encounter and stores recorded time, blood glucose,
+insulin given, meal status, symptoms, notes, recording user, and timestamps.
+It supports repeated bedside diabetes monitoring without introducing a chronic
+disease registry or separate endocrinology workflow.

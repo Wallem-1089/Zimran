@@ -48,6 +48,10 @@ if (!empty($canViewDrugChart)) {
     $chartTabs['drug_chart'] = 'Drug Chart';
 }
 
+if (!empty($canViewDmSheet)) {
+    $chartTabs['dm_sheet'] = 'DM Sheet';
+}
+
 if ($canViewAudit) {
     $chartTabs['audit'] = 'Audit History';
 }

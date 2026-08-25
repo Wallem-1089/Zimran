@@ -1049,6 +1049,30 @@ Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?Permiss
 | `modules/nursing/drug_chart/update.php` | POST | Persist edits. |
 | `modules/nursing/drug_chart/history.php` | GET | Visit or patient Drug Chart history. |
 
+### DiabetesMonitoringService — Nursing DM Sheet
+
+Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?PermissionService $permissionService = null)`. Uses `diabetes_monitoring`, `visits`, `patients`, `users`, audit and the existing Nursing permission model.
+
+| Signature | Purpose/return | Contract |
+|---|---|---|
+| `create(array $data, array $user): array` | Inserts a DM Sheet entry for an active encounter. | Validates patient/visit consistency, active encounter, Nursing create permission, recorded time, blood glucose, meal status, insulin text, symptoms and notes; writes `DIABETES_MONITORING_RECORDED` audit. |
+| `getById(int $recordId, ?array $user = null): ?array` | Read one DM Sheet entry. | Returns `null` when a supplied user lacks Nursing view permission. |
+| `listByVisit(int $visitId, ?array $user = null): array` | DM Sheet history for one encounter. | Used by the Nursing workspace card and visit-level history. |
+| `listByPatient(int $patientId, ?array $user = null): array` | DM Sheet history across encounters. | Used by the Patient Chart DM Sheet tab. |
+| `update(int $recordId, array $data, array $user): array` | Updates an existing DM Sheet entry while the encounter is active. | Revalidates permission/status and writes `DIABETES_MONITORING_UPDATED` audit. |
+| `getMealStatuses(): array` | Returns the fixed meal-status options. | UI helper; no settings table is introduced. |
+
+### DM Sheet route map
+
+| Route | HTTP | Purpose |
+|---|---|---|
+| `modules/nursing/dm_sheet/create.php` | GET | Render DM Sheet form for a visit. |
+| `modules/nursing/dm_sheet/save.php` | POST | Persist a new DM Sheet entry. |
+| `modules/nursing/dm_sheet/view.php` | GET | Read one DM Sheet entry. |
+| `modules/nursing/dm_sheet/edit.php` | GET | Render edit form. |
+| `modules/nursing/dm_sheet/update.php` | POST | Persist edits. |
+| `modules/nursing/dm_sheet/history.php` | GET | Visit or patient DM Sheet history. |
+
 ### Patient Chart Blood Card view
 
 `modules/medical_records/chart.php?patient={id}&tab=blood_card` is a read-only

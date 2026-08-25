@@ -356,17 +356,18 @@ Patient Chart only show the Vital Signs tab when `view_vital_signs` resolves
 true for the current patient context. Administrator override remains active,
 but the service still validates encounter status and patient/visit matching.
 
-## Nursing, Dressing Book and Drug Chart permissions
+## Nursing, Dressing Book, Drug Chart and DM Sheet permissions
 
-Nursing Assessment, Dressing Book, and Drug Chart / MAR reuse the existing
-Nursing permission model. No extra Dressing or Drug Chart permission keys are
-introduced.
+Nursing Assessment, Dressing Book, Drug Chart / MAR, and DM Sheet reuse the
+existing Nursing permission model. No extra Dressing, Drug Chart, or DM Sheet
+permission keys are introduced.
 
 | Area | View | Create/Edit |
 |---|---|---|
 | Nursing Assessment | `view_nursing` / clinical cross-view policy | Nurse or Administrator with Nursing mutation permission |
 | Dressing Book | Same as Nursing view | Nurse or Administrator with Nursing mutation permission |
 | Drug Chart / MAR | Same as Nursing view | Nurse or Administrator with Nursing mutation permission |
+| DM Sheet | Same as Nursing view | Nurse or Administrator with Nursing mutation permission |
 
 Drug Chart entries may link to Pharmacy prescriptions, but Pharmacy
 permissions do not grant medication-administration mutation. Pharmacy remains

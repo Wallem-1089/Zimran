@@ -15,6 +15,9 @@ $medicationAdministrationTablesReady = $medicationAdministrationTablesReady ?? f
 $medicationAdministrationRecords = $medicationAdministrationRecords ?? [];
 $latestMedicationAdministrationRecord = $latestMedicationAdministrationRecord ?? ($medicationAdministrationRecords[0] ?? null);
 $drugChartPrescriptions = $drugChartPrescriptions ?? [];
+$diabetesMonitoringTablesReady = $diabetesMonitoringTablesReady ?? false;
+$diabetesMonitoringRecords = $diabetesMonitoringRecords ?? [];
+$latestDiabetesMonitoringRecord = $latestDiabetesMonitoringRecord ?? ($diabetesMonitoringRecords[0] ?? null);
 $isClosedEncounter = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
 ?>
 
@@ -142,6 +145,46 @@ $isClosedEncounter = in_array((string)($visit['visit_status'] ?? ''), ['Complete
                 <a href="../nursing/drug_chart/view.php?id=<?= (int)$latestMedicationAdministrationRecord['id'] ?>" class="btn-secondary">View Latest</a>
                 <?php if ($canEditNursing && !$isClosedEncounter): ?>
                     <a href="../nursing/drug_chart/edit.php?id=<?= (int)$latestMedicationAdministrationRecord['id'] ?>" class="btn-secondary">Edit Latest</a>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <div class="card">
+        <div class="section-heading">
+            <div>
+                <h3>DM Sheet</h3>
+                <p>Blood glucose monitoring, insulin given, meal status, symptoms, and notes.</p>
+            </div>
+            <div class="form-actions">
+                <?php if ($diabetesMonitoringTablesReady && $canViewNursing): ?>
+                    <a href="../nursing/dm_sheet/history.php?visit=<?= (int)$visit['id'] ?>" class="btn-secondary">View DM Sheet</a>
+                <?php endif; ?>
+                <?php if ($diabetesMonitoringTablesReady && $canCreateNursing && (!$isClosedEncounter || $permissionService->isAdministrator($currentUser))): ?>
+                    <a href="../nursing/dm_sheet/create.php?visit=<?= (int)$visit['id'] ?>" class="btn-primary">New DM Entry</a>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <?php if (!$diabetesMonitoringTablesReady): ?>
+            <p>DM Sheet tables are not available yet. Apply Migration 048 to enable this section.</p>
+        <?php elseif (!$canViewNursing): ?>
+            <p class="text-muted">You do not have permission to view DM Sheet.</p>
+        <?php elseif ($latestDiabetesMonitoringRecord === null): ?>
+            <p class="text-muted">No DM Sheet entries found for this encounter.</p>
+        <?php else: ?>
+            <div class="summary-grid">
+                <div class="summary-item"><span class="summary-label">Blood Glucose</span> <span class="summary-value"><?= e((string)$latestDiabetesMonitoringRecord['blood_glucose']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Meal Status</span> <span class="summary-value"><?= e((string)$latestDiabetesMonitoringRecord['meal_status']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Insulin Given</span> <span class="summary-value"><?= e((string)($latestDiabetesMonitoringRecord['insulin_given'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Recorded At</span> <span class="summary-value"><?= e((string)$latestDiabetesMonitoringRecord['recorded_at']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Recorded By</span> <span class="summary-value"><?= e((string)($latestDiabetesMonitoringRecord['recorded_by_name'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Total Entries</span> <span class="summary-value"><?= count($diabetesMonitoringRecords) ?></span></div>
+            </div>
+            <div class="form-actions">
+                <a href="../nursing/dm_sheet/view.php?id=<?= (int)$latestDiabetesMonitoringRecord['id'] ?>" class="btn-secondary">View Latest</a>
+                <?php if ($canEditNursing && !$isClosedEncounter): ?>
+                    <a href="../nursing/dm_sheet/edit.php?id=<?= (int)$latestDiabetesMonitoringRecord['id'] ?>" class="btn-secondary">Edit Latest</a>
                 <?php endif; ?>
             </div>
         <?php endif; ?>

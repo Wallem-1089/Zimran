@@ -1,0 +1,9 @@
+-- Add ward/department paper-form equivalents as first-class Medical Document upload types.
+-- These are document upload classifications only; no new clinical workflow tables are created here.
+
+UPDATE system_settings
+SET setting_value = '["referral_letter","identity_document","insurance_document","consent_form","external_laboratory_result","blood_card","blood_group_result","crossmatch_form","transfusion_record","operation_consent_form","theatre_operation_note","continuation_sheet","observation_chart","nursing_checklist","dressing_record","drug_chart","dm_sheet","emergency_record","department_report_book","external_radiology_report","discharge_document","clinical_photograph","medical_certificate","correspondence","other"]',
+    default_value = '["referral_letter","identity_document","insurance_document","consent_form","external_laboratory_result","blood_card","blood_group_result","crossmatch_form","transfusion_record","operation_consent_form","theatre_operation_note","continuation_sheet","observation_chart","nursing_checklist","dressing_record","drug_chart","dm_sheet","emergency_record","department_report_book","external_radiology_report","discharge_document","clinical_photograph","medical_certificate","correspondence","other"]',
+    validation_rules = '{"required":true,"schema_values":["referral_letter","identity_document","insurance_document","consent_form","external_laboratory_result","blood_card","blood_group_result","crossmatch_form","transfusion_record","operation_consent_form","theatre_operation_note","continuation_sheet","observation_chart","nursing_checklist","dressing_record","drug_chart","dm_sheet","emergency_record","department_report_book","external_radiology_report","discharge_document","clinical_photograph","medical_certificate","correspondence","other"]}',
+    updated_at = CURRENT_TIMESTAMP
+WHERE setting_key = 'documents.allowed_types';

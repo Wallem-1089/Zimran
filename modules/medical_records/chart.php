@@ -13,6 +13,7 @@ require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
 require_once __DIR__ . '/../../services/PatientIdentifierService.php';
 require_once __DIR__ . '/../../services/ClinicalSafetyService.php';
+require_once __DIR__ . '/../../services/DiabetesMonitoringService.php';
 require_once __DIR__ . '/../../services/ProblemListService.php';
 require_once __DIR__ . '/../../services/MedicalDocumentService.php';
 require_once __DIR__ . '/../../services/ClinicalNoteService.php';
@@ -104,6 +105,7 @@ $allowedTabs = [
     'nursing',
     'dressings',
     'drug_chart',
+    'dm_sheet',
     'encounters',
     'history',
     'audit'
@@ -204,6 +206,11 @@ $canViewDrugChart = $medicationAdministrationTablesReady && $permissionService->
 $medicationAdministrationService = $medicationAdministrationTablesReady ? new MedicationAdministrationService($pdo, null, $permissionService) : null;
 $medicationAdministrationHistory = [];
 $latestMedicationAdministrationRecord = null;
+$diabetesMonitoringTablesReady = chartTableExists($pdo, 'diabetes_monitoring');
+$canViewDmSheet = $diabetesMonitoringTablesReady && $permissionService->canViewNursing($patientId, $currentUser);
+$diabetesMonitoringService = $diabetesMonitoringTablesReady ? new DiabetesMonitoringService($pdo, null, $permissionService) : null;
+$diabetesMonitoringHistory = [];
+$latestDiabetesMonitoringRecord = null;
 
 if ($activeTab === 'problems' && !$canViewProblemList) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'PROBLEM_LIST_ACCESS_DENIED', 'Problem List access denied.');
@@ -244,6 +251,11 @@ if ($activeTab === 'drug_chart' && !$canViewDrugChart) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'DRUG_CHART_ACCESS_DENIED', 'Drug Chart access denied.');
     http_response_code(403);
     exit('You do not have permission to view Drug Chart.');
+}
+if ($activeTab === 'dm_sheet' && !$canViewDmSheet) {
+    $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'DM_SHEET_ACCESS_DENIED', 'DM Sheet access denied.');
+    http_response_code(403);
+    exit('You do not have permission to view DM Sheet.');
 }
 if ($activeTab === 'physiotherapy' && !$canViewPhysiotherapy) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'PHYSIOTHERAPY_ACCESS_DENIED', 'Physiotherapy access denied.');
@@ -356,6 +368,11 @@ if ($canViewDressings) {
 if ($canViewDrugChart) {
     $medicationAdministrationHistory = $medicationAdministrationService->listByPatient($patientId, $currentUser);
     $latestMedicationAdministrationRecord = $medicationAdministrationHistory[0] ?? null;
+}
+
+if ($canViewDmSheet) {
+    $diabetesMonitoringHistory = $diabetesMonitoringService->listByPatient($patientId, $currentUser);
+    $latestDiabetesMonitoringRecord = $diabetesMonitoringHistory[0] ?? null;
 }
 
 if ($activeTab === 'identifiers' && !$canViewIdentifiers) {
@@ -515,6 +532,10 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         case 'drug_chart':
             require __DIR__ . '/partials/drug_chart.php';
+            break;
+
+        case 'dm_sheet':
+            require __DIR__ . '/partials/dm_sheet.php';
             break;
 
         case 'problems':

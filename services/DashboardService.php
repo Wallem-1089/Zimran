@@ -173,6 +173,194 @@ class DashboardService
         ];
     }
 
+    public function getTheatreOperationRegister(array $filters = []): array
+    {
+        $range = $this->dateRange($filters);
+        $params = [':from' => $range['from'], ':to' => $range['to']];
+        $where = 'tr.created_at BETWEEN :from AND :to';
+
+        if (!empty($filters['department_id'])) {
+            $where .= ' AND tr.department_id = :department_id';
+            $params[':department_id'] = (int)$filters['department_id'];
+        }
+
+        if (!empty($filters['status'])) {
+            $where .= ' AND tr.status = :status';
+            $params[':status'] = (string)$filters['status'];
+        }
+
+        $summary = $this->fetchOne(
+            "SELECT COUNT(*) AS operation_count,
+                    SUM(tr.status = 'Completed') AS completed_count,
+                    SUM(tr.status = 'Draft') AS draft_count
+             FROM theatre_records tr
+             WHERE {$where}",
+            $params
+        );
+
+        $rows = $this->fetchAll(
+            "SELECT
+                tr.id,
+                tr.visit_id,
+                tr.procedure_name,
+                tr.indication,
+                tr.findings,
+                tr.complications,
+                tr.status,
+                tr.created_at,
+                tr.completed_at,
+                v.visit_number,
+                p.hospital_number,
+                CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
+                d.department_name,
+                CONCAT(surgeon.first_name, ' ', surgeon.last_name) AS surgeon_name,
+                CONCAT(completed.first_name, ' ', completed.last_name) AS completed_by_name
+             FROM theatre_records tr
+             INNER JOIN visits v ON v.id = tr.visit_id
+             INNER JOIN patients p ON p.id = tr.patient_id
+             LEFT JOIN departments d ON d.id = tr.department_id
+             LEFT JOIN users surgeon ON surgeon.id = tr.surgeon_id
+             LEFT JOIN users completed ON completed.id = tr.completed_by
+             WHERE {$where}
+             ORDER BY tr.created_at ASC, tr.id ASC
+             LIMIT 500",
+            $params
+        );
+
+        return [
+            'filters' => $range,
+            'summary' => $summary,
+            'rows' => $rows,
+        ];
+    }
+
+    public function getLaboratoryReportBook(array $filters = []): array
+    {
+        $range = $this->dateRange($filters);
+        $params = [':from' => $range['from'], ':to' => $range['to']];
+        $where = 'lr.created_at BETWEEN :from AND :to';
+
+        if (!empty($filters['department_id'])) {
+            $where .= ' AND lr.department_id = :department_id';
+            $params[':department_id'] = (int)$filters['department_id'];
+        }
+
+        if (!empty($filters['status'])) {
+            $where .= ' AND lr.status = :status';
+            $params[':status'] = (string)$filters['status'];
+        }
+
+        return [
+            'filters' => $range,
+            'summary' => $this->fetchOne(
+                "SELECT COUNT(*) AS request_count,
+                        SUM(lr.status = 'Completed') AS completed_count,
+                        SUM(lres.id IS NOT NULL) AS resulted_count
+                 FROM laboratory_requests lr
+                 LEFT JOIN laboratory_results lres ON lres.laboratory_request_id = lr.id
+                 WHERE {$where}",
+                $params
+            ),
+            'rows' => $this->fetchAll(
+                "SELECT
+                    lr.id,
+                    lr.visit_id,
+                    lr.tests_requested,
+                    lr.request_source,
+                    lr.priority,
+                    lr.status,
+                    lr.created_at,
+                    lr.updated_at,
+                    v.visit_number,
+                    p.hospital_number,
+                    CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
+                    d.department_name,
+                    CONCAT(requested.first_name, ' ', requested.last_name) AS requested_by_name,
+                    CONCAT(performed.first_name, ' ', performed.last_name) AS performed_by_name,
+                    lres.sample_taken,
+                    lres.findings,
+                    lres.result,
+                    lres.interpretation,
+                    lres.created_at AS result_created_at,
+                    lres.completed_at AS result_completed_at
+                 FROM laboratory_requests lr
+                 INNER JOIN visits v ON v.id = lr.visit_id
+                 INNER JOIN patients p ON p.id = lr.patient_id
+                 LEFT JOIN departments d ON d.id = lr.department_id
+                 LEFT JOIN users requested ON requested.id = lr.requested_by
+                 LEFT JOIN laboratory_results lres ON lres.laboratory_request_id = lr.id
+                 LEFT JOIN users performed ON performed.id = lres.performed_by
+                 WHERE {$where}
+                 ORDER BY lr.created_at ASC, lr.id ASC
+                 LIMIT 500",
+                $params
+            ),
+        ];
+    }
+
+    public function getRadiologyReportBook(array $filters = []): array
+    {
+        $range = $this->dateRange($filters);
+        $params = [':from' => $range['from'], ':to' => $range['to']];
+        $where = 'rr.created_at BETWEEN :from AND :to';
+
+        if (!empty($filters['department_id'])) {
+            $where .= ' AND rr.department_id = :department_id';
+            $params[':department_id'] = (int)$filters['department_id'];
+        }
+
+        if (!empty($filters['status'])) {
+            $where .= ' AND rr.status = :status';
+            $params[':status'] = (string)$filters['status'];
+        }
+
+        return [
+            'filters' => $range,
+            'summary' => $this->fetchOne(
+                "SELECT COUNT(*) AS request_count,
+                        SUM(rr.status = 'Completed') AS completed_count,
+                        SUM(rep.id IS NOT NULL) AS reported_count
+                 FROM radiology_requests rr
+                 LEFT JOIN radiology_reports rep ON rep.radiology_request_id = rr.id
+                 WHERE {$where}",
+                $params
+            ),
+            'rows' => $this->fetchAll(
+                "SELECT
+                    rr.id,
+                    rr.visit_id,
+                    rr.study_requested,
+                    rr.clinical_indication,
+                    rr.request_source,
+                    rr.priority,
+                    rr.status,
+                    rr.created_at,
+                    v.visit_number,
+                    p.hospital_number,
+                    CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
+                    d.department_name,
+                    CONCAT(requested.first_name, ' ', requested.last_name) AS requested_by_name,
+                    CONCAT(performed.first_name, ' ', performed.last_name) AS performed_by_name,
+                    rep.findings,
+                    rep.impression,
+                    rep.recommendation,
+                    rep.created_at AS report_created_at,
+                    rep.completed_at AS report_completed_at
+                 FROM radiology_requests rr
+                 INNER JOIN visits v ON v.id = rr.visit_id
+                 INNER JOIN patients p ON p.id = rr.patient_id
+                 LEFT JOIN departments d ON d.id = rr.department_id
+                 LEFT JOIN users requested ON requested.id = rr.requested_by
+                 LEFT JOIN radiology_reports rep ON rep.radiology_request_id = rr.id
+                 LEFT JOIN users performed ON performed.id = rep.performed_by
+                 WHERE {$where}
+                 ORDER BY rr.created_at ASC, rr.id ASC
+                 LIMIT 500",
+                $params
+            ),
+        ];
+    }
+
     public function getClinicalActivityReport(array $filters = []): array
     {
         $range = $this->dateRange($filters);
