@@ -26,6 +26,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p>Departments request stock here. Store issues stock through the existing inventory ledger.</p>
         </div>
         <div class="form-actions">
+            <a class="btn-secondary" href="my_department_stock.php">My Department Stock</a>
             <?php if ($permissionService->canCreateStockRequest($currentUser)): ?>
                 <a class="btn-primary" href="create.php">New Stock Request</a>
             <?php endif; ?>

@@ -696,6 +696,38 @@ class StoreService
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function listDepartmentLedger(int $departmentId, ?array $user = null, int $limit = 50): array
+    {
+        if ($departmentId <= 0 || ($user !== null && !$this->permissionService->canViewInventory($user))) {
+            return [];
+        }
+
+        $limit = max(1, min(200, $limit));
+
+        $stmt = $this->pdo->prepare('
+            SELECT
+                st.*,
+                ii.item_code,
+                ii.item_name,
+                ii.unit,
+                CONCAT(performed_by.first_name, " ", performed_by.last_name) AS performed_by_name,
+                fd.department_name AS from_department_name,
+                td.department_name AS to_department_name
+            FROM stock_transactions st
+            INNER JOIN inventory_items ii ON ii.id = st.inventory_item_id
+            LEFT JOIN users performed_by ON performed_by.id = st.performed_by
+            LEFT JOIN departments fd ON fd.id = st.from_department_id
+            LEFT JOIN departments td ON td.id = st.to_department_id
+            WHERE st.from_department_id = :department_id
+               OR st.to_department_id = :department_id
+            ORDER BY st.created_at DESC, st.id DESC
+            LIMIT ' . $limit
+        );
+        $stmt->execute([':department_id' => $departmentId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     private function recordMovement(
         string $transactionType,
         array $data,
