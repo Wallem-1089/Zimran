@@ -35,6 +35,8 @@ $canDispense = (string)$prescription['status'] === 'Prescribed'
     && $permissionService->canDispensePrescription($visit, $currentUser);
 $canCancel = (string)$prescription['status'] === 'Prescribed'
     && $permissionService->canEditPrescription($visit, $currentUser, (string)$prescription['prescription_source']);
+$canRecordDrugChart = !in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)
+    && $permissionService->canCreateNursing($visit, $currentUser);
 
 $pageTitle = 'Prescription';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -75,6 +77,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php if (!in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true) && $permissionService->canCreateBillingRequest($currentUser)): ?>
                 <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$prescription['visit_id'] ?>&source_module=Pharmacy&source_record_id=<?= (int)$prescription['id'] ?>&description=<?= urlencode('Pharmacy: ' . (string)($prescription['medication_name'] ?? '') . ' x ' . (string)($prescription['quantity'] ?? '')) ?>">Request Billing</a>
             <?php endif; ?>
+            <?php if ($canRecordDrugChart): ?>
+                <a class="btn-primary" href="../nursing/drug_chart/create.php?visit=<?= (int)$prescription['visit_id'] ?>&prescription=<?= (int)$prescription['id'] ?>">Record in Drug Chart</a>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -114,6 +119,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
             <?php if ($canDispense): ?>
                 <a class="btn-primary" href="dispense.php?id=<?= (int)$prescription['id'] ?>">Dispense</a>
+            <?php endif; ?>
+            <?php if ($canRecordDrugChart): ?>
+                <a class="btn-secondary" href="../nursing/drug_chart/create.php?visit=<?= (int)$prescription['visit_id'] ?>&prescription=<?= (int)$prescription['id'] ?>">Record Administration</a>
             <?php endif; ?>
             <?php if ($canCancel): ?>
                 <form method="post" action="cancel_save.php" onsubmit="return confirm('Cancel this prescription?');">

@@ -98,6 +98,9 @@ $requestSource = $pharmacyRequestSource ?? 'Clinical';
                 <?php if (!$isClosedEncounter && $canDispensePrescription && (string)$latest['status'] === 'Prescribed'): ?>
                     <a href="../pharmacy/dispense.php?id=<?= (int)$latest['id'] ?>" class="btn-primary">Dispense</a>
                 <?php endif; ?>
+                <?php if (!$isClosedEncounter && !empty($canCreateNursing)): ?>
+                    <a href="../nursing/drug_chart/create.php?visit=<?= (int)$visit['id'] ?>&prescription=<?= (int)$latest['id'] ?>" class="btn-secondary">Record in Drug Chart</a>
+                <?php endif; ?>
             </div>
         </div>
 

@@ -68,6 +68,7 @@ require __DIR__ . '/../../../layouts/sidebar.php';
                             <th>Time</th>
                             <th>Encounter</th>
                             <th>Medication</th>
+                            <th>Prescription</th>
                             <th>Dose</th>
                             <th>Route</th>
                             <th>Status</th>
@@ -81,6 +82,14 @@ require __DIR__ . '/../../../layouts/sidebar.php';
                                 <td><?= e((string)$record['scheduled_time']) ?></td>
                                 <td><?= e((string)($record['visit_number'] ?? ('#' . (int)$record['visit_id']))) ?></td>
                                 <td><?= e((string)$record['medication_name']) ?></td>
+                                <td>
+                                    <?php if (!empty($record['prescription_id'])): ?>
+                                        <a href="../../pharmacy/view.php?id=<?= (int)$record['prescription_id'] ?>">#<?= (int)$record['prescription_id'] ?></a>
+                                        <span class="text-muted"><?= e((string)($record['prescription_status'] ?? '')) ?></span>
+                                    <?php else: ?>
+                                        <span class="text-muted">Manual</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?= e((string)$record['dose_given']) ?></td>
                                 <td><?= e((string)($record['route'] ?? '-')) ?></td>
                                 <td><?= e((string)$record['administration_status']) ?></td>

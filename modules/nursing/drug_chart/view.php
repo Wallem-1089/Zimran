@@ -49,7 +49,17 @@ require __DIR__ . '/../../../layouts/sidebar.php';
             <div class="summary-item"><span class="summary-label">Time</span> <span class="summary-value"><?= e((string)$record['scheduled_time']) ?></span></div>
             <div class="summary-item"><span class="summary-label">Administered By</span> <span class="summary-value"><?= e((string)($record['administered_by_name'] ?? '-')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Prescription Status</span> <span class="summary-value"><?= e((string)($record['prescription_status'] ?? 'Not linked')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Prescribed Dose</span> <span class="summary-value"><?= e((string)($record['prescribed_dosage'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Prescribed Frequency</span> <span class="summary-value"><?= e((string)($record['prescribed_frequency'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Prescribed Duration</span> <span class="summary-value"><?= e((string)($record['prescribed_duration'] ?? '-')) ?></span></div>
         </div>
+
+        <?php if (!empty($record['prescription_id'])): ?>
+            <p class="text-muted">
+                Linked to Pharmacy Prescription
+                <a href="../../pharmacy/view.php?id=<?= (int)$record['prescription_id'] ?>">#<?= (int)$record['prescription_id'] ?></a>.
+            </p>
+        <?php endif; ?>
 
         <?php if (trim((string)($record['prescribed_instructions'] ?? '')) !== ''): ?>
             <h3>Prescription Instructions</h3>

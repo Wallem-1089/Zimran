@@ -130,6 +130,34 @@ $isClosedEncounter = in_array((string)($visit['visit_status'] ?? ''), ['Complete
             <p class="text-muted">No drug chart entries found for this encounter.</p>
             <?php if (!empty($drugChartPrescriptions)): ?>
                 <p class="text-muted"><?= count($drugChartPrescriptions) ?> prescription(s) available to link when recording administration.</p>
+                <?php if ($canCreateNursing && (!$isClosedEncounter || $permissionService->isAdministrator($currentUser))): ?>
+                    <div class="table-responsive">
+                        <table class="table compact-table">
+                            <thead>
+                                <tr>
+                                    <th>Medication</th>
+                                    <th>Dosage</th>
+                                    <th>Frequency</th>
+                                    <th>Status</th>
+                                    <th class="no-print">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach (array_slice($drugChartPrescriptions, 0, 5) as $prescription): ?>
+                                    <tr>
+                                        <td><?= e((string)$prescription['medication_name']) ?></td>
+                                        <td><?= e((string)($prescription['dosage'] ?? '-')) ?></td>
+                                        <td><?= e((string)($prescription['frequency'] ?? '-')) ?></td>
+                                        <td><?= e((string)$prescription['status']) ?></td>
+                                        <td class="no-print">
+                                            <a class="btn-secondary btn-sm" href="../nursing/drug_chart/create.php?visit=<?= (int)$visit['id'] ?>&prescription=<?= (int)$prescription['id'] ?>">Record Administration</a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         <?php else: ?>
             <div class="summary-grid">
@@ -145,6 +173,9 @@ $isClosedEncounter = in_array((string)($visit['visit_status'] ?? ''), ['Complete
                 <a href="../nursing/drug_chart/view.php?id=<?= (int)$latestMedicationAdministrationRecord['id'] ?>" class="btn-secondary">View Latest</a>
                 <?php if ($canEditNursing && !$isClosedEncounter): ?>
                     <a href="../nursing/drug_chart/edit.php?id=<?= (int)$latestMedicationAdministrationRecord['id'] ?>" class="btn-secondary">Edit Latest</a>
+                <?php endif; ?>
+                <?php if ($canCreateNursing && !$isClosedEncounter && !empty($drugChartPrescriptions)): ?>
+                    <a href="../nursing/drug_chart/create.php?visit=<?= (int)$visit['id'] ?>&prescription=<?= (int)$drugChartPrescriptions[0]['id'] ?>" class="btn-secondary">Record From Latest Prescription</a>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
