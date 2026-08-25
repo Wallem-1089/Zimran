@@ -1120,6 +1120,13 @@ Department Stock Requests are implemented as a standalone sidebar module.
 Departments can request stock from Store without entering the Store module
 directly. Requests do not change stock; stock changes only when Store/Admin
 issues items through the existing Store stock ledger.
+
+Patient Stock Usage is implemented as encounter-linked department consumption.
+Departments can record items used on a specific patient encounter from their
+own department stock. The record reduces department balance through
+`StoreService` using an immutable `Consumption` stock transaction, and can
+optionally create a Billing Request for Accounts review. It does not create a
+patient charge directly.
 ## Phase 4.5 Basic Dashboards / Reports
 
 Phase 4.5 adds a small read-only Reports module and enhances the

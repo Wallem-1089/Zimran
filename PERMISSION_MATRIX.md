@@ -106,6 +106,7 @@ table.
 | Accounts | `view_billable_items` plus Accounts ownership; Administrator override |
 | Store | `view_inventory` plus Store ownership; Administrator override |
 | Stock Requests | `view_stock_requests` / `create_stock_request`; Store/Admin can review and issue |
+| Patient Stock Usage | `view_patient_stock_usage`; `record_patient_stock_usage` for departments allowed to consume their own stock on an encounter |
 | Admissions | `view_admissions` plus Reception/Records/Doctor/Nursing ownership; Administrator override |
 | Pharmacy | `view_pharmacy` plus Pharmacy ownership; Administrator override |
 | Billing | `view_billing` plus Accounts ownership; Administrator override |

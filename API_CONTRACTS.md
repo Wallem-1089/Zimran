@@ -1168,6 +1168,16 @@ Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?Permiss
 Stock Requests are available through `modules/stock_requests/`. They are
 sidebar workflow records and are not Encounter Workspace tabs.
 
+Patient Stock Usage is available through `modules/patient_stock_usage/`, the
+Encounter Workspace `stock_usage` tab, the Patient Chart `Stock Used` tab, and
+a Store read-only usage list. `PatientStockUsageService` exposes
+`createUsage()`, `getById()`, `listByVisit()`, `listByPatient()`,
+`listByDepartment()`, and `listAvailableDepartmentStock()`. `createUsage()`
+validates encounter, patient, department, permission, and balance, then calls
+`StoreService::consumeDepartmentStock()` and optionally
+`BillingService::createBillingRequest()`. It does not create patient charges
+directly.
+
 ### Current UI route notes
 
 Consultation create/edit forms preserve the same POST fields and service calls

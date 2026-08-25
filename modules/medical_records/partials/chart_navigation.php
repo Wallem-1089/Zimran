@@ -52,6 +52,10 @@ if (!empty($canViewDmSheet)) {
     $chartTabs['dm_sheet'] = 'DM Sheet';
 }
 
+if (!empty($canViewPatientStockUsage)) {
+    $chartTabs['stock_usage'] = 'Stock Used';
+}
+
 if ($canViewAudit) {
     $chartTabs['audit'] = 'Audit History';
 }

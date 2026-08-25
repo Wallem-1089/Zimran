@@ -44,6 +44,7 @@ require_once __DIR__ . '/../../services/TheatreService.php';
 require_once __DIR__ . '/../../services/PharmacyService.php';
 require_once __DIR__ . '/../../services/BillingService.php';
 require_once __DIR__ . '/../../services/StoreService.php';
+require_once __DIR__ . '/../../services/PatientStockUsageService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
 require_once __DIR__ . '/../../services/DressingRecordService.php';
@@ -446,6 +447,16 @@ $billingInvoice = $billingSummary['invoice'] ?? null;
 $billingRequests = $billingRequestsReady && $billingService
     ? $billingService->listBillingRequests(['visit_id' => $visitId], $currentUser)
     : [];
+$patientStockUsageTablesReady = workspaceTableExists($pdo, 'patient_stock_usage');
+$patientStockUsageService = $patientStockUsageTablesReady
+    ? new PatientStockUsageService($pdo, null, null, null, $permissionService)
+    : null;
+$canViewPatientStockUsage = $permissionService->canViewPatientStockUsage($currentUser);
+$canRecordPatientStockUsage = $permissionService->canRecordPatientStockUsage($currentUser);
+$patientStockUsageRecords = $canViewPatientStockUsage && $patientStockUsageService
+    ? $patientStockUsageService->listByVisit($visitId, $currentUser)
+    : [];
+$latestPatientStockUsage = $patientStockUsageRecords[0] ?? null;
 $admissionTablesReady = workspaceTableExists($pdo, 'wards')
     && workspaceTableExists($pdo, 'ward_beds')
     && workspaceTableExists($pdo, 'admissions')
@@ -484,6 +495,7 @@ $workspaceTabTitles = [
     'radiology' => 'Encounter X-Ray',
     'pharmacy' => 'Encounter Pharmacy',
     'billing' => 'Encounter Billing',
+    'stock_usage' => 'Encounter Stock Usage',
     'admission' => 'Encounter Admission',
     'physiotherapy' => 'Encounter Physiotherapy',
     'theatre' => 'Encounter Theatre',
@@ -656,6 +668,12 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
             case 'billing':
 
                 require __DIR__ . '/partials/tabs/billing.php';
+
+                break;
+
+            case 'stock_usage':
+
+                require __DIR__ . '/partials/tabs/stock_usage.php';
 
                 break;
 

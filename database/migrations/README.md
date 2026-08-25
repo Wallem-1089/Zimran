@@ -465,3 +465,17 @@ linked encounters, clinical records, billing records, documents, identifiers,
 and audit history remain intact, while normal patient search and new encounter
 creation exclude deleted patients. The migration does not reset patient IDs,
 hospital numbers, visit IDs, or encounter numbering.
+
+## Migration 053 - Patient Stock Usage / Department Consumption
+
+`053_patient_stock_usage_up.sql` adds `Consumption` to the Store stock movement
+ledger and creates `patient_stock_usage`. Departments can record stock used on
+a specific patient encounter from their own department balance. The action
+creates an immutable stock transaction through `StoreService`, can optionally
+create a Billing Request for Accounts review, and stores the patient/visit,
+department, item, quantity, recorder, stock transaction, and billing request
+links.
+
+The migration seeds `view_patient_stock_usage` and
+`record_patient_stock_usage`. It does not create patient charges directly and
+does not let departments edit stock balances.

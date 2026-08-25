@@ -975,6 +975,7 @@ erDiagram
 | `inventory_items` | Store / `StoreService` | Mutable inventory master data with soft activation | PK `id`; unique `item_code`; item name, category, billable-item link, active, created_at, created_by and updated_by indexes |
 | `stock_transactions` | Store / `StoreService` | Immutable stock movement ledger | PK `id`; inventory item, transaction type, quantity, from/to department, created_at, performer indexes |
 | `department_stock_balances` | Store / `StoreService` | Maintained cache of current department quantities | Composite PK `(inventory_item_id, department_id)`; quantity and updated_at |
+| `patient_stock_usage` | Patient Stock Usage / `PatientStockUsageService` | Encounter-linked department stock consumption | PK `id`; visit, patient, department, item, stock transaction, billing request, recorder, created_at indexes |
 | `billing_requests` | Billing / `BillingService` | Non-financial department recommendation queue; Pending -> Charged/Cancelled | PK `id`; visit, patient, department, status, requested_by, source, suggested billable item, patient charge, and created_at indexes |
 
 | FK | Source -> target | Update/delete |
@@ -989,6 +990,13 @@ erDiagram
 | `fk_stock_transactions_from_department` | `stock_transactions.from_department_id -> departments.id` | CASCADE / SET NULL |
 | `fk_stock_transactions_to_department` | `stock_transactions.to_department_id -> departments.id` | CASCADE / SET NULL |
 | `fk_stock_transactions_performed_by` | `stock_transactions.performed_by -> users.id` | CASCADE / RESTRICT |
+| `fk_patient_stock_usage_visit` | `patient_stock_usage.visit_id -> visits.id` | CASCADE / RESTRICT |
+| `fk_patient_stock_usage_patient` | `patient_stock_usage.patient_id -> patients.id` | CASCADE / RESTRICT |
+| `fk_patient_stock_usage_department` | `patient_stock_usage.department_id -> departments.id` | CASCADE / RESTRICT |
+| `fk_patient_stock_usage_item` | `patient_stock_usage.inventory_item_id -> inventory_items.id` | CASCADE / RESTRICT |
+| `fk_patient_stock_usage_transaction` | `patient_stock_usage.stock_transaction_id -> stock_transactions.id` | CASCADE / SET NULL |
+| `fk_patient_stock_usage_billing_request` | `patient_stock_usage.billing_request_id -> billing_requests.id` | CASCADE / SET NULL |
+| `fk_patient_stock_usage_recorded_by` | `patient_stock_usage.recorded_by -> users.id` | CASCADE / RESTRICT |
 | `fk_department_stock_balances_item` | `department_stock_balances.inventory_item_id -> inventory_items.id` | CASCADE / CASCADE |
 | `fk_department_stock_balances_department` | `department_stock_balances.department_id -> departments.id` | CASCADE / CASCADE |
 | `fk_billing_requests_visit` | `billing_requests.visit_id -> visits.id` | CASCADE / RESTRICT |

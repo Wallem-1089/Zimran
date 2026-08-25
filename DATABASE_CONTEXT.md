@@ -1244,6 +1244,12 @@ stock requests. These tables record department demand and Store review/issue
 status. They do not move stock by themselves; issuing a request creates normal
 Store stock transactions and updates `department_stock_balances`.
 
+Migration 053 adds `patient_stock_usage` for patient/encounter-linked
+department stock consumption. The table links the visit, patient, department,
+inventory item, recorder, Store stock transaction, and optional Billing
+Request. Stock still changes only through `StoreService`; usage records
+reference the resulting immutable `Consumption` transaction.
+
 Migration 043 adds simple external Store sales for non-patient customers.
 `external_sales` stores the sale number, optional customer name/phone, payment
 method/reference, total amount, sold-by attribution, status, cancellation

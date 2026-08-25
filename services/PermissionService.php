@@ -314,6 +314,16 @@ class PermissionService
                 ['Nurse', 'Doctor', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist', 'Store Officer'],
                 true
             ) || in_array($department, ['Nursing', 'Doctor', 'Laboratory', 'Radiology', 'X-Ray', 'Physiotherapy', 'Theatre', 'Pharmacy', 'Store'], true),
+            'view_patient_stock_usage' => in_array(
+                $role,
+                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist', 'Store Officer', 'Accounts', 'Accountant'],
+                true
+            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'Radiology', 'X-Ray', 'Physiotherapy', 'Theatre', 'Pharmacy', 'Store', 'Accounts'], true),
+            'record_patient_stock_usage' => in_array(
+                $role,
+                ['Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff'],
+                true
+            ) || in_array($department, ['Doctor', 'Nursing', 'Laboratory', 'Radiology', 'X-Ray', 'Physiotherapy', 'Theatre'], true),
             'review_stock_request', 'issue_stock_request' => $role === 'Store Officer'
                 || $department === 'Store',
             'view_reports' => in_array(
@@ -1639,6 +1649,20 @@ class PermissionService
         $user = $user ?? $this->currentUser();
         return $this->isAdministrator($user)
             || $this->hasPermission('view_stock_ledger', $user);
+    }
+
+    public function canViewPatientStockUsage(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('view_patient_stock_usage', $user);
+    }
+
+    public function canRecordPatientStockUsage(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('record_patient_stock_usage', $user);
     }
 
     public function canViewExternalSales(?array $user = null): bool

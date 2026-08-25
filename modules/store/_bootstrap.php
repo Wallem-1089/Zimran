@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/AuditService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
+require_once __DIR__ . '/../../services/PatientStockUsageService.php';
 require_once __DIR__ . '/../../services/StoreService.php';
 
 function storeTableExists(PDO $pdo, string $table): bool
@@ -155,9 +156,11 @@ function storeStoreDepartmentId(PDO $pdo): ?int
 
 $permissionService = new PermissionService($pdo);
 $storeService = new StoreService($pdo, null, $permissionService);
+$patientStockUsageService = new PatientStockUsageService($pdo, $storeService, null, null, $permissionService);
 $storeTablesReady = storeTableExists($pdo, 'inventory_items')
     && storeTableExists($pdo, 'stock_transactions')
     && storeTableExists($pdo, 'department_stock_balances');
+$patientStockUsageTablesReady = storeTableExists($pdo, 'patient_stock_usage');
 $storeExternalSalesReady = storeTableExists($pdo, 'external_sales')
     && storeTableExists($pdo, 'external_sale_items');
 $storeDepartmentOptions = storeDepartments($pdo);

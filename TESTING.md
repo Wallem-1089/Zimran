@@ -422,3 +422,11 @@ When testing clinical module access, verify both sides of the current policy:
 - Vital Signs create/edit remains limited to Doctor, Nurse, and Administrator.
 
 Migration 038 was applied live with guarded backup flow on 2026-08-23.
+
+## Patient Stock Usage / Department Consumption
+
+Focused tests should verify that authorized department users can record stock
+used on an active encounter, non-admin users cannot consume stock from another
+department, insufficient department stock is rejected, the Store ledger
+receives a `Consumption` transaction, department balance decreases, and
+optional Billing Requests are created without posting patient charges.

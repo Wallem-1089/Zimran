@@ -254,7 +254,7 @@ class StoreService
             $balance = $this->fetchBalance($item['id'], $payload['data']['department_id']);
             if (!$balance || (float)$balance['quantity'] < (float)$payload['data']['quantity']) {
                 $this->rollback();
-                return $this->failure(['Insufficient stock in the selected department for dispensing.']);
+                return $this->failure(['Insufficient stock in the selected department.']);
             }
 
             $stmt = $this->pdo->prepare('
@@ -282,7 +282,7 @@ class StoreService
             ');
             $stmt->execute([
                 ':inventory_item_id' => $item['id'],
-                ':transaction_type' => 'Issue',
+                ':transaction_type' => 'Consumption',
                 ':quantity' => $payload['data']['quantity'],
                 ':from_department_id' => $payload['data']['department_id'],
                 ':reference' => $payload['data']['reference'],
@@ -293,7 +293,7 @@ class StoreService
 
             $this->changeBalance($item['id'], $payload['data']['department_id'], 0 - (float)$payload['data']['quantity']);
 
-            if (!$this->audit((int)$user['id'], null, 'STOCK_ISSUED', 'Consumed stock from department for dispensing. Item #' . $item['id'] . '.')) {
+            if (!$this->audit((int)$user['id'], null, 'STOCK_CONSUMED', 'Consumed department stock. Item #' . $item['id'] . '.')) {
                 throw new RuntimeException('Unable to audit stock consumption.');
             }
 
@@ -1427,7 +1427,9 @@ class StoreService
 
     private function assertCanViewItemForMovement(array $user): void
     {
-        if (!$this->permissionService->canViewInventory($user)) {
+        if (!$this->permissionService->canViewInventory($user)
+            && !$this->permissionService->canRecordPatientStockUsage($user)
+        ) {
             throw new RuntimeException('You are not allowed to access inventory items.');
         }
     }

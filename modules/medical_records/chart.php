@@ -26,6 +26,7 @@ require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
 require_once __DIR__ . '/../../services/DressingRecordService.php';
 require_once __DIR__ . '/../../services/MedicationAdministrationService.php';
+require_once __DIR__ . '/../../services/PatientStockUsageService.php';
 
 function chartTableExists(PDO $pdo, string $table): bool
 {
@@ -111,6 +112,7 @@ $allowedTabs = [
     'dressings',
     'drug_chart',
     'dm_sheet',
+    'stock_usage',
     'encounters',
     'history',
     'audit'
@@ -216,6 +218,11 @@ $canViewDmSheet = $diabetesMonitoringTablesReady && $permissionService->canViewN
 $diabetesMonitoringService = $diabetesMonitoringTablesReady ? new DiabetesMonitoringService($pdo, null, $permissionService) : null;
 $diabetesMonitoringHistory = [];
 $latestDiabetesMonitoringRecord = null;
+$patientStockUsageTablesReady = chartTableExists($pdo, 'patient_stock_usage');
+$canViewPatientStockUsage = $patientStockUsageTablesReady && $permissionService->canViewPatientStockUsage($currentUser);
+$patientStockUsageService = $patientStockUsageTablesReady ? new PatientStockUsageService($pdo, null, null, null, $permissionService) : null;
+$patientStockUsageHistory = [];
+$latestPatientStockUsage = null;
 
 if ($activeTab === 'problems' && !$canViewProblemList) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'PROBLEM_LIST_ACCESS_DENIED', 'Problem List access denied.');
@@ -261,6 +268,11 @@ if ($activeTab === 'dm_sheet' && !$canViewDmSheet) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'DM_SHEET_ACCESS_DENIED', 'DM Sheet access denied.');
     http_response_code(403);
     exit('You do not have permission to view DM Sheet.');
+}
+if ($activeTab === 'stock_usage' && !$canViewPatientStockUsage) {
+    $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'PATIENT_STOCK_USAGE_ACCESS_DENIED', 'Patient Stock Usage access denied.');
+    http_response_code(403);
+    exit('You do not have permission to view Patient Stock Usage.');
 }
 if ($activeTab === 'physiotherapy' && !$canViewPhysiotherapy) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'PHYSIOTHERAPY_ACCESS_DENIED', 'Physiotherapy access denied.');
@@ -378,6 +390,11 @@ if ($canViewDrugChart) {
 if ($canViewDmSheet) {
     $diabetesMonitoringHistory = $diabetesMonitoringService->listByPatient($patientId, $currentUser);
     $latestDiabetesMonitoringRecord = $diabetesMonitoringHistory[0] ?? null;
+}
+
+if ($canViewPatientStockUsage) {
+    $patientStockUsageHistory = $patientStockUsageService->listByPatient($patientId, $currentUser);
+    $latestPatientStockUsage = $patientStockUsageHistory[0] ?? null;
 }
 
 if ($activeTab === 'identifiers' && !$canViewIdentifiers) {
@@ -541,6 +558,10 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         case 'dm_sheet':
             require __DIR__ . '/partials/dm_sheet.php';
+            break;
+
+        case 'stock_usage':
+            require __DIR__ . '/partials/stock_usage.php';
             break;
 
         case 'problems':

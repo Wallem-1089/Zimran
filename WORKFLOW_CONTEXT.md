@@ -1253,6 +1253,10 @@ department handoff.
   Physiotherapy, Theatre, Pharmacy, Store, and Administrator request items
   from Store. Requests do not reduce stock. Store/Admin issue actions use the
   Store stock ledger and create normal `STOCK_ISSUED` movements.
+- Patient Stock Usage records department stock consumed on a patient encounter.
+  It reduces the department's existing stock through a `Consumption` stock
+  transaction and may create a Billing Request; Accounts still decides and
+  posts official patient charges.
 - Store may sell stock to external non-patient customers through External
   Store Sales. External sales reduce Store stock and produce a receipt, but do
   not create fake patients, encounters, invoices, or patient charges.
