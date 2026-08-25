@@ -97,7 +97,7 @@ table.
 | Sidebar destination | Visibility rule |
 |---|---|
 | Patients / Encounters | Authenticated user; encounter actions still require their own permissions |
-| Department Worklist | Authenticated user with active department context |
+| Department Worklist | Encounter-handling department ownership; Accounts also sees pending Billing Requests; Administrator override |
 | Medical Records | `view_medical_record` plus Records ownership; Administrator override |
 | Laboratory | `view_laboratory` plus Laboratory department ownership; Administrator override |
 | Radiology | `view_radiology` plus X-Ray/Radiology department ownership; Administrator override |
@@ -116,6 +116,29 @@ table.
 This keeps patient-specific clinical context useful without giving every
 clinical user every department's full worklist. Page-level permission checks
 remain authoritative even when a sidebar link is visible.
+
+### Default sidebar by role
+
+| Role | Main sidebar destinations |
+|---|---|
+| System Administrator | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Medical Records, Laboratory, Radiology, Physiotherapy, Theatre, Accounts, Store, Stock Requests, Admissions, Pharmacy, Billing, Reports, Administration, Switch Department |
+| Receptionist | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Admissions |
+| Records Officer | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Medical Records, Admissions, Reports |
+| Doctor | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Stock Requests, Admissions |
+| Nurse | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Stock Requests, Admissions |
+| Laboratory Scientist | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Laboratory, Stock Requests |
+| Radiographer | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Radiology, Stock Requests |
+| Physiotherapist | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Physiotherapy, Stock Requests |
+| Theatre Staff | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Theatre, Stock Requests |
+| Pharmacist | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Pharmacy, Stock Requests |
+| Accountant | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Accounts, Billing, Reports |
+| Store Officer | Dashboard, Patients, Encounters, Department Notifications, My Notifications, Store, Stock Requests, Reports |
+
+Patient-specific clinical tabs may still be visible inside an authorized
+Encounter Workspace even when the matching department-wide sidebar module is
+hidden. For example, a pharmacist may view a patient's consultation context in
+the workspace for safe dispensing but does not receive the Consultation or
+Laboratory department worklist in the sidebar.
 
 ## Dashboard Visibility Policy
 

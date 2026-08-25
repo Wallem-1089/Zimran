@@ -21,6 +21,7 @@ $canAccessPharmacySidebar = false;
 $canAccessBillingSidebar = false;
 $canAccessReportsSidebar = false;
 $canAccessDepartmentSwitchSidebar = false;
+$canAccessDepartmentWorklistSidebar = false;
 $departmentWorklistCount = 0;
 $departmentNotificationCount = 0;
 $userNotificationCount = 0;
@@ -62,6 +63,18 @@ if ($currentUser && isset($pdo)) {
             return false;
         }
     };
+    $sidebarOwnsDepartmentModule = static function (
+        array $roles,
+        array $departments
+    ) use (
+        $sidebarIsAdmin,
+        $sidebarRoleIn,
+        $sidebarDepartmentIn
+    ): bool {
+        return $sidebarIsAdmin
+            || $sidebarRoleIn($roles)
+            || $sidebarDepartmentIn($departments);
+    };
 
     /*
     |--------------------------------------------------------------------------
@@ -74,87 +87,67 @@ if ($currentUser && isset($pdo)) {
     |
     */
 
-    $canAccessMedicalRecordsSidebar = $sidebarIsAdmin
-        || (
-            $sidebarCan('view_medical_record')
-            && (
-                $sidebarRoleIn(['Records Officer'])
-                || $sidebarDepartmentIn(['Records'])
-            )
+    $canAccessMedicalRecordsSidebar = $sidebarCan('view_medical_record')
+        && $sidebarOwnsDepartmentModule(['Records Officer'], ['Records']);
+
+    $canAccessLaboratorySidebar = $sidebarCan('view_laboratory')
+        && $sidebarOwnsDepartmentModule(['Laboratory Scientist'], ['Laboratory']);
+
+    $canAccessRadiologySidebar = $sidebarCan('view_radiology')
+        && $sidebarOwnsDepartmentModule(['Radiographer'], ['X-Ray', 'Radiology']);
+
+    $canAccessPhysiotherapySidebar = $sidebarCan('view_physiotherapy')
+        && $sidebarOwnsDepartmentModule(['Physiotherapist'], ['Physiotherapy', 'Physio', 'Rehabilitation']);
+
+    $canAccessTheatreSidebar = $sidebarCan('view_theatre')
+        && $sidebarOwnsDepartmentModule(['Theatre Staff'], ['Theatre']);
+
+    $canAccessAccountsSidebar = $sidebarCan('view_billable_items')
+        && $sidebarOwnsDepartmentModule(['Accountant', 'Accounts'], ['Accounts']);
+
+    $canAccessStoreSidebar = $sidebarCan('view_inventory')
+        && $sidebarOwnsDepartmentModule(['Store Officer'], ['Store']);
+
+    $canAccessStockRequestsSidebar = (
+        $sidebarCan('view_stock_requests')
+        || $sidebarCan('create_stock_request')
+    ) && $sidebarOwnsDepartmentModule(
+        [
+            'Doctor',
+            'Nurse',
+            'Laboratory Scientist',
+            'Radiographer',
+            'Physiotherapist',
+            'Theatre Staff',
+            'Pharmacist',
+            'Store Officer',
+        ],
+        [
+            'Doctor',
+            'Nursing',
+            'Laboratory',
+            'Radiology',
+            'X-Ray',
+            'Physiotherapy',
+            'Physio',
+            'Rehabilitation',
+            'Theatre',
+            'Pharmacy',
+            'Store',
+        ]
+    );
+
+    $canAccessAdmissionsSidebar = $sidebarCan('view_admissions')
+        && $sidebarOwnsDepartmentModule(
+            ['Receptionist', 'Records Officer', 'Doctor', 'Nurse'],
+            ['Reception', 'Records', 'Doctor', 'Nursing']
         );
 
-    $canAccessLaboratorySidebar = $sidebarIsAdmin
-        || (
-            $sidebarCan('view_laboratory')
-            && $sidebarDepartmentIn(['Laboratory'])
-        );
+    $canAccessPharmacySidebar = $sidebarCan('view_pharmacy')
+        && $sidebarOwnsDepartmentModule(['Pharmacist'], ['Pharmacy']);
 
-    $canAccessRadiologySidebar = $sidebarIsAdmin
-        || (
-            $sidebarCan('view_radiology')
-            && $sidebarDepartmentIn(['X-Ray', 'Radiology'])
-        );
-
-    $canAccessPhysiotherapySidebar = $sidebarIsAdmin
-        || (
-            $sidebarCan('view_physiotherapy')
-            && $sidebarDepartmentIn(['Physiotherapy'])
-        );
-
-    $canAccessTheatreSidebar = $sidebarIsAdmin
-        || (
-            $sidebarCan('view_theatre')
-            && $sidebarDepartmentIn(['Theatre'])
-        );
-
-    $canAccessAccountsSidebar = $sidebarIsAdmin
-        || (
-            $sidebarCan('view_billable_items')
-            && (
-                $sidebarRoleIn(['Accountant'])
-                || $sidebarDepartmentIn(['Accounts'])
-            )
-        );
-
-    $canAccessStoreSidebar = $sidebarIsAdmin
-        || (
-            $sidebarCan('view_inventory')
-            && (
-                $sidebarRoleIn(['Store Officer'])
-                || $sidebarDepartmentIn(['Store'])
-            )
-        );
-
-    $canAccessStockRequestsSidebar = $sidebarIsAdmin
-        || $sidebarCan('view_stock_requests')
-        || $sidebarCan('create_stock_request');
-
-    $canAccessAdmissionsSidebar = $sidebarIsAdmin
-        || (
-            $sidebarCan('view_admissions')
-            && (
-                $sidebarRoleIn(['Receptionist', 'Records Officer', 'Doctor', 'Nurse'])
-                || $sidebarDepartmentIn(['Reception', 'Records', 'Doctor', 'Nursing'])
-            )
-        );
-
-    $canAccessPharmacySidebar = $sidebarIsAdmin
-        || (
-            $sidebarCan('view_pharmacy')
-            && (
-                $sidebarRoleIn(['Pharmacist'])
-                || $sidebarDepartmentIn(['Pharmacy'])
-            )
-        );
-
-    $canAccessBillingSidebar = $sidebarIsAdmin
-        || (
-            $sidebarCan('view_billing')
-            && (
-                $sidebarRoleIn(['Accountant'])
-                || $sidebarDepartmentIn(['Accounts'])
-            )
-        );
+    $canAccessBillingSidebar = $sidebarCan('view_billing')
+        && $sidebarOwnsDepartmentModule(['Accountant', 'Accounts'], ['Accounts']);
 
     $canAccessReportsSidebar = $sidebarIsAdmin
         || (
@@ -185,14 +178,46 @@ if ($currentUser && isset($pdo)) {
         ?? $currentUser['department_id']
         ?? 0
     );
+    $sidebarOwnsEncounterWorklist = $sidebarOwnsDepartmentModule(
+        [
+            'Receptionist',
+            'Records Officer',
+            'Doctor',
+            'Nurse',
+            'Laboratory Scientist',
+            'Radiographer',
+            'Physiotherapist',
+            'Theatre Staff',
+            'Pharmacist',
+            'Accountant',
+            'Accounts',
+        ],
+        [
+            'Reception',
+            'Records',
+            'Doctor',
+            'Nursing',
+            'Laboratory',
+            'Radiology',
+            'X-Ray',
+            'Physiotherapy',
+            'Physio',
+            'Rehabilitation',
+            'Theatre',
+            'Pharmacy',
+            'Accounts',
+        ]
+    );
     if ($sidebarDepartmentId > 0) {
         try {
             if ($sidebarPermissionService->hasPermission('view_encounter', $currentUser)
+                && $sidebarOwnsEncounterWorklist
                 && (
                     $sidebarIsAdmin
                     || $sidebarPermissionService->canAccessDepartment($sidebarDepartmentId, $currentUser)
                 )
             ) {
+                $canAccessDepartmentWorklistSidebar = true;
                 $departmentWorklistCount = count((new VisitService($pdo))->listDepartmentWorklist($sidebarDepartmentId));
             }
         } catch (Throwable) {
@@ -208,6 +233,7 @@ if ($currentUser && isset($pdo)) {
         if ($sidebarDepartmentIn(['Accounts'])
             && $sidebarPermissionService->canViewBillingRequests($currentUser)
         ) {
+            $canAccessDepartmentWorklistSidebar = true;
             try {
                 $stmt = $pdo->prepare(
                     'SELECT COUNT(*)
@@ -328,15 +354,19 @@ $sidebarBranding = appBranding($pdo ?? null);
 
             </li>
 
-            <li>
+            <?php if ($canAccessDepartmentWorklistSidebar): ?>
 
-                <a href="<?= e($baseUrl) ?>/modules/visits/department_worklist.php">
+                <li>
 
-                    Department Worklist<?= $departmentWorklistCount > 0 ? ' (' . (int)$departmentWorklistCount . ')' : '' ?>
+                    <a href="<?= e($baseUrl) ?>/modules/visits/department_worklist.php">
 
-                </a>
+                        Department Worklist<?= $departmentWorklistCount > 0 ? ' (' . (int)$departmentWorklistCount . ')' : '' ?>
 
-            </li>
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
 
             <li>
 
