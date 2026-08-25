@@ -45,3 +45,5 @@
 2026-08-25T02:14:23+02:00	target=hospital_management_system	reason=Additive controlled live development database reconstruction	authorization=verified-backup:before_048_diabetes_monitoring_20260825_011412.sql
 2026-08-25T02:28:26+02:00	target=hospital_management_system	reason=Additive controlled live development database reconstruction	authorization=verified-backup:before_049_document_register_types_20260825_012816.sql
 2026-08-25T03:07:18+02:00	target=hospital_management_system	reason=Additive controlled live development database reconstruction	authorization=verified-backup:before_050_stock_requests_20260825_020710.sql
+2026-08-25T03:37:09+02:00	target=hospital_management_system	reason=Applied Migration 051 patient delete permission	authorization=verified-backup:before_051_patient_delete_permission_20260825_023538.sql
+2026-08-25T03:49:41+02:00	target=hospital_management_system	reason=Applied Migration 052 patient soft delete columns	authorization=verified-backup:before_052_patient_soft_delete_20260825_024923.sql

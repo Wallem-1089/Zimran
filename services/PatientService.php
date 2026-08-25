@@ -497,7 +497,7 @@ class PatientService
 {
     $sql = "SELECT * FROM patients";
 
-    $conditions = [];
+    $conditions = ["COALESCE(is_deleted, 0) = 0"];
 
     $params = [];
 
@@ -557,11 +557,7 @@ class PatientService
 
     }
 
-    if (!empty($conditions)) {
-
-        $sql .= " WHERE " . implode(" AND ", $conditions);
-
-    }
+    $sql .= " WHERE " . implode(" AND ", $conditions);
 
     $sql .= " ORDER BY last_name, first_name";
 
@@ -611,6 +607,102 @@ public function updatePatient(
     );
 }
 
+public function deletePatient(
+    int $id,
+    int $deletedBy,
+    string $reason
+): array {
+    if ($id <= 0 || $deletedBy <= 0) {
+        return [
+            'success' => false,
+            'errors' => ['Patient and user are required.']
+        ];
+    }
+
+    $reason = trim($reason);
+    if ($reason === '') {
+        return [
+            'success' => false,
+            'errors' => ['A reason is required before deleting a patient.']
+        ];
+    }
+
+    try {
+        $this->pdo->beginTransaction();
+
+        $lock = $this->pdo->prepare('SELECT * FROM patients WHERE id = :id FOR UPDATE');
+        $lock->execute([':id' => $id]);
+        $patient = $lock->fetch(PDO::FETCH_ASSOC);
+
+        if (!$patient) {
+            $this->pdo->rollBack();
+            return [
+                'success' => false,
+                'errors' => ['Patient not found.']
+            ];
+        }
+
+        if ((int)($patient['is_deleted'] ?? 0) === 1) {
+            $this->pdo->rollBack();
+            return [
+                'success' => false,
+                'errors' => ['This patient is already deleted.']
+            ];
+        }
+
+        $delete = $this->pdo->prepare('
+            UPDATE patients
+            SET is_deleted = 1,
+                deleted_at = NOW(),
+                deleted_by = :deleted_by,
+                deletion_reason = :deletion_reason,
+                updated_at = NOW()
+            WHERE id = :id
+              AND COALESCE(is_deleted, 0) = 0
+        ');
+        $delete->execute([
+            ':deleted_by' => $deletedBy,
+            ':deletion_reason' => $reason,
+            ':id' => $id,
+        ]);
+
+        if ($delete->rowCount() !== 1) {
+            throw new RuntimeException('Patient soft deletion did not affect exactly one record.');
+        }
+
+        if (!$this->auditService->logPatient(
+            $deletedBy,
+            $id,
+            null,
+            'Patients',
+            'PATIENT_DELETED',
+            'Soft-deleted patient registration #' . $id . '. Reason: ' . $reason,
+            $this->currentDepartmentId(),
+            'WARNING',
+            'PATIENT_DELETED'
+        )) {
+            throw new RuntimeException('Unable to record patient deletion audit log.');
+        }
+
+        $this->pdo->commit();
+
+        return [
+            'success' => true,
+            'patient_id' => $id,
+            'errors' => []
+        ];
+    } catch (Throwable) {
+        if ($this->pdo->inTransaction()) {
+            $this->pdo->rollBack();
+        }
+
+        return [
+            'success' => false,
+            'errors' => ['Unable to delete patient.']
+        ];
+    }
+}
+
     public function findPatientByHospitalNumberExact(string $hospitalNumber): ?array
     {
         $stmt = $this->pdo->prepare('
@@ -628,7 +720,7 @@ public function updatePatient(
     ): array {
         $page = max(1, $page);
         $pageSize = max(1, min(100, $pageSize));
-        $conditions = [];
+        $conditions = ['COALESCE(p.is_deleted, 0) = 0'];
         $parameters = [];
         $rank = '50';
 
@@ -1315,7 +1407,7 @@ public function updatePatientWithContext(
             $params[':alternate_identifier'] = $alternateIdentifier;
         }
 
-        $sql = 'SELECT * FROM patients WHERE (' . implode(' OR ', $conditions) . ')';
+        $sql = 'SELECT * FROM patients WHERE COALESCE(is_deleted, 0) = 0 AND (' . implode(' OR ', $conditions) . ')';
         if ($excludePatientId !== null) {
             $sql .= ' AND id <> :exclude_id';
             $params[':exclude_id'] = $excludePatientId;
@@ -1475,6 +1567,47 @@ public function updatePatientWithContext(
     private function normalizeIdentifierValue(string $value): string
     {
         return preg_replace('/[^A-Z0-9]/', '', strtoupper(trim($value))) ?? '';
+    }
+
+    private function patientDeletionBlockers(int $patientId): array
+    {
+        $stmt = $this->pdo->prepare('
+            SELECT
+                k.TABLE_NAME AS table_name,
+                k.COLUMN_NAME AS column_name,
+                rc.DELETE_RULE AS delete_rule
+            FROM information_schema.KEY_COLUMN_USAGE k
+            INNER JOIN information_schema.REFERENTIAL_CONSTRAINTS rc
+                ON rc.CONSTRAINT_SCHEMA = k.CONSTRAINT_SCHEMA
+               AND rc.CONSTRAINT_NAME = k.CONSTRAINT_NAME
+               AND rc.TABLE_NAME = k.TABLE_NAME
+            WHERE k.TABLE_SCHEMA = DATABASE()
+              AND k.REFERENCED_TABLE_NAME = "patients"
+              AND rc.DELETE_RULE IN ("RESTRICT", "NO ACTION")
+            ORDER BY k.TABLE_NAME, k.COLUMN_NAME
+        ');
+        $stmt->execute();
+
+        $blockers = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $reference) {
+            $table = (string)$reference['table_name'];
+            $column = (string)$reference['column_name'];
+            if ($table === '' || $column === '') {
+                continue;
+            }
+
+            $safeTable = '`' . str_replace('`', '``', $table) . '`';
+            $safeColumn = '`' . str_replace('`', '``', $column) . '`';
+            $count = $this->pdo
+                ->prepare("SELECT COUNT(*) FROM {$safeTable} WHERE {$safeColumn} = :patient_id");
+            $count->execute([':patient_id' => $patientId]);
+
+            if ((int)$count->fetchColumn() > 0) {
+                $blockers[] = $table;
+            }
+        }
+
+        return array_values(array_unique($blockers));
     }
 
     private function currentUserId(): ?int

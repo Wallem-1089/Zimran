@@ -47,6 +47,20 @@ $canViewMedicalRecord = $permissionService->canViewMedicalRecord(
     $id,
     $currentUser
 );
+$canDeletePatient = $permissionService->canDeletePatient(
+    $id,
+    $currentUser
+);
+$isDeletedPatient = (int)($patient['is_deleted'] ?? 0) === 1;
+
+if ($isDeletedPatient && !$permissionService->canViewDeletedPatient($currentUser)) {
+    http_response_code(404);
+    exit('Patient not found.');
+}
+
+if ($isDeletedPatient) {
+    $canViewMedicalRecord = false;
+}
 
 require_once __DIR__ . '/../../layouts/header.php';
 require_once __DIR__ . '/../../layouts/sidebar.php';
@@ -97,11 +111,79 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
 <?php endif; ?>
 
+<?php if ($isDeletedPatient) : ?>
+
+<div class="alert-warning">
+
+    <strong>Deleted Patient Record</strong>
+    This patient has been soft-deleted/voided and is retained only for audit and
+    historical record integrity. New encounters and normal chart access are disabled.
+
+</div>
+
+<?php endif; ?>
+
+<?php if (isset($_SESSION['validation_errors'])) : ?>
+
+<div class="alert-danger">
+
+    <strong>Please correct the following:</strong>
+
+    <ul>
+
+        <?php foreach ((array)$_SESSION['validation_errors'] as $error) : ?>
+
+            <li><?= e((string)$error) ?></li>
+
+        <?php endforeach; ?>
+
+    </ul>
+
+</div>
+
+<?php unset($_SESSION['validation_errors']); ?>
+
+<?php endif; ?>
+
   <!-- Patient Header -->
     <?php require __DIR__ . '/partials/patient_header.php'; ?>
 
     <!-- Quick Actions -->
     <?php require __DIR__ . '/partials/quick_actions.php'; ?>
+
+    <?php if ($canDeletePatient && !$isDeletedPatient) : ?>
+
+        <div class="card alert-danger">
+
+            <h2>Delete Patient Registration</h2>
+
+            <p>
+                Use this to void a patient registration. Existing encounters, clinical records,
+                billing records, documents, and audit history are retained, but the patient is
+                hidden from normal search and new encounters are disabled.
+            </p>
+
+            <form method="post" action="delete.php" onsubmit="return confirm('Delete this patient registration? This cannot be undone.');">
+
+                <?= csrfField() ?>
+
+                <input type="hidden" name="id" value="<?= (int)$patient['id'] ?>">
+
+                <div class="form-group">
+
+                    <label for="delete_reason">Deletion Reason</label>
+
+                    <textarea id="delete_reason" name="reason" rows="3" required placeholder="Explain why this patient registration should be deleted."></textarea>
+
+                </div>
+
+                <button type="submit" class="btn-danger">Delete Patient</button>
+
+            </form>
+
+        </div>
+
+    <?php endif; ?>
 
     <!-- Patient Summary -->
     <?php require __DIR__ . '/partials/patient_summary.php'; ?>

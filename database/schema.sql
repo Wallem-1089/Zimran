@@ -333,6 +333,14 @@ CREATE TABLE patients (
 
     demographic_version INT NOT NULL DEFAULT 1,
 
+    is_deleted TINYINT(1) NOT NULL DEFAULT 0,
+
+    deleted_at DATETIME NULL,
+
+    deleted_by INT NULL,
+
+    deletion_reason TEXT NULL,
+
     created_at TIMESTAMP
         DEFAULT CURRENT_TIMESTAMP,
 
@@ -357,6 +365,9 @@ CREATE TABLE patients (
 
     INDEX idx_patients_demographic_version
         (id, demographic_version),
+
+    INDEX idx_patients_deleted
+        (is_deleted, deleted_at),
 
     INDEX idx_patients_normalized_name
         (normalized_last_name, normalized_first_name, date_of_birth),

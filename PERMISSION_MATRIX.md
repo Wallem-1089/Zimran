@@ -198,12 +198,17 @@ until their workflows are implemented.
 |---|---|---|
 | `view_medical_record` | Implemented | Reception, Records, Doctor, Nurse, Laboratory, Pharmacy, Physiotherapy, Radiology, Theatre; treatment scope applies outside Records/Reception |
 | `edit_patient_demographics` | Implemented | Receptionist, Records Officer |
+| `delete_patient` | Implemented | Administrator override; Doctor and Records Officer by default |
 | `view_patient_audit_history` | Implemented | Records Officer |
 
 Administrators retain the existing override. Chart authorization then requires
 the database permission and either Records/Reception scope or an active
 treatment relationship through the current encounter department or assigned
 doctor. Patient audit history remains more restrictive than general chart view.
+Patient deletion is implemented as a soft delete/void action. Linked encounter,
+clinical, billing, document, identifier, and audit records are retained for
+integrity, while the patient is hidden from normal search and blocked from new
+encounter creation. Deletion does not reset patient or encounter ID generators.
 
 ## Radiology Permissions
 

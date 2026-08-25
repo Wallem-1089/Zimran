@@ -304,6 +304,14 @@ Phone
 Next of Kin
 ```
 
+Soft deletion / voiding:
+
+Migration 052 adds `is_deleted`, `deleted_at`, `deleted_by`, and
+`deletion_reason` to `patients`. Normal patient search excludes deleted
+patients, and new encounters cannot be created for deleted/voided patients.
+Existing encounters, clinical records, billing records, documents, identifiers,
+and audit history remain intact for legal and operational traceability.
+
 One patient
 
 ↓
@@ -1292,6 +1300,10 @@ completion/discharge fields directly to `visits`: `completed_at`,
 `completed_by`, `discharge_diagnosis`, `discharge_notes`, and
 `follow_up_instructions`. This is not a full admission or ward-management
 schema.
+
+Migration 052 adds patient soft-delete/void metadata directly to `patients`.
+It is additive and does not reset patient IDs, hospital numbers, visit IDs, or
+encounter numbering.
 
 ## Inpatient Admissions / Ward & Bed Workflow
 

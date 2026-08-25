@@ -92,6 +92,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 }
 
+if ((int)($patient['is_deleted'] ?? 0) === 1) {
+    http_response_code(410);
+    exit('This patient record has been deleted/voided and cannot be edited.');
+}
+
 if (!$patient
     || !$permissionService->canEditPatientDemographics(
         (int)$id,

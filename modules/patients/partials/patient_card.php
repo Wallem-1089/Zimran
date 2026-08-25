@@ -152,13 +152,17 @@ if (!empty($patient['date_of_birth'])) {
 
         </a>
 
-        <a
-            href="../visits/create.php?patient=<?= (int)($patient['id'] ?? 0) ?>"
-            class="btn-secondary">
+        <?php if ((int)($patient['is_deleted'] ?? 0) !== 1): ?>
 
-            Create Encounter
+            <a
+                href="../visits/create.php?patient=<?= (int)($patient['id'] ?? 0) ?>"
+                class="btn-secondary">
 
-        </a>
+                Create Encounter
+
+            </a>
+
+        <?php endif; ?>
 
     </div>
 

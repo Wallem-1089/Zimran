@@ -448,3 +448,20 @@ stock balances change only when Store/Admin issues the request through
 
 The migration seeds `view_stock_requests`, `create_stock_request`,
 `review_stock_request`, `issue_stock_request`, and `cancel_stock_request`.
+
+## Migration 051 - Patient Delete Permission
+
+`051_patient_delete_permission_up.sql` adds the `delete_patient` permission and
+grants it to Doctor and Records Officer roles. Administrators continue to use
+the global override. The permission controls the patient delete/void action and
+does not change patient data by itself.
+
+## Migration 052 - Patient Soft Delete / Void
+
+`052_patient_soft_delete_up.sql` adds `is_deleted`, `deleted_at`,
+`deleted_by`, and `deletion_reason` to `patients`, plus an index for normal
+search filtering. Patient deletion is implemented as a soft-delete/void action:
+linked encounters, clinical records, billing records, documents, identifiers,
+and audit history remain intact, while normal patient search and new encounter
+creation exclude deleted patients. The migration does not reset patient IDs,
+hospital numbers, visit IDs, or encounter numbering.

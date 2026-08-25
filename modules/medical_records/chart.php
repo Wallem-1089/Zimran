@@ -57,6 +57,11 @@ if (!$patient) {
     exit('Patient not found.');
 }
 
+if ((int)($patient['is_deleted'] ?? 0) === 1) {
+    http_response_code(410);
+    exit('This patient record has been deleted/voided. Patient Chart access is disabled.');
+}
+
 $visitId = filter_input(INPUT_GET, 'visit', FILTER_VALIDATE_INT) ?: null;
 if ($visitId !== null) {
     $contextVisit = (new VisitService($pdo))->getVisitById((int)$visitId);

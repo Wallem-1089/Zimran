@@ -75,6 +75,14 @@ if (!$patient) {
 
 }
 
+if ((int)($patient['is_deleted'] ?? 0) === 1) {
+
+    http_response_code(410);
+
+    exit('This patient record has been deleted/voided. New encounters cannot be created for deleted patients.');
+
+}
+
 /*
 |--------------------------------------------------------------------------
 | Prevent Duplicate Active Encounter

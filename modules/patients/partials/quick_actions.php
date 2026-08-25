@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 /** @var array $patient */
+$isDeletedPatient = (int)($patient['is_deleted'] ?? 0) === 1;
 ?>
 
 
@@ -33,9 +34,11 @@ declare(strict_types=1);
 
         <?php endif; ?>
 
-        <a
-            href="../visits/create.php?patient=<?= (int)$patient['id'] ?>"
-            class="action-card action-primary">
+        <?php if (!$isDeletedPatient): ?>
+
+            <a
+                href="../visits/create.php?patient=<?= (int)$patient['id'] ?>"
+                class="action-card action-primary">
 
             <div class="action-icon">
 
@@ -59,11 +62,15 @@ declare(strict_types=1);
 
             </div>
 
-        </a>
+            </a>
 
-        <a
-            href="edit.php?id=<?= (int)$patient['id'] ?>"
-            class="action-card">
+        <?php endif; ?>
+
+        <?php if (!$isDeletedPatient): ?>
+
+            <a
+                href="edit.php?id=<?= (int)$patient['id'] ?>"
+                class="action-card">
 
             <div class="action-icon">
 
@@ -87,7 +94,9 @@ declare(strict_types=1);
 
             </div>
 
-        </a>
+            </a>
+
+        <?php endif; ?>
 
         <a
             href="history.php?id=<?= (int)$patient['id'] ?>"
