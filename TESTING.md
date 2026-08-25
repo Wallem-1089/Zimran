@@ -325,6 +325,12 @@ wiring, audit generation, and sidebar visibility. It also confirms that no
 Store Encounter Workspace tab was introduced and that the module remains
 independent from Pharmacy dispensing and Billing.
 
+Department Stock Request testing should verify department users can create and
+view their own requests, Store/Admin can approve and issue, issued quantities
+create Store `STOCK_ISSUED` ledger entries, requests become `Issued` or
+`Partially Issued`, cancellation requires a reason, non-Store users cannot
+issue stock, and stock is not changed when a request is merely created.
+
 Migration 043 adds External Store Sales. Practical verification should cover:
 sale creation from Store stock with an active Accounts price link, price
 snapshot behavior, Store stock reduction through the stock ledger, receipt

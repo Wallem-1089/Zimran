@@ -44,3 +44,4 @@
 2026-08-25T02:01:58+02:00	target=hospital_management_system	reason=Additive controlled live development database reconstruction	authorization=verified-backup:before_047_blood_document_types_20260825_010147.sql
 2026-08-25T02:14:23+02:00	target=hospital_management_system	reason=Additive controlled live development database reconstruction	authorization=verified-backup:before_048_diabetes_monitoring_20260825_011412.sql
 2026-08-25T02:28:26+02:00	target=hospital_management_system	reason=Additive controlled live development database reconstruction	authorization=verified-backup:before_049_document_register_types_20260825_012816.sql
+2026-08-25T03:07:18+02:00	target=hospital_management_system	reason=Additive controlled live development database reconstruction	authorization=verified-backup:before_050_stock_requests_20260825_020710.sql

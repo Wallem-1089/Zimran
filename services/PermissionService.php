@@ -304,6 +304,13 @@ class PermissionService
                 ['Store Officer'],
                 true
             ) || $department === 'Store',
+            'view_stock_requests', 'create_stock_request', 'cancel_stock_request' => in_array(
+                $role,
+                ['Nurse', 'Doctor', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist', 'Store Officer'],
+                true
+            ) || in_array($department, ['Nursing', 'Doctor', 'Laboratory', 'Radiology', 'X-Ray', 'Physiotherapy', 'Theatre', 'Pharmacy', 'Store'], true),
+            'review_stock_request', 'issue_stock_request' => $role === 'Store Officer'
+                || $department === 'Store',
             'view_reports' => in_array(
                 $role,
                 ['System Administrator', 'Accountant', 'Accounts', 'Store Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist', 'Records Officer'],
@@ -1600,6 +1607,41 @@ class PermissionService
         $user = $user ?? $this->currentUser();
         return $this->isAdministrator($user)
             || $this->hasPermission('view_external_sales', $user);
+    }
+
+    public function canViewStockRequests(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('view_stock_requests', $user);
+    }
+
+    public function canCreateStockRequest(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('create_stock_request', $user);
+    }
+
+    public function canReviewStockRequest(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('review_stock_request', $user);
+    }
+
+    public function canIssueStockRequest(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('issue_stock_request', $user);
+    }
+
+    public function canCancelStockRequest(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('cancel_stock_request', $user);
     }
 
     public function canCreateExternalSale(?array $user = null): bool

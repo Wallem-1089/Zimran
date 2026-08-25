@@ -1152,6 +1152,22 @@ not create patient charges, invoices, patient payments, or dispensing.
 External Store Sales are non-patient receipts only and remain outside the
 Encounter Workspace.
 
+### `StockRequestService`
+
+Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?PermissionService $permissionService = null, ?StoreService $storeService = null)`.
+
+| Signature | Purpose/return | Contract |
+|---|---|---|
+| `createRequest(array $data, array $user): array` | Creates a department stock request with one or more item lines. | Does not move stock; validates department/items/quantities; audits `STOCK_REQUEST_CREATED`. |
+| `listRequests(array $filters = [], ?array $user = null): array` | Lists requests. | Store/Admin can see all; department users see their department only. |
+| `getRequestById(int $requestId, ?array $user = null): ?array` | Reads request header and item lines. | Scope-aware. |
+| `approveRequest(int $requestId, array $user): array` | Store/Admin approves a pending request. | Audits `STOCK_REQUEST_APPROVED`. |
+| `issueRequest(int $requestId, array $quantities, array $user): array` | Store/Admin issues requested quantities. | Reuses `StoreService::issueStock()`; stock changes only through Store ledger; request becomes `Issued` or `Partially Issued`. |
+| `cancelRequest(int $requestId, string $reason, array $user): array` | Cancels a pending/approved/partial request. | Reason required; audits `STOCK_REQUEST_CANCELLED`. |
+
+Stock Requests are available through `modules/stock_requests/`. They are
+sidebar workflow records and are not Encounter Workspace tabs.
+
 ### Current UI route notes
 
 Consultation create/edit forms preserve the same POST fields and service calls

@@ -437,3 +437,14 @@ emergency records, and department report books.
 
 No new clinical workflow tables are created by this migration. The down
 migration restores the document type set to the Blood Card milestone list.
+
+## Migration 050 - Department Stock Requests
+
+`050_department_stock_requests_up.sql` creates `stock_requests` and
+`stock_request_items`. Departments can request stock from Store without
+entering the Store module directly. Requests are demand/approval records only;
+stock balances change only when Store/Admin issues the request through
+`StoreService`, which creates normal `STOCK_ISSUED` stock transactions.
+
+The migration seeds `view_stock_requests`, `create_stock_request`,
+`review_stock_request`, `issue_stock_request`, and `cancel_stock_request`.

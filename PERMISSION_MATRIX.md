@@ -105,6 +105,7 @@ table.
 | Theatre | `view_theatre` plus Theatre department ownership; Administrator override |
 | Accounts | `view_billable_items` plus Accounts ownership; Administrator override |
 | Store | `view_inventory` plus Store ownership; Administrator override |
+| Stock Requests | `view_stock_requests` / `create_stock_request`; Store/Admin can review and issue |
 | Admissions | `view_admissions` plus Reception/Records/Doctor/Nursing ownership; Administrator override |
 | Pharmacy | `view_pharmacy` plus Pharmacy ownership; Administrator override |
 | Billing | `view_billing` plus Accounts ownership; Administrator override |
@@ -428,11 +429,20 @@ receipts.
 | `create_external_sale` | Yes | Yes | No | No | No | No | No | No | No | No | No | No | No |
 | `cancel_external_sale` | Yes | Yes | No | No | No | No | No | No | No | No | No | No | No |
 | `view_external_sale_receipts` | Yes | Yes | Yes | No | No | No | No | No | No | No | No | No | No |
+| `view_stock_requests` | Yes | Yes | No | Yes | Yes | Yes | Yes | Yes | Yes | Yes | No | No | No |
+| `create_stock_request` | Yes | Yes | No | Yes | Yes | Yes | Yes | Yes | Yes | Yes | No | No | No |
+| `review_stock_request` | Yes | Yes | No | No | No | No | No | No | No | No | No | No | No |
+| `issue_stock_request` | Yes | Yes | No | No | No | No | No | No | No | No | No | No | No |
+| `cancel_stock_request` | Yes | Yes | No | Yes | Yes | Yes | Yes | Yes | Yes | Yes | No | No | No |
 
 Store is a standalone sidebar module. It is not an Encounter Workspace tab.
 Store owns stock movements, department balances, inventory item catalogue, and
 external non-patient sales receipts. It does not own patient pricing,
 dispensing, patient charges, invoices, or patient Billing receipts.
+
+Department Stock Requests are standalone sidebar workflow records. Creating a
+request does not change stock. Store/Admin review and issue requests, and the
+actual issue uses the Store stock ledger.
 
 ## Phase 4.3 Pharmacy permissions
 

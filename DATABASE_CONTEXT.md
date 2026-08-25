@@ -1231,6 +1231,11 @@ department quantities so Store and downstream department views can read
 balances without editing them directly. Store remains a sidebar operational
 module and does not create patient charges or dispensing workflows.
 
+Migration 050 adds `stock_requests` and `stock_request_items` for department
+stock requests. These tables record department demand and Store review/issue
+status. They do not move stock by themselves; issuing a request creates normal
+Store stock transactions and updates `department_stock_balances`.
+
 Migration 043 adds simple external Store sales for non-patient customers.
 `external_sales` stores the sale number, optional customer name/phone, payment
 method/reference, total amount, sold-by attribution, status, cancellation

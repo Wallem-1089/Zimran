@@ -15,6 +15,7 @@ $canAccessPhysiotherapySidebar = false;
 $canAccessTheatreSidebar = false;
 $canAccessAccountsSidebar = false;
 $canAccessStoreSidebar = false;
+$canAccessStockRequestsSidebar = false;
 $canAccessAdmissionsSidebar = false;
 $canAccessPharmacySidebar = false;
 $canAccessBillingSidebar = false;
@@ -123,6 +124,10 @@ if ($currentUser && isset($pdo)) {
                 || $sidebarDepartmentIn(['Store'])
             )
         );
+
+    $canAccessStockRequestsSidebar = $sidebarIsAdmin
+        || $sidebarCan('view_stock_requests')
+        || $sidebarCan('create_stock_request');
 
     $canAccessAdmissionsSidebar = $sidebarIsAdmin
         || (
@@ -444,6 +449,20 @@ $sidebarBranding = appBranding($pdo ?? null);
                     <a href="<?= e($baseUrl) ?>/modules/store/index.php">
 
                         Store
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
+            <?php if ($canAccessStockRequestsSidebar): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/stock_requests/index.php">
+
+                        Stock Requests
 
                     </a>
 

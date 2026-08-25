@@ -1249,6 +1249,10 @@ department handoff.
 - Accounts owns PRICE through `billable_items`.
 - Store owns STOCK through inventory items, stock transactions, and maintained
   department balances.
+- Department Stock Requests let Nursing, Doctor, Laboratory, Radiology,
+  Physiotherapy, Theatre, Pharmacy, Store, and Administrator request items
+  from Store. Requests do not reduce stock. Store/Admin issue actions use the
+  Store stock ledger and create normal `STOCK_ISSUED` movements.
 - Store may sell stock to external non-patient customers through External
   Store Sales. External sales reduce Store stock and produce a receipt, but do
   not create fake patients, encounters, invoices, or patient charges.

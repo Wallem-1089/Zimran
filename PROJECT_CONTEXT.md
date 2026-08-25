@@ -1115,6 +1115,11 @@ supports simple external walk-in sales for non-patient customers: the sale uses
 Accounts catalogue price snapshots, reduces Store stock through the stock
 ledger, and produces a printable receipt without creating a patient encounter,
 invoice, or patient charge.
+
+Department Stock Requests are implemented as a standalone sidebar module.
+Departments can request stock from Store without entering the Store module
+directly. Requests do not change stock; stock changes only when Store/Admin
+issues items through the existing Store stock ledger.
 ## Phase 4.5 Basic Dashboards / Reports
 
 Phase 4.5 adds a small read-only Reports module and enhances the
