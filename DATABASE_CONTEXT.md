@@ -1321,3 +1321,9 @@ row links to patient and encounter and stores recorded time, blood glucose,
 insulin given, meal status, symptoms, notes, recording user, and timestamps.
 It supports repeated bedside diabetes monitoring without introducing a chronic
 disease registry or separate endocrinology workflow.
+
+Migration 049 does not add tables. It expands the `documents.allowed_types`
+setting so Medical Records can upload paper-form equivalents including
+operation consent forms, Theatre operation notes, continuation sheets,
+observation charts, nursing checklists, dressing records, drug charts, DM
+sheets, emergency records, and department report books.

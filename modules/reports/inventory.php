@@ -24,7 +24,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
 <main class="content">
     <div class="page-header">
         <div><h1>Inventory Summary</h1><p>Store stock balances and movement totals.</p></div>
-        <div><a class="btn-secondary" href="index.php">Reports</a></div>
+        <div class="form-actions">
+            <button class="btn-secondary" type="button" onclick="window.print()">Print Inventory Summary</button>
+            <a class="btn-secondary" href="index.php">Reports</a>
+        </div>
     </div>
     <?php reportsFilterForm($filters, $departments, ['items' => $items]); ?>
     <div class="card">

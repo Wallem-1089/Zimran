@@ -18,6 +18,8 @@ $canEdit = $permissionService->canEditNursing($visit, $currentUser)
         !in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)
         || $permissionService->isAdministrator($currentUser)
     );
+$isClosed = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
+$canRequestBilling = !$isClosed && $permissionService->canCreateBillingRequest($currentUser);
 
 $pageTitle = 'Dressing Record';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -37,6 +39,9 @@ require __DIR__ . '/../../../layouts/sidebar.php';
             <button class="btn-secondary" type="button" onclick="window.print()">Print Dressing Record</button>
             <a class="btn-secondary" href="history.php?visit=<?= (int)$record['visit_id'] ?>">Dressing Book</a>
             <a class="btn-secondary" href="<?= e(dressingBackToWorkspace((int)$record['visit_id'])) ?>">Workspace</a>
+            <?php if ($canRequestBilling): ?>
+                <a class="btn-secondary" href="../../billing/request_create.php?visit=<?= (int)$record['visit_id'] ?>&source_module=Dressing&source_record_id=<?= (int)$record['id'] ?>&description=<?= urlencode('Dressing: ' . (string)($record['wound_site'] ?? 'Dressing care')) ?>">Request Billing</a>
+            <?php endif; ?>
             <?php if ($canEdit): ?><a class="btn-primary" href="edit.php?id=<?= (int)$record['id'] ?>">Edit</a><?php endif; ?>
         </div>
     </div>

@@ -40,6 +40,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p><?= e((string)($patient['first_name'] . ' ' . $patient['last_name'])) ?> | <?= e((string)$patient['hospital_number']) ?></p>
         </div>
         <div class="form-actions">
+            <button class="btn-secondary" type="button" onclick="window.print()">Print Radiology History</button>
             <?php if ($visitId > 0 && $records !== []): ?>
                 <a class="btn-secondary" href="view.php?id=<?= (int)($records[0]['id'] ?? 0) ?>">Open Latest Request</a>
             <?php endif; ?>

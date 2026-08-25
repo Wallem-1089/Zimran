@@ -20,7 +20,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
 <main class="content">
     <div class="page-header">
         <div><h1>Patient / Encounter Activity</h1><p>Encounter volume by date range and department.</p></div>
-        <div><a class="btn-secondary" href="index.php">Reports</a></div>
+        <div class="form-actions">
+            <button class="btn-secondary" type="button" onclick="window.print()">Print Activity Report</button>
+            <a class="btn-secondary" href="index.php">Reports</a>
+        </div>
     </div>
     <?php reportsFilterForm($filters, $departments, ['status' => true]); ?>
     <div class="card">

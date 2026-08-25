@@ -426,3 +426,14 @@ recording user, and timestamps.
 The feature reuses existing Nursing permissions. Users who can view Nursing can
 view DM Sheet history, while Nurse/Admin users with Nursing create/edit access
 can record or update DM Sheet entries during active encounters.
+
+## Migration 049 - Medical Document Paper/Register Types
+
+`049_medical_document_type_registers_up.sql` expands
+`documents.allowed_types` for uploaded paper-form equivalents such as operation
+consent forms, Theatre operation notes, continuation sheets, observation
+charts, nursing checklists, dressing records, drug charts, DM sheets,
+emergency records, and department report books.
+
+No new clinical workflow tables are created by this migration. The down
+migration restores the document type set to the Blood Card milestone list.

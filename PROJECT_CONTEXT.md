@@ -1123,6 +1123,10 @@ and notification summaries. This is not a BI platform: there are no scheduled
 reports, report designer, warehouse tables, chart-library dependencies, or
 advanced analytics.
 
+Printable register/report views now include Emergency Register, Laboratory
+Report Book, Radiology Report Book, and Theatre Operation Register. These are
+read-only views over existing operational records, not new workflow modules.
+
 ## Current implementation checkpoint after Phase 4.5
 
 The current operational application includes:

@@ -22,7 +22,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
 <main class="content">
     <div class="page-header">
         <div><h1>Financial Summary</h1><p>Posted Billing records only. Accounts catalogue prices are not recalculated here.</p></div>
-        <div><a class="btn-secondary" href="index.php">Reports</a></div>
+        <div class="form-actions">
+            <button class="btn-secondary" type="button" onclick="window.print()">Print Financial Summary</button>
+            <a class="btn-secondary" href="index.php">Reports</a>
+        </div>
     </div>
     <?php reportsFilterForm($filters, []); ?>
     <div class="card">

@@ -31,6 +31,10 @@ if ($patientId > 0 && $visit === null) {
     $records = $dressingRecordService->listByPatient($patientId, $currentUser);
 }
 
+$canRequestBilling = $visit !== null
+    && !in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)
+    && $permissionService->canCreateBillingRequest($currentUser);
+
 $pageTitle = 'Dressing Book';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 require __DIR__ . '/../../../layouts/header.php';
@@ -85,6 +89,9 @@ require __DIR__ . '/../../../layouts/sidebar.php';
                                 <td><?= e((string)($record['recorded_by_name'] ?? '-')) ?></td>
                                 <td class="no-print">
                                     <a class="btn-secondary btn-sm" href="view.php?id=<?= (int)$record['id'] ?>">View</a>
+                                    <?php if ($canRequestBilling): ?>
+                                        <a class="btn-secondary btn-sm" href="../../billing/request_create.php?visit=<?= (int)$record['visit_id'] ?>&source_module=Dressing&source_record_id=<?= (int)$record['id'] ?>&description=<?= urlencode('Dressing: ' . (string)($record['wound_site'] ?? 'Dressing care')) ?>">Request Billing</a>
+                                    <?php endif; ?>
                                     <?php if ($visit !== null): ?>
                                         <a class="btn-secondary btn-sm" href="../../visits/workspace.php?id=<?= (int)$record['visit_id'] ?>&tab=nursing">Open Encounter</a>
                                     <?php endif; ?>

@@ -10,6 +10,9 @@ $reportCards = [
     ['Patient / Encounter Activity', 'activity.php', 'Encounter counts by date, department, and status.', true],
     ['Emergency Register', 'emergency_register.php', 'Printable emergency book from Emergency encounters.', true],
     ['Clinical Activity', 'clinical.php', 'Consultation, nursing, diagnostic, theatre, and pharmacy counts.', $permissionService->canViewClinicalReports($currentUser)],
+    ['Laboratory Report Book', 'laboratory_report_book.php', 'Printable Laboratory request/result register.', $permissionService->canViewClinicalReports($currentUser)],
+    ['Radiology Report Book', 'radiology_report_book.php', 'Printable Radiology study/report register.', $permissionService->canViewClinicalReports($currentUser)],
+    ['Theatre Operation Register', 'theatre_operation_register.php', 'Printable Theatre operation register.', $permissionService->canViewClinicalReports($currentUser)],
     ['Financial Summary', 'financial.php', 'Charges, invoices, payments, and outstanding balances.', $permissionService->canViewFinancialReports($currentUser)],
     ['Inventory Summary', 'inventory.php', 'Department balances and stock movement counts.', $permissionService->canViewInventoryReports($currentUser)],
 ];

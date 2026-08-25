@@ -1187,6 +1187,12 @@ Medical Documents now supports first-class blood-related document types:
 `transfusion_record`. These uploads can appear in the Blood Card summary
 without creating a structured Blood Bank workflow yet.
 
+Medical Documents also supports uploaded paper-form equivalents such as
+operation consent forms, Theatre operation notes, continuation sheets,
+observation charts, nursing checklists, dressing records, drug charts, DM
+sheets, emergency records, and department report books. These uploads do not
+replace the structured modules where those modules already exist.
+
 Structured blood requests, crossmatch records, transfusion records, and
 Blood Bank workflow remain later Laboratory-owned work.
 
@@ -1207,6 +1213,10 @@ timeline events and do not change clinical, inventory, or financial workflow
 ownership. Financial figures come from Billing, prices remain owned by
 Accounts, stock remains owned by Store, and dispensing remains owned by
 Pharmacy.
+
+Printable book/register views are available for Emergency encounters,
+Laboratory reports, Radiology reports, and Theatre operations. They reuse
+existing visits, request/result/report, and Theatre tables.
 
 ## Current encounter completion and discharge workflow
 

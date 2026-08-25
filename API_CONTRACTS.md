@@ -372,6 +372,10 @@ Constructor: `__construct(PDO $db)`. Reads users, roles, departments/memberships
 | `recordDashboardView(?int $userId): bool` | Records administrator dashboard view. | Audit-only `ADMIN_DASHBOARD_VIEWED`-style event as implemented; no statistics mutation. |
 | `getPatientEncounterActivity(array $filters = []): array` | Returns encounter counts and department activity for an inclusive date range, optional department, and optional status. | Read only; aggregate output only. |
 | `getClinicalActivityReport(array $filters = []): array` | Returns aggregate counts for Consultation, Nursing, Vital Signs, Laboratory, Radiology, Physiotherapy, Theatre, and Pharmacy. | Read only; does not expose clinical narratives or result/report text. |
+| `getEmergencyRegister(array $filters = []): array` | Returns the printable Emergency Register from existing Emergency visits. | Read only; no new emergency table. |
+| `getLaboratoryReportBook(array $filters = []): array` | Returns a printable Laboratory request/result register. | Uses existing Laboratory request/result tables. |
+| `getRadiologyReportBook(array $filters = []): array` | Returns a printable Radiology study/report register. | Uses existing Radiology request/report tables. |
+| `getTheatreOperationRegister(array $filters = []): array` | Returns a printable Theatre operation register. | Uses existing Theatre records. |
 | `getFinancialReport(array $filters = []): array` | Returns posted Billing totals for charges, invoices, payments, open invoices, and outstanding balances. | Uses Billing records only; does not recalculate from Accounts prices. |
 | `getInventoryReport(array $filters = []): array` | Returns stock movement totals and current department balances. | Uses Store inventory tables as stock source of truth. |
 | `recordReportView(?int $userId, string $action = 'REPORT_VIEWED'): bool` | Records concise report access audit events when report pages are opened. | Audit-only; no encounter timeline event. |
@@ -1081,10 +1085,23 @@ patient demographics (`blood_group`, `genotype`), visible Laboratory
 request/result history, and visible Medical Documents filtered for blood-related
 terms. Structured blood-bank workflows remain future Laboratory functionality.
 
-Medical Document uploads accept the additional document type keys `blood_card`,
-`blood_group_result`, `crossmatch_form`, and `transfusion_record` through the
-existing `MedicalDocumentService::getAllowedDocumentTypes()` contract and
+Medical Document uploads accept the additional blood and paper-form document
+type keys `blood_card`, `blood_group_result`, `crossmatch_form`,
+`transfusion_record`, `operation_consent_form`, `theatre_operation_note`,
+`continuation_sheet`, `observation_chart`, `nursing_checklist`,
+`dressing_record`, `drug_chart`, `dm_sheet`, `emergency_record`, and
+`department_report_book` through the existing
+`MedicalDocumentService::getAllowedDocumentTypes()` contract and
 `documents.allowed_types` setting.
+
+### Printable report/register routes
+
+| Route | Purpose |
+|---|---|
+| `modules/reports/emergency_register.php` | Emergency Register from existing Emergency visits. |
+| `modules/reports/laboratory_report_book.php` | Laboratory report book from requests/results. |
+| `modules/reports/radiology_report_book.php` | Radiology report book from requests/reports. |
+| `modules/reports/theatre_operation_register.php` | Theatre operation register from Theatre records. |
 
 ### `AccountsService`
 

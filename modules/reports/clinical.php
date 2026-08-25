@@ -23,7 +23,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
 <main class="content">
     <div class="page-header">
         <div><h1>Clinical Activity</h1><p>Aggregate clinical workload. Narrative clinical content is not shown.</p></div>
-        <div><a class="btn-secondary" href="index.php">Reports</a></div>
+        <div class="form-actions">
+            <button class="btn-secondary" type="button" onclick="window.print()">Print Clinical Activity</button>
+            <a class="btn-secondary" href="index.php">Reports</a>
+        </div>
     </div>
     <?php reportsFilterForm($filters, $departments); ?>
     <div class="card">

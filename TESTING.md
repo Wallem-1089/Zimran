@@ -227,10 +227,20 @@ filtering; empty states when no matching records exist; print button rendering;
 and no leakage of Laboratory or Medical Document rows the user cannot already
 view through existing permissions.
 
-Medical Document upload testing should also verify the blood-related document
-types `blood_card`, `blood_group_result`, `crossmatch_form`, and
-`transfusion_record` appear in the upload selector and are accepted by
+Medical Document upload testing should also verify the blood and paper-form
+document types `blood_card`, `blood_group_result`, `crossmatch_form`,
+`transfusion_record`, `operation_consent_form`, `theatre_operation_note`,
+`continuation_sheet`, `observation_chart`, `nursing_checklist`,
+`dressing_record`, `drug_chart`, `dm_sheet`, `emergency_record`, and
+`department_report_book` appear in the upload selector and are accepted by
 server-side document-type validation.
+
+## Printable Books / Registers
+
+Focused verification should cover Emergency Register, Laboratory Report Book,
+Radiology Report Book, and Theatre Operation Register loading with date,
+department, and status filters; print button rendering; safe empty states;
+links back to source records/encounters; and no unexpected write operations.
 
 ## Phase 3.5 Radiology
 

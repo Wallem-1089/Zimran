@@ -33,6 +33,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <h1>Theatre History</h1>
             <p>Longitudinal theatre records for the patient or encounter.</p>
         </div>
+        <div class="form-actions">
+            <button class="btn-secondary" type="button" onclick="window.print()">Print Theatre History</button>
+        </div>
     </div>
     <div class="card">
         <?php if ($records === []): ?>

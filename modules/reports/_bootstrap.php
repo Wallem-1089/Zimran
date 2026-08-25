@@ -33,6 +33,8 @@ function reportsDateFilters(): array
 function reportsFilterForm(array $filters, array $departments, array $options = []): void
 {
     $showStatus = !empty($options['status']);
+    $statusValues = $options['status_values']
+        ?? ['Waiting','Reception','Records','Nursing','Doctor','Laboratory','X-Ray','Pharmacy','Physiotherapy','Theatre','Accounts','Store','Completed','Cancelled'];
     $showItems = !empty($options['items']);
     $items = $options['items'] ?? [];
     ?>
@@ -62,7 +64,7 @@ function reportsFilterForm(array $filters, array $departments, array $options = 
                     <label for="status">Status</label>
                     <select id="status" name="status">
                         <option value="">All</option>
-                        <?php foreach (['Waiting','Reception','Records','Nursing','Doctor','Laboratory','X-Ray','Pharmacy','Physiotherapy','Theatre','Accounts','Store','Completed','Cancelled'] as $status): ?>
+                        <?php foreach ($statusValues as $status): ?>
                             <option value="<?= e($status) ?>" <?= $filters['status'] === $status ? 'selected' : '' ?>><?= e($status) ?></option>
                         <?php endforeach; ?>
                     </select>
