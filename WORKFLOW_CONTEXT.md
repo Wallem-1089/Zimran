@@ -1214,6 +1214,12 @@ ownership. Financial figures come from Billing, prices remain owned by
 Accounts, stock remains owned by Store, and dispensing remains owned by
 Pharmacy.
 
+The main dashboard follows the department worklist privacy model. System
+Administrator sees hospital-wide current working encounters; non-admin users
+see only active/current working encounters for their active/current department.
+This keeps cross-view patient context available inside the Encounter Workspace
+without exposing every department's full active encounter list on the dashboard.
+
 Printable book/register views are available for Emergency encounters,
 Laboratory reports, Radiology reports, and Theatre operations. They reuse
 existing visits, request/result/report, and Theatre tables.

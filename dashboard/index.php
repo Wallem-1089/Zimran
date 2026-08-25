@@ -7,19 +7,28 @@ $pageTitle = 'Dashboard';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/helpers.php';
+require_once __DIR__ . '/../services/PermissionService.php';
 
 $currentDate = date('l, d F Y');
+$permissionService = new PermissionService($pdo);
+$isAdministrator = $permissionService->isAdministrator($currentUser);
+$activeDepartmentId = (int)($currentUser['active_department_id'] ?? $currentUser['department_id'] ?? 0);
+$activeDepartmentName = trim((string)($currentUser['active_department_name'] ?? $currentUser['department_name'] ?? 'Department'));
 
 $todayPatients = (int)$pdo
     ->query('SELECT COUNT(*) FROM patients WHERE DATE(created_at) = CURDATE()')
     ->fetchColumn();
 
-$activeEncounters = (int)$pdo
-    ->query("SELECT COUNT(*) FROM visits WHERE visit_status NOT IN ('Completed', 'Cancelled')")
-    ->fetchColumn();
+$activeEncounterCountSql = "SELECT COUNT(*) FROM visits WHERE visit_status NOT IN ('Completed', 'Cancelled')";
+$activeEncounterCountParams = [];
+if (!$isAdministrator) {
+    $activeEncounterCountSql .= ' AND current_department_id = :department_id';
+    $activeEncounterCountParams[':department_id'] = $activeDepartmentId;
+}
+$activeEncounterCountStmt = $pdo->prepare($activeEncounterCountSql);
+$activeEncounterCountStmt->execute($activeEncounterCountParams);
+$activeEncounters = (int)$activeEncounterCountStmt->fetchColumn();
 
-$activeDepartmentId = (int)($currentUser['active_department_id'] ?? $currentUser['department_id'] ?? 0);
-$activeDepartmentName = trim((string)($currentUser['active_department_name'] ?? $currentUser['department_name'] ?? 'Department'));
 $pendingDepartmentEncounters = 0;
 
 if ($activeDepartmentId > 0) {
@@ -46,7 +55,7 @@ if ((int)$pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table
     $pendingBills = number_format((float)$pendingBillsStmt->fetchColumn(), 2);
 }
 
-$activeEncounterStmt = $pdo->prepare("
+$activeEncounterSql = "
     SELECT
         v.id,
         v.visit_number,
@@ -61,10 +70,18 @@ $activeEncounterStmt = $pdo->prepare("
     LEFT JOIN departments d ON d.id = v.current_department_id
     LEFT JOIN users u ON u.id = v.attending_doctor_id
     WHERE v.visit_status NOT IN ('Completed', 'Cancelled')
+";
+$activeEncounterParams = [];
+if (!$isAdministrator) {
+    $activeEncounterSql .= ' AND v.current_department_id = :department_id';
+    $activeEncounterParams[':department_id'] = $activeDepartmentId;
+}
+$activeEncounterSql .= "
     ORDER BY v.visit_date DESC, v.id DESC
     LIMIT 25
-");
-$activeEncounterStmt->execute();
+";
+$activeEncounterStmt = $pdo->prepare($activeEncounterSql);
+$activeEncounterStmt->execute($activeEncounterParams);
 $currentWorkingEncounters = $activeEncounterStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
 require_once __DIR__ . '/../layouts/header.php';
@@ -89,7 +106,7 @@ require_once __DIR__ . '/../layouts/sidebar.php';
         </div>
 
         <div class="card">
-            <h3>Active Encounters</h3>
+            <h3><?= $isAdministrator ? 'Active Encounters' : e($activeDepartmentName) . ' Active Encounters' ?></h3>
             <h2><?= (int)$activeEncounters ?></h2>
         </div>
 
@@ -117,7 +134,11 @@ require_once __DIR__ . '/../layouts/sidebar.php';
 
     <section class="card">
         <h2>Current Working Encounters</h2>
-        <p class="text-muted">Active patient encounters that are not completed or cancelled.</p>
+        <p class="text-muted">
+            <?= $isAdministrator
+                ? 'Active patient encounters that are not completed or cancelled.'
+                : e($activeDepartmentName) . ' active patient encounters that are not completed or cancelled.' ?>
+        </p>
 
         <?php if ($currentWorkingEncounters === []): ?>
             <div class="empty-state">No active encounters at the moment.</div>

@@ -377,6 +377,10 @@ manager, verifies report permissions, administrator dashboard contract,
 report aggregate contracts, sidebar visibility, and guards against narrative
 PHI leakage in the basic report pages.
 
+Dashboard scope verification should also confirm that System Administrator
+sees hospital-wide current working encounters while non-admin users see only
+active/current working encounters for their active/current department.
+
 ## Inpatient Admissions / Ward & Bed Workflow
 
 Focused tests should verify ward and bed creation, admission to an active

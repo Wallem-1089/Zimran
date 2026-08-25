@@ -115,6 +115,17 @@ This keeps patient-specific clinical context useful without giving every
 clinical user every department's full worklist. Page-level permission checks
 remain authoritative even when a sidebar link is visible.
 
+## Dashboard Visibility Policy
+
+The main user dashboard is authenticated-user visible. System Administrator
+sees hospital-wide active/current working encounters. Non-administrator users
+see current working encounters scoped to their active/current department only.
+
+This dashboard scoping is separate from Encounter Workspace access: a user may
+open a patient-specific workspace they are allowed to view, but the dashboard
+should not become a hospital-wide encounter browser for ordinary department
+users.
+
 ## Module Permission Requirements
 
 | Module/action | Required authorization | Status |
