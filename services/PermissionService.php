@@ -67,9 +67,9 @@ class PermissionService
             'manage_users' => false,
             'view_medical_record' => in_array(
                 $role,
-                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist', 'Receptionist'],
+                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist', 'Receptionist'],
                 true
-            ) || in_array($department, ['Records', 'Reception', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
+            ) || in_array($department, ['Records', 'Reception', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'view_patient_identifiers' => in_array(
                 $role,
                 ['Records Officer', 'Doctor', 'Nurse', 'Receptionist'],
@@ -151,11 +151,24 @@ class PermissionService
             ),
             'process_radiology_request', 'enter_radiology_report',
             'edit_radiology_report', 'complete_radiology_request' => $role === 'Radiographer',
+            'view_ecg' => in_array(
+                $role,
+                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
+                true
+            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
+            'create_ecg_request' => in_array(
+                $role,
+                ['Doctor', 'ECG Technician'],
+                true
+            ) || in_array($department, ['Doctor', 'ECG'], true),
+            'process_ecg_request', 'upload_ecg_chart',
+            'edit_ecg_report', 'complete_ecg_request' => $role === 'ECG Technician'
+                || $department === 'ECG',
             'view_physiotherapy' => in_array(
                 $role,
-                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
+                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
                 true
-            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'Physiotherapy', 'Physio', 'Rehabilitation', 'Theatre', 'Pharmacy'], true),
+            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Physiotherapy', 'Physio', 'Rehabilitation', 'Theatre', 'Pharmacy'], true),
             'view_theatre' => in_array(
                 $role,
                 ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
@@ -1455,6 +1468,39 @@ class PermissionService
         return $this->canMutateRadiology('complete_radiology_request', $encounter, $user);
     }
 
+    public function canViewEcg(int $patientId, ?array $user = null): bool
+    {
+        return $this->canViewClinicalContext('view_ecg', $patientId, $user);
+    }
+
+    public function canCreateEcgRequest(
+        array $encounter,
+        ?array $user = null,
+        string $requestSource = 'Clinical'
+    ): bool {
+        return $this->canMutateEcg('create_ecg_request', $encounter, $user, $requestSource);
+    }
+
+    public function canProcessEcgRequest(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateEcg('process_ecg_request', $encounter, $user);
+    }
+
+    public function canUploadEcgChart(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateEcg('upload_ecg_chart', $encounter, $user);
+    }
+
+    public function canEditEcgReport(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateEcg('edit_ecg_report', $encounter, $user);
+    }
+
+    public function canCompleteEcgRequest(array $encounter, ?array $user = null): bool
+    {
+        return $this->canMutateEcg('complete_ecg_request', $encounter, $user);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Physiotherapy Authorization
@@ -1566,6 +1612,15 @@ class PermissionService
             $user,
             ['Radiographer'],
             ['Radiology', 'X-Ray']
+        );
+    }
+
+    public function canViewEcgWorklist(?array $user = null): bool
+    {
+        return $this->canViewDepartmentWorklist(
+            $user,
+            ['ECG Technician'],
+            ['ECG']
         );
     }
 
@@ -2417,6 +2472,7 @@ class PermissionService
             'Nurse',
             'Laboratory Scientist',
             'Radiographer',
+            'ECG Technician',
             'Physiotherapist',
             'Theatre Staff',
             'Pharmacist',
@@ -2601,6 +2657,48 @@ class PermissionService
             'edit_radiology_report',
             'complete_radiology_request' => $this->roleMatches($user, ['Radiographer'])
                 && $this->canViewRadiology((int)($encounter['patient_id'] ?? 0), $user),
+            default => false
+        };
+    }
+
+    private function canMutateEcg(
+        string $permission,
+        array $encounter,
+        ?array $user = null,
+        string $requestSource = 'Clinical'
+    ): bool {
+        $user = $user ?? $this->currentUser();
+        if (!$user) {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        if (in_array((string)($encounter['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)) {
+            return false;
+        }
+
+        if (!$this->hasPermission($permission, $user)) {
+            return false;
+        }
+
+        $source = strtoupper(trim($requestSource));
+
+        return match ($permission) {
+            'create_ecg_request' => $source === 'DIRECT'
+                ? $this->roleMatches($user, ['ECG Technician'])
+                    || $this->activeDepartmentName($user) === 'ECG'
+                : $this->roleMatches($user, ['Doctor'])
+                    && $this->canViewEncounter($encounter, $user),
+            'process_ecg_request',
+            'upload_ecg_chart',
+            'edit_ecg_report',
+            'complete_ecg_request' => (
+                $this->roleMatches($user, ['ECG Technician'])
+                || $this->activeDepartmentName($user) === 'ECG'
+            ) && $this->canViewEcg((int)($encounter['patient_id'] ?? 0), $user),
             default => false
         };
     }

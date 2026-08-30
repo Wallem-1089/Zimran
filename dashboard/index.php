@@ -110,6 +110,8 @@ require_once __DIR__ . '/../layouts/sidebar.php';
             <h2><?= (int)$todayPatients ?></h2>
         </div>
 
+        <?php if (!$isStockRequestOnlyUser): ?>
+
         <div class="card">
             <h3><?= $isAdministrator ? 'Active Encounters' : e($activeDepartmentName) . ' Active Encounters' ?></h3>
             <h2><?= (int)$activeEncounters ?></h2>
@@ -126,16 +128,26 @@ require_once __DIR__ . '/../layouts/sidebar.php';
         </div>
     </section>
 
+        <?php endif; ?>
+
     <section class="quick-actions">
         <h2>Quick Actions</h2>
 
         <div class="actions">
-            <a href="../modules/patients/register.php">Register Patient</a>
-            <a href="../modules/visits/create.php">New Encounter</a>
-            <a href="../modules/patients/search.php">Find Encounter</a>
-            <a href="../modules/reports/index.php">Reports</a>
+            <?php if ($isStockRequestOnlyUser): ?>
+                <a href="../modules/stock_requests/index.php">Stock Requests</a>
+                <a href="../modules/stock_requests/create.php">New Stock Request</a>
+                <a href="../modules/stock_requests/my_department_stock.php">My Department Stock</a>
+            <?php else: ?>
+                <a href="../modules/patients/register.php">Register Patient</a>
+                <a href="../modules/visits/create.php">New Encounter</a>
+                <a href="../modules/patients/search.php">Find Encounter</a>
+                <a href="../modules/reports/index.php">Reports</a>
+            <?php endif; ?>
         </div>
     </section>
+
+    <?php if (!$isStockRequestOnlyUser): ?>
 
     <section class="card">
         <h2>Current Working Encounters</h2>
@@ -180,6 +192,8 @@ require_once __DIR__ . '/../layouts/sidebar.php';
             </div>
         <?php endif; ?>
     </section>
+
+    <?php endif; ?>
 
     <section class="departments">
         <h2>Hospital Departments</h2>

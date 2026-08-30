@@ -196,7 +196,7 @@ Owner: Encounters / `VisitService`; shared by queue and future clinical modules.
 | `current_department_received_status` | `ENUM('Pending','Received')` | No/`Pending` | Department receipt state. |
 | `attending_doctor_id` | `INT` | Yes | Assigned doctor user. |
 | `queue_number` | `INT` | Yes | Compatibility/display queue number. |
-| `visit_status` | `ENUM('Waiting','Reception','Records','Nursing','Doctor','Laboratory','X-Ray','Pharmacy','Physiotherapy','Theatre','Accounts','Store','Completed','Cancelled')` | No/`Waiting` | Encounter lifecycle/current department-compatible status. |
+| `visit_status` | `ENUM('Waiting','Reception','Records','Nursing','Doctor','Laboratory','X-Ray','ECG','Pharmacy','Physiotherapy','Theatre','Accounts','Store','Completed','Cancelled')` | No/`Waiting` | Encounter lifecycle/current department-compatible status. |
 | `created_by` | `INT` | Yes | Creating user. |
 | `created_at` / `updated_at` | `TIMESTAMP` | Created/updated defaults | Lifecycle timestamps. |
 
@@ -316,7 +316,7 @@ This compact dictionary is included to make the catalogue independently complete
 | `system_setting_history` | `id BIGINT NN AI`; `setting_id BIGINT NULL`; `setting_key VARCHAR(191) NN`; `setting_group VARCHAR(100) NN`; `action VARCHAR(50) NN`; `old_value LONGTEXT NULL`; `new_value LONGTEXT NULL`; `is_sensitive TINYINT(1) NN DEFAULT 0`; `changed_by INT NULL`; `created_at TIMESTAMP NN DEFAULT CURRENT`. |
 | `users` | `id INT NN AI`; `employee_id VARCHAR(30) NN`; `first_name VARCHAR(100) NN`; `last_name VARCHAR(100) NN`; `gender ENUM('Male','Female') NULL`; `phone VARCHAR(20) NULL`; `email VARCHAR(150) NULL`; `username VARCHAR(50) NN`; `password VARCHAR(255) NN`; `department_id INT NN`; `role_id INT NN`; `status ENUM('Active','Inactive') NN DEFAULT 'Active'`; `failed_login_attempts INT NN DEFAULT 0`; `last_failed_login DATETIME NULL`; `locked_at DATETIME NULL`; `locked_by INT NULL`; `lock_reason VARCHAR(255) NULL`; `last_login DATETIME NULL`; `password_changed_at DATETIME NULL`; `must_change_password TINYINT(1) NN DEFAULT 0`; `created_at TIMESTAMP NN DEFAULT CURRENT`; `updated_at TIMESTAMP NULL ON UPDATE`. |
 | `user_departments` | `id INT NN AI`; `user_id INT NN`; `department_id INT NN`; `is_primary TINYINT(1) NN DEFAULT 0`; `is_active TINYINT(1) NN DEFAULT 1`; `assigned_at DATETIME NN DEFAULT CURRENT`; `assigned_by INT NULL`. |
-| `visits` | `id INT NN AI`; `visit_number VARCHAR(30) NN`; `patient_id INT NN`; `visit_date DATETIME NN`; `visit_type ENUM('Outpatient','Inpatient','Emergency','Referral') NN DEFAULT 'Outpatient'`; `current_department_id INT NULL`; `current_department_received_by INT NULL`; `current_department_received_at DATETIME NULL`; `current_department_received_status ENUM('Pending','Received') NN DEFAULT 'Pending'`; `attending_doctor_id INT NULL`; `queue_number INT NULL`; `visit_status ENUM('Waiting','Reception','Records','Nursing','Doctor','Laboratory','X-Ray','Pharmacy','Physiotherapy','Theatre','Accounts','Store','Completed','Cancelled') NN DEFAULT 'Waiting'`; `created_by INT NULL`; `created_at TIMESTAMP NN DEFAULT CURRENT`; `updated_at TIMESTAMP NULL ON UPDATE`. |
+| `visits` | `id INT NN AI`; `visit_number VARCHAR(30) NN`; `patient_id INT NN`; `visit_date DATETIME NN`; `visit_type ENUM('Outpatient','Inpatient','Emergency','Referral') NN DEFAULT 'Outpatient'`; `current_department_id INT NULL`; `current_department_received_by INT NULL`; `current_department_received_at DATETIME NULL`; `current_department_received_status ENUM('Pending','Received') NN DEFAULT 'Pending'`; `attending_doctor_id INT NULL`; `queue_number INT NULL`; `visit_status ENUM('Waiting','Reception','Records','Nursing','Doctor','Laboratory','X-Ray','ECG','Pharmacy','Physiotherapy','Theatre','Accounts','Store','Completed','Cancelled') NN DEFAULT 'Waiting'`; `created_by INT NULL`; `created_at TIMESTAMP NN DEFAULT CURRENT`; `updated_at TIMESTAMP NULL ON UPDATE`. |
 | `visit_queue` | `id INT NN AI`; `visit_id INT NN`; `department_id INT NN`; `assigned_user_id INT NULL`; `position INT NULL`; `remarks TEXT NULL`; `queue_status ENUM('Waiting','Called','In Progress','Completed','Cancelled') NN DEFAULT 'Waiting'`; `queued_at TIMESTAMP NN DEFAULT CURRENT`; `called_at DATETIME NULL`; `started_at DATETIME NULL`; `completed_at DATETIME NULL`; `cancelled_at DATETIME NULL`. |
 | `visit_transfers` | `id INT NN AI`; `visit_id INT NN`; `from_department_id INT NULL`; `to_department_id INT NN`; `from_status VARCHAR(50) NN`; `to_status VARCHAR(50) NN`; `previous_status VARCHAR(50) NULL`; `new_status VARCHAR(50) NULL`; `transfer_type ENUM('Forward','Return','Referral','Discharge','Completion','Cancellation') NN DEFAULT 'Forward'`; `remarks TEXT NULL`; `transferred_by INT NN`; `received_by INT NULL`; `transferred_at TIMESTAMP NN DEFAULT CURRENT`; `received_at DATETIME NULL`. |
 
@@ -861,6 +861,7 @@ ordered visit ledger.
 | `medication_administration_records` | Nursing / `MedicationAdministrationService` | Repeated encounter-linked medication administration entries; mutable while encounter remains active | PK `id`; prescription/visit-time/patient-time/status-time/administered-by indexes; dose, route, status, and notes remain simple fields |
 | `diabetes_monitoring` | Nursing / `DiabetesMonitoringService` | Repeated encounter-linked DM Sheet entries; mutable while encounter remains active | PK `id`; visit-time/patient-time/recorded-by/meal-status indexes; blood glucose is structured while symptoms and notes remain `TEXT` |
 | `radiology_requests` / `radiology_reports` | Encounter workflow / `RadiologyService` | Mutable request with immutable text report; multiple requests per visit allowed | PK `id`; visit/patient/requester/department/status/source indexes; report unique on request; study requested, clinical indication, findings, impression, and recommendation remain `TEXT` fields |
+| `ecg_requests` / `ecg_reports` | Encounter workflow / `ECGService` | Mutable ECG request with one scanned chart/notes record per request | PK `id`; visit/patient/requester/department/status indexes; report unique on request; notes and remarks remain `TEXT`; chart metadata points to secure file storage |
 
 | FK | Source -> target | Update/delete |
 |---|---|---|
@@ -890,6 +891,15 @@ ordered visit ledger.
 | `fk_radiology_reports_patient` | `radiology_reports.patient_id -> patients.id` | CASCADE / RESTRICT |
 | `fk_radiology_reports_performed_by` | `radiology_reports.performed_by -> users.id` | CASCADE / RESTRICT |
 | `fk_radiology_reports_completed_by` | `radiology_reports.completed_by -> users.id` | CASCADE / SET NULL |
+| `fk_ecg_requests_visit` | `ecg_requests.visit_id -> visits.id` | CASCADE / RESTRICT |
+| `fk_ecg_requests_patient` | `ecg_requests.patient_id -> patients.id` | CASCADE / RESTRICT |
+| `fk_ecg_requests_requested_by` | `ecg_requests.requested_by -> users.id` | CASCADE / RESTRICT |
+| `fk_ecg_requests_department` | `ecg_requests.department_id -> departments.id` | CASCADE / SET NULL |
+| `fk_ecg_reports_request` | `ecg_reports.ecg_request_id -> ecg_requests.id` | CASCADE / RESTRICT |
+| `fk_ecg_reports_visit` | `ecg_reports.visit_id -> visits.id` | CASCADE / RESTRICT |
+| `fk_ecg_reports_patient` | `ecg_reports.patient_id -> patients.id` | CASCADE / RESTRICT |
+| `fk_ecg_reports_performed_by` | `ecg_reports.performed_by -> users.id` | CASCADE / RESTRICT |
+| `fk_ecg_reports_updated_by` / `completed_by` | actor columns -> `users.id` | CASCADE / SET NULL |
 
 ```mermaid
 erDiagram

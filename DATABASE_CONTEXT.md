@@ -1193,6 +1193,15 @@ store findings, impression, recommendation, reporter/completer attribution, and
 timestamps. Radiology remains text-report CRUD; PACS, DICOM, images, scheduling,
 and modality catalogues are not part of the current schema.
 
+## ECG
+
+Migration 058 adds the ECG department, ECG Technician role,
+`ecg_requests`, and `ecg_reports`. ECG requests support `Clinical` Doctor
+requests and `Direct` ECG department requests without requiring a fake
+Consultation. ECG reports store scanned chart file metadata plus notes and
+remarks. Chart files live under the configured secure document storage root
+and are served through the ECG download controller after permission checks.
+
 ## Phase 3.6 Physiotherapy
 
 Migration 028 adds the encounter-linked `physiotherapy_records` and

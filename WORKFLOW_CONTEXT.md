@@ -1022,6 +1022,25 @@ Radiology study requested, clinical indication, findings, impression, and
 recommendation remain text. PACS, DICOM, and advanced imaging logistics are
 postponed.
 
+### ECG Workflow
+
+ECG follows a small diagnostic flow:
+
+```text
+Doctor request or direct ECG encounter
+-> ECG Worklist
+-> Start ECG
+-> Upload scanned ECG chart
+-> Add notes/remarks
+-> Complete
+```
+
+Clinical ECG requests are available from Consultation and the Encounter
+Workspace. Direct ECG requests are allowed for active ECG encounters and do not
+require a fake Consultation or Doctor assignment. ECG requests do not transfer
+encounter ownership automatically; Department Notifications remain
+attention-only.
+
 ### Phase 3.7 - Theatre
 
 Theatre is implemented as a single encounter-linked record with Draft and

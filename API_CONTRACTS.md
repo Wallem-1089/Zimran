@@ -71,7 +71,7 @@ Current extended results may additionally retain `user_id`, `role_id`, `permissi
 | `SettingsService` | Typed definitions, validation, history, export and request-local cache. | Owns settings write transactions; history/audit atomic; authorization remains controller-owned. |
 
 `ConsultationService`, `VitalSignsService`, `NursingService`,
-`LaboratoryService`, `RadiologyService`, `PhysiotherapyService`,
+`LaboratoryService`, `RadiologyService`, `ECGService`, `PhysiotherapyService`,
 `TheatreService`, `AccountsService`, `StoreService`, `PharmacyService`, and
 `BillingService` are implemented for their current CRUD-first scopes. There is
 no implemented `TimelineService`; timeline reads are exposed by `VisitService`,
@@ -1107,6 +1107,25 @@ type keys `blood_card`, `blood_group_result`, `crossmatch_form`,
 | `modules/reports/laboratory_report_book.php` | Laboratory report book from requests/results. |
 | `modules/reports/radiology_report_book.php` | Radiology report book from requests/reports. |
 | `modules/reports/theatre_operation_register.php` | Theatre operation register from Theatre records. |
+
+### `ECGService`
+
+Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?EncounterEventService $eventService = null, ?PermissionService $permissionService = null, ?string $storageRoot = null)`. Uses `ecg_requests`, `ecg_reports`, visits, patients, users, departments, audit, encounter events, and secure chart-file storage.
+
+| Signature | Purpose/return | Contract |
+|---|---|---|
+| `createRequest(array $data, array $user): array` | Creates a Clinical or Direct ECG request. | Transaction; validates patient/visit, source, active encounter, ECG department, and permission; audits `ECG_REQUEST_CREATED`; records `ECG_REQUESTED`. |
+| `getRequestById(int $requestId, ?array $user = null): ?array` | Reads one request with chart/report metadata. | Permission-filtered read. |
+| `listByVisit(int $visitId, ?array $user = null): array` / `listByPatient(int $patientId, ?array $user = null): array` | Lists ECG history for an encounter/patient. | Permission-filtered read. |
+| `listWorklist(?array $user = null, array $filters = []): array` | ECG department worklist. | Department-owned sidebar/worklist visibility. |
+| `startRequest(int $requestId, array $user): array` | Moves Requested to In Progress. | Transaction; ECG processing permission; audit. |
+| `saveReport(array $data, array $user, ?array $file = null): array` / `updateReport(...)` | Uploads/replaces scanned chart and saves notes/remarks. | Transaction; validates file type/size, active encounter, and ECG report permissions; chart file stored outside normal web routing. |
+| `getReport(int $requestId, ?array $user = null): ?array` | Returns request/report metadata. | Read-only wrapper. |
+| `prepareChartDownload(int $requestId, array $user): array` | Returns secure file metadata for controller streaming. | Rechecks permission; does not expose direct file path to browser. |
+| `completeRequest(int $requestId, array $user): array` / `cancelRequest(...)` | Completes/cancels the ECG request. | Transaction; completion requires uploaded chart; audits and records `ECG_COMPLETED` on completion. |
+
+Routes live under `modules/ecg/` and use the normal request/worklist/report
+pattern. Direct ECG does not require Consultation or Doctor assignment.
 
 ### `AccountsService`
 

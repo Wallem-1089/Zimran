@@ -36,6 +36,12 @@ $latestRadiologyRequests = $radiologyService
 $latestRadiologyReport = ($latestRadiologyRequests !== [] && $radiologyService)
     ? $radiologyService->getResult((int)$latestRadiologyRequests[0]['id'], $currentUser)
     : null;
+$latestEcgRequests = $ecgService
+    ? $ecgService->listByVisit((int)$visit['id'], $currentUser)
+    : [];
+$latestEcgReport = ($latestEcgRequests !== [] && $ecgService)
+    ? $ecgService->getReport((int)$latestEcgRequests[0]['id'], $currentUser)
+    : null;
 $latestPharmacyRequests = $pharmacyService
     ? $pharmacyService->listByVisit((int)$visit['id'], $currentUser)
     : [];
@@ -176,6 +182,40 @@ require __DIR__ . '/../../layouts/sidebar.php';
                         <div class="summary-item"><span class="summary-label">Recommendation</span> <span class="summary-value"><?= e((string)($latestRadiologyReport['recommendation'] ?? '-')) ?></span></div>
                     </div>
                 <?php endif; ?>
+        <?php endif; ?>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3>ECG Requests</h3>
+                <p>Encounter ECG requests and scanned chart status.</p>
+            </div>
+            <?php if ($ecgService && $permissionService->canCreateEcgRequest($visit, $currentUser, 'Clinical')): ?>
+                <a class="btn-primary" href="../ecg/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request ECG</a>
+            <?php endif; ?>
+        </div>
+        <?php if (!$ecgService): ?>
+            <p class="text-muted">ECG tables are not available yet. Apply Migration 058 to enable this section.</p>
+        <?php elseif ($latestEcgRequests === []): ?>
+            <p class="text-muted">No ECG requests recorded.</p>
+        <?php else: ?>
+            <ul class="clean-list">
+                <?php foreach (array_slice($latestEcgRequests, 0, 5) as $request): ?>
+                    <li>
+                        <a href="../ecg/view.php?id=<?= (int)$request['id'] ?>">#<?= (int)$request['id'] ?></a>
+                        — <?= e((string)($request['study_requested'] ?? 'ECG')) ?>
+                        (<?= e((string)$request['status']) ?>)
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+            <?php if ($latestEcgReport !== null && !empty($latestEcgReport['report_id'])): ?>
+                <div class="summary-grid">
+                    <div class="summary-item"><span class="summary-label">Chart</span> <span class="summary-value"><?= !empty($latestEcgReport['chart_stored_path']) ? 'Uploaded' : 'Pending' ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Notes</span> <span class="summary-value"><?= e(trim((string)($latestEcgReport['notes'] ?? '')) !== '' ? (string)$latestEcgReport['notes'] : '-') ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Remarks</span> <span class="summary-value"><?= e(trim((string)($latestEcgReport['remarks'] ?? '')) !== '' ? (string)$latestEcgReport['remarks'] : '-') ?></span></div>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 

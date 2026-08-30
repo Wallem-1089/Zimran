@@ -24,6 +24,9 @@ $latestVitalSigns = $vitalSignsService
 $latestLaboratoryRequests = $laboratoryService
     ? $laboratoryService->listByVisit($visitId, $currentUser)
     : [];
+$latestEcgRequests = $ecgService
+    ? $ecgService->listByVisit($visitId, $currentUser)
+    : [];
 unset($_SESSION['old_consultation']);
 
 $pageTitle = 'Start Consultation';
@@ -81,6 +84,32 @@ require __DIR__ . '/../../layouts/sidebar.php';
                     <li>
                         <a href="../laboratory/view.php?id=<?= (int)$request['id'] ?>">#<?= (int)$request['id'] ?></a>
                         — <?= e((string)$request['tests_requested']) ?>
+                        (<?= e((string)$request['status']) ?>)
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3>ECG Requests</h3>
+                <p>Request ECG for this encounter or review scanned ECG charts.</p>
+            </div>
+            <?php if ($ecgService && $permissionService->canCreateEcgRequest($visit, $currentUser, 'Clinical')): ?>
+                <a class="btn-primary" href="../ecg/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request ECG</a>
+            <?php endif; ?>
+        </div>
+        <?php if (!$ecgService): ?>
+            <p class="text-muted">ECG tables are not available yet. Apply Migration 058 to enable this section.</p>
+        <?php elseif ($latestEcgRequests === []): ?>
+            <p class="text-muted">No ECG requests recorded.</p>
+        <?php else: ?>
+            <ul class="clean-list">
+                <?php foreach (array_slice($latestEcgRequests, 0, 3) as $request): ?>
+                    <li>
+                        <a href="../ecg/view.php?id=<?= (int)$request['id'] ?>">#<?= (int)$request['id'] ?></a>
+                        — <?= e((string)($request['study_requested'] ?? 'ECG')) ?>
                         (<?= e((string)$request['status']) ?>)
                     </li>
                 <?php endforeach; ?>

@@ -39,6 +39,7 @@ require_once __DIR__ . '/../../services/DepartmentNotificationService.php';
 require_once __DIR__ . '/../../services/UserNotificationService.php';
 require_once __DIR__ . '/../../services/LaboratoryService.php';
 require_once __DIR__ . '/../../services/RadiologyService.php';
+require_once __DIR__ . '/../../services/ECGService.php';
 require_once __DIR__ . '/../../services/PhysiotherapyService.php';
 require_once __DIR__ . '/../../services/TheatreService.php';
 require_once __DIR__ . '/../../services/PharmacyService.php';
@@ -179,6 +180,7 @@ $workspaceUserDepartment = (string)(
 );
 $canOpenLaboratoryWorklist = $permissionService->canViewLaboratoryWorklist($currentUser);
 $canOpenRadiologyWorklist = $permissionService->canViewRadiologyWorklist($currentUser);
+$canOpenEcgWorklist = $permissionService->canViewEcgWorklist($currentUser);
 $canOpenPharmacyWorklist = $permissionService->canViewPharmacyWorklist($currentUser);
 $canOpenPhysiotherapyWorklist = $permissionService->canViewPhysiotherapyWorklist($currentUser);
 $canOpenAdmissionCensus = $permissionService->isAdministrator($currentUser)
@@ -399,6 +401,23 @@ $canEnterRadiologyReport = $permissionService->canEnterRadiologyReport($visit, $
 $canEditRadiologyReport = $permissionService->canEditRadiologyReport($visit, $currentUser);
 $canCompleteRadiologyRequest = $permissionService->canCompleteRadiologyRequest($visit, $currentUser);
 $radiology = [];
+$ecgTablesReady = workspaceTableExists($pdo, 'ecg_requests')
+    && workspaceTableExists($pdo, 'ecg_reports');
+$ecgService = $ecgTablesReady ? new ECGService($pdo, null, null, $permissionService) : null;
+$ecgRequestSource = (string)($visit['department_name'] ?? '') === 'ECG'
+    ? 'Direct'
+    : 'Clinical';
+$ecgRequests = $ecgService ? $ecgService->listByVisit($visitId, $currentUser) : [];
+$latestEcgRequest = $ecgRequests[0] ?? null;
+$latestEcgReport = $latestEcgRequest
+    ? $ecgService->getReport((int)$latestEcgRequest['id'], $currentUser)
+    : null;
+$canViewEcg = $permissionService->canViewEcg((int)$visit['patient_id'], $currentUser);
+$canCreateEcgRequest = $permissionService->canCreateEcgRequest($visit, $currentUser, $ecgRequestSource);
+$canProcessEcgRequest = $permissionService->canProcessEcgRequest($visit, $currentUser);
+$canUploadEcgChart = $permissionService->canUploadEcgChart($visit, $currentUser);
+$canEditEcgReport = $permissionService->canEditEcgReport($visit, $currentUser);
+$canCompleteEcgRequest = $permissionService->canCompleteEcgRequest($visit, $currentUser);
 $pharmacyRequestSource = in_array((string)($visit['department_name'] ?? ''), ['Pharmacy'], true)
     ? 'Direct'
     : 'Clinical';
@@ -493,6 +512,7 @@ $workspaceTabTitles = [
     'nursing' => 'Encounter Nurse',
     'laboratory' => 'Encounter Laboratory',
     'radiology' => 'Encounter X-Ray',
+    'ecg' => 'Encounter ECG',
     'pharmacy' => 'Encounter Pharmacy',
     'billing' => 'Encounter Billing',
     'stock_usage' => 'Encounter Stock Usage',
@@ -656,6 +676,12 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
             case 'radiology':
 
                 require __DIR__ . '/partials/tabs/radiology.php';
+
+                break;
+
+            case 'ecg':
+
+                require __DIR__ . '/partials/tabs/ecg.php';
 
                 break;
 

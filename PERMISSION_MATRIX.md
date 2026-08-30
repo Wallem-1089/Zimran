@@ -41,6 +41,7 @@ Current roles in the database:
 | Pharmacist | Implemented | Pharmacy prescription worklist, direct prescriptions, and dispensing. |
 | Physiotherapist | Implemented | Physiotherapy records, sessions, and direct/clinical workflows. |
 | Radiographer | Implemented | Radiology request/report workflow. |
+| ECG Technician | Implemented | ECG request worklist, scanned chart upload, notes, remarks, and completion. |
 | Theatre Staff | Implemented | Theatre workflow. |
 | Accountant | Implemented | Price catalogue and Billing / Patient Accounts. |
 | Store Officer | Implemented | Store inventory item catalogue, stock movements, ledger, and department balances. |
@@ -108,6 +109,7 @@ table.
 | Medical Records | `view_medical_record` plus Records ownership; Administrator override |
 | Laboratory | `view_laboratory` plus Laboratory department ownership; Administrator override |
 | Radiology | `view_radiology` plus X-Ray/Radiology department ownership; Administrator override |
+| ECG | `view_ecg` plus ECG department ownership; Administrator override |
 | Physiotherapy | `view_physiotherapy` plus Physiotherapy department ownership; Administrator override |
 | Theatre | `view_theatre` plus Theatre/Doctor department ownership; Administrator override |
 | Accounts | `view_billable_items` plus Accounts ownership; Administrator override |
@@ -128,13 +130,14 @@ remain authoritative even when a sidebar link is visible.
 
 | Role | Main sidebar destinations |
 |---|---|
-| System Administrator | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Medical Records, Laboratory, Radiology, Physiotherapy, Theatre, Accounts, Store, Stock Requests, Admissions, Pharmacy, Billing, Reports, Administration, Switch Department |
+| System Administrator | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Medical Records, Laboratory, Radiology, ECG, Physiotherapy, Theatre, Accounts, Store, Stock Requests, Admissions, Pharmacy, Billing, Reports, Administration, Switch Department |
 | Receptionist | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Admissions |
 | Records Officer | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Medical Records, Admissions, Reports |
 | Doctor | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Theatre, Stock Requests, Admissions |
 | Nurse | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Stock Requests, Admissions |
 | Laboratory Scientist | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Laboratory, Stock Requests |
 | Radiographer | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Radiology, Stock Requests |
+| ECG Technician | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, ECG, Stock Requests |
 | Physiotherapist | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Physiotherapy, Stock Requests |
 | Theatre Staff | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Theatre, Stock Requests |
 | Pharmacist | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Pharmacy, Stock Requests |
@@ -181,6 +184,7 @@ users.
 | Nursing | Nursing-specific clinical permission | Implemented |
 | Laboratory | Laboratory request/result permissions | Implemented |
 | Radiology | Radiology-specific permission | Implemented |
+| ECG | ECG request/chart permissions | Implemented |
 | Pharmacy | Prescription and dispensing permissions | Implemented |
 | Billing | Charge, invoice, payment, receipt permissions | Implemented |
 | Reporting | Reporting permissions and data scopes | Implemented |
@@ -256,6 +260,24 @@ encounter creation. Deletion does not reset patient or encounter ID generators.
 | `enter_radiology_report` | Implemented | Radiographer |
 | `edit_radiology_report` | Implemented | Radiographer |
 | `complete_radiology_request` | Implemented | Radiographer |
+
+## ECG Permissions
+
+| Permission | Status | Seeded roles |
+|---|---|---|
+| `view_ecg` | Implemented | Records Officer plus clinical roles: Doctor, Nurse, Laboratory Scientist, Radiographer, ECG Technician, Physiotherapist, Theatre Staff, Pharmacist |
+| `create_ecg_request` | Implemented | Doctor, ECG Technician |
+| `process_ecg_request` | Implemented | ECG Technician |
+| `upload_ecg_chart` | Implemented | ECG Technician |
+| `edit_ecg_report` | Implemented | ECG Technician |
+| `complete_ecg_request` | Implemented | ECG Technician |
+
+Doctor/Admin users can create clinical ECG requests from Consultation or the
+Encounter Workspace. ECG Technician/Admin users can create direct ECG requests
+for active ECG encounters and can start, upload chart files, add/edit
+notes/remarks, and complete requests. ECG sidebar/worklist access remains
+department-owned; other clinical roles only receive patient-specific view
+context where permitted.
 
 ## Physiotherapy Permissions
 

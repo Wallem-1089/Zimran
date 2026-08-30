@@ -274,6 +274,16 @@ by the Workspace, Consultation page and Patient Chart. Existing Consultation,
 Vital Signs, Nursing, Laboratory, Workspace, and Department Notification
 regression coverage remains in place.
 
+## ECG
+
+Focused ECG testing should verify Doctor clinical request creation,
+ECG Technician direct request creation for active ECG encounters, ECG worklist
+visibility, start/process flow, scanned chart upload, notes/remarks update,
+completion requiring an uploaded chart, completed/cancelled read-only behavior,
+patient/visit mismatch rejection, CSRF-aware controller wiring, audit/events,
+Workspace tab integration, Consultation request integration, and that ECG
+does not require a fake Consultation or transfer encounter ownership.
+
 ## Phase 3.6 Physiotherapy
 
 ```powershell

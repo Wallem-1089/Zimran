@@ -250,6 +250,8 @@ VitalSignsService
 
 RadiologyService
 
+ECGService
+
 PhysiotherapyService
 
 TheatreService
@@ -374,6 +376,8 @@ Nursing
 Laboratory
 
 Radiology
+
+ECG
 
 Pharmacy
 
@@ -770,9 +774,10 @@ the Dressing Book for repeated wound/dressing records and the Drug Chart /
 Medication Administration Record for administered doses, plus the DM Sheet for
 diabetes monitoring. Phase 3.4 Laboratory
 CRUD is implemented and live-verified. Phase 3.5 Radiology CRUD is
-implemented and live-verified. Phase 3.6 Physiotherapy CRUD is implemented
+implemented and live-verified. ECG is implemented as a simple diagnostic
+request/worklist/chart-upload workflow. Phase 3.6 Physiotherapy CRUD is implemented
 and live-verified. The next module target after the current
-Consultation/Nursing/Laboratory/Radiology/Physiotherapy slice is now one of
+Consultation/Nursing/Laboratory/Radiology/ECG/Physiotherapy slice is now one of
 the remaining later operational modules.
 
 ## Phase 4 - Radiology
@@ -1164,15 +1169,15 @@ The current operational application includes:
   department notifications, timeline, cancellation, and completion/discharge
   capture.
 - Consultation, Vital Signs, Nursing with Dressing Book, Drug Chart, and DM Sheet,
-  Laboratory, Radiology, Physiotherapy,
+  Laboratory, Radiology, ECG, Physiotherapy,
   Theatre, Pharmacy, Billing with department billing requests,
   Accounts/Price Catalogue, Store/Inventory, and
   Basic Reports/Dashboard summaries.
 - Inpatient Admissions / Ward & Bed workflow: admit an active encounter to a
   ward/bed, transfer ward/bed, discharge/cancel admission, view inpatient
   census, and manage basic wards/beds.
-- Clinical cross-view permissions from Migration 038 are live: Doctor, Nurse,
-  Laboratory Scientist, Radiographer/X-Ray, Physiotherapist, Theatre Staff,
+- Clinical cross-view permissions from Migration 038 plus ECG additions are live: Doctor, Nurse,
+  Laboratory Scientist, Radiographer/X-Ray, ECG Technician, Physiotherapist, Theatre Staff,
   Pharmacist, and Records Officer can view core clinical context across the
   active encounter while create/edit/complete rights remain owned by each
   department module. Vital Signs mutation remains limited to Doctor, Nurse, and

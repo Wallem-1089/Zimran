@@ -479,3 +479,17 @@ links.
 The migration seeds `view_patient_stock_usage` and
 `record_patient_stock_usage`. It does not create patient charges directly and
 does not let departments edit stock balances.
+
+## Migration 058 - ECG Department CRUD
+
+`058_ecg_department_crud_up.sql` adds `ECG` to encounter-compatible visit
+statuses, creates the ECG department and ECG Technician role, creates
+`ecg_requests` and `ecg_reports`, and seeds the six ECG permissions:
+`view_ecg`, `create_ecg_request`, `process_ecg_request`,
+`upload_ecg_chart`, `edit_ecg_report`, and `complete_ecg_request`.
+
+Doctor receives clinical request/view access. ECG Technician receives patient
+context view plus the direct request, worklist, chart upload, edit, and
+completion workflow.
+Cross-view clinical roles receive patient-specific ECG view access, but ECG
+worklist/sidebar access remains ECG-department-owned.

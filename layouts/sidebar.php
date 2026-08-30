@@ -11,6 +11,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 $canAccessMedicalRecordsSidebar = false;
 $canAccessLaboratorySidebar = false;
 $canAccessRadiologySidebar = false;
+$canAccessEcgSidebar = false;
 $canAccessPhysiotherapySidebar = false;
 $canAccessTheatreSidebar = false;
 $canAccessAccountsSidebar = false;
@@ -102,6 +103,9 @@ if ($currentUser && isset($pdo)) {
     $canAccessRadiologySidebar = $sidebarCan('view_radiology')
         && $sidebarOwnsDepartmentModule(['Radiographer'], ['X-Ray', 'Radiology']);
 
+    $canAccessEcgSidebar = $sidebarCan('view_ecg')
+        && $sidebarOwnsDepartmentModule(['ECG Technician'], ['ECG']);
+
     $canAccessPhysiotherapySidebar = $sidebarCan('view_physiotherapy')
         && $sidebarOwnsDepartmentModule(['Physiotherapist'], ['Physiotherapy', 'Physio', 'Rehabilitation']);
 
@@ -123,6 +127,7 @@ if ($currentUser && isset($pdo)) {
             'Nurse',
             'Laboratory Scientist',
             'Radiographer',
+            'ECG Technician',
             'Physiotherapist',
             'Theatre Staff',
             'Pharmacist',
@@ -135,6 +140,7 @@ if ($currentUser && isset($pdo)) {
             'Laboratory',
             'Radiology',
             'X-Ray',
+            'ECG',
             'Physiotherapy',
             'Physio',
             'Rehabilitation',
@@ -194,6 +200,7 @@ if ($currentUser && isset($pdo)) {
             'Nurse',
             'Laboratory Scientist',
             'Radiographer',
+            'ECG Technician',
             'Physiotherapist',
             'Theatre Staff',
             'Pharmacist',
@@ -208,6 +215,7 @@ if ($currentUser && isset($pdo)) {
             'Laboratory',
             'Radiology',
             'X-Ray',
+            'ECG',
             'Physiotherapy',
             'Physio',
             'Rehabilitation',
@@ -435,6 +443,20 @@ $sidebarBranding = appBranding($pdo ?? null);
                     <a href="<?= e($baseUrl) ?>/modules/radiology/index.php">
 
                         Radiology
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
+            <?php if ($canAccessEcgSidebar): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/ecg/index.php">
+
+                        ECG
 
                     </a>
 
