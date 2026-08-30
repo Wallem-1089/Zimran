@@ -179,12 +179,14 @@ Constructor: `__construct(PDO $db)`. Uses permissions, role permissions, users/d
 
 | Signature | Purpose/return | Authorization/compatibility contract |
 |---|---|---|
-| `hasPermission(string $permission, ?array $user = null): bool` | Checks effective permission. | Administrator override; database role mapping first; if unavailable/unmapped, hardcoded role/department compatibility fallback. User defaults to current session compatibility identity. |
+| `hasPermission(string $permission, ?array $user = null): bool` | Checks effective permission. | Administrator override; user-level Allow/Deny override; database role mapping; if unavailable/unmapped, hardcoded role/department compatibility fallback. User defaults to current session compatibility identity. |
 | `listPermissions(bool $activeOnly = true): array` | Permission catalogue. | Read; admin page expectation. |
 | `createPermission(string $key, string $name, string $module, ?string $description, int $actorUserId): array` | Creates unique permission; returns `permission_id`. | Transaction, format/duplicate checks, `PERMISSION_CREATED`. |
 | `updatePermission(int $permissionId, string $key, string $name, string $module, ?string $description, int $actorUserId): array` | Updates permission metadata. | Transaction/row lock, duplicate checks, `PERMISSION_UPDATED`. |
 | `getRolePermissions(int $roleId): array` | Assigned permission IDs/details. | Read. |
 | `assignPermissions(int $roleId, array $permissionIds, int $actorUserId): array` | Bulk-replaces/synchronizes role matrix; returns role and IDs. | Transaction/role lock; deduplicates IDs; prevents duplicate rows; `PERMISSION_ASSIGNED`/`PERMISSION_REMOVED` and `ROLE_PERMISSION_UPDATED` as applicable. |
+| `getUserPermissionOverrides(int $userId): array` | Lists per-account permission overrides. | Read; no row means inherit role/default permission behavior. |
+| `assignUserPermissionOverrides(int $userId, array $permissionEffects, int $actorUserId): array` | Bulk-replaces per-account overrides; accepted effects are `Allow`, `Deny`, or omitted/`Inherit`. | Transaction/user lock; active permissions only; `USER_PERMISSION_OVERRIDES_UPDATED`. |
 | `removePermission(int $roleId, int $permissionId, int $actorUserId): array` | Removes one mapping. | Transaction; `PERMISSION_REMOVED`/matrix audit. |
 | `canAccessDepartment(int $departmentId, ?array $user = null): bool` | Validates admin override, active membership, primary and compatibility fallback. | Read. |
 | `canAccessEncounter(array $encounter, ?array $user = null): bool` | Encounter department access. | Delegates department logic; administrator override. |
@@ -202,6 +204,9 @@ Consultation writes are Doctor/Admin, Vital Signs writes are Doctor/Nurse/Admin,
 Laboratory writes are Laboratory Scientist/Admin, Radiology writes are
 Radiographer/Admin, Pharmacy dispensing is Pharmacist/Admin, and equivalent
 department ownership remains in place for the other clinical modules.
+Consultation handwriting/touch-pad entry is separately controlled by
+`use_consultation_handwriting`; users still need the normal Consultation
+create/edit permission before the form can mutate records.
 
 See [PERMISSION_MATRIX.md](PERMISSION_MATRIX.md) for the implemented permission catalogue and module requirements.
 

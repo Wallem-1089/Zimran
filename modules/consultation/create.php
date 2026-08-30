@@ -156,7 +156,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
         <?php endif; ?>
     </div>
-    <?php $action = 'review.php'; $buttonLabel = 'Review Consultation'; $enableWritingMode = true; require __DIR__ . '/form.php'; ?>
+    <?php $action = 'review.php'; $buttonLabel = 'Review Consultation'; $enableWritingMode = $permissionService->canUseConsultationHandwriting($currentUser); require __DIR__ . '/form.php'; ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

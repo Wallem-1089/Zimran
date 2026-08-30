@@ -14,6 +14,11 @@ $permissionService = new PermissionService($pdo);
 $isAdministrator = $permissionService->isAdministrator($currentUser);
 $activeDepartmentId = (int)($currentUser['active_department_id'] ?? $currentUser['department_id'] ?? 0);
 $activeDepartmentName = trim((string)($currentUser['active_department_name'] ?? $currentUser['department_name'] ?? 'Department'));
+$isStockRequestOnlyUser = !$isAdministrator
+    && (
+        (string)($currentUser['role_name'] ?? '') === 'Orderly'
+        || $activeDepartmentName === 'Orderly'
+    );
 
 $todayPatients = (int)$pdo
     ->query('SELECT COUNT(*) FROM patients WHERE DATE(created_at) = CURDATE()')

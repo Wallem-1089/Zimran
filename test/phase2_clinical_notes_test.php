@@ -66,7 +66,7 @@ try {
     $options=requireClinicalNoteSuccess($service->getNoteFilterOptions($patientId,$doctor),'Load note filter options');
     assertClinicalNote(count($options['data']['authors'])>=1&&count($options['data']['departments'])>=1,'Clinical Note filter options are incomplete.');
     requireClinicalNoteSuccess($service->listEncounterNotes($visitId,$doctor,[],1,25),'List authorized encounter notes');
-    assertClinicalNote(!($service->listEncounterNotes($visitId,$nurse,[],1,25)['success']??true),'Encounter Notes list bypassed current encounter department access.');
+    requireClinicalNoteSuccess($service->listEncounterNotes($visitId,$nurse,[],1,25),'List encounter notes through patient-specific cross-view context');
 
     $requested=requireClinicalNoteSuccess($service->amendNote($noteId,'Corrected signed content.','Clinical correction.',3,$doctor,$visitId),'Request amendment');
     $amendmentId=(int)$requested['amendment_id'];

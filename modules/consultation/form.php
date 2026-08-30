@@ -101,7 +101,7 @@ $fields = [
             function resizeCanvas(canvas, payload) {
                 const containerWidth = Math.max(320, Math.floor(canvas.parentElement.getBoundingClientRect().width));
                 const ratio = window.devicePixelRatio || 1;
-                const cssHeight = Math.max(320, Math.min(460, Math.floor(containerWidth * 0.42)));
+                const cssHeight = Math.max(380, Math.min(620, Math.floor(containerWidth * 0.55)));
 
                 canvas.style.width = '100%';
                 canvas.style.height = cssHeight + 'px';
@@ -216,6 +216,11 @@ $fields = [
 
                 let drawing = false;
                 let currentStroke = null;
+                let lastPoint = null;
+
+                canvas.style.touchAction = 'none';
+                canvas.style.userSelect = 'none';
+                canvas.style.webkitUserSelect = 'none';
 
                 function pointFromEvent(event) {
                     const rect = canvas.getBoundingClientRect();
@@ -224,47 +229,103 @@ $fields = [
                     return [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
                 }
 
-                canvas.addEventListener('pointerdown', function (event) {
+                function drawSegment(from, to) {
+                    if (!from || !to) {
+                        return;
+                    }
+
+                    const context = canvas.getContext('2d');
+                    context.save();
+                    context.lineWidth = 4.2;
+                    context.strokeStyle = '#0f172a';
+                    context.lineCap = 'round';
+                    context.lineJoin = 'round';
+                    context.beginPath();
+                    context.moveTo(from[0], from[1]);
+                    context.quadraticCurveTo(from[0], from[1], (from[0] + to[0]) / 2, (from[1] + to[1]) / 2);
+                    context.stroke();
+                    context.restore();
+                }
+
+                function beginStroke(event) {
                     if (activeMode !== 'write') {
                         return;
                     }
 
                     event.preventDefault();
+                    event.stopPropagation();
                     canvas._handwritingTouched = true;
-                    canvas.setPointerCapture(event.pointerId);
+                    if (typeof canvas.setPointerCapture === 'function' && event.pointerId !== undefined) {
+                        canvas.setPointerCapture(event.pointerId);
+                    }
+                    document.body.classList.add('consultation-writing-in-progress');
                     drawing = true;
-                    currentStroke = [pointFromEvent(event)];
+                    lastPoint = pointFromEvent(event);
+                    currentStroke = [lastPoint];
                     canvas._handwritingPayload.strokes.push(currentStroke);
-                    redrawCanvas(canvas, canvas._handwritingPayload);
+                    drawSegment([lastPoint[0] - 0.1, lastPoint[1] - 0.1], lastPoint);
                     syncTextarea(field);
-                });
+                }
 
-                canvas.addEventListener('pointermove', function (event) {
+                function continueStroke(event) {
                     if (!drawing || !currentStroke) {
                         return;
                     }
 
                     event.preventDefault();
+                    event.stopPropagation();
                     const point = pointFromEvent(event);
                     const previous = currentStroke[currentStroke.length - 1];
                     const dx = point[0] - previous[0];
                     const dy = point[1] - previous[1];
-                    if (Math.sqrt(dx * dx + dy * dy) < 1.5) {
+                    if (Math.sqrt(dx * dx + dy * dy) < 0.8) {
                         return;
                     }
 
                     currentStroke.push(point);
+                    drawSegment(lastPoint || previous, point);
+                    lastPoint = point;
+                    syncTextarea(field);
+                }
+
+                function endStroke(event) {
+                    if (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        if (typeof canvas.releasePointerCapture === 'function' && event.pointerId !== undefined) {
+                            try {
+                                canvas.releasePointerCapture(event.pointerId);
+                            } catch (error) {
+                                // Pointer may already be released by the browser.
+                            }
+                        }
+                    }
+
+                    drawing = false;
+                    currentStroke = null;
+                    lastPoint = null;
+                    document.body.classList.remove('consultation-writing-in-progress');
                     redrawCanvas(canvas, canvas._handwritingPayload);
                     syncTextarea(field);
+                }
+
+                canvas.addEventListener('pointerdown', beginStroke, {passive: false});
+                canvas.addEventListener('pointermove', continueStroke, {passive: false});
+                ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (eventName) {
+                    canvas.addEventListener(eventName, endStroke, {passive: false});
                 });
 
-                ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (eventName) {
-                    canvas.addEventListener(eventName, function () {
-                        drawing = false;
-                        currentStroke = null;
-                        syncTextarea(field);
-                    });
-                });
+                canvas.addEventListener('touchstart', function (event) {
+                    if (activeMode === 'write') {
+                        event.preventDefault();
+                    }
+                }, {passive: false});
+
+                canvas.addEventListener('touchmove', function (event) {
+                    if (activeMode === 'write') {
+                        event.preventDefault();
+                    }
+                }, {passive: false});
 
                 field.querySelector('[data-handwriting-undo]')?.addEventListener('click', function () {
                     canvas._handwritingTouched = true;

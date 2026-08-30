@@ -70,6 +70,21 @@ Owner: Administration authorization / `PermissionService`. Mutable junction tabl
 
 Unique `(role_id, permission_id)` prevents duplicate assignments. Role and permission deletion is `RESTRICT`; actor deletion is `SET NULL`.
 
+#### `user_permissions`
+
+Owner: Administration authorization / `PermissionService`. Mutable per-account override table.
+
+| Column | Type | Null/default | Notes |
+|---|---|---|---|
+| `id` | `INT` PK auto increment | No | Identifier. |
+| `user_id` | `INT` | No | User account receiving the override. |
+| `permission_id` | `INT` | No | Permission being overridden. |
+| `effect` | `ENUM('Allow','Deny')` | No/`Allow` | User-level effect. `Inherit` is represented by no row. |
+| `assigned_by` | `INT` | Yes/`NULL` | Acting administrator. |
+| `created_at` / `updated_at` | `TIMESTAMP` | Created/updated defaults | Override lifecycle timestamps. |
+
+Unique `(user_id, permission_id)` prevents duplicate account overrides. User/permission deletion cascades override rows; actor deletion is `SET NULL`. `PermissionService` evaluates System Administrator override first, then `user_permissions`, then role permissions/default compatibility rules.
+
 #### `departments`
 
 Owner: Administration / `DepartmentService`; shared by workflows. Mutable master data with historical IDs preserved.

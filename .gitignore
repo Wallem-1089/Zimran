@@ -1,0 +1,4 @@
+storage/sessions/
+storage/logs/*.log
+database/backups/*.sql
+

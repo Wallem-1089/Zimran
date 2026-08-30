@@ -309,7 +309,12 @@ class PermissionService
                 ['Store Officer'],
                 true
             ) || $department === 'Store',
-            'view_stock_requests', 'create_stock_request', 'cancel_stock_request' => in_array(
+            'view_stock_requests', 'create_stock_request' => in_array(
+                $role,
+                ['Nurse', 'Doctor', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist', 'Store Officer', 'Orderly'],
+                true
+            ) || in_array($department, ['Nursing', 'Doctor', 'Laboratory', 'Radiology', 'X-Ray', 'Physiotherapy', 'Theatre', 'Pharmacy', 'Store', 'Orderly'], true),
+            'cancel_stock_request' => in_array(
                 $role,
                 ['Nurse', 'Doctor', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist', 'Store Officer'],
                 true
@@ -364,6 +369,7 @@ class PermissionService
                 true
             ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'create_consultation', 'edit_consultation', 'complete_consultation' => $role === 'Doctor',
+            'use_consultation_handwriting' => false,
             default => false
         };
     }
@@ -493,6 +499,106 @@ class PermissionService
         ');
         $stmt->execute([':role_id' => $roleId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getUserPermissionOverrides(int $userId): array
+    {
+        if ($userId <= 0) {
+            return [];
+        }
+
+        try {
+            $stmt = $this->pdo->prepare('
+                SELECT p.id, p.permission_key, p.permission_name, p.module,
+                       p.description, p.is_active, up.effect
+                FROM permissions p
+                INNER JOIN user_permissions up ON up.permission_id = p.id
+                WHERE up.user_id = :user_id
+                ORDER BY p.module, p.permission_name
+            ');
+            $stmt->execute([':user_id' => $userId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $exception) {
+            return [];
+        }
+    }
+
+    public function assignUserPermissionOverrides(
+        int $userId,
+        array $permissionEffects,
+        int $assignedBy
+    ): array {
+        if ($userId <= 0) {
+            return ['success' => false, 'errors' => ['User is required.']];
+        }
+
+        $normalized = [];
+        foreach ($permissionEffects as $permissionId => $effect) {
+            $permissionId = (int)$permissionId;
+            $effect = ucfirst(strtolower(trim((string)$effect)));
+
+            if ($permissionId <= 0 || $effect === 'Inherit' || $effect === '') {
+                continue;
+            }
+
+            if (!in_array($effect, ['Allow', 'Deny'], true)) {
+                return ['success' => false, 'errors' => ['Invalid permission override selected.']];
+            }
+
+            $normalized[$permissionId] = $effect;
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            $userStmt = $this->pdo->prepare('SELECT id FROM users WHERE id = :id FOR UPDATE');
+            $userStmt->execute([':id' => $userId]);
+            if (!$userStmt->fetchColumn()) {
+                throw new RuntimeException('User not found.');
+            }
+
+            $this->pdo->prepare('DELETE FROM user_permissions WHERE user_id = :user_id')
+                ->execute([':user_id' => $userId]);
+
+            if ($normalized !== []) {
+                $insert = $this->pdo->prepare('
+                    INSERT INTO user_permissions (
+                        user_id, permission_id, effect, assigned_by
+                    )
+                    SELECT :user_id, id, :effect, :assigned_by
+                    FROM permissions
+                    WHERE id = :permission_id
+                      AND is_active = 1
+                ');
+
+                foreach ($normalized as $permissionId => $effect) {
+                    $insert->execute([
+                        ':user_id' => $userId,
+                        ':permission_id' => $permissionId,
+                        ':effect' => $effect,
+                        ':assigned_by' => $assignedBy
+                    ]);
+                }
+            }
+
+            $this->audit(
+                $assignedBy,
+                'USER_PERMISSION_OVERRIDES_UPDATED',
+                'Updated permission overrides for user #' . $userId . '.'
+            );
+
+            $this->pdo->commit();
+
+            return [
+                'success' => true,
+                'user_id' => $userId,
+                'permission_effects' => $normalized,
+                'errors' => []
+            ];
+        } catch (Throwable $exception) {
+            $this->rollback();
+            return ['success' => false, 'errors' => ['Unable to update user permission overrides.']];
+        }
     }
 
     public function assignPermissions(
@@ -1814,6 +1920,11 @@ class PermissionService
         return $this->canMutateConsultation('complete_consultation', $encounter, $user);
     }
 
+    public function canUseConsultationHandwriting(?array $user = null): bool
+    {
+        return $this->hasPermission('use_consultation_handwriting', $user ?? $this->currentUser());
+    }
+
     public function logPatientDenied(
         ?int $userId,
         int $patientId,
@@ -2189,6 +2300,36 @@ class PermissionService
         array $user
     ): ?bool {
         $roleId = (int)($user['role_id'] ?? 0);
+        $userId = (int)($user['id'] ?? 0);
+
+        if ($userId > 0) {
+            try {
+                $userStmt = $this->pdo->prepare('
+                    SELECT up.effect
+                    FROM permissions p
+                    INNER JOIN user_permissions up ON up.permission_id = p.id
+                    WHERE p.permission_key = :permission_key
+                      AND p.is_active = 1
+                      AND up.user_id = :user_id
+                    LIMIT 1
+                ');
+                $userStmt->execute([
+                    ':permission_key' => $permission,
+                    ':user_id' => $userId
+                ]);
+                $effect = $userStmt->fetchColumn();
+
+                if ($effect === 'Allow') {
+                    return true;
+                }
+
+                if ($effect === 'Deny') {
+                    return false;
+                }
+            } catch (Throwable $exception) {
+                // Older databases may not have user permission overrides yet.
+            }
+        }
 
         if ($roleId <= 0) {
             return null;

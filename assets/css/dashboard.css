@@ -136,6 +136,188 @@ body{
 }
 
 /* ==========================================================================
+   Consultation handwriting pad
+   ========================================================================== */
+
+.consultation-writing-toolbar{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:18px;
+
+    padding:18px;
+
+    margin-bottom:22px;
+
+    border:1px solid var(--border);
+
+    border-radius:18px;
+
+    background:linear-gradient(135deg,#ffffff,#eef6ff);
+
+    box-shadow:0 14px 32px rgba(15,23,42,.08);
+
+}
+
+.consultation-writing-toolbar h3{
+
+    margin:0 0 5px;
+
+}
+
+.consultation-writing-toolbar p{
+
+    margin:0;
+
+    color:var(--text-light);
+
+}
+
+.writing-mode-switch{
+
+    display:inline-flex;
+
+    gap:8px;
+
+    padding:6px;
+
+    border-radius:999px;
+
+    background:#e5e7eb;
+
+}
+
+.writing-mode-option{
+
+    border:0;
+
+    border-radius:999px;
+
+    padding:10px 18px;
+
+    background:transparent;
+
+    color:var(--text);
+
+    font-weight:700;
+
+    cursor:pointer;
+
+}
+
+.writing-mode-option.active{
+
+    background:#2563eb;
+
+    color:#ffffff;
+
+    box-shadow:0 8px 18px rgba(37,99,235,.28);
+
+}
+
+.consultation-handwriting-pad{
+
+    margin-top:10px;
+
+    padding:14px;
+
+    border:1px solid rgba(37,99,235,.2);
+
+    border-radius:18px;
+
+    background:#f8fbff;
+
+}
+
+.handwriting-pad-top,
+.handwriting-pad-actions{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:12px;
+
+    flex-wrap:wrap;
+
+}
+
+.handwriting-canvas{
+
+    display:block;
+
+    width:100%;
+
+    min-height:380px;
+
+    margin:12px 0;
+
+    border:1px solid rgba(37,99,235,.3);
+
+    border-radius:16px;
+
+    background:#ffffff;
+
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 10px 24px rgba(15,23,42,.08);
+
+    cursor:crosshair;
+
+    touch-action:none;
+
+    user-select:none;
+
+    -webkit-user-select:none;
+
+    -webkit-touch-callout:none;
+
+}
+
+body.consultation-writing-in-progress{
+
+    overflow:hidden;
+
+    overscroll-behavior:none;
+
+}
+
+@media(max-width:768px){
+
+    .consultation-writing-toolbar{
+
+        align-items:stretch;
+
+        flex-direction:column;
+
+    }
+
+    .writing-mode-switch,
+    .writing-mode-option{
+
+        width:100%;
+
+    }
+
+    .writing-mode-option{
+
+        text-align:center;
+
+    }
+
+    .handwriting-canvas{
+
+        min-height:430px;
+
+    }
+
+}
+
+/* ==========================================================================
    Browser Print
    ========================================================================== */
 

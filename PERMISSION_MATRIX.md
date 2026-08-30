@@ -11,16 +11,20 @@ flowchart TD
     Start[Authorization request]
     Start --> Admin{Administrator?}
     Admin -->|Yes| Allow[Allow]
-    Admin -->|No| DB[Database role permission]
-    DB -->|Permission assigned and active| Dept[Department validation]
+    Admin -->|No| UserOverride[User permission override]
+    UserOverride -->|Allow| Dept[Department validation]
+    UserOverride -->|Deny| Deny[Deny]
+    UserOverride -->|No override| DB[Database role permission]
+    DB -->|Permission assigned and active| Dept
+    DB -->|Known but not assigned| Deny
     DB -->|No permission row / unavailable| Legacy[Compatibility fallback]
     Legacy --> Dept
     Dept -->|Active assigned department| Allow
     Dept -->|Primary department| Allow
-    Dept -->|No match| Deny[Deny]
+    Dept -->|No match| Deny
 ```
 
-Database permissions are checked first for known permission keys. If the permission catalogue cannot be read or the permission key does not exist, the existing hardcoded compatibility rules are used. If a known database permission exists but is not assigned to a role, the database result is authoritative and denies access.
+User permission overrides are checked before role permissions. `Allow` grants a permission to a specific user account; `Deny` removes that permission from a specific user account even if their role would normally have it; `Inherit` means no user override and the role/department defaults apply. If the permission catalogue cannot be read or the permission key does not exist, the existing hardcoded compatibility rules are used. If a known database permission exists but is not assigned to a role, the database result is authoritative and denies access unless a user-level `Allow` exists.
 
 ## Roles
 
@@ -40,6 +44,7 @@ Current roles in the database:
 | Theatre Staff | Implemented | Theatre workflow. |
 | Accountant | Implemented | Price catalogue and Billing / Patient Accounts. |
 | Store Officer | Implemented | Store inventory item catalogue, stock movements, ledger, and department balances. |
+| Orderly | Implemented | Support staff role limited to Stock Requests by default. |
 
 Role activation/deactivation is implemented through `RoleService`. Role inheritance is not implemented.
 
@@ -59,6 +64,7 @@ Role activation/deactivation is implemented through `RoleService`. Role inherita
 | `manage_roles` | Administration | Implemented for administrator override; role assignment available |
 | `manage_permissions` | Administration | Implemented for administrator override; role assignment available |
 | `manage_settings` | Administration | Implemented for administrator override; role assignment available |
+| `use_consultation_handwriting` | Consultation | Implemented; controls the Consultation handwriting/touch-pad entry mode |
 
 Most current clinical, financial, inventory, and reporting permissions are now
 database-backed. Future permissions should be added only when a new workflow
@@ -82,6 +88,7 @@ The migration seeds the common encounter permissions for non-administrator roles
 | Theatre Staff | Yes | No | Yes | Yes | No | Yes | Yes | No | No | No | No |
 | Accountant | Yes | No | Yes | Yes | No | Yes | Yes | No | No | No | No |
 | Store Officer | Yes | No | Yes | Yes | No | Yes | Yes | No | No | No | No |
+| Orderly | Yes | No | No | No | No | No | No | No | No | No | No |
 
 The matrix describes current seeded behavior, not a final clinical permission model. Future modules will narrow permissions to their specific department operations.
 
@@ -105,7 +112,7 @@ table.
 | Theatre | `view_theatre` plus Theatre/Doctor department ownership; Administrator override |
 | Accounts | `view_billable_items` plus Accounts ownership; Administrator override |
 | Store | `view_inventory` plus Store ownership; Administrator override |
-| Stock Requests | `view_stock_requests` / `create_stock_request`; Store/Admin can review and issue |
+| Stock Requests | `view_stock_requests` / `create_stock_request`; Orderly can create/view own department requests; Store/Admin can review and issue |
 | Patient Stock Usage | `view_patient_stock_usage`; `record_patient_stock_usage` for departments allowed to consume their own stock on an encounter |
 | Admissions | `view_admissions` plus Reception/Records/Doctor/Nursing ownership; Administrator override |
 | Pharmacy | `view_pharmacy` plus Pharmacy ownership; Administrator override |
@@ -133,6 +140,7 @@ remain authoritative even when a sidebar link is visible.
 | Pharmacist | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Pharmacy, Stock Requests |
 | Accountant | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Accounts, Billing, Reports |
 | Store Officer | Dashboard, Patients, Encounters, Department Notifications, My Notifications, Store, Stock Requests, Reports |
+| Orderly | Dashboard, Stock Requests |
 
 Patient-specific clinical tabs may still be visible inside an authorized
 Encounter Workspace even when the matching department-wide sidebar module is
@@ -196,6 +204,7 @@ Implemented administration pages provide:
 - permission creation and editing;
 - role listing and editing;
 - role permission matrix;
+- user permission override matrix with `Inherit`, `Allow`, and `Deny`;
 - bulk assignment and removal;
 - duplicate assignment prevention through a database unique constraint.
 
@@ -206,6 +215,9 @@ All permission and matrix writes use transactions and audit events:
 - `PERMISSION_ASSIGNED`
 - `PERMISSION_REMOVED`
 - `ROLE_PERMISSION_UPDATED`
+- `USER_PERMISSION_OVERRIDES_UPDATED`
+
+Role permissions remain the default way to manage what departments and roles can do. User overrides are for exceptions, such as giving one nurse an extra view permission or removing Consultation handwriting from one doctor without affecting all doctors.
 
 ## Remaining Future Permissions
 
@@ -490,21 +502,27 @@ charges directly. Accounts remains the price owner.
 
 | Permission | Administrator | Accountant | Reception | Clinical roles | Other |
 |---|---:|---:|---:|---:|---:|
-| `view_billing` | Yes | Yes | Limited/basic when granted | View only when granted | No default |
-| `create_patient_charge` | Yes | Yes | No default | No default | No |
+| `view_billing` | Yes | Yes | Yes | Yes, encounter billing status only | No default |
+| `create_patient_charge` | Yes | Yes | No | No | No |
 | `cancel_patient_charge` | Yes | Yes | No | No | No |
 | `create_billing_request` | Yes | No default | No default | Yes | No |
 | `view_billing_requests` | Yes | Yes | No default | Own/current encounter only through workflow | No |
 | `review_billing_request` | Yes | Yes | No | No | No |
 | `cancel_billing_request` | Yes | Yes | No | No | No |
-| `create_invoice` | Yes | Yes | No default | No | No |
-| `record_payment` | Yes | Yes | No default | No | No |
-| `view_receipts` | Yes | Yes | No default | No default | No |
+| `create_invoice` | Yes | Yes | No | No | No |
+| `record_payment` | Yes | Yes | No | No | No |
+| `view_receipts` | Yes | Yes | Yes | No | Records Officer only outside Accounts/Reception |
 
 Billing owns patient charges, invoices, payments, and receipt views. Financial
 totals are derived from posted charges and payments and cannot be manually
 edited. Billing can remain mutable after clinical encounter completion for
 settlement purposes.
+
+Migration 055 repairs the Billing permission seed so the core Billing
+permissions exist in the live permission matrix. `view_billing` may be broad
+for encounter-context visibility, but receipt visibility is intentionally
+limited to Administrator, Accountant/Accounts, Receptionist, and Records
+Officer.
 
 Billing Requests are recommendations only. Clinical/department roles may create
 requests, but Accounts/Admin must review them and create the official charge

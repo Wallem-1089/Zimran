@@ -22,6 +22,7 @@ $canAccessBillingSidebar = false;
 $canAccessReportsSidebar = false;
 $canAccessDepartmentSwitchSidebar = false;
 $canAccessDepartmentWorklistSidebar = false;
+$sidebarStockRequestOnly = false;
 $departmentWorklistCount = 0;
 $departmentNotificationCount = 0;
 $userNotificationCount = 0;
@@ -40,6 +41,11 @@ if ($currentUser && isset($pdo)) {
         ?? ''
     );
     $sidebarIsAdmin = $sidebarPermissionService->isAdministrator($currentUser);
+    $sidebarStockRequestOnly = !$sidebarIsAdmin
+        && (
+            $sidebarRole === 'Orderly'
+            || $sidebarDepartment === 'Orderly'
+        );
     $sidebarRoleIn = static fn(array $roles): bool => in_array(
         $sidebarRole,
         $roles,
@@ -121,6 +127,7 @@ if ($currentUser && isset($pdo)) {
             'Theatre Staff',
             'Pharmacist',
             'Store Officer',
+            'Orderly',
         ],
         [
             'Doctor',
@@ -134,6 +141,7 @@ if ($currentUser && isset($pdo)) {
             'Theatre',
             'Pharmacy',
             'Store',
+            'Orderly',
         ]
     );
 
@@ -334,6 +342,8 @@ $sidebarBranding = appBranding($pdo ?? null);
 
             </li>
 
+            <?php if (!$sidebarStockRequestOnly): ?>
+
             <li>
 
                 <a href="<?= e($baseUrl) ?>/modules/patients/search.php">
@@ -387,6 +397,8 @@ $sidebarBranding = appBranding($pdo ?? null);
                 </a>
 
             </li>
+
+            <?php endif; ?>
 
             <?php if ($canAccessMedicalRecordsSidebar): ?>
 

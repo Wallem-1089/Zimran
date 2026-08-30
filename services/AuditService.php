@@ -213,7 +213,10 @@ class AuditService
                 action,
                 description,
                 ip_address,
-                user_agent
+                user_agent,
+                department_id,
+                severity,
+                event_type
 
             )
 
@@ -226,7 +229,10 @@ class AuditService
                 :action,
                 :description,
                 :ip_address,
-                :user_agent
+                :user_agent,
+                :department_id,
+                :severity,
+                :event_type
 
             )
 
@@ -248,7 +254,10 @@ class AuditService
                 ':action'      => $action,
                 ':description' => $description,
                 ':ip_address'  => $this->getClientIp(),
-                ':user_agent' => $this->getUserAgent()
+                ':user_agent' => $this->getUserAgent(),
+                ':department_id' => $departmentId,
+                ':severity' => $severity,
+                ':event_type' => $eventType ?: $action
             ]);
 
             if ($result === false) {

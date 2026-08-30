@@ -46,7 +46,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php $latest = $latestVitalSigns; require __DIR__ . '/../vital_signs/partials/record_card.php'; ?>
         </div>
     <?php endif; ?>
-    <?php $action = 'update.php'; $buttonLabel = 'Update Draft'; $enableWritingMode = true; require __DIR__ . '/form.php'; ?>
+    <?php $action = 'update.php'; $buttonLabel = 'Update Draft'; $enableWritingMode = $permissionService->canUseConsultationHandwriting($currentUser); require __DIR__ . '/form.php'; ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

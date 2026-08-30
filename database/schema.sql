@@ -79,7 +79,9 @@ VALUES
 
 ('Accounts', 'Billing and payments'),
 
-('Store', 'Medical store');
+('Store', 'Medical store'),
+
+('Orderly', 'Orderly support services');
 
 
 
@@ -100,6 +102,8 @@ CREATE TABLE roles (
 
     description TEXT NULL,
 
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+
     created_at TIMESTAMP
         DEFAULT CURRENT_TIMESTAMP,
 
@@ -108,7 +112,9 @@ CREATE TABLE roles (
         ON UPDATE CURRENT_TIMESTAMP,
 
     CONSTRAINT uq_roles_name
-        UNIQUE (role_name)
+        UNIQUE (role_name),
+
+    INDEX idx_roles_active (is_active)
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
@@ -143,7 +149,9 @@ VALUES
 
 ('Accountant','Billing and payments'),
 
-('Store Officer','Medical store');
+('Store Officer','Medical store'),
+
+('Orderly','Orderly support staff with stock request access');
 
 
 
@@ -254,6 +262,131 @@ CREATE TABLE users (
         ON UPDATE CASCADE
 
         ON DELETE RESTRICT
+
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+/*
+|--------------------------------------------------------------------------
+| Permissions
+|--------------------------------------------------------------------------
+| Fresh baseline imports need these tables before later module permission
+| inserts run. Migration 006 remains responsible for the Phase 1 permission
+| seed/role grants on existing installations.
+*/
+
+CREATE TABLE permissions (
+
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
+    permission_key VARCHAR(100) NOT NULL,
+
+    permission_name VARCHAR(150) NOT NULL,
+
+    module VARCHAR(100) NOT NULL,
+
+    description TEXT NULL,
+
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMP NULL DEFAULT NULL
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT uq_permissions_key UNIQUE (permission_key),
+
+    INDEX idx_permissions_module (module),
+
+    INDEX idx_permissions_active (is_active)
+
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE role_permissions (
+
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
+    role_id INT NOT NULL,
+
+    permission_id INT NOT NULL,
+
+    assigned_by INT NULL,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT uq_role_permissions UNIQUE (role_id, permission_id),
+
+    INDEX idx_role_permissions_role (role_id),
+
+    INDEX idx_role_permissions_permission (permission_id),
+
+    CONSTRAINT fk_role_permissions_role
+        FOREIGN KEY (role_id)
+        REFERENCES roles(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_role_permissions_permission
+        FOREIGN KEY (permission_id)
+        REFERENCES permissions(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_role_permissions_assigned_by
+        FOREIGN KEY (assigned_by)
+        REFERENCES users(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE user_permissions (
+
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
+    user_id INT NOT NULL,
+
+    permission_id INT NOT NULL,
+
+    effect ENUM('Allow','Deny') NOT NULL DEFAULT 'Allow',
+
+    assigned_by INT NULL,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMP NULL DEFAULT NULL
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT uq_user_permissions UNIQUE (user_id, permission_id),
+
+    INDEX idx_user_permissions_user (user_id),
+
+    INDEX idx_user_permissions_permission (permission_id),
+
+    INDEX idx_user_permissions_effect (effect),
+
+    CONSTRAINT fk_user_permissions_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_user_permissions_permission
+        FOREIGN KEY (permission_id)
+        REFERENCES permissions(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_user_permissions_assigned_by
+        FOREIGN KEY (assigned_by)
+        REFERENCES users(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
@@ -2056,6 +2189,57 @@ CREATE TABLE payments (
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE billing_requests (
+    id INT NOT NULL AUTO_INCREMENT,
+    visit_id INT NOT NULL,
+    patient_id INT NOT NULL,
+    department_id INT NOT NULL,
+    source_module VARCHAR(100) NOT NULL,
+    source_record_id INT NULL,
+    requested_by INT NOT NULL,
+    description TEXT NOT NULL,
+    suggested_billable_item_id INT NULL,
+    quantity DECIMAL(12,2) NOT NULL DEFAULT 1.00,
+    status ENUM('Pending','Charged','Cancelled') NOT NULL DEFAULT 'Pending',
+    reviewed_by INT NULL,
+    reviewed_at DATETIME NULL,
+    patient_charge_id INT NULL,
+    notes TEXT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_billing_requests_visit (visit_id),
+    KEY idx_billing_requests_patient (patient_id),
+    KEY idx_billing_requests_department (department_id),
+    KEY idx_billing_requests_requested_by (requested_by),
+    KEY idx_billing_requests_status (status),
+    KEY idx_billing_requests_source (source_module, source_record_id),
+    KEY idx_billing_requests_suggested_item (suggested_billable_item_id),
+    KEY idx_billing_requests_patient_charge (patient_charge_id),
+    KEY idx_billing_requests_created_at (created_at),
+    CONSTRAINT fk_billing_requests_visit
+        FOREIGN KEY (visit_id) REFERENCES visits(id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_billing_requests_patient
+        FOREIGN KEY (patient_id) REFERENCES patients(id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_billing_requests_department
+        FOREIGN KEY (department_id) REFERENCES departments(id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_billing_requests_requested_by
+        FOREIGN KEY (requested_by) REFERENCES users(id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_billing_requests_suggested_item
+        FOREIGN KEY (suggested_billable_item_id) REFERENCES billable_items(id)
+        ON UPDATE CASCADE ON DELETE SET NULL,
+    CONSTRAINT fk_billing_requests_reviewed_by
+        FOREIGN KEY (reviewed_by) REFERENCES users(id)
+        ON UPDATE CASCADE ON DELETE SET NULL,
+    CONSTRAINT fk_billing_requests_patient_charge
+        FOREIGN KEY (patient_charge_id) REFERENCES patient_charges(id)
+        ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT INTO permissions (permission_key, permission_name, module, description, is_active)
 SELECT 'view_billing', 'View Billing', 'Billing', 'View patient billing and invoices.', 1
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE permission_key = 'view_billing');
@@ -2098,7 +2282,19 @@ WHERE r.role_name IN (
     'Pharmacist',
     'Store Officer'
   )
-  AND p.permission_key IN ('view_billing', 'view_receipts');
+  AND p.permission_key = 'view_billing';
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+INNER JOIN permissions p
+WHERE r.role_name IN (
+    'Accounts',
+    'Accountant',
+    'Receptionist',
+    'Records Officer'
+  )
+  AND p.permission_key = 'view_receipts';
 
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
@@ -2396,6 +2592,13 @@ FROM roles r
 INNER JOIN permissions p
 WHERE r.role_name = 'Store Officer'
   AND p.permission_key IN ('view_stock_requests','create_stock_request','review_stock_request','issue_stock_request','cancel_stock_request');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+INNER JOIN permissions p
+WHERE r.role_name = 'Orderly'
+  AND p.permission_key IN ('view_stock_requests','create_stock_request');
 
 /*
 |--------------------------------------------------------------------------  
@@ -2786,3 +2989,14 @@ FROM roles r
 INNER JOIN permissions p
 WHERE r.role_name = 'Receptionist'
   AND p.permission_key IN ('view_admissions', 'create_admission');
+
+INSERT INTO permissions (permission_key, permission_name, module, description, is_active)
+SELECT 'use_consultation_handwriting', 'Use Consultation Handwriting', 'Consultation', 'Use the handwriting/touch-pad entry mode on Consultation forms.', 1
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE permission_key = 'use_consultation_handwriting');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+INNER JOIN permissions p
+WHERE r.role_name IN ('System Administrator', 'Doctor')
+  AND p.permission_key = 'use_consultation_handwriting';

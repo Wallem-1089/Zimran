@@ -55,7 +55,7 @@ $pdo->exec($schema);
 $manager = new MigrationManager($pdo, $resolved['test']);
 $manager->ensureLedger();
 $migrationDirectory = dirname(__DIR__) . '/migrations';
-$representedByBaseline = ['002', '003', '004', '013', '014'];
+$representedByBaseline = ['002', '003', '004', '006', '013', '014', '026'];
 $paths = glob($migrationDirectory . '/*_up.sql') ?: [];
 sort($paths, SORT_NATURAL);
 

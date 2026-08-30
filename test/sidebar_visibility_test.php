@@ -94,4 +94,10 @@ foreach (['Medical Records', 'Accounts', 'Store', 'Admissions', 'Billing', 'Repo
     assertSidebarOmits($pharmacySidebar, $label, 'Pharmacist');
 }
 
+$orderlySidebar = renderSidebarFor(sidebarUser('Orderly', 'Orderly'));
+assertSidebarContains($orderlySidebar, 'Stock Requests', 'Orderly');
+foreach (['Medical Records', 'Laboratory', 'Radiology', 'Physiotherapy', 'Theatre', 'Accounts', 'Store', 'Admissions', 'Pharmacy', 'Billing', 'Reports', 'Administration'] as $label) {
+    assertSidebarOmits($orderlySidebar, $label, 'Orderly');
+}
+
 echo "Sidebar visibility test passed.\n";
