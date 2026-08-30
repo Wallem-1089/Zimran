@@ -102,7 +102,7 @@ table.
 | Laboratory | `view_laboratory` plus Laboratory department ownership; Administrator override |
 | Radiology | `view_radiology` plus X-Ray/Radiology department ownership; Administrator override |
 | Physiotherapy | `view_physiotherapy` plus Physiotherapy department ownership; Administrator override |
-| Theatre | `view_theatre` plus Theatre department ownership; Administrator override |
+| Theatre | `view_theatre` plus Theatre/Doctor department ownership; Administrator override |
 | Accounts | `view_billable_items` plus Accounts ownership; Administrator override |
 | Store | `view_inventory` plus Store ownership; Administrator override |
 | Stock Requests | `view_stock_requests` / `create_stock_request`; Store/Admin can review and issue |
@@ -124,7 +124,7 @@ remain authoritative even when a sidebar link is visible.
 | System Administrator | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Medical Records, Laboratory, Radiology, Physiotherapy, Theatre, Accounts, Store, Stock Requests, Admissions, Pharmacy, Billing, Reports, Administration, Switch Department |
 | Receptionist | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Admissions |
 | Records Officer | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Medical Records, Admissions, Reports |
-| Doctor | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Stock Requests, Admissions |
+| Doctor | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Theatre, Stock Requests, Admissions |
 | Nurse | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Stock Requests, Admissions |
 | Laboratory Scientist | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Laboratory, Stock Requests |
 | Radiographer | Dashboard, Patients, Encounters, Department Worklist, Department Notifications, My Notifications, Radiology, Stock Requests |

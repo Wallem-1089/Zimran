@@ -1,0 +1,38 @@
+[30-Aug-2026 12:59:35 Europe/Berlin] PHP Fatal error:  Uncaught RuntimeException: Male patient registration failed. in C:\xampp\htdocs\hospital_management_system\test\phase1_8_remediation_test.php:46
+Stack trace:
+#0 C:\xampp\htdocs\hospital_management_system\test\phase1_8_remediation_test.php(116): assertRemediation(false, 'Male patient re...')
+#1 {main}
+  thrown in C:\xampp\htdocs\hospital_management_system\test\phase1_8_remediation_test.php on line 46
+[30-Aug-2026 12:59:36 Europe/Berlin] PHP Fatal error:  Uncaught RuntimeException: Nested audit failure did not propagate to its transaction owner. in C:\xampp\htdocs\hospital_management_system\test\phase1_regression_test.php:22
+Stack trace:
+#0 C:\xampp\htdocs\hospital_management_system\test\phase1_regression_test.php(160): assertRegression(false, 'Nested audit fa...')
+#1 {main}
+  thrown in C:\xampp\htdocs\hospital_management_system\test\phase1_regression_test.php on line 22
+[30-Aug-2026 12:59:36 Europe/Berlin] PHP Fatal error:  Uncaught RuntimeException: First MPI patient creation failed: Unable to register patient. in C:\xampp\htdocs\hospital_management_system\test\phase2_mpi_test.php:17
+Stack trace:
+#0 C:\xampp\htdocs\hospital_management_system\test\phase2_mpi_test.php(23): assertMpi(false, 'First MPI patie...')
+#1 C:\xampp\htdocs\hospital_management_system\test\phase2_mpi_test.php(105): requireMpiSuccess(Array, 'First MPI patie...')
+#2 {main}
+  thrown in C:\xampp\htdocs\hospital_management_system\test\phase2_mpi_test.php on line 17
+[30-Aug-2026 12:59:37 Europe/Berlin] PHP Fatal error:  Uncaught RuntimeException: Patient creation failed: Unable to register patient. in C:\xampp\htdocs\hospital_management_system\test\phase2_medical_records_foundation_test.php:14
+Stack trace:
+#0 C:\xampp\htdocs\hospital_management_system\test\phase2_medical_records_foundation_test.php(20): assertMedicalRecords(false, 'Patient creatio...')
+#1 C:\xampp\htdocs\hospital_management_system\test\phase2_medical_records_foundation_test.php(79): successfulMedicalRecords(Array, 'Patient creatio...')
+#2 {main}
+  thrown in C:\xampp\htdocs\hospital_management_system\test\phase2_medical_records_foundation_test.php on line 14
+[30-Aug-2026 12:59:37 Europe/Berlin] PHP Fatal error:  Uncaught RuntimeException: Clinical Safety patient creation failed: Unable to register patient. in C:\xampp\htdocs\hospital_management_system\test\phase2_clinical_safety_test.php:16
+Stack trace:
+#0 C:\xampp\htdocs\hospital_management_system\test\phase2_clinical_safety_test.php(22): assertClinicalSafety(false, 'Clinical Safety...')
+#1 C:\xampp\htdocs\hospital_management_system\test\phase2_clinical_safety_test.php(107): clinicalSafetySuccess(Array, 'Clinical Safety...')
+#2 {main}
+  thrown in C:\xampp\htdocs\hospital_management_system\test\phase2_clinical_safety_test.php on line 16
+[30-Aug-2026 12:59:39 Europe/Berlin] PHP Fatal error:  Uncaught RuntimeException: Encounter Notes list bypassed current encounter department access. in C:\xampp\htdocs\hospital_management_system\test\phase2_clinical_notes_test.php:12
+Stack trace:
+#0 C:\xampp\htdocs\hospital_management_system\test\phase2_clinical_notes_test.php(69): assertClinicalNote(false, 'Encounter Notes...')
+#1 {main}
+  thrown in C:\xampp\htdocs\hospital_management_system\test\phase2_clinical_notes_test.php on line 12
+[30-Aug-2026 12:59:46 Europe/Berlin] PHP Fatal error:  Uncaught RuntimeException: Live database bootstrap is disabled in testing. Use config/test_database.php. in C:\xampp\htdocs\hospital_management_system\config\database.php:8
+Stack trace:
+#0 C:\xampp\htdocs\hospital_management_system\test\sidebar_visibility_test.php(5): require_once()
+#1 {main}
+  thrown in C:\xampp\htdocs\hospital_management_system\config\database.php on line 8

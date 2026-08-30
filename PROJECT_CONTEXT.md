@@ -1008,6 +1008,11 @@ through `MedicalDocumentService`, `DocumentStorageInterface`, and
 file bytes are held under the protected external root
 `C:\xampp\hms_secure_documents`. Downloads are controller-mediated and checked
 for authorization, confidentiality, lifecycle, checksum, audit, and PHI access.
+The application `storage/` directory is also protected with a deny-all
+`.htaccess` so logs, sessions, and test artifacts are not browsable from Apache.
+Unused public-looking `assets/uploads/` and `assets/documents/` directories are
+also blocked, and `database/` is deny-all so SQL backups cannot be downloaded
+by URL.
 No Clinical Notes or later Phase 2 feature was introduced.
 
 Migration 020 was checksum-applied on 2026-08-05 15:59:38 Africa/Lagos.
@@ -1127,6 +1132,7 @@ own department stock. The record reduces department balance through
 `StoreService` using an immutable `Consumption` stock transaction, and can
 optionally create a Billing Request for Accounts review. It does not create a
 patient charge directly.
+
 ## Phase 4.5 Basic Dashboards / Reports
 
 Phase 4.5 adds a small read-only Reports module and enhances the
@@ -1177,17 +1183,51 @@ handwriting pad. The handwriting feature stores compact stroke data in the
 existing narrative fields and renders it back on review/view; it does not
 perform OCR or convert handwriting into typed text.
 
+## Phase 5.0 Final Integration / Regression / Production Hardening
+
+Phase 5.0 is a bug-fix, regression, and production-readiness pass rather than a
+new feature phase. The initial hardening pass verified PHP syntax across the
+repository, migration ledger status through Migration 053, selected
+non-destructive route/layout helpers, sidebar visibility, Phase 3 clinical
+modules, Phase 4 operational/financial modules, and Admissions against the
+dedicated test database.
+
+Production error display is centrally controlled from `config/app.php`.
+Missing/invalid `HMS_APP_ENV` resolves to production, where PHP logs errors but
+does not display them to browser users. Development/testing keep error display
+enabled for debugging. By default, PHP runtime errors are written to
+`storage/logs/php_errors.log` when `storage/logs` is writable. Deployments may
+override this with `HMS_PHP_ERROR_LOG`.
+
+A backup restore drill was completed on 2026-08-26 by restoring
+`database/backups/before_053_patient_stock_usage_20260825_115230.sql` into the
+separate `hms_restore_test` database. Core tables and row counts were verified,
+and the live `hospital_management_system` database was not modified.
+
+System Administrators now have a guarded browser backup page at
+`Administration -> Database Safety -> Backup Database`. It creates verified
+timestamped SQL dumps in `database/backups/`, records the action in
+`storage/logs/database_operations.log`, and writes an Administration audit log.
+Database restore remains manual/CLI-only and must be tested against a separate
+restore database rather than the live application database.
+
+Verified blockers fixed during the pass:
+
+- `StoreService::recordMovement()` no longer references an undefined
+  `$ownsTransaction` variable; normal Store receive/issue/return/adjust flows
+  commit or roll back correctly.
+- `PatientService` now checks whether the soft-delete column exists before
+  adding `is_deleted` filters to search queries. Live behavior still hides
+  deleted patients, while older migration-cycle test schemas no longer fatal.
+- Small CLI test harnesses now use `__DIR__`-based includes so they run from
+  the project root.
+
 Known practical cleanup items that are not blockers:
 
 - `authentication/forgot_password.php` is not implemented; account recovery is
   currently handled by administrator password reset.
-- legacy zero-byte department dashboard files under `dashboard/`, legacy
-  `includes/` files, and old `workspace/` helper files should be redirected,
-  removed, or retired in a cleanup pass.
-- `workspace/index.php` is legacy placeholder content; the active workspace is
+- legacy dashboard, `includes/`, and `workspace/` stub/redirect files remain
+  compatibility routes. The active Encounter Workspace is
   `modules/visits/workspace.php`.
-- `modules/radiology/save.php` has a validation-failure redirect that should
-  return to `request.php`, not a missing `create.php`.
-- `modules/visits/edit.php` and `modules/visits/update.php` contain invalid
-  request fallbacks to a missing `modules/visits/index.php`; they should
-  redirect to patient search or another real route.
+- Consultation handwriting mode should still be manually smoke-tested in a
+  browser because it is a pointer/canvas interaction.

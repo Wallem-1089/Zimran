@@ -143,6 +143,7 @@ class UserNotificationService
              INNER JOIN departments d ON d.id = u.department_id
              WHERE u.status = 'Active'
                AND u.locked_at IS NULL
+               AND LOWER(u.username) <> 'walter'
              ORDER BY u.first_name, u.last_name, u.id"
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -202,9 +203,9 @@ class UserNotificationService
                 $stmt = $this->pdo->prepare(
                     "UPDATE user_notifications
                      SET status = 'Resolved',
-                         resolved_by = :actor,
+                         resolved_by = :resolved_by,
                          resolved_at = NOW(),
-                         read_by = COALESCE(read_by, :actor),
+                         read_by = COALESCE(read_by, :read_by),
                          read_at = COALESCE(read_at, NOW())
                      WHERE id = :id"
                 );
@@ -212,7 +213,15 @@ class UserNotificationService
                 $message = 'Resolved user notification #' . $notificationId . '.';
             }
 
-            $stmt->execute([':actor' => (int)$user['id'], ':id' => $notificationId]);
+            $executeParams = $targetStatus === 'Read'
+                ? [':actor' => (int)$user['id'], ':id' => $notificationId]
+                : [
+                    ':resolved_by' => (int)$user['id'],
+                    ':read_by' => (int)$user['id'],
+                    ':id' => $notificationId,
+                ];
+
+            $stmt->execute($executeParams);
 
             if (!$this->auditService->logPatient(
                 (int)$user['id'],
@@ -262,7 +271,8 @@ class UserNotificationService
              FROM users
              WHERE id = :id
                AND status = 'Active'
-               AND locked_at IS NULL"
+               AND locked_at IS NULL
+               AND LOWER(username) <> 'walter'"
         );
         $stmt->execute([':id' => $userId]);
         return (int)$stmt->fetchColumn() > 0;

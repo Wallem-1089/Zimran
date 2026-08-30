@@ -42,6 +42,13 @@ Create and verify a backup before every migration and another afterward. A
 backup must be readable, non-empty, and recognized as a MySQL/MariaDB dump.
 Otherwise destructive work stops.
 
+System Administrators may create an on-demand browser backup from
+`Administration -> Database Safety -> Backup Database`. The page writes a
+timestamped `.sql` file to `database/backups/`, verifies that it is readable,
+records a database operation log entry, and writes an administration audit log.
+Browser restore is intentionally not available; restore drills must still be
+performed manually against a separate test database, never the live database.
+
 ## Phase 3.4 Laboratory CRUD
 
 Use only the explicit dedicated database configuration:
@@ -102,6 +109,14 @@ checksums, quarantine, patient/encounter linkage, immutable replacement,
 archival/restoration/entered-in-error, confidentiality, downloads, historical
 versions, closed encounters, access-log failure, rollback, event/audit/storage
 failures, orphan compensation, and cleanup.
+
+Document file bytes should remain outside the public web root by default at
+`C:\xampp\hms_secure_documents`; downloads must go through
+`modules/medical_records/documents/download.php`. The project `storage/`
+directory has a deny-all `.htaccess` for logs/sessions/test artifacts and must
+not be used for public document links. Public-looking placeholder directories
+`assets/uploads/` and `assets/documents/` are also deny-all. Database backups
+under `database/` are blocked from browser access by `.htaccess`.
 
 Migration 020 down/up verification is destructive and requires the verified
 current-session backup gate plus explicit dedicated-test approval:
@@ -402,12 +417,10 @@ targets should be tracked separately from feature tests:
 
 - `authentication/forgot_password.php` is not implemented; administrator
   password reset remains the supported recovery path.
-- legacy zero-byte role dashboard files, legacy `includes/`, and old
-  `workspace/` helper files should not be treated as current routes.
+- legacy role dashboard files, legacy `includes/`, and old `workspace/` helper
+  files are compatibility stubs/redirects and should not be treated as current
+  feature routes.
 - the active Encounter Workspace route is `modules/visits/workspace.php`.
-- invalid-request fallback redirects should target real pages; known cleanup
-  candidates include Radiology validation failure and Visit edit/update invalid
-  fallback routes.
 - Consultation handwriting mode should be manually smoke-tested in create/edit,
   review, and view pages because it is a browser pointer/canvas interaction.
 
@@ -430,3 +443,52 @@ used on an active encounter, non-admin users cannot consume stock from another
 department, insufficient department stock is rejected, the Store ledger
 receives a `Consumption` transaction, department balance decreases, and
 optional Billing Requests are created without posting patient charges.
+
+## Phase 5.0 Final Integration / Regression / Production Hardening
+
+Run the hardening suite from the project root:
+
+```powershell
+php -l <changed-file.php>
+
+$env:HMS_APP_ENV='testing'
+$env:HMS_TEST_DB_NAME='hms_test_hospital_management_system'
+php test\phase3_consultation_notifications_test.php
+php test\phase3_vital_signs_test.php
+php test\phase3_nursing_test.php
+php test\phase3_laboratory_test.php
+php test\phase3_radiology_test.php
+php test\phase3_physiotherapy_test.php
+php test\phase3_theatre_test.php
+php test\phase4_store_test.php
+php test\phase4_pharmacy_test.php
+php test\phase4_billing_test.php
+php test\phase4_reports_test.php
+php test\phase_inpatient_admissions_test.php
+```
+
+Also run non-test-DB smoke checks outside `HMS_APP_ENV=testing` where the test
+uses normal application bootstrap, such as:
+
+```powershell
+php test\sidebar_visibility_test.php
+php test\layout_test.php
+php test\helpers_test.php
+php test\session_test.php
+php database\tools\migration_status.php --live
+```
+
+Phase 5.0 is bug-fix-only: fix verified blockers, preserve routes and service
+contracts, keep migrations additive, and record non-blocking technical debt
+instead of adding new modules.
+
+Production error logging should be checked by confirming that `config/app.php`
+sets `display_errors=0`, `display_startup_errors=0`, `log_errors=1`, and
+`error_log=storage/logs/php_errors.log` by default when `HMS_APP_ENV` is not
+set or is `production`.
+
+Backup restore drills must restore a selected backup into a separate database,
+not the live application database. The 2026-08-26 drill restored
+`before_053_patient_stock_usage_20260825_115230.sql` into `hms_restore_test`,
+verified core tables and counts, and confirmed live Migration 053 remained
+separate from the restored pre-053 backup state.

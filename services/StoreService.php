@@ -718,12 +718,15 @@ class StoreService
             LEFT JOIN users performed_by ON performed_by.id = st.performed_by
             LEFT JOIN departments fd ON fd.id = st.from_department_id
             LEFT JOIN departments td ON td.id = st.to_department_id
-            WHERE st.from_department_id = :department_id
-               OR st.to_department_id = :department_id
+            WHERE st.from_department_id = :from_department_id
+               OR st.to_department_id = :to_department_id
             ORDER BY st.created_at DESC, st.id DESC
             LIMIT ' . $limit
         );
-        $stmt->execute([':department_id' => $departmentId]);
+        $stmt->execute([
+            ':from_department_id' => $departmentId,
+            ':to_department_id' => $departmentId,
+        ]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -745,32 +748,24 @@ class StoreService
 
             $item = $this->fetchItemByIdForUpdate($payload['data']['inventory_item_id']);
             if (!$item) {
-                if ($ownsTransaction) {
-                    $this->rollback();
-                }
+                $this->rollback();
                 return $this->failure(['Inventory item not found.']);
             }
 
             if ((int)$item['is_active'] !== 1) {
-                if ($ownsTransaction) {
-                    $this->rollback();
-                }
+                $this->rollback();
                 return $this->failure(['Inventory item is inactive.']);
             }
 
             $storeDepartmentId = $this->getStoreDepartmentId();
             if ($storeDepartmentId === null) {
-                if ($ownsTransaction) {
-                    $this->rollback();
-                }
+                $this->rollback();
                 return $this->failure(['Store department is not available.']);
             }
 
             $movement = $this->buildMovementContext($transactionType, $payload['data'], $storeDepartmentId);
             if ($movement['errors'] !== []) {
-                if ($ownsTransaction) {
-                    $this->rollback();
-                }
+                $this->rollback();
                 return $this->failure($movement['errors']);
             }
 
@@ -791,9 +786,7 @@ class StoreService
                 && $fromBalance !== null
                 && (float)$fromBalance['quantity'] < (float)$movement['data']['quantity']
             ) {
-                if ($ownsTransaction) {
-                    $this->rollback();
-                }
+                $this->rollback();
                 return $this->failure([$this->insufficientStockMessage($transactionType)]);
             }
 
@@ -845,9 +838,7 @@ class StoreService
                 throw new RuntimeException('Unable to audit stock movement.');
             }
 
-            if ($ownsTransaction) {
-                $this->pdo->commit();
-            }
+            $this->pdo->commit();
 
             return [
                 'success' => true,

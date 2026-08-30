@@ -42,6 +42,7 @@ class PatientService
     private array $config;
     private AuditService $auditService;
     private SettingsService $settingsService;
+    private ?bool $patientSoftDeleteAvailable = null;
 
     public function __construct(PDO $pdo, ?AuditService $auditService = null)
     {
@@ -493,11 +494,15 @@ class PatientService
     |--------------------------------------------------------------------------
     */
 
-    public function searchPatients(array $filters): array
+public function searchPatients(array $filters): array
 {
     $sql = "SELECT * FROM patients";
 
-    $conditions = ["COALESCE(is_deleted, 0) = 0"];
+    $conditions = [];
+
+    if ($this->patientSoftDeleteAvailable()) {
+        $conditions[] = "COALESCE(is_deleted, 0) = 0";
+    }
 
     $params = [];
 
@@ -557,7 +562,9 @@ class PatientService
 
     }
 
-    $sql .= " WHERE " . implode(" AND ", $conditions);
+    if ($conditions !== []) {
+        $sql .= " WHERE " . implode(" AND ", $conditions);
+    }
 
     $sql .= " ORDER BY last_name, first_name";
 
@@ -720,7 +727,10 @@ public function deletePatient(
     ): array {
         $page = max(1, $page);
         $pageSize = max(1, min(100, $pageSize));
-        $conditions = ['COALESCE(p.is_deleted, 0) = 0'];
+        $conditions = [];
+        if ($this->patientSoftDeleteAvailable()) {
+            $conditions[] = 'COALESCE(p.is_deleted, 0) = 0';
+        }
         $parameters = [];
         $rank = '50';
 
@@ -1407,7 +1417,13 @@ public function updatePatientWithContext(
             $params[':alternate_identifier'] = $alternateIdentifier;
         }
 
-        $sql = 'SELECT * FROM patients WHERE COALESCE(is_deleted, 0) = 0 AND (' . implode(' OR ', $conditions) . ')';
+        $baseConditions = [];
+        if ($this->patientSoftDeleteAvailable()) {
+            $baseConditions[] = 'COALESCE(is_deleted, 0) = 0';
+        }
+        $baseConditions[] = '(' . implode(' OR ', $conditions) . ')';
+
+        $sql = 'SELECT * FROM patients WHERE ' . implode(' AND ', $baseConditions);
         if ($excludePatientId !== null) {
             $sql .= ' AND id <> :exclude_id';
             $params[':exclude_id'] = $excludePatientId;
@@ -1608,6 +1624,32 @@ public function updatePatientWithContext(
         }
 
         return array_values(array_unique($blockers));
+    }
+
+    private function patientSoftDeleteAvailable(): bool
+    {
+        if ($this->patientSoftDeleteAvailable !== null) {
+            return $this->patientSoftDeleteAvailable;
+        }
+
+        try {
+            $stmt = $this->pdo->prepare('
+                SELECT COUNT(*)
+                FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND table_name = :table
+                  AND column_name = :column
+            ');
+            $stmt->execute([
+                ':table' => 'patients',
+                ':column' => 'is_deleted',
+            ]);
+            $this->patientSoftDeleteAvailable = (int)$stmt->fetchColumn() > 0;
+        } catch (Throwable) {
+            $this->patientSoftDeleteAvailable = false;
+        }
+
+        return $this->patientSoftDeleteAvailable;
     }
 
     private function currentUserId(): ?int

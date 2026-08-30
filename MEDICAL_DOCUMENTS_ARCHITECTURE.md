@@ -110,6 +110,13 @@ Directories and files receive best-effort `0700` and `0600` permissions.
 Production deployments must additionally enforce OS ACLs and verify that no URL
 maps to the storage root; see `MEDICAL_DOCUMENTS_DEPLOYMENT.md`.
 
+The project-local `storage/` directory is not used as public document storage.
+It contains runtime logs, sessions, and test artifacts, and is protected by a
+deny-all `.htaccess`. Medical Document downloads must continue to stream only
+through the authorized PHP controller. Empty public-looking directories
+`assets/uploads/` and `assets/documents/` are also deny-all to prevent
+accidental direct-upload usage.
+
 ### 3.3 Storage states
 
 - `available` contains versions permitted for service-controlled download.

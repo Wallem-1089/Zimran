@@ -11,6 +11,29 @@ $applicationEnvironment = in_array(
     true
 ) ? $configuredEnvironment : 'production';
 
+error_reporting(E_ALL);
+ini_set('log_errors', '1');
+
+$configuredPhpErrorLog = trim((string)getenv('HMS_PHP_ERROR_LOG'));
+$phpErrorLog = $configuredPhpErrorLog !== ''
+    ? $configuredPhpErrorLog
+    : dirname(__DIR__) . DIRECTORY_SEPARATOR . 'storage'
+        . DIRECTORY_SEPARATOR . 'logs'
+        . DIRECTORY_SEPARATOR . 'php_errors.log';
+
+$phpErrorLogDirectory = dirname($phpErrorLog);
+if (is_dir($phpErrorLogDirectory) && is_writable($phpErrorLogDirectory)) {
+    ini_set('error_log', $phpErrorLog);
+}
+
+if ($applicationEnvironment === 'production') {
+    ini_set('display_errors', '0');
+    ini_set('display_startup_errors', '0');
+} else {
+    ini_set('display_errors', '1');
+    ini_set('display_startup_errors', '1');
+}
+
 $developmentBypassValue = strtolower(
     trim((string)getenv('HMS_ENABLE_DEV_AUTH_BYPASS'))
 );
@@ -58,7 +81,9 @@ return [
 
         'development_auth_bypass' => $developmentAuthBypass,
 
-        'base_url' => $baseUrl
+        'base_url' => $baseUrl,
+
+        'php_error_log' => $phpErrorLog
 
 
     ],
@@ -87,13 +112,13 @@ return [
 
     'database' => [
 
-        'host' => 'localhost',
+        'host' => getenv('HMS_DB_HOST') ?: 'localhost',
 
-        'name' => 'hospital_management_system',
+        'name' => getenv('HMS_DB_NAME') ?: 'hospital_management_system',
 
-        'user' => 'root',
+        'user' => getenv('HMS_DB_USER') ?: 'root',
 
-        'pass' => ''
+        'pass' => getenv('HMS_DB_PASS') ?: ''
 
     ],
 

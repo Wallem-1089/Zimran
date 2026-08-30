@@ -24,6 +24,7 @@ require_once __DIR__ . '/../../../layouts/sidebar.php';
         <p><a class="btn-primary" href="../users/index.php">Manage Users</a></p>
         <p><a class="btn-primary" href="../departments/index.php">Manage Departments</a></p>
         <p><a class="btn-primary" href="../security/dashboard.php">Security Dashboard</a></p>
+        <p><a class="btn-primary" href="../security/database_backup.php">Database Safety / Backup Database</a></p>
         <p><a class="btn-primary" href="../settings/index.php">System Settings</a></p>
         <p>Total departments: <?= count($departments) ?> | Active: <?= $activeDepartments ?> | Inactive: <?= count($departments) - $activeDepartments ?></p>
 

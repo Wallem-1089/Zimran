@@ -100,7 +100,7 @@ if ($currentUser && isset($pdo)) {
         && $sidebarOwnsDepartmentModule(['Physiotherapist'], ['Physiotherapy', 'Physio', 'Rehabilitation']);
 
     $canAccessTheatreSidebar = $sidebarCan('view_theatre')
-        && $sidebarOwnsDepartmentModule(['Theatre Staff'], ['Theatre']);
+        && $sidebarOwnsDepartmentModule(['Theatre Staff', 'Doctor'], ['Theatre', 'Doctor']);
 
     $canAccessAccountsSidebar = $sidebarCan('view_billable_items')
         && $sidebarOwnsDepartmentModule(['Accountant', 'Accounts'], ['Accounts']);

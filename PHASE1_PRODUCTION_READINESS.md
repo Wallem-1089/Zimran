@@ -7,6 +7,11 @@ dedicated `hms_test_*` database. The live bootstrap refuses testing mode.
 Baselines are database-neutral, migrations are checksummed, destructive test
 recreation requires confirmation and a backup gate, and operations are logged.
 
+System Administrators can create on-demand verified SQL backups from
+`Administration -> Database Safety -> Backup Database`. The browser tool only
+creates/list backups; it does not restore or delete databases. Restore drills
+remain manual and must target a separate test database.
+
 The database incident was unrecoverable because binary logging was off and no
 backup existed. Phase 1, Phase 1.8, and Phase 2.1 tests now pass on the
 dedicated reconstructed test database. This does not mark Milestone 2.2
@@ -244,7 +249,7 @@ Recommended future patient-search work is a normalized search strategy or databa
 
 ### Deployment security gates
 
-Environment resolution now fails closed: missing or invalid `HMS_APP_ENV` values resolve to production and authentication bypass is disabled. Developers may opt in only through protected process/server configuration using `HMS_APP_ENV=development` together with `HMS_ENABLE_DEV_AUTH_BYPASS=true`. Production deployment must continue to disable PHP error display, enable HTTPS, protect database credentials outside the web root, and verify writable runtime paths.
+Environment resolution now fails closed: missing or invalid `HMS_APP_ENV` values resolve to production and authentication bypass is disabled. Developers may opt in only through protected process/server configuration using `HMS_APP_ENV=development` together with `HMS_ENABLE_DEV_AUTH_BYPASS=true`. `config/app.php` now sets `error_reporting(E_ALL)`, enables PHP error logging to `storage/logs/php_errors.log` by default, disables `display_errors` / `display_startup_errors` in production, and leaves display enabled only for development/testing. Production deployment may override the PHP error log path with `HMS_PHP_ERROR_LOG` and must continue to enable HTTPS, protect database credentials outside the web root, and verify writable runtime paths.
 
 ### Remaining security debt
 

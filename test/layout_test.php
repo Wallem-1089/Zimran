@@ -11,10 +11,10 @@ $currentUser = [
     'department_name' => 'Administrator'
 ];
 
-require_once '../config/helpers.php';
-require_once '../layouts/header.php';
-require_once '../layouts/sidebar.php';
-require_once '../layouts/navbar.php';
+require_once __DIR__ . '/../config/helpers.php';
+require_once __DIR__ . '/../layouts/header.php';
+require_once __DIR__ . '/../layouts/sidebar.php';
+require_once __DIR__ . '/../layouts/navbar.php';
 ?>
 
 <main class="content">
@@ -25,4 +25,4 @@ require_once '../layouts/navbar.php';
 
 </main>
 
-<?php require_once '../layouts/footer.php'; ?>
+<?php require_once __DIR__ . '/../layouts/footer.php'; ?>

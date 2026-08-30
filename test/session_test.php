@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once '../config/session.php';
+require_once __DIR__ . '/../config/session.php';
 
 $_SESSION['test'] = 'Hospital System';
 

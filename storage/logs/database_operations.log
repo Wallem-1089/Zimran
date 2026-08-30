@@ -48,3 +48,5 @@
 2026-08-25T03:37:09+02:00	target=hospital_management_system	reason=Applied Migration 051 patient delete permission	authorization=verified-backup:before_051_patient_delete_permission_20260825_023538.sql
 2026-08-25T03:49:41+02:00	target=hospital_management_system	reason=Applied Migration 052 patient soft delete columns	authorization=verified-backup:before_052_patient_soft_delete_20260825_024923.sql
 2026-08-25T12:55:22+02:00	target=hospital_management_system	reason=Apply migration 053 patient stock usage / department consumption	authorization=verified-backup:before_053_patient_stock_usage_20260825_115230.sql
+2026-08-26 14:37:23	hms_restore_test	Backup restore drill completed from before_053_patient_stock_usage_20260825_115230.sql; verified core tables/counts; live database untouched.
+2026-08-26T16:06:52+02:00	target=hospital_management_system	reason=Manual verification backup created from Codex for browser backup feature	authorization=codex_verification
