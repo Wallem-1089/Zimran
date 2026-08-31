@@ -39,6 +39,7 @@ fwrite(
 $manager = new MigrationManager($pdo, $databaseName);
 $manager->ensureLedger();
 $manager->apply(__DIR__ . '/../database/migrations/037_inpatient_admissions_up.sql', 37);
+$manager->apply(__DIR__ . '/../database/migrations/061_admission_bed_permission_repair_up.sql', 61);
 
 $permissionService = new PermissionService($pdo);
 $service = new AdmissionService($pdo, null, null, $permissionService);
@@ -49,12 +50,12 @@ $rows = $pdo->query("
     FROM users u
     INNER JOIN roles r ON r.id = u.role_id
     INNER JOIN departments d ON d.id = u.department_id
-    WHERE u.username IN ('admin','dev_doctor','dev_nurse','dev_records')
+    WHERE u.username IN ('admin','dev_doctor','dev_nurse','dev_records','dev_reception')
 ")->fetchAll(PDO::FETCH_ASSOC);
 foreach ($rows as $row) {
     $users[$row['username']] = $row;
 }
-foreach (['admin','dev_doctor','dev_nurse','dev_records'] as $username) {
+foreach (['admin','dev_doctor','dev_nurse','dev_records','dev_reception'] as $username) {
     assertAdmission(isset($users[$username]), 'Missing fixture user ' . $username . '.');
 }
 
@@ -62,6 +63,7 @@ $admin = $users['admin'];
 $doctor = $users['dev_doctor'];
 $nurse = $users['dev_nurse'];
 $records = $users['dev_records'];
+$reception = $users['dev_reception'];
 $nursingDepartmentId = (int)$pdo->query("SELECT id FROM departments WHERE department_name = 'Nursing' LIMIT 1")->fetchColumn();
 assertAdmission($nursingDepartmentId > 0, 'Nursing department is missing.');
 
@@ -85,6 +87,18 @@ try {
     assertAdmission($permissionService->canViewAdmissions($nurse), 'Nurse should view admissions.');
     assertAdmission($permissionService->canCreateAdmission(['visit_status' => 'Nursing'], $doctor), 'Doctor should create admission.');
     assertAdmission($permissionService->canTransferAdmission(['visit_status' => 'Nursing'], $nurse), 'Nurse should transfer admission.');
+    assertAdmission($permissionService->canTransferAdmission(['visit_status' => 'Nursing'], $doctor), 'Doctor should transfer/change admission bed.');
+    assertAdmission($permissionService->canTransferAdmission(['visit_status' => 'Nursing'], $reception), 'Receptionist should transfer/change admission bed.');
+    assertAdmission($permissionService->canCreateAdmission(['visit_status' => 'Nursing'], [
+        'id' => (int)$admin['id'],
+        'role_name' => 'System Administrator',
+        'department_name' => 'Administrator',
+    ]), 'System Administrator should create admissions.');
+    assertAdmission($permissionService->canTransferAdmission(['visit_status' => 'Nursing'], [
+        'id' => (int)$admin['id'],
+        'role_name' => 'System Administrator',
+        'department_name' => 'Administrator',
+    ]), 'System Administrator should transfer/change admission bed.');
     assertAdmission(!$permissionService->canTransferAdmission(['visit_status' => 'Completed'], $nurse), 'Completed encounter should block admission transfer.');
 
     $ward = requireAdmissionSuccess($service->createWard([

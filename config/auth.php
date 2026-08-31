@@ -56,9 +56,9 @@ if (($config['app']['environment'] ?? 'production') === 'development'
 
         'last_name' => 'Developer',
 
-        'role_name' => 'System Administrator',
+        'role_name' => 'Super Administrator',
 
-        'department_name' => 'Administrator',
+        'department_name' => 'Super Administrator',
 
     ];
 

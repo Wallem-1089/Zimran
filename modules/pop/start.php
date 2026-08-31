@@ -19,9 +19,9 @@ if (!$request) {
 $visit = popRequireVisit($visitService, (int)$request['visit_id']);
 if (!$permissionService->canProcessPopRequest($visit, $currentUser)) {
     http_response_code(403);
-    exit('You cannot cancel this POP request.');
+    exit('You cannot start this POP request.');
 }
 
-popFlash($popService->cancelRequest($requestId, $currentUser), 'POP request cancelled.');
+popFlash($popService->startRequest($requestId, $currentUser), 'POP request started.');
 header('Location: view.php?id=' . $requestId);
 exit;

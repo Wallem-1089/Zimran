@@ -12,6 +12,7 @@ $canAccessMedicalRecordsSidebar = false;
 $canAccessLaboratorySidebar = false;
 $canAccessRadiologySidebar = false;
 $canAccessEcgSidebar = false;
+$canAccessPopSidebar = false;
 $canAccessPhysiotherapySidebar = false;
 $canAccessTheatreSidebar = false;
 $canAccessAccountsSidebar = false;
@@ -42,6 +43,7 @@ if ($currentUser && isset($pdo)) {
         ?? ''
     );
     $sidebarIsAdmin = $sidebarPermissionService->isAdministrator($currentUser);
+    $sidebarIsAdministrationUser = $sidebarPermissionService->isAdministrationUser($currentUser);
     $sidebarStockRequestOnly = !$sidebarIsAdmin
         && (
             $sidebarRole === 'Orderly'
@@ -106,6 +108,9 @@ if ($currentUser && isset($pdo)) {
     $canAccessEcgSidebar = $sidebarCan('view_ecg')
         && $sidebarOwnsDepartmentModule(['ECG Technician'], ['ECG']);
 
+    $canAccessPopSidebar = $sidebarCan('view_pop')
+        && $sidebarOwnsDepartmentModule(['POP Technician'], ['POP']);
+
     $canAccessPhysiotherapySidebar = $sidebarCan('view_physiotherapy')
         && $sidebarOwnsDepartmentModule(['Physiotherapist'], ['Physiotherapy', 'Physio', 'Rehabilitation']);
 
@@ -128,6 +133,7 @@ if ($currentUser && isset($pdo)) {
             'Laboratory Scientist',
             'Radiographer',
             'ECG Technician',
+            'POP Technician',
             'Physiotherapist',
             'Theatre Staff',
             'Pharmacist',
@@ -141,6 +147,7 @@ if ($currentUser && isset($pdo)) {
             'Radiology',
             'X-Ray',
             'ECG',
+            'POP',
             'Physiotherapy',
             'Physio',
             'Rehabilitation',
@@ -201,6 +208,7 @@ if ($currentUser && isset($pdo)) {
             'Laboratory Scientist',
             'Radiographer',
             'ECG Technician',
+            'POP Technician',
             'Physiotherapist',
             'Theatre Staff',
             'Pharmacist',
@@ -216,6 +224,7 @@ if ($currentUser && isset($pdo)) {
             'Radiology',
             'X-Ray',
             'ECG',
+            'POP',
             'Physiotherapy',
             'Physio',
             'Rehabilitation',
@@ -230,6 +239,7 @@ if ($currentUser && isset($pdo)) {
                 && $sidebarOwnsEncounterWorklist
                 && (
                     $sidebarIsAdmin
+                    || $sidebarPermissionService->canViewAllDepartmentWorklists($currentUser)
                     || $sidebarPermissionService->canAccessDepartment($sidebarDepartmentId, $currentUser)
                 )
             ) {
@@ -464,6 +474,20 @@ $sidebarBranding = appBranding($pdo ?? null);
 
             <?php endif; ?>
 
+            <?php if ($canAccessPopSidebar): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/pop/index.php">
+
+                        POP
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
             <?php if ($canAccessPhysiotherapySidebar): ?>
 
                 <li>
@@ -590,7 +614,7 @@ $sidebarBranding = appBranding($pdo ?? null);
 
             <?php endif; ?>
 
-            <?php if (($currentUser['role_name'] ?? '') === 'System Administrator'): ?>
+            <?php if (($currentUser['role_name'] ?? '') === 'System Administrator' || ($currentUser['role_name'] ?? '') === 'Super Administrator'): ?>
 
                 <li>
 

@@ -596,9 +596,42 @@ report text.
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | `view_admissions` | Yes | Yes | Yes | Yes | Yes | No default |
 | `create_admission` | Yes | Yes | Yes | Yes | Yes | No default |
-| `transfer_admission` | Yes | No | Yes | No default | Yes | No default |
+| `transfer_admission` | Yes | Yes | Yes | Yes | Yes | No default |
 | `discharge_admission` | Yes | No default | Yes | Yes when granted | Yes | No default |
 | `manage_wards_beds` | Yes | No | Yes | No | Yes | No default |
 
 Admissions manage inpatient ward and bed occupancy for an existing encounter.
 They do not replace encounter completion/discharge documentation.
+Nurses, Doctors, Receptionists, Records Officers, and Administrators may admit
+patients and assign/change ward-bed placement for active encounters. Ward/bed
+master-data setup remains restricted by `manage_wards_beds`.
+
+## POP / Casting permissions
+
+| Permission | Administrator | Doctor | POP Technician | Nurse / Other Clinical |
+| --- | ---: | ---: | ---: | ---: |
+| `view_pop` | Yes | Yes | Yes | Patient-context view where granted |
+| `create_pop_request` | Yes | Clinical request | Direct request | No default |
+| `process_pop_request` | Yes | No | Yes | No |
+| `record_pop_procedure` | Yes | No | Yes | No |
+| `edit_pop_record` | Yes | No | Yes | No |
+| `complete_pop_request` | Yes | No | Yes | No |
+
+POP sidebar/worklist access is POP-department-owned. Other clinical users may
+view POP records through the Encounter Workspace or patient-specific context
+where they have permission, but they do not browse the full POP worklist.
+
+## Super Administrator vs System Administrator
+
+| Capability | Super Administrator | System Administrator |
+| --- | ---: | ---: |
+| Full permission override | Yes | No |
+| Administration dashboard | Yes | Yes |
+| Manage users/roles/permissions/settings | Yes | Yes |
+| View other department worklists | Yes | Yes |
+| Clinical module mutation by override | Yes | No |
+| Billing/stock/pharmacy mutation by override | Yes | No |
+| Reports by override | Yes | No |
+
+Walter Ikhile / username `walter` is the protected Super Administrator account.
+The original `admin` account remains a protected ordinary System Administrator.

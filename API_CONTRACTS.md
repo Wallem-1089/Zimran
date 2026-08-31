@@ -1228,3 +1228,23 @@ is not implemented; administrator reset-password remains the recovery path.
 The legacy `workspace/index.php`, zero-byte role dashboard pages, and empty
 legacy `includes/` / `workspace/` helper files are not current APIs. The active
 workspace contract remains `modules/visits/workspace.php?id=<visit_id>`.
+## POPService
+
+`services/POPService.php` exposes:
+
+- `createRequest()`
+- `getRequestById()`
+- `listByVisit()`
+- `listByPatient()`
+- `listWorklist()`
+- `startRequest()`
+- `saveRecord()`
+- `getRecord()`
+- `updateRecord()`
+- `completeRequest()`
+- `cancelRequest()`
+
+Write methods return the standard structured response:
+`['success' => bool, 'errors' => []]`. POP writes validate patient/visit
+consistency, encounter status, permissions, request source, procedure text, and
+CSRF in controllers.

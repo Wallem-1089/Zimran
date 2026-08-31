@@ -9,32 +9,31 @@ if (!$requestId) {
     header('Location: index.php');
     exit;
 }
-
-if (!$POPTablesReady) {
+if (!$popTablesReady) {
     http_response_code(503);
-    exit('POP tables are not available yet. Apply Migration 058 to enable this section.');
+    exit('POP tables are not available yet. Apply Migration 059 to enable this section.');
 }
 
-$request = $POPService->getRequestById($requestId, $currentUser);
+$request = $popService->getRequestById($requestId, $currentUser);
 if (!$request) {
     http_response_code(404);
     exit('POP request not found.');
 }
-
-$visit = POPRequireVisit($visitService, (int)$request['visit_id']);
+$visit = popRequireVisit($visitService, (int)$request['visit_id']);
 $patient = $patientService->getPatientById((int)$request['patient_id']);
 if (!$patient) {
     http_response_code(404);
     exit('Patient not found.');
 }
 
-$report = $POPService->getReport($requestId, $currentUser);
-$canProcess = $permissionService->canProcessPOPRequest($visit, $currentUser);
-$canUpload = $permissionService->canUploadPOPChart($visit, $currentUser);
-$canEdit = $permissionService->canEditPOPReport($visit, $currentUser);
-$canComplete = $permissionService->canCompletePOPRequest($visit, $currentUser);
+$record = $popService->getRecord($requestId, $currentUser);
+$canProcess = $permissionService->canProcessPopRequest($visit, $currentUser);
+$canRecord = $permissionService->canRecordPopProcedure($visit, $currentUser);
+$canEdit = $permissionService->canEditPopRecord($visit, $currentUser);
+$canComplete = $permissionService->canCompletePopRequest($visit, $currentUser);
 $isClosed = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
 $isRequestClosed = in_array((string)($request['status'] ?? ''), ['Completed', 'Cancelled'], true);
+$hasRecord = $record && !empty($record['record_id']);
 
 $pageTitle = 'POP Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -48,11 +47,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <?php if (isset($_SESSION['validation_errors'])): ?>
         <div class="alert-danger">
             <strong>Please correct the following:</strong>
-            <ul>
-                <?php foreach ((array)$_SESSION['validation_errors'] as $error): ?>
-                    <li><?= e((string)$error) ?></li>
-                <?php endforeach; ?>
-            </ul>
+            <ul><?php foreach ((array)$_SESSION['validation_errors'] as $error): ?><li><?= e((string)$error) ?></li><?php endforeach; ?></ul>
         </div>
         <?php unset($_SESSION['validation_errors']); ?>
     <?php endif; ?>
@@ -68,13 +63,13 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
         <div class="form-actions">
             <button class="btn-secondary" type="button" onclick="window.print()">Print POP Record</button>
-            <?php if ($permissionService->canViewPOPWorklist($currentUser)): ?>
+            <?php if ($permissionService->canViewPopWorklist($currentUser)): ?>
                 <a class="btn-secondary" href="index.php">Worklist</a>
             <?php endif; ?>
-            <a class="btn-secondary" href="<?= e(POPBackToWorkspace((int)$request['visit_id'])) ?>">Workspace</a>
+            <a class="btn-secondary" href="<?= e(popBackToWorkspace((int)$request['visit_id'])) ?>">Workspace</a>
             <a class="btn-secondary" href="history.php?visit=<?= (int)$request['visit_id'] ?>">History</a>
             <?php if (!$isClosed && $permissionService->canCreateBillingRequest($currentUser)): ?>
-                <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$request['visit_id'] ?>&source_module=POP&source_record_id=<?= (int)$request['id'] ?>&description=<?= urlencode('POP: ' . (string)($request['study_requested'] ?? 'POP')) ?>">Request Billing</a>
+                <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$request['visit_id'] ?>&source_module=POP&source_record_id=<?= (int)$request['id'] ?>&description=<?= urlencode('POP: ' . (string)($request['procedure_requested'] ?? 'POP / Casting')) ?>">Request Billing</a>
             <?php endif; ?>
         </div>
     </div>
@@ -93,72 +88,46 @@ require __DIR__ . '/../../layouts/sidebar.php';
     </div>
 
     <div class="card">
-        <h3>Study Requested</h3>
-        <p><?= nl2br(e((string)($request['study_requested'] ?? 'POP'))) ?></p>
-    </div>
-
-    <div class="card">
-        <h3>Clinical Indication</h3>
-        <?php if (trim((string)($request['clinical_indication'] ?? '')) === ''): ?>
-            <p class="text-muted">No clinical indication recorded.</p>
-        <?php else: ?>
-            <p><?= nl2br(e((string)$request['clinical_indication'])) ?></p>
-        <?php endif; ?>
+        <h3>Procedure Requested</h3>
+        <p><?= nl2br(e((string)($request['procedure_requested'] ?? 'POP / Casting'))) ?></p>
+        <h3>Clinical Indication / Reason</h3>
+        <p><?= trim((string)($request['clinical_indication'] ?? '')) === '' ? '<span class="text-muted">No clinical indication recorded.</span>' : nl2br(e((string)$request['clinical_indication'])) ?></p>
     </div>
 
     <div class="card">
         <div class="form-actions">
             <?php if (!$isClosed && !$isRequestClosed && $canProcess && (string)$request['status'] === 'Requested'): ?>
-                <form method="post" action="start.php">
-                    <?= csrfField() ?>
-                    <input type="hidden" name="id" value="<?= (int)$request['id'] ?>">
-                    <button type="submit" class="btn-primary">Start</button>
-                </form>
+                <form method="post" action="start.php"><?= csrfField() ?><input type="hidden" name="id" value="<?= (int)$request['id'] ?>"><button type="submit" class="btn-primary">Start</button></form>
             <?php endif; ?>
-            <?php if (!$isClosed && !$isRequestClosed && ($canUpload || $canEdit)): ?>
-                <a class="btn-secondary" href="report.php?id=<?= (int)$request['id'] ?>"><?= $report && !empty($report['report_id']) ? 'Edit POP Chart/Notes' : 'Upload POP Chart' ?></a>
+            <?php if (!$isClosed && !$isRequestClosed && ($canRecord || $canEdit)): ?>
+                <a class="btn-secondary" href="record.php?id=<?= (int)$request['id'] ?>"><?= $hasRecord ? 'Edit POP Record' : 'Record POP Procedure' ?></a>
             <?php endif; ?>
             <?php if (!$isClosed && !$isRequestClosed && $canComplete): ?>
-                <form method="post" action="complete.php">
-                    <?= csrfField() ?>
-                    <input type="hidden" name="id" value="<?= (int)$request['id'] ?>">
-                    <button type="submit" class="btn-secondary">Complete</button>
-                </form>
+                <form method="post" action="complete.php"><?= csrfField() ?><input type="hidden" name="id" value="<?= (int)$request['id'] ?>"><button type="submit" class="btn-secondary">Complete</button></form>
             <?php endif; ?>
             <?php if (!$isClosed && !$isRequestClosed && $canProcess): ?>
-                <form method="post" action="cancel.php" onsubmit="return confirm('Cancel this POP request?');">
-                    <?= csrfField() ?>
-                    <input type="hidden" name="id" value="<?= (int)$request['id'] ?>">
-                    <button type="submit" class="btn-secondary">Cancel Request</button>
-                </form>
+                <form method="post" action="cancel.php" onsubmit="return confirm('Cancel this POP request?');"><?= csrfField() ?><input type="hidden" name="id" value="<?= (int)$request['id'] ?>"><button type="submit" class="btn-secondary">Cancel Request</button></form>
             <?php endif; ?>
         </div>
     </div>
 
     <div class="card">
-        <h3>POP Chart and Notes</h3>
-        <?php if ($report && !empty($report['report_id'])): ?>
+        <h3>POP / Casting Record</h3>
+        <?php if ($hasRecord): ?>
             <div class="summary-grid">
-                <div class="summary-item"><span class="summary-label">Chart</span> <span class="summary-value">
-                    <?php if (!empty($report['chart_stored_path'])): ?>
-                        <a href="download_chart.php?id=<?= (int)$request['id'] ?>" target="_blank" rel="noopener">Open scanned POP chart</a>
-                    <?php else: ?>
-                        Not uploaded
-                    <?php endif; ?>
-                </span></div>
-                <div class="summary-item"><span class="summary-label">Uploaded By</span> <span class="summary-value"><?= e((string)($report['performed_by_name'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Completed By</span> <span class="summary-value"><?= e((string)($report['completed_by_name'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Completed At</span> <span class="summary-value"><?= e((string)($report['report_completed_at'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Cast Type</span> <span class="summary-value"><?= e((string)($record['cast_type'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Body Part</span> <span class="summary-value"><?= e((string)($record['body_part'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Performed By</span> <span class="summary-value"><?= e((string)($record['performed_by_name'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Completed By</span> <span class="summary-value"><?= e((string)($record['completed_by_name'] ?? '-')) ?></span></div>
             </div>
-            <h4>Notes</h4>
-            <p><?= trim((string)($report['notes'] ?? '')) === '' ? '<span class="text-muted">No POP notes recorded.</span>' : nl2br(e((string)$report['notes'])) ?></p>
-            <h4>Remarks</h4>
-            <p><?= trim((string)($report['remarks'] ?? '')) === '' ? '<span class="text-muted">No POP remarks recorded.</span>' : nl2br(e((string)$report['remarks'])) ?></p>
+            <h4>Procedure Notes</h4><p><?= nl2br(e((string)($record['procedure_notes'] ?? ''))) ?></p>
+            <h4>Materials Used</h4><p><?= trim((string)($record['materials_used'] ?? '')) === '' ? '<span class="text-muted">No materials recorded.</span>' : nl2br(e((string)$record['materials_used'])) ?></p>
+            <h4>Aftercare Instructions</h4><p><?= trim((string)($record['aftercare_instructions'] ?? '')) === '' ? '<span class="text-muted">No aftercare instructions recorded.</span>' : nl2br(e((string)$record['aftercare_instructions'])) ?></p>
+            <h4>Remarks</h4><p><?= trim((string)($record['remarks'] ?? '')) === '' ? '<span class="text-muted">No remarks recorded.</span>' : nl2br(e((string)$record['remarks'])) ?></p>
         <?php else: ?>
-            <p class="text-muted">No scanned POP chart or notes recorded.</p>
+            <p class="text-muted">No POP procedure record yet.</p>
         <?php endif; ?>
     </div>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
-

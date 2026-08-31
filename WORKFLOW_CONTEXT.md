@@ -1286,13 +1286,25 @@ department handoff.
 - Reports are read-only summaries over already-posted operational records.
 - Admissions own inpatient ward and bed occupancy. An admission is attached to
   an existing encounter; it does not replace the encounter, consultation, or
-  discharge-summary workflow. Admission movements record admit, transfer,
+  discharge-summary workflow. Nurse, Doctor, Receptionist, Records Officer,
+  and Administrator users can admit patients and assign/change ward-bed
+  placement for active encounters. Admission movements record admit, transfer,
   discharge, and cancellation actions.
 
 Financial settlement may continue after clinical encounter completion. This is
 an intentional exception to the normal clinical CRUD lock: clinical records are
 read-only after completion/cancellation, while Billing may still receive
 payments against outstanding invoices.
+
+## POP / Casting workflow
+
+POP is an encounter-linked department workflow. A Doctor may create a clinical
+POP/casting request from the patient encounter. POP Technician/Admin may create
+a direct POP request when the active encounter is in POP. POP staff then start
+the request, document the procedure/cast record, materials used, aftercare, and
+remarks, and complete the request. POP requests do not transfer encounter
+ownership automatically; normal transfer/receive and department notification
+rules remain separate.
 
 ## Clinical cross-view policy
 
@@ -1317,3 +1329,12 @@ treated as the current workspace. Empty legacy `dashboard/`, `includes/`, and
 `workspace/` helper files remain cleanup candidates. User self-service forgot
 password is not implemented; administrator password reset is the current
 recovery workflow.
+
+## Super Administrator / Administrator workflow
+
+Super Administrator is the only role with full override access across clinical,
+stock, pharmacy, billing, reports, and administration. Ordinary System
+Administrator is for administration support: managing users, roles,
+permissions, settings/security, and viewing department worklists. Ordinary
+administrators do not automatically gain department clinical mutation rights or
+financial/stock mutation rights.

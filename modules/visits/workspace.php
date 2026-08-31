@@ -40,6 +40,7 @@ require_once __DIR__ . '/../../services/UserNotificationService.php';
 require_once __DIR__ . '/../../services/LaboratoryService.php';
 require_once __DIR__ . '/../../services/RadiologyService.php';
 require_once __DIR__ . '/../../services/ECGService.php';
+require_once __DIR__ . '/../../services/POPService.php';
 require_once __DIR__ . '/../../services/PhysiotherapyService.php';
 require_once __DIR__ . '/../../services/TheatreService.php';
 require_once __DIR__ . '/../../services/PharmacyService.php';
@@ -181,6 +182,7 @@ $workspaceUserDepartment = (string)(
 $canOpenLaboratoryWorklist = $permissionService->canViewLaboratoryWorklist($currentUser);
 $canOpenRadiologyWorklist = $permissionService->canViewRadiologyWorklist($currentUser);
 $canOpenEcgWorklist = $permissionService->canViewEcgWorklist($currentUser);
+$canOpenPopWorklist = $permissionService->canViewPopWorklist($currentUser);
 $canOpenPharmacyWorklist = $permissionService->canViewPharmacyWorklist($currentUser);
 $canOpenPhysiotherapyWorklist = $permissionService->canViewPhysiotherapyWorklist($currentUser);
 $canOpenAdmissionCensus = $permissionService->isAdministrator($currentUser)
@@ -418,6 +420,23 @@ $canProcessEcgRequest = $permissionService->canProcessEcgRequest($visit, $curren
 $canUploadEcgChart = $permissionService->canUploadEcgChart($visit, $currentUser);
 $canEditEcgReport = $permissionService->canEditEcgReport($visit, $currentUser);
 $canCompleteEcgRequest = $permissionService->canCompleteEcgRequest($visit, $currentUser);
+$popTablesReady = workspaceTableExists($pdo, 'pop_requests')
+    && workspaceTableExists($pdo, 'pop_records');
+$popService = $popTablesReady ? new POPService($pdo, null, null, $permissionService) : null;
+$popRequestSource = (string)($visit['department_name'] ?? '') === 'POP'
+    ? 'Direct'
+    : 'Clinical';
+$popRequests = $popService ? $popService->listByVisit($visitId, $currentUser) : [];
+$latestPopRequest = $popRequests[0] ?? null;
+$latestPopRecord = $latestPopRequest
+    ? $popService->getRecord((int)$latestPopRequest['id'], $currentUser)
+    : null;
+$canViewPop = $permissionService->canViewPop((int)$visit['patient_id'], $currentUser);
+$canCreatePopRequest = $permissionService->canCreatePopRequest($visit, $currentUser, $popRequestSource);
+$canProcessPopRequest = $permissionService->canProcessPopRequest($visit, $currentUser);
+$canRecordPopProcedure = $permissionService->canRecordPopProcedure($visit, $currentUser);
+$canEditPopRecord = $permissionService->canEditPopRecord($visit, $currentUser);
+$canCompletePopRequest = $permissionService->canCompletePopRequest($visit, $currentUser);
 $pharmacyRequestSource = in_array((string)($visit['department_name'] ?? ''), ['Pharmacy'], true)
     ? 'Direct'
     : 'Clinical';
@@ -513,6 +532,7 @@ $workspaceTabTitles = [
     'laboratory' => 'Encounter Laboratory',
     'radiology' => 'Encounter X-Ray',
     'ecg' => 'Encounter ECG',
+    'pop' => 'Encounter POP',
     'pharmacy' => 'Encounter Pharmacy',
     'billing' => 'Encounter Billing',
     'stock_usage' => 'Encounter Stock Usage',
@@ -682,6 +702,12 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
             case 'ecg':
 
                 require __DIR__ . '/partials/tabs/ecg.php';
+
+                break;
+
+            case 'pop':
+
+                require __DIR__ . '/partials/tabs/pop.php';
 
                 break;
 

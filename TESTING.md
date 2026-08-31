@@ -415,8 +415,9 @@ active/current working encounters for their active/current department.
 ## Inpatient Admissions / Ward & Bed Workflow
 
 Focused tests should verify ward and bed creation, admission to an active
-encounter, duplicate admission prevention, occupied-bed rejection, ward/bed
-transfer, discharge bed release, cancellation bed release,
+encounter by Nurse/Doctor/Receptionist/Records/Admin roles, duplicate
+admission prevention, occupied-bed rejection, ward/bed transfer, discharge bed
+release, cancellation bed release,
 completed/cancelled-encounter mutation rejection, permissions, CSRF, audit, and
 encounter timeline events.
 
@@ -502,3 +503,18 @@ not the live application database. The 2026-08-26 drill restored
 `before_053_patient_stock_usage_20260825_115230.sql` into `hms_restore_test`,
 verified core tables and counts, and confirmed live Migration 053 remained
 separate from the restored pre-053 backup state.
+## POP / Casting regression
+
+`test/phase_pop_test.php` verifies Doctor clinical POP request creation, POP
+Technician worklist visibility, start/procedure record/update/completion,
+Doctor result visibility, Direct POP request without Consultation, patient/visit
+mismatch rejection, unauthorized mutation rejection, completed-encounter lock,
+audit records, and encounter timeline events.
+
+## Super Administrator / Administrator split
+
+`test/superadmin_admin_split_test.php` verifies Migration 060, Walter promotion
+to Super Administrator, the original admin account remaining ordinary System
+Administrator, Super Administrator full override behavior, ordinary
+administrator Administration access, all-department worklist access, and denial
+of inherited clinical mutation override for ordinary admin.

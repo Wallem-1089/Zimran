@@ -1050,3 +1050,13 @@ erDiagram
     DEPARTMENTS ||--o{ BILLING_REQUESTS : requests
     BILLABLE_ITEMS o|--o{ BILLING_REQUESTS : suggested_for
 ```
+## POP / Casting relationships
+
+- `pop_requests.visit_id` references `visits.id`.
+- `pop_requests.patient_id` references `patients.id`.
+- `pop_requests.requested_by` references `users.id`.
+- `pop_requests.department_id` references `departments.id`.
+- `pop_records.pop_request_id` references `pop_requests.id` and is unique for
+  this first simple version.
+- `pop_records.visit_id` and `pop_records.patient_id` mirror the request for
+  safe encounter/patient filtering.

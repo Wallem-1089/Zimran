@@ -13,7 +13,7 @@ require_once __DIR__ . '/../../../services/UserDepartmentService.php';
 
 $permissionService = new PermissionService($pdo);
 
-if (!$permissionService->isAdministrator($currentUser)) {
+if (!$permissionService->isAdministrationUser($currentUser)) {
     securityFailure(
         'Unauthorized administration access attempt.',
         null,

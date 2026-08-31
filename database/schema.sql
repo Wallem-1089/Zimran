@@ -59,6 +59,8 @@ VALUES
 
 ('Administrator', 'System administration'),
 
+('Super Administrator', 'Full system super administration'),
+
 ('Reception', 'Patient reception'),
 
 ('Records', 'Medical records'),
@@ -76,6 +78,8 @@ VALUES
 ('X-Ray', 'Radiology and imaging'),
 
 ('ECG', 'Electrocardiography services'),
+
+('POP', 'Plaster of Paris and casting services'),
 
 ('Theatre', 'Surgical theatre'),
 
@@ -129,7 +133,9 @@ INSERT INTO roles
 )
 VALUES
 
-('System Administrator','Full system access'),
+('System Administrator','Administration functionality and cross-department worklist visibility'),
+
+('Super Administrator','Full unrestricted system access'),
 
 ('Receptionist','Patient registration'),
 
@@ -148,6 +154,8 @@ VALUES
 ('Radiographer','Radiology'),
 
 ('ECG Technician','ECG services'),
+
+('POP Technician','POP and casting services'),
 
 ('Theatre Staff','Surgical procedures'),
 
@@ -593,6 +601,8 @@ DEFAULT 'Outpatient',
         'X-Ray',
 
         'ECG',
+
+        'POP',
 
         'Pharmacy',
 
@@ -2112,6 +2122,107 @@ INNER JOIN permissions p
 WHERE r.role_name IN ('Nurse', 'Records Officer', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist')
   AND p.permission_key = 'view_ecg';
 
+-- =========================================================
+-- PHASE 5 POP BASELINE
+-- Tables are baseline-represented; Migration 059 remains ledger-applied for existing installs.
+-- =========================================================
+
+CREATE TABLE pop_requests (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    visit_id INT NOT NULL,
+    patient_id INT NOT NULL,
+    requested_by INT NOT NULL,
+    department_id INT NULL,
+    request_source ENUM('Clinical','Direct') NOT NULL DEFAULT 'Clinical',
+    procedure_requested VARCHAR(255) NOT NULL DEFAULT 'POP / Casting',
+    clinical_indication TEXT NULL,
+    priority ENUM('Routine','Urgent') NOT NULL DEFAULT 'Routine',
+    status ENUM('Requested','In Progress','Completed','Cancelled') NOT NULL DEFAULT 'Requested',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    completed_at DATETIME NULL,
+    INDEX idx_pop_requests_visit_created (visit_id, created_at),
+    INDEX idx_pop_requests_patient_created (patient_id, created_at),
+    INDEX idx_pop_requests_status_created (status, created_at),
+    INDEX idx_pop_requests_department_status (department_id, status),
+    INDEX idx_pop_requests_requested_by (requested_by),
+    CONSTRAINT fk_pop_requests_visit FOREIGN KEY (visit_id) REFERENCES visits(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_pop_requests_patient FOREIGN KEY (patient_id) REFERENCES patients(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_pop_requests_requested_by FOREIGN KEY (requested_by) REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_pop_requests_department FOREIGN KEY (department_id) REFERENCES departments(id) ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE pop_records (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    pop_request_id BIGINT NOT NULL,
+    visit_id INT NOT NULL,
+    patient_id INT NOT NULL,
+    cast_type VARCHAR(255) NULL,
+    body_part VARCHAR(255) NULL,
+    procedure_notes TEXT NOT NULL,
+    materials_used TEXT NULL,
+    aftercare_instructions TEXT NULL,
+    remarks TEXT NULL,
+    performed_by INT NOT NULL,
+    updated_by INT NULL,
+    completed_by INT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    completed_at DATETIME NULL,
+    UNIQUE KEY uq_pop_records_request (pop_request_id),
+    INDEX idx_pop_records_visit_created (visit_id, created_at),
+    INDEX idx_pop_records_patient_created (patient_id, created_at),
+    INDEX idx_pop_records_performed_by (performed_by),
+    CONSTRAINT fk_pop_records_request FOREIGN KEY (pop_request_id) REFERENCES pop_requests(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_pop_records_visit FOREIGN KEY (visit_id) REFERENCES visits(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_pop_records_patient FOREIGN KEY (patient_id) REFERENCES patients(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_pop_records_performed_by FOREIGN KEY (performed_by) REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_pop_records_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    CONSTRAINT fk_pop_records_completed_by FOREIGN KEY (completed_by) REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO permissions (permission_key, permission_name, module, description, is_active) VALUES
+('view_pop', 'View POP', 'POP', 'View POP requests and casting/procedure records.', 1),
+('create_pop_request', 'Create POP Request', 'POP', 'Create a clinical or direct POP/casting request.', 1),
+('process_pop_request', 'Process POP Request', 'POP', 'Start and process POP requests.', 1),
+('record_pop_procedure', 'Record POP Procedure', 'POP', 'Document POP/casting procedure details.', 1),
+('edit_pop_record', 'Edit POP Record', 'POP', 'Edit POP records before completion.', 1),
+('complete_pop_request', 'Complete POP Request', 'POP', 'Complete POP requests after procedure documentation.', 1)
+ON DUPLICATE KEY UPDATE
+    permission_name = VALUES(permission_name),
+    module = VALUES(module),
+    description = VALUES(description),
+    is_active = 1;
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+INNER JOIN permissions p
+WHERE r.role_name = 'POP Technician'
+  AND p.permission_key IN (
+      'view_pop',
+      'create_pop_request',
+      'process_pop_request',
+      'record_pop_procedure',
+      'edit_pop_record',
+      'complete_pop_request',
+      'view_medical_record'
+  );
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+INNER JOIN permissions p
+WHERE r.role_name = 'Doctor'
+  AND p.permission_key IN ('view_pop', 'create_pop_request');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+INNER JOIN permissions p
+WHERE r.role_name IN ('Nurse', 'Records Officer', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist')
+  AND p.permission_key = 'view_pop';
+
 /*
 |--------------------------------------------------------------------------  
 | Phase 4.1 Accounts / Price Catalogue
@@ -3088,14 +3199,14 @@ SELECT r.id, p.id
 FROM roles r
 INNER JOIN permissions p
 WHERE r.role_name = 'Doctor'
-  AND p.permission_key IN ('view_admissions', 'create_admission', 'discharge_admission');
+  AND p.permission_key IN ('view_admissions', 'create_admission', 'transfer_admission', 'discharge_admission');
 
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
 INNER JOIN permissions p
 WHERE r.role_name = 'Receptionist'
-  AND p.permission_key IN ('view_admissions', 'create_admission');
+  AND p.permission_key IN ('view_admissions', 'create_admission', 'transfer_admission');
 
 INSERT INTO permissions (permission_key, permission_name, module, description, is_active)
 SELECT 'use_consultation_handwriting', 'Use Consultation Handwriting', 'Consultation', 'Use the handwriting/touch-pad entry mode on Consultation forms.', 1
@@ -3107,3 +3218,30 @@ FROM roles r
 INNER JOIN permissions p
 WHERE r.role_name IN ('System Administrator', 'Doctor')
   AND p.permission_key = 'use_consultation_handwriting';
+
+-- Super Administrator / ordinary Administrator split baseline.
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+INNER JOIN permissions p
+WHERE r.role_name = 'Super Administrator';
+
+DELETE rp FROM role_permissions rp
+INNER JOIN roles r ON r.id = rp.role_id
+WHERE r.role_name = 'System Administrator';
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+INNER JOIN permissions p
+WHERE r.role_name = 'System Administrator'
+  AND p.permission_key IN (
+      'view_encounter',
+      'view_admissions',
+      'create_admission',
+      'transfer_admission',
+      'manage_users',
+      'manage_roles',
+      'manage_permissions',
+      'manage_settings'
+  );

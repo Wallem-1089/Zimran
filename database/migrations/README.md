@@ -493,3 +493,36 @@ context view plus the direct request, worklist, chart upload, edit, and
 completion workflow.
 Cross-view clinical roles receive patient-specific ECG view access, but ECG
 worklist/sidebar access remains ECG-department-owned.
+
+## Migration 059 - POP Department CRUD
+
+`059_pop_department_crud_up.sql` adds `POP` to encounter-compatible visit
+statuses, creates the POP department and POP Technician role, creates
+`pop_requests` and `pop_records`, and seeds the six POP permissions:
+`view_pop`, `create_pop_request`, `process_pop_request`,
+`record_pop_procedure`, `edit_pop_record`, and `complete_pop_request`.
+
+Doctor receives clinical request/view access. POP Technician receives patient
+context view plus direct request, worklist, procedure-record, edit, and
+completion workflow. Cross-view clinical roles receive patient-specific POP
+view access, but POP worklist/sidebar access remains POP-department-owned.
+
+## Migration 060 - Super Administrator / Administrator Split
+
+`060_superadmin_admin_split_up.sql` creates a `Super Administrator` department
+and role. Super Administrator becomes the only full-system override role.
+Walter Ikhile / username `walter` is moved to this role and department.
+
+The ordinary `System Administrator` role remains active for Administration
+tasks only: user, role, permission, settings management, and cross-department
+worklist visibility. It no longer inherits clinical, stock, pharmacy, billing,
+or reporting mutation rights merely by being an administrator.
+
+## Migration 061 - Admission / Bed Assignment Permission Repair
+
+`061_admission_bed_permission_repair_up.sql` aligns admission access with the
+current workflow rule: Nurse, Doctor, Receptionist, Records Officer, and System
+Administrator may view admissions, create admissions, and transfer/change
+ward-bed assignment for active encounters. Super Administrator remains covered
+by the full-system override. This migration does not broaden discharge or
+ward/bed master-data setup permissions.

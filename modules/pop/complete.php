@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 require __DIR__ . '/_bootstrap.php';
-
 requireCsrfToken();
 
 $requestId = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT) ?: 0;
@@ -12,21 +11,17 @@ if (!$requestId) {
     exit('Invalid POP request.');
 }
 
-$request = $POPService->getRequestById($requestId, $currentUser);
+$request = $popService->getRequestById($requestId, $currentUser);
 if (!$request) {
     http_response_code(404);
     exit('POP request not found.');
 }
-
-$visit = POPRequireVisit($visitService, (int)$request['visit_id']);
-if (!$permissionService->canCompletePOPRequest($visit, $currentUser)) {
+$visit = popRequireVisit($visitService, (int)$request['visit_id']);
+if (!$permissionService->canCompletePopRequest($visit, $currentUser)) {
     http_response_code(403);
     exit('You cannot complete this POP request.');
 }
 
-$result = $POPService->completeRequest($requestId, $currentUser);
-POPFlash($result, 'POP request completed.');
-
+popFlash($popService->completeRequest($requestId, $currentUser), 'POP request completed.');
 header('Location: view.php?id=' . $requestId);
 exit;
-

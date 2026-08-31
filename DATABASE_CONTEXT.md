@@ -1359,3 +1359,11 @@ setting so Medical Records can upload paper-form equivalents including
 operation consent forms, Theatre operation notes, continuation sheets,
 observation charts, nursing checklists, dressing records, drug charts, DM
 sheets, emergency records, and department report books.
+## POP / Casting tables
+
+Migration 059 creates `pop_requests` and `pop_records`.
+`pop_requests` stores the encounter-linked clinical or direct POP/casting
+request, procedure requested, indication, priority, status, requester, patient,
+visit, and department. `pop_records` stores the one procedure/cast record for
+the request: cast type, body part, procedure notes, materials used, aftercare,
+remarks, performer, updater, completer, and timestamps.

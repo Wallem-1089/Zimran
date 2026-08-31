@@ -887,14 +887,18 @@ class UserService
         }
 
         $newRoleId = (int)($newUser['role_id'] ?? 0);
-        if ($newRoleId !== (int)$existingUser['role_id'] || !$this->roleIsSystemAdministrator($newRoleId)) {
-            $errors[] = 'Protected administrator accounts must keep the System Administrator role.';
+        $requiredRole = strtolower((string)$existingUser['username']) === 'walter'
+            ? 'Super Administrator'
+            : 'System Administrator';
+
+        if ($newRoleId !== (int)$existingUser['role_id'] || !$this->roleHasName($newRoleId, $requiredRole)) {
+            $errors[] = 'Protected administrator accounts must keep the ' . $requiredRole . ' role.';
         }
 
         return $errors;
     }
 
-    private function roleIsSystemAdministrator(int $roleId): bool
+    private function roleHasName(int $roleId, string $roleName): bool
     {
         if ($roleId <= 0) {
             return false;
@@ -905,7 +909,7 @@ class UserService
         );
         $stmt->execute([':id' => $roleId]);
 
-        return (string)$stmt->fetchColumn() === 'System Administrator';
+        return (string)$stmt->fetchColumn() === $roleName;
     }
 
     /**

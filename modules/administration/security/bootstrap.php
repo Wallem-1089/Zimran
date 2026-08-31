@@ -19,7 +19,7 @@ if (($securityConfig['app']['environment'] ?? 'production') !== 'development') {
 $securityUserService = new UserService($pdo);
 $securityAuditService = new AuditService($pdo);
 $securityPermissionService = new PermissionService($pdo);
-$isSecurityAdministrator = $securityPermissionService->isAdministrator($currentUser);
+$isSecurityAdministrator = $securityPermissionService->isAdministrationUser($currentUser);
 
 function requireSecurityAdministrator(): void
 {

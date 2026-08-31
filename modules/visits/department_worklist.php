@@ -29,12 +29,27 @@ $departmentName = (string)(
 $permissionService = new PermissionService($pdo);
 $visitService = new VisitService($pdo);
 $billingService = new BillingService($pdo);
+$canViewAllDepartmentWorklists = $permissionService->canViewAllDepartmentWorklists($currentUser);
+$availableDepartments = $canViewAllDepartmentWorklists ? $visitService->getDepartments() : [];
+$requestedDepartmentId = filter_input(INPUT_GET, 'department_id', FILTER_VALIDATE_INT) ?: 0;
+
+if ($canViewAllDepartmentWorklists && $requestedDepartmentId > 0) {
+    foreach ($availableDepartments as $department) {
+        if ((int)$department['id'] === $requestedDepartmentId) {
+            $departmentId = $requestedDepartmentId;
+            $departmentName = (string)$department['department_name'];
+            break;
+        }
+    }
+}
+$canActOnSelectedDepartment = $permissionService->isAdministrator($currentUser)
+    || $permissionService->canAccessDepartment($departmentId, $currentUser);
 
 if (
     !$currentUser
     || !$permissionService->hasPermission('view_encounter', $currentUser)
     || (
-        !$permissionService->isAdministrator($currentUser)
+        !$canViewAllDepartmentWorklists
         && !$permissionService->canAccessDepartment($departmentId, $currentUser)
     )
 ) {
@@ -109,6 +124,26 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
             <p><?= e($departmentName) ?> encounters awaiting receive or active queue action.</p>
         </div>
     </div>
+
+    <?php if ($canViewAllDepartmentWorklists): ?>
+        <form method="get" class="card compact-filter">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="department_id">View Department</label>
+                    <select id="department_id" name="department_id">
+                        <?php foreach ($availableDepartments as $department): ?>
+                            <option value="<?= (int)$department['id'] ?>" <?= (int)$department['id'] === $departmentId ? 'selected' : '' ?>>
+                                <?= e((string)$department['department_name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn-secondary" type="submit">Open Worklist</button>
+            </div>
+        </form>
+    <?php endif; ?>
 
     <?php if ($isAccountsDepartment && $permissionService->canViewBillingRequests($currentUser)): ?>
         <section class="card">
@@ -214,7 +249,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
                                 <td><?= ($row['position'] ?? null) !== null ? (int)$row['position'] : '—' ?></td>
                                 <td><?= !empty($row['queued_at']) ? e(date('d M Y h:i A', strtotime((string)$row['queued_at']))) : '—' ?></td>
                                 <td class="table-actions">
-                                    <?php if ($awaitingReceive): ?>
+                                    <?php if ($awaitingReceive && $canActOnSelectedDepartment): ?>
                                         <a class="btn-primary" href="receive.php?visit=<?= $visitId ?>">Receive</a>
                                     <?php endif; ?>
                                     <a class="btn-secondary" href="workspace.php?id=<?= $visitId ?>">Open Encounter</a>

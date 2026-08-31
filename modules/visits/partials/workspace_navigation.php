@@ -242,6 +242,34 @@ function isActiveTab(
         </a>
 
         <a
+            href="workspace.php?id=<?= (int)$visitId ?>&tab=pop"
+            class="workspace-card<?= isActiveTab('pop', $activeTab) ?>">
+
+            <div class="workspace-icon">
+
+                POP
+
+            </div>
+
+            <div class="workspace-content">
+
+                <strong>
+
+                    POP
+
+                </strong>
+
+                <span>
+
+                    Casting services
+
+                </span>
+
+            </div>
+
+        </a>
+
+        <a
             href="workspace.php?id=<?= (int)$visitId ?>&tab=pharmacy"
             class="workspace-card<?= isActiveTab('pharmacy', $activeTab) ?>">
 

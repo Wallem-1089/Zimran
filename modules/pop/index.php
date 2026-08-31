@@ -4,22 +4,20 @@ declare(strict_types=1);
 
 require __DIR__ . '/_bootstrap.php';
 
-if (!$POPTablesReady) {
-    http_response_code(503);
-    exit('POP tables are not available yet. Apply Migration 058 to enable this section.');
-}
-
-if (!$permissionService->canViewPOPWorklist($currentUser)) {
+if (!$permissionService->canViewPopWorklist($currentUser)) {
     http_response_code(403);
     exit('You do not have permission to view the POP worklist.');
 }
+if (!$popTablesReady) {
+    http_response_code(503);
+    exit('POP tables are not available yet. Apply Migration 059 to enable this section.');
+}
 
 $status = (string)($_GET['status'] ?? '');
-$requests = $POPService->listWorklist($currentUser, ['status' => $status]);
+$requests = $popService->listWorklist($currentUser, ['status' => $status]);
 
 $pageTitle = 'POP Worklist';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
-
 require __DIR__ . '/../../layouts/header.php';
 require __DIR__ . '/../../layouts/sidebar.php';
 ?>
@@ -29,25 +27,22 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="page-header">
         <div>
             <h1>POP Worklist</h1>
-            <p>Clinical and direct POP requests awaiting POP department action.</p>
+            <p>POP/casting requests awaiting department action.</p>
         </div>
     </div>
 
-    <?php if (isset($_SESSION['success_message'])): ?>
-        <div class="alert-success"><?= e((string)$_SESSION['success_message']) ?></div>
-        <?php unset($_SESSION['success_message']); ?>
-    <?php endif; ?>
-
-    <form method="get" class="card filters-inline">
-        <div class="form-group">
-            <label for="status">Status</label>
-            <select id="status" name="status">
-                <?php foreach (['' => 'Active', 'All' => 'All', 'Requested' => 'Requested', 'In Progress' => 'In Progress', 'Completed' => 'Completed', 'Cancelled' => 'Cancelled'] as $value => $label): ?>
-                    <option value="<?= e((string)$value) ?>" <?= $status === (string)$value ? 'selected' : '' ?>><?= e($label) ?></option>
-                <?php endforeach; ?>
-            </select>
+    <form method="get" class="card compact-filter">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="status">Status</label>
+                <select id="status" name="status">
+                    <?php foreach (['' => 'Active', 'All' => 'All', 'Requested' => 'Requested', 'In Progress' => 'In Progress', 'Completed' => 'Completed', 'Cancelled' => 'Cancelled'] as $value => $label): ?>
+                        <option value="<?= e($value) ?>" <?= $status === $value ? 'selected' : '' ?>><?= e($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
         </div>
-        <button type="submit" class="btn-secondary">Filter</button>
+        <div class="form-actions"><button class="btn-secondary" type="submit">Filter</button></div>
     </form>
 
     <div class="card">
@@ -55,19 +50,19 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p class="text-muted">No POP requests found.</p>
         <?php else: ?>
             <div class="table-responsive">
-                <table>
+                <table class="data-table">
                     <thead>
                         <tr>
                             <th>Patient</th>
                             <th>Hospital No.</th>
-                            <th>Visit No.</th>
-                            <th>Study</th>
+                            <th>Visit</th>
+                            <th>Procedure</th>
                             <th>Source</th>
                             <th>Priority</th>
                             <th>Requested By</th>
                             <th>Date</th>
                             <th>Status</th>
-                            <th>Action</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -76,15 +71,15 @@ require __DIR__ . '/../../layouts/sidebar.php';
                                 <td><?= e((string)($request['patient_name'] ?? '-')) ?></td>
                                 <td><?= e((string)($request['hospital_number'] ?? '-')) ?></td>
                                 <td><?= e((string)($request['visit_number'] ?? '-')) ?></td>
-                                <td><?= e((string)($request['study_requested'] ?? 'POP')) ?></td>
-                                <td><?= e((string)($request['request_source'] ?? '-')) ?></td>
-                                <td><?= e((string)($request['priority'] ?? '-')) ?></td>
+                                <td><?= e((string)($request['procedure_requested'] ?? 'POP / Casting')) ?></td>
+                                <td><?= e((string)$request['request_source']) ?></td>
+                                <td><?= e((string)$request['priority']) ?></td>
                                 <td><?= e((string)($request['requested_by_name'] ?? '-')) ?></td>
                                 <td><?= e((string)($request['created_at'] ?? '-')) ?></td>
-                                <td><?= e((string)($request['status'] ?? '-')) ?></td>
-                                <td class="table-actions">
-                                    <a href="../visits/workspace.php?id=<?= (int)$request['visit_id'] ?>&tab=POP">Open Encounter</a>
+                                <td><?= e((string)$request['status']) ?></td>
+                                <td class="actions-cell">
                                     <a href="view.php?id=<?= (int)$request['id'] ?>">View/Process</a>
+                                    <a href="../visits/workspace.php?id=<?= (int)$request['visit_id'] ?>&tab=pop">Open Encounter</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -96,4 +91,3 @@ require __DIR__ . '/../../layouts/sidebar.php';
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
-

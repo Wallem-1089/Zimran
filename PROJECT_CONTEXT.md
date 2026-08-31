@@ -1169,19 +1169,28 @@ The current operational application includes:
   department notifications, timeline, cancellation, and completion/discharge
   capture.
 - Consultation, Vital Signs, Nursing with Dressing Book, Drug Chart, and DM Sheet,
-  Laboratory, Radiology, ECG, Physiotherapy,
+  Laboratory, Radiology, ECG, POP, Physiotherapy,
   Theatre, Pharmacy, Billing with department billing requests,
   Accounts/Price Catalogue, Store/Inventory, and
   Basic Reports/Dashboard summaries.
-- Inpatient Admissions / Ward & Bed workflow: admit an active encounter to a
-  ward/bed, transfer ward/bed, discharge/cancel admission, view inpatient
-  census, and manage basic wards/beds.
-- Clinical cross-view permissions from Migration 038 plus ECG additions are live: Doctor, Nurse,
-  Laboratory Scientist, Radiographer/X-Ray, ECG Technician, Physiotherapist, Theatre Staff,
+- Inpatient Admissions / Ward & Bed workflow: Nurse, Doctor, Receptionist,
+  Records Officer, and Administrator users can admit an active encounter to a
+  ward/bed and transfer/change ward-bed placement. Discharge/cancel admission
+  and ward/bed master-data setup remain controlled by their separate
+  permissions.
+- Clinical cross-view permissions from Migration 038 plus ECG/POP additions are live: Doctor, Nurse,
+  Laboratory Scientist, Radiographer/X-Ray, ECG Technician, POP Technician, Physiotherapist, Theatre Staff,
   Pharmacist, and Records Officer can view core clinical context across the
   active encounter while create/edit/complete rights remain owned by each
   department module. Vital Signs mutation remains limited to Doctor, Nurse, and
   Administrator.
+
+POP is implemented as a simple encounter-linked department workflow through
+`pop_requests`, `pop_records`, and `POPService`. Doctors can create clinical
+POP/casting requests. POP Technicians can create direct POP requests for active
+POP encounters, process their worklist, document cast/procedure details,
+materials used, aftercare, and remarks, then complete the request. POP does
+not require fake Consultation records for direct patients.
 
 Consultation supports both typed narrative entry and an optional Doctor/Admin
 handwriting pad. The handwriting feature stores compact stroke data in the
@@ -1236,3 +1245,16 @@ Known practical cleanup items that are not blockers:
   `modules/visits/workspace.php`.
 - Consultation handwriting mode should still be manually smoke-tested in a
   browser because it is a pointer/canvas interaction.
+
+## Administrator model
+
+The application distinguishes Super Administrator from ordinary System
+Administrator.
+
+- Super Administrator has full-system override access.
+- System Administrator is limited to Administration functionality such as user,
+  role, permission, department, security/settings management, plus the ability
+  to view other department worklists for operational support.
+- Walter Ikhile / username `walter` is the protected Super Administrator
+  account.
+- The original `admin` account remains an ordinary System Administrator.
