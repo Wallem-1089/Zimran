@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/test_database.php';
 require_once __DIR__ . '/../config/helpers.php';
 
 $_SERVER['PHP_SELF'] = '/test/sidebar_visibility_test.php';
@@ -10,15 +10,35 @@ $baseUrl = '/hospital_management_system';
 
 function sidebarUser(string $role, string $department): array
 {
+    $departmentIds = [
+        'Administrator' => 1,
+        'Reception' => 2,
+        'Records' => 3,
+        'Doctor' => 4,
+        'Nursing' => 5,
+        'Laboratory' => 6,
+        'Pharmacy' => 7,
+        'Physiotherapy' => 8,
+        'X-Ray' => 9,
+        'Theatre' => 10,
+        'Accounts' => 11,
+        'Store' => 12,
+        'Orderly' => 13,
+        'ECG' => 14,
+        'POP' => 15,
+        'Super Administrator' => 16,
+    ];
+    $departmentId = $departmentIds[$department] ?? 0;
+
     return [
-        'id' => 0,
+        'id' => $departmentId,
         'first_name' => 'Sidebar',
         'last_name' => 'Tester',
         'role_name' => $role,
         'department_name' => $department,
-        'department_id' => 0,
+        'department_id' => $departmentId,
         'active_department_name' => $department,
-        'active_department_id' => 0,
+        'active_department_id' => $departmentId,
     ];
 }
 
@@ -47,9 +67,17 @@ function assertSidebarOmits(string $html, string $label, string $context): void
     }
 }
 
-$adminSidebar = renderSidebarFor(sidebarUser('System Administrator', 'Administrator'));
+$superAdminSidebar = renderSidebarFor(sidebarUser('Super Administrator', 'Super Administrator'));
 foreach (['Medical Records', 'Accounts', 'Store', 'Admissions', 'Pharmacy', 'Billing', 'Reports', 'Administration', 'Switch Department'] as $label) {
+    assertSidebarContains($superAdminSidebar, $label, 'Super Administrator');
+}
+
+$adminSidebar = renderSidebarFor(sidebarUser('System Administrator', 'Administrator'));
+foreach (['Department Worklist', 'Administration'] as $label) {
     assertSidebarContains($adminSidebar, $label, 'Administrator');
+}
+foreach (['Medical Records', 'Accounts', 'Store', 'Admissions', 'Pharmacy', 'Billing', 'Reports'] as $label) {
+    assertSidebarOmits($adminSidebar, $label, 'Administrator');
 }
 
 $doctorSidebar = renderSidebarFor(sidebarUser('Doctor', 'Doctor'));

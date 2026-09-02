@@ -63,10 +63,10 @@ $admin = $pdo->query('
     FROM users u
     INNER JOIN roles r ON r.id = u.role_id
     INNER JOIN departments d ON d.id = u.department_id
-    WHERE r.role_name = \'System Administrator\'
+    WHERE u.username = \'walter\'
     ORDER BY u.id LIMIT 1
 ')->fetch(PDO::FETCH_ASSOC);
-assertMpi((bool)$admin, 'The deterministic administrator fixture is missing.');
+assertMpi((bool)$admin, 'The deterministic super administrator fixture is missing.');
 $actorId = (int)$admin['id'];
 
 $patientService = new PatientService($pdo);

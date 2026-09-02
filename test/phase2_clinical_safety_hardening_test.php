@@ -39,12 +39,12 @@ $rows = $pdo->query("
     FROM users u
     INNER JOIN roles r ON r.id=u.role_id
     INNER JOIN departments d ON d.id=u.department_id
-    WHERE u.username IN ('admin','dev_doctor','dev_records','dev_nurse')
+    WHERE u.username IN ('walter','dev_doctor','dev_records','dev_nurse')
 ")->fetchAll(PDO::FETCH_ASSOC);
 foreach ($rows as $row) {
     $users[$row['username']] = $row;
 }
-foreach (['admin', 'dev_doctor', 'dev_records', 'dev_nurse'] as $username) {
+foreach (['walter', 'dev_doctor', 'dev_records', 'dev_nurse'] as $username) {
     assertSafetyHardening(isset($users[$username]), 'Missing fixture user ' . $username . '.');
 }
 
@@ -53,7 +53,7 @@ $patientId = (int)$pdo->query(
 )->fetchColumn();
 assertSafetyHardening($patientId > 0, 'Dedicated fixture patient is missing.');
 
-$admin = $users['admin'];
+$admin = $users['walter'];
 $doctor = $users['dev_doctor'];
 $records = $users['dev_records'];
 $settings = new SettingsService($pdo);

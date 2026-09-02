@@ -253,6 +253,20 @@ assertRemediation(
     strlen($fixturePassword) >= 12,
     'HMS_DEV_FIXTURE_PASSWORD is required for the isolated authentication test.'
 );
+$pdo->prepare('
+    UPDATE users
+    SET password = :password,
+        must_change_password = 0,
+        status = \'Active\',
+        failed_login_attempts = 0,
+        locked_at = NULL,
+        locked_by = NULL,
+        lock_reason = NULL
+    WHERE id = :id
+')->execute([
+    ':password' => password_hash($fixturePassword, PASSWORD_DEFAULT),
+    ':id' => $adminId,
+]);
 $adminLogin = $authService->login('admin', $fixturePassword);
 assertRemediation(
     ($adminLogin['success'] ?? false) === true,

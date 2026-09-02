@@ -33,12 +33,12 @@ assertLongitudinal(
 );
 
 $users = [];
-$rows = $pdo->query("SELECT u.*,r.role_name,d.department_name FROM users u INNER JOIN roles r ON r.id=u.role_id INNER JOIN departments d ON d.id=u.department_id WHERE u.username IN ('admin','dev_doctor','dev_records','dev_nurse')")->fetchAll(PDO::FETCH_ASSOC);
+$rows = $pdo->query("SELECT u.*,r.role_name,d.department_name FROM users u INNER JOIN roles r ON r.id=u.role_id INNER JOIN departments d ON d.id=u.department_id WHERE u.username IN ('walter','dev_doctor','dev_records','dev_nurse')")->fetchAll(PDO::FETCH_ASSOC);
 foreach ($rows as $row) { $users[$row['username']] = $row; }
-foreach (['admin', 'dev_doctor', 'dev_records', 'dev_nurse'] as $username) {
+foreach (['walter', 'dev_doctor', 'dev_records', 'dev_nurse'] as $username) {
     assertLongitudinal(isset($users[$username]), 'Missing fixture user ' . $username . '.');
 }
-$admin = $users['admin']; $doctor = $users['dev_doctor']; $records = $users['dev_records'];
+$admin = $users['walter']; $doctor = $users['dev_doctor']; $records = $users['dev_records'];
 $patientIds = array_map('intval', $pdo->query("SELECT id FROM patients WHERE hospital_number IN ('DEV-PATIENT-0001','DEV-PATIENT-0002') ORDER BY hospital_number")->fetchAll(PDO::FETCH_COLUMN));
 assertLongitudinal(count($patientIds) === 2, 'Dedicated patient fixtures are missing.');
 [$patientId, $otherPatientId] = $patientIds;

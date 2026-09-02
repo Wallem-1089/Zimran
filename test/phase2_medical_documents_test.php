@@ -55,10 +55,10 @@ $fixtureRoot = __DIR__ . '/../storage/tests/medical_document_uploads';
 removeTree($storageRoot); removeTree($fixtureRoot); mkdir($fixtureRoot, 0700, true);
 
 $users = [];
-$rows = $pdo->query("SELECT u.*,r.role_name,d.department_name FROM users u INNER JOIN roles r ON r.id=u.role_id INNER JOIN departments d ON d.id=u.department_id WHERE u.username IN ('admin','dev_doctor','dev_reception','dev_records','dev_nurse','dev_accounts')")->fetchAll(PDO::FETCH_ASSOC);
+$rows = $pdo->query("SELECT u.*,r.role_name,d.department_name FROM users u INNER JOIN roles r ON r.id=u.role_id INNER JOIN departments d ON d.id=u.department_id WHERE u.username IN ('walter','dev_doctor','dev_reception','dev_records','dev_nurse','dev_accounts')")->fetchAll(PDO::FETCH_ASSOC);
 foreach ($rows as $row) { $users[$row['username']] = $row; }
-foreach (['admin','dev_doctor','dev_reception','dev_records','dev_nurse','dev_accounts'] as $username) { assertDocumentTest(isset($users[$username]), 'Missing fixture user ' . $username); }
-$admin = $users['admin']; $doctor = $users['dev_doctor']; $reception = $users['dev_reception']; $accounts = $users['dev_accounts'];
+foreach (['walter','dev_doctor','dev_reception','dev_records','dev_nurse','dev_accounts'] as $username) { assertDocumentTest(isset($users[$username]), 'Missing fixture user ' . $username); }
+$admin = $users['walter']; $doctor = $users['dev_doctor']; $reception = $users['dev_reception']; $accounts = $users['dev_accounts'];
 $patientIds = array_map('intval', $pdo->query("SELECT id FROM patients WHERE hospital_number IN ('DEV-PATIENT-0001','DEV-PATIENT-0002') ORDER BY hospital_number")->fetchAll(PDO::FETCH_COLUMN));
 assertDocumentTest(count($patientIds) === 2, 'Patient fixtures are missing.');
 [$patientId, $otherPatientId] = $patientIds;

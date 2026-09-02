@@ -38,12 +38,12 @@ $admin = $pdo->query('
     FROM users u
     INNER JOIN departments d ON d.id = u.department_id
     INNER JOIN roles r ON r.id = u.role_id
-    WHERE r.role_name = \'System Administrator\'
+    WHERE u.username = \'walter\'
     ORDER BY u.id
     LIMIT 1
 ')->fetch(PDO::FETCH_ASSOC);
 
-assertRegression((bool)$admin, 'An administrator account is required.');
+assertRegression((bool)$admin, 'A super administrator account is required.');
 
 $_SESSION['user'] = $admin;
 $_SESSION['active_department_id'] = (int)$admin['department_id'];
@@ -82,7 +82,7 @@ try {
         );
     }
 
-    assertRegression($permissionService->isAdministrator($admin), 'Administrator override failed.');
+    assertRegression($permissionService->isAdministrator($admin), 'Super Administrator override failed.');
     assertRegression($permissionService->canManageUsers($admin), 'Administrator user management permission failed.');
     assertRegression($permissionService->canManageSettings($admin), 'Administrator settings permission failed.');
 

@@ -1,4 +1,5 @@
 storage/sessions/
 storage/logs/*.log
+storage/e2e_documents/
+storage/e2e_ecg_charts/
 database/backups/*.sql
-

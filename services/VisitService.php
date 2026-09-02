@@ -558,28 +558,36 @@ class VisitService
     private function generateVisitNumber(): string
     {
         $prefix = 'VIS';
-
         $year = date('Y');
+        $pattern = $prefix . '-' . $year . '-%';
 
-        $stmt = $this->pdo->query(
-
-            "SELECT COUNT(*) FROM visits"
-
-        );
+        $stmt = $this->pdo->prepare("
+            SELECT MAX(CAST(SUBSTRING_INDEX(visit_number, '-', -1) AS UNSIGNED))
+            FROM visits
+            WHERE visit_number LIKE :pattern
+        ");
+        $stmt->execute([':pattern' => $pattern]);
 
         $next = ((int)$stmt->fetchColumn()) + 1;
 
-        return sprintf(
+        do {
+            $visitNumber = sprintf(
+                '%s-%s-%06d',
+                $prefix,
+                $year,
+                $next
+            );
 
-            '%s-%s-%06d',
+            $exists = $this->pdo->prepare('
+                SELECT COUNT(*)
+                FROM visits
+                WHERE visit_number = :visit_number
+            ');
+            $exists->execute([':visit_number' => $visitNumber]);
+            $next++;
+        } while ((int)$exists->fetchColumn() > 0);
 
-            $prefix,
-
-            $year,
-
-            $next
-
-        );
+        return $visitNumber;
     }
         /*
     |--------------------------------------------------------------------------

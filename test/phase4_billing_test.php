@@ -84,18 +84,18 @@ $rows = $pdo->query("
     FROM users u
     INNER JOIN roles r ON r.id = u.role_id
     INNER JOIN departments d ON d.id = u.department_id
-    WHERE u.username IN ('admin','dev_accounts','dev_doctor','dev_nurse')
+    WHERE u.username IN ('walter','dev_accounts','dev_doctor','dev_nurse')
 ")->fetchAll(PDO::FETCH_ASSOC);
 $users = [];
 foreach ($rows as $row) {
     $users[$row['username']] = $row;
 }
 
-foreach (['admin', 'dev_accounts', 'dev_doctor', 'dev_nurse'] as $username) {
+foreach (['walter', 'dev_accounts', 'dev_doctor', 'dev_nurse'] as $username) {
     assertBilling(isset($users[$username]), 'Missing fixture user ' . $username . '.');
 }
 
-$admin = $users['admin'];
+$admin = $users['walter'];
 $accounts = $users['dev_accounts'];
 $doctor = $users['dev_doctor'];
 $nurse = $users['dev_nurse'];

@@ -30,12 +30,12 @@ $admin = $pdo->query('
     FROM users u
     INNER JOIN departments d ON d.id = u.department_id
     INNER JOIN roles r ON r.id = u.role_id
-    WHERE r.role_name = \'System Administrator\'
+    WHERE u.username = \'walter\'
     ORDER BY u.id
     LIMIT 1
 ')->fetch(PDO::FETCH_ASSOC);
 
-assertMedicalRecords((bool)$admin, 'An administrator account is required.');
+assertMedicalRecords((bool)$admin, 'A super administrator account is required.');
 
 $_SESSION['user'] = $admin;
 $_SESSION['active_department_id'] = (int)$admin['department_id'];
@@ -108,7 +108,7 @@ try {
 
     assertMedicalRecords(
         $permissionService->canViewMedicalRecord($patientId, $admin),
-        'Administrator chart override failed.'
+        'Super Administrator chart override failed.'
     );
 
     $storeRoleId = (int)$pdo->query(

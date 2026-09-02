@@ -201,6 +201,7 @@ if ($currentUser && isset($pdo)) {
     );
     $sidebarOwnsEncounterWorklist = $sidebarOwnsDepartmentModule(
         [
+            'System Administrator',
             'Receptionist',
             'Records Officer',
             'Doctor',
@@ -216,6 +217,7 @@ if ($currentUser && isset($pdo)) {
             'Accounts',
         ],
         [
+            'Administrator',
             'Reception',
             'Records',
             'Doctor',

@@ -66,18 +66,18 @@ $rows = $pdo->query("
     FROM users u
     INNER JOIN roles r ON r.id = u.role_id
     INNER JOIN departments d ON d.id = u.department_id
-    WHERE u.username IN ('admin','dev_accounts','dev_doctor','dev_store')
+    WHERE u.username IN ('walter','dev_accounts','dev_doctor','dev_store')
 ")->fetchAll(PDO::FETCH_ASSOC);
 foreach ($rows as $row) {
     $users[$row['username']] = $row;
 }
 
-foreach (['admin', 'dev_accounts', 'dev_doctor', 'dev_store'] as $username) {
+foreach (['walter', 'dev_accounts', 'dev_doctor', 'dev_store'] as $username) {
     assertReports(isset($users[$username]), 'Missing fixture user ' . $username . '.');
 }
 
 $permissionService = new PermissionService($pdo);
-assertReports($permissionService->canViewReports($users['admin']), 'Administrator should view reports.');
+assertReports($permissionService->canViewReports($users['walter']), 'Super Administrator should view reports.');
 assertReports($permissionService->canViewReports($users['dev_accounts']), 'Accounts should view reports.');
 assertReports($permissionService->canViewFinancialReports($users['dev_accounts']), 'Accounts should view financial reports.');
 assertReports(!$permissionService->canViewFinancialReports($users['dev_doctor']), 'Doctor should not view financial reports.');
