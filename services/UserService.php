@@ -424,6 +424,12 @@ class UserService
     {
         $errors = $this->validateUserInput($user, true);
 
+        if ($this->roleHasName((int)($user['role_id'] ?? 0), 'Super Administrator')
+            && !$this->actorIsSuperAdministrator($createdBy)
+        ) {
+            $errors[] = 'Only a Super Administrator can create another Super Administrator account.';
+        }
+
         if ($errors) {
             return $this->failure($errors);
         }
@@ -512,6 +518,12 @@ class UserService
     ): array {
         $errors = $this->validateUserInput($user, false);
 
+        if ($this->roleHasName((int)($user['role_id'] ?? 0), 'Super Administrator')
+            && !$this->actorIsSuperAdministrator($updatedBy)
+        ) {
+            $errors[] = 'Only a Super Administrator can assign the Super Administrator role.';
+        }
+
         if ($errors) {
             return $this->failure($errors);
         }
@@ -535,6 +547,13 @@ class UserService
 
             if (!$locked) {
                 throw new RuntimeException('User not found.');
+            }
+
+            if ($this->roleHasName((int)$locked['role_id'], 'Super Administrator')
+                && !$this->actorIsSuperAdministrator($updatedBy)
+            ) {
+                $this->rollback();
+                return $this->failure(['Only a Super Administrator can modify a Super Administrator account.']);
             }
 
             if ($this->isProtectedAdminUser($locked)) {
@@ -910,6 +929,30 @@ class UserService
         $stmt->execute([':id' => $roleId]);
 
         return (string)$stmt->fetchColumn() === $roleName;
+    }
+
+    private function actorIsSuperAdministrator(int $actorId): bool
+    {
+        if ($actorId <= 0) {
+            return false;
+        }
+
+        $stmt = $this->db->prepare('
+            SELECT 1
+            FROM users u
+            INNER JOIN roles r ON r.id = u.role_id
+            LEFT JOIN departments d ON d.id = u.department_id
+            WHERE u.id = :id
+              AND u.status = \'Active\'
+              AND (
+                  r.role_name = \'Super Administrator\'
+                  OR d.department_name = \'Super Administrator\'
+              )
+            LIMIT 1
+        ');
+        $stmt->execute([':id' => $actorId]);
+
+        return (bool)$stmt->fetchColumn();
     }
 
     /**

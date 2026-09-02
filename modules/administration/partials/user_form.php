@@ -6,6 +6,9 @@ $user = $user ?? [];
 $roles = $roles ?? [];
 $departments = $departments ?? [];
 $isEdit = $isEdit ?? false;
+$currentUser = $currentUser ?? ($_SESSION['user'] ?? []);
+$canAssignSuperAdministrator = ($currentUser['role_name'] ?? '') === 'Super Administrator'
+    || ($currentUser['department_name'] ?? '') === 'Super Administrator';
 
 ?>
 
@@ -65,6 +68,9 @@ $isEdit = $isEdit ?? false;
             <select name="role_id" required>
                 <option value="">Select role</option>
                 <?php foreach ($roles as $role): ?>
+                    <?php if (($role['role_name'] ?? '') === 'Super Administrator' && !$canAssignSuperAdministrator): ?>
+                        <?php continue; ?>
+                    <?php endif; ?>
                     <option value="<?= (int)$role['id'] ?>" <?= (int)($user['role_id'] ?? 0) === (int)$role['id'] ? 'selected' : '' ?>>
                         <?= e($role['role_name']) ?>
                     </option>

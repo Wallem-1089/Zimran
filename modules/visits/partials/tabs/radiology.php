@@ -117,6 +117,13 @@ $requestSource = $radiologyRequestSource ?? 'Clinical';
                     <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?= e((string)($report['findings'] ?? '-')) ?></span></div>
                     <div class="summary-item"><span class="summary-label">Impression</span> <span class="summary-value"><?= e((string)($report['impression'] ?? '-')) ?></span></div>
                     <div class="summary-item"><span class="summary-label">Recommendation</span> <span class="summary-value"><?= e((string)($report['recommendation'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Uploaded Document</span> <span class="summary-value">
+                        <?php if (!empty($report['chart_stored_path'])): ?>
+                            <a href="../radiology/download_chart.php?id=<?= (int)$latest['id'] ?>" target="_blank" rel="noopener">Open scanned document</a>
+                        <?php else: ?>
+                            Not uploaded
+                        <?php endif; ?>
+                    </span></div>
                     <div class="summary-item"><span class="summary-label">Reported By</span> <span class="summary-value"><?= e((string)($report['result_performed_by_name'] ?? $report['performed_by_name'] ?? '-')) ?></span></div>
                     <div class="summary-item"><span class="summary-label">Completed At</span> <span class="summary-value"><?= e((string)($report['result_completed_at'] ?? '-')) ?></span></div>
                 </div>

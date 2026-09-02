@@ -55,11 +55,7 @@ class PermissionService
 
         return match ($permission) {
             'view_encounter' => true,
-            'delete_patient' => in_array(
-                $role,
-                ['Doctor', 'Records Officer'],
-                true
-            ),
+            'delete_patient' => false,
             'create_encounter' => in_array(
                 $role,
                 ['Receptionist', 'Nurse'],
@@ -815,19 +811,8 @@ class PermissionService
             return false;
         }
 
-        if ($this->isAdministrator($user)) {
-            return true;
-        }
-
-        if (!$this->hasPermission('delete_patient', $user)) {
-            return false;
-        }
-
-        return in_array(
-            (string)($user['role_name'] ?? ''),
-            ['Doctor', 'Records Officer'],
-            true
-        );
+        return $this->isAdministrator($user)
+            && $this->hasPermission('delete_patient', $user);
     }
 
     public function canViewDeletedPatient(

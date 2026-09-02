@@ -37,5 +37,27 @@ require __DIR__ . '/../../../layouts/sidebar.php';
 <form class="inline-form" method="post" action="<?= e($action) ?>.php"><?= csrfField() ?><input type="hidden" name="id" value="<?= (int)$document['id'] ?>"><input type="hidden" name="version" value="<?= (int)$document['version'] ?>"><input required name="reason" maxlength="1000" placeholder="Reason"><button class="btn-secondary" type="submit"><?= e($label) ?></button></form>
 <?php endforeach; endif; ?>
 </div>
+<?php if ($canDownload && $document['document_status'] !== 'Entered-in-error'): ?>
+<div class="card whatsapp-handoff-card">
+    <div class="whatsapp-handoff-header">
+        <div>
+            <h2>Send Document via WhatsApp</h2>
+            <p class="text-muted">Opens WhatsApp with a safe message. Download and attach the document manually; no public file link is shared.</p>
+        </div>
+        <span class="whatsapp-pill">Secure handoff</span>
+    </div>
+    <form class="whatsapp-handoff-form" method="post" action="../../patient_communications/whatsapp_handoff.php" target="_blank">
+        <?= csrfField() ?>
+        <input type="hidden" name="source_type" value="medical_document">
+        <input type="hidden" name="source_id" value="<?= (int)$document['id'] ?>">
+        <input type="hidden" name="return_url" value="../medical_records/documents/view.php?id=<?= (int)$document['id'] ?><?= e(documentContextQuery($visitId)) ?>">
+        <label class="inline-check whatsapp-consent">
+            <input type="checkbox" name="patient_consent_confirmed" value="1" required>
+            Patient consent confirmed
+        </label>
+        <button class="btn-whatsapp" type="submit">Send via WhatsApp</button>
+    </form>
+</div>
+<?php endif; ?>
 <a href="../chart.php?patient=<?= (int)$patient['id'] ?>&tab=documents<?= e(documentContextQuery($visitId)) ?>">Back to Medical Documents</a>
 </main><?php require __DIR__ . '/../../../layouts/footer.php'; ?></div>

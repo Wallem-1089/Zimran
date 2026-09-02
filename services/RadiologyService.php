@@ -11,16 +11,22 @@ class RadiologyService
     private AuditService $auditService;
     private EncounterEventService $eventService;
     private PermissionService $permissionService;
+    private string $storageRoot;
 
     public function __construct(
         private PDO $pdo,
         ?AuditService $auditService = null,
         ?EncounterEventService $eventService = null,
-        ?PermissionService $permissionService = null
+        ?PermissionService $permissionService = null,
+        ?string $storageRoot = null
     ) {
         $this->auditService = $auditService ?? new AuditService($pdo);
         $this->eventService = $eventService ?? new EncounterEventService($pdo);
         $this->permissionService = $permissionService ?? new PermissionService($pdo);
+        $config = require __DIR__ . '/../config/app.php';
+        $this->storageRoot = $storageRoot
+            ?? rtrim((string)($config['documents']['storage_root'] ?? dirname(__DIR__, 2) . '/hms_secure_documents'), "\\/")
+                . DIRECTORY_SEPARATOR . 'radiology_charts';
     }
 
     public function createRequest(array $data, array $user): array
@@ -177,20 +183,21 @@ class RadiologyService
         return $this->transitionRequest($requestId, $user, 'In Progress', 'RADIOLOGY_REQUEST_STARTED', 'Started radiology request #' . $requestId . '.');
     }
 
-    public function saveResult(array $data, array $user): array
+    public function saveResult(array $data, array $user, ?array $file = null): array
     {
-        return $this->saveOrUpdateResult($data, $user, false, 'enter_radiology_report');
+        return $this->saveOrUpdateResult($data, $user, $file, false, 'enter_radiology_report');
     }
 
-    public function updateResult(array $data, array $user): array
+    public function updateResult(array $data, array $user, ?array $file = null): array
     {
-        return $this->saveOrUpdateResult($data, $user, true, 'edit_radiology_report');
+        return $this->saveOrUpdateResult($data, $user, $file, true, 'edit_radiology_report');
     }
 
     public function getResult(int $requestId, ?array $user = null): ?array
     {
         $stmt = $this->pdo->prepare('
             SELECT lr.*, lres.id AS result_id, lres.findings, lres.impression, lres.recommendation,
+                   lres.chart_original_name, lres.chart_stored_path, lres.chart_mime_type, lres.chart_file_size,
                    lres.performed_by, lres.completed_by, lres.created_at AS result_created_at,
                    lres.updated_at AS result_updated_at, lres.completed_at AS result_completed_at,
                    CONCAT(performed.first_name, " ", performed.last_name) AS performed_by_name,
@@ -214,6 +221,34 @@ class RadiologyService
         }
 
         return $this->decorateRow($row);
+    }
+
+    public function prepareChartDownload(int $requestId, array $user): array
+    {
+        $request = $this->getResult($requestId, $user);
+        if (!$request || empty($request['chart_stored_path'])) {
+            return $this->failure(['Radiology chart/document not found.']);
+        }
+
+        $path = (string)$request['chart_stored_path'];
+        if (!is_file($path)) {
+            return $this->failure(['Radiology chart/document file is missing.']);
+        }
+
+        $this->audit(
+            'RADIOLOGY_CHART_DOWNLOADED',
+            $request,
+            $user,
+            'Downloaded radiology chart/document for request #' . $requestId . '.'
+        );
+
+        return [
+            'success' => true,
+            'path' => $path,
+            'filename' => (string)($request['chart_original_name'] ?? ('radiology-document-' . $requestId)),
+            'mime_type' => (string)($request['chart_mime_type'] ?? 'application/octet-stream'),
+            'errors' => [],
+        ];
     }
 
     public function completeRequest(int $requestId, array $user): array
@@ -316,7 +351,7 @@ class RadiologyService
         }
     }
 
-    private function saveOrUpdateResult(array $data, array $user, bool $mustExist, string $permissionKey): array
+    private function saveOrUpdateResult(array $data, array $user, ?array $file, bool $mustExist, string $permissionKey): array
     {
         try {
             $this->pdo->beginTransaction();
@@ -350,14 +385,16 @@ class RadiologyService
                 $errors[] = 'Recommendation is too long.';
             }
 
+            $existing = $this->lockResultByRequest($requestId);
+            if ($mustExist && !$existing) {
+                $errors[] = 'Radiology report not found.';
+            }
+
+            $upload = $this->prepareUpload($file, $errors, false);
+
             if ($errors !== []) {
                 $this->rollback();
                 return $this->failure($errors);
-            }
-
-            $existing = $this->lockResultByRequest($requestId);
-            if ($mustExist && !$existing) {
-                $existing = null;
             }
 
             if ($existing) {
@@ -366,6 +403,10 @@ class RadiologyService
                     SET findings = :findings,
                         impression = :impression,
                         recommendation = :recommendation,
+                        chart_original_name = COALESCE(:chart_original_name, chart_original_name),
+                        chart_stored_path = COALESCE(:chart_stored_path, chart_stored_path),
+                        chart_mime_type = COALESCE(:chart_mime_type, chart_mime_type),
+                        chart_file_size = COALESCE(:chart_file_size, chart_file_size),
                         performed_by = :performed_by,
                         updated_at = NOW()
                     WHERE radiology_request_id = :radiology_request_id
@@ -374,6 +415,10 @@ class RadiologyService
                     ':findings' => $findings,
                     ':impression' => $impression,
                     ':recommendation' => $recommendation,
+                    ':chart_original_name' => $upload['original_name'] ?? null,
+                    ':chart_stored_path' => $upload['stored_path'] ?? null,
+                    ':chart_mime_type' => $upload['mime_type'] ?? null,
+                    ':chart_file_size' => $upload['file_size'] ?? null,
                     ':performed_by' => (int)$user['id'],
                     ':radiology_request_id' => $requestId,
                 ]);
@@ -390,10 +435,14 @@ class RadiologyService
                 $stmt = $this->pdo->prepare('
                     INSERT INTO radiology_reports (
                         radiology_request_id, visit_id, patient_id,
-                        findings, impression, recommendation, performed_by, created_at, updated_at
+                        findings, impression, recommendation,
+                        chart_original_name, chart_stored_path, chart_mime_type, chart_file_size,
+                        performed_by, created_at, updated_at
                     ) VALUES (
                         :radiology_request_id, :visit_id, :patient_id,
-                        :findings, :impression, :recommendation, :performed_by, NOW(), NOW()
+                        :findings, :impression, :recommendation,
+                        :chart_original_name, :chart_stored_path, :chart_mime_type, :chart_file_size,
+                        :performed_by, NOW(), NOW()
                     )
                 ');
                 $stmt->execute([
@@ -403,6 +452,10 @@ class RadiologyService
                     ':findings' => $findings,
                     ':impression' => $impression,
                     ':recommendation' => $recommendation,
+                    ':chart_original_name' => $upload['original_name'] ?? null,
+                    ':chart_stored_path' => $upload['stored_path'] ?? null,
+                    ':chart_mime_type' => $upload['mime_type'] ?? null,
+                    ':chart_file_size' => $upload['file_size'] ?? null,
                     ':performed_by' => (int)$user['id'],
                 ]);
 
@@ -431,6 +484,60 @@ class RadiologyService
             $this->rollback();
             return $this->failure(['Unable to save radiology result.']);
         }
+    }
+
+    private function prepareUpload(?array $file, array &$errors, bool $required): array
+    {
+        if (!$file || (int)($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            if ($required) {
+                $errors[] = 'Scanned X-Ray/Radiology document is required.';
+            }
+            return [];
+        }
+
+        if ((int)$file['error'] !== UPLOAD_ERR_OK) {
+            $errors[] = 'The X-Ray/Radiology document could not be uploaded.';
+            return [];
+        }
+
+        $size = (int)($file['size'] ?? 0);
+        if ($size <= 0 || $size > 10 * 1024 * 1024) {
+            $errors[] = 'X-Ray/Radiology document must be between 1 byte and 10 MB.';
+            return [];
+        }
+
+        $tmp = (string)($file['tmp_name'] ?? '');
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime = (string)$finfo->file($tmp);
+        $allowed = ['application/pdf' => 'pdf', 'image/jpeg' => 'jpg', 'image/png' => 'png'];
+        if (!isset($allowed[$mime])) {
+            $errors[] = 'X-Ray/Radiology document must be a PDF, JPG, or PNG file.';
+            return [];
+        }
+
+        if (!is_dir($this->storageRoot) && !mkdir($this->storageRoot, 0775, true)) {
+            $errors[] = 'X-Ray/Radiology document storage is not available.';
+            return [];
+        }
+
+        $storedName = bin2hex(random_bytes(16)) . '.' . $allowed[$mime];
+        $storedPath = $this->storageRoot . DIRECTORY_SEPARATOR . $storedName;
+        $stored = move_uploaded_file($tmp, $storedPath);
+        if (!$stored && PHP_SAPI === 'cli' && is_file($tmp)) {
+            $stored = rename($tmp, $storedPath);
+        }
+
+        if (!$stored) {
+            $errors[] = 'Unable to store the X-Ray/Radiology document securely.';
+            return [];
+        }
+
+        return [
+            'original_name' => basename((string)($file['name'] ?? 'radiology-document.' . $allowed[$mime])),
+            'stored_path' => $storedPath,
+            'mime_type' => $mime,
+            'file_size' => $size,
+        ];
     }
 
     private function validateRequest(
@@ -762,6 +869,10 @@ class RadiologyService
                    lres.findings,
                    lres.impression,
                    lres.recommendation,
+                   lres.chart_original_name,
+                   lres.chart_stored_path,
+                   lres.chart_mime_type,
+                   lres.chart_file_size,
                    lres.performed_by AS result_performed_by,
                    lres.completed_by AS result_completed_by,
                    lres.created_at AS result_created_at,

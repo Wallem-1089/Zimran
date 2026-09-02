@@ -24,7 +24,7 @@ if (!$permissionService->canEnterRadiologyResult($visit, $currentUser)) {
     exit('You cannot enter this radiology result.');
 }
 
-$result = $radiologyService->saveResult($_POST, $currentUser);
+$result = $radiologyService->saveResult($_POST, $currentUser, $_FILES['radiology_chart'] ?? null);
 radiologyFlash($result, 'Radiology report saved.');
 
 header('Location: report.php?id=' . $requestId);

@@ -143,6 +143,13 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?= e((string)($result['findings'] ?? '-')) ?></span></div>
                 <div class="summary-item"><span class="summary-label">Impression</span> <span class="summary-value"><?= e((string)($result['impression'] ?? '-')) ?></span></div>
                 <div class="summary-item"><span class="summary-label">Recommendation</span> <span class="summary-value"><?= e((string)($result['recommendation'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Uploaded Document</span> <span class="summary-value">
+                    <?php if (!empty($result['chart_stored_path'])): ?>
+                        <a href="download_chart.php?id=<?= (int)$request['id'] ?>" target="_blank" rel="noopener">Open scanned X-Ray/Radiology document</a>
+                    <?php else: ?>
+                        Not uploaded
+                    <?php endif; ?>
+                </span></div>
                 <div class="summary-item"><span class="summary-label">Performed By</span> <span class="summary-value"><?= e((string)($result['performed_by_name'] ?? '-')) ?></span></div>
                 <div class="summary-item"><span class="summary-label">Completed By</span> <span class="summary-value"><?= e((string)($result['completed_by_name'] ?? '-')) ?></span></div>
                 <div class="summary-item"><span class="summary-label">Completed At</span> <span class="summary-value"><?= e((string)($result['result_completed_at'] ?? '-')) ?></span></div>
@@ -159,6 +166,28 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
         <?php endif; ?>
     </div>
+    <?php if ($result && trim((string)($result['impression'] ?? '')) !== ''): ?>
+        <div class="card whatsapp-handoff-card">
+            <div class="whatsapp-handoff-header">
+                <div>
+                    <h3>Send Report via WhatsApp</h3>
+                    <p class="text-muted">Opens WhatsApp with a safe message. Download and attach the report manually; no public file link is shared.</p>
+                </div>
+                <span class="whatsapp-pill">Patient handoff</span>
+            </div>
+            <form class="whatsapp-handoff-form" method="post" action="../patient_communications/whatsapp_handoff.php" target="_blank">
+                <?= csrfField() ?>
+                <input type="hidden" name="source_type" value="radiology_report">
+                <input type="hidden" name="source_id" value="<?= (int)$request['id'] ?>">
+                <input type="hidden" name="return_url" value="../radiology/view.php?id=<?= (int)$request['id'] ?>">
+                <label class="inline-check whatsapp-consent">
+                    <input type="checkbox" name="patient_consent_confirmed" value="1" required>
+                    Patient consent confirmed
+                </label>
+                <button class="btn-whatsapp" type="submit">Send via WhatsApp</button>
+            </form>
+        </div>
+    <?php endif; ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

@@ -526,3 +526,11 @@ Administrator may view admissions, create admissions, and transfer/change
 ward-bed assignment for active encounters. Super Administrator remains covered
 by the full-system override. This migration does not broaden discharge or
 ward/bed master-data setup permissions.
+
+## Migration 062 - Superadmin Patient Delete / Reception Records / Radiology Upload
+
+`062_superadmin_patient_delete_reception_radiology_upload_up.sql` restricts
+`delete_patient` to Super Administrator, aligns Receptionist and Records Officer
+practical permission visibility except patient deletion, forces the generated
+staff batch to change password on first login, and adds optional PDF/JPG/PNG
+upload metadata to `radiology_reports` for scanned X-Ray/Radiology documents.

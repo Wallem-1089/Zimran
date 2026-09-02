@@ -94,9 +94,18 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
     </div>
 
-    <form method="post" action="<?= e($action) ?>" class="card">
+    <form method="post" action="<?= e($action) ?>" enctype="multipart/form-data" class="card">
         <?= csrfField() ?>
         <input type="hidden" name="radiology_request_id" value="<?= (int)$requestId ?>">
+
+        <div class="form-group">
+            <label for="radiology_chart">Scanned X-Ray/Radiology Document <?= !empty($radiologyResult['chart_original_name']) ? '(optional replacement)' : '' ?></label>
+            <input id="radiology_chart" name="radiology_chart" type="file" accept="application/pdf,image/jpeg,image/png">
+            <small class="text-muted">Allowed: PDF, JPG, PNG. Maximum size: 10 MB.</small>
+            <?php if (!empty($radiologyResult['chart_original_name'])): ?>
+                <p>Current document: <a href="download_chart.php?id=<?= (int)$requestId ?>" target="_blank" rel="noopener"><?= e((string)$radiologyResult['chart_original_name']) ?></a></p>
+            <?php endif; ?>
+        </div>
 
         <div class="form-group">
             <label for="findings">Findings</label>
