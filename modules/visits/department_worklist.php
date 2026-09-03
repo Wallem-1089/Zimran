@@ -217,6 +217,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
                             <th>Encounter Status</th>
                             <th>Queue Status</th>
                             <th>Department State</th>
+                            <th>Details</th>
                             <th>Position</th>
                             <th>Queued At</th>
                             <th>Action</th>
@@ -227,6 +228,17 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
                             <?php
                                 $visitId = (int)($row['visit_id'] ?? 0);
                                 $awaitingReceive = !empty($row['can_receive']);
+                                $worklistStatus = (string)($row['worklist_status'] ?? '');
+                                $requestAttentionStatuses = [
+                                    'Laboratory Request',
+                                    'Radiology Request',
+                                    'ECG Request',
+                                    'POP Request',
+                                    'Physiotherapy Record',
+                                    'Prescription',
+                                    'Theatre Record',
+                                ];
+                                $isRequestAttention = !$awaitingReceive && in_array($worklistStatus, $requestAttentionStatuses, true);
                                 $patientName = trim(
                                     (string)($row['first_name'] ?? '')
                                     . ' '
@@ -242,10 +254,13 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
                                 <td>
                                     <?php if ($awaitingReceive): ?>
                                         <span class="status-badge status-warning">Awaiting Receive</span>
+                                    <?php elseif ($isRequestAttention): ?>
+                                        <span class="status-badge status-warning">Request / Attention</span>
                                     <?php else: ?>
                                         <span class="status-badge status-success">Received</span>
                                     <?php endif; ?>
                                 </td>
+                                <td><?= e((string)($row['remarks'] ?? '—')) ?></td>
                                 <td><?= ($row['position'] ?? null) !== null ? (int)$row['position'] : '—' ?></td>
                                 <td><?= !empty($row['queued_at']) ? e(date('d M Y h:i A', strtotime((string)$row['queued_at']))) : '—' ?></td>
                                 <td class="table-actions">

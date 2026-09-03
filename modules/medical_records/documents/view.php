@@ -29,7 +29,10 @@ require __DIR__ . '/../../../layouts/sidebar.php';
 </div>
 <?php if (!empty($document['description'])): ?><div class="card"><h2>Description</h2><p><?= nl2br(e($document['description'])) ?></p></div><?php endif; ?>
 <div class="card"><h2>Actions</h2>
-<?php if ($canDownload && $document['document_status'] !== 'Entered-in-error'): ?><a class="btn-primary" href="download.php?id=<?= (int)$document['id'] ?>">Download current version</a><?php endif; ?>
+<?php if ($canDownload && $document['document_status'] !== 'Entered-in-error'): ?>
+<a class="btn-primary" href="download.php?id=<?= (int)$document['id'] ?>&disposition=inline" target="_blank" rel="noopener">Open in Browser</a>
+<a class="btn-secondary" href="download.php?id=<?= (int)$document['id'] ?>&disposition=attachment">Download current version</a>
+<?php endif; ?>
 <?php if ($canReplace && $document['document_status'] === 'Active'): ?><a class="btn-secondary" href="replace.php?id=<?= (int)$document['id'] ?><?= e(documentContextQuery($visitId)) ?>">Replace</a><?php endif; ?>
 <?php if ($canHistory): ?><a class="btn-secondary" href="versions.php?id=<?= (int)$document['id'] ?>">Version history</a><?php endif; ?>
 <?php if ($canArchive && $document['document_status'] !== 'Entered-in-error'): ?>

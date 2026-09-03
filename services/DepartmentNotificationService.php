@@ -226,7 +226,13 @@ class DepartmentNotificationService
 
     private function departmentExists(int $departmentId): bool
     {
-        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM departments WHERE id = :id');
+        $stmt = $this->pdo->prepare(
+            "SELECT COUNT(*)
+             FROM departments
+             WHERE id = :id
+               AND is_active = 1
+               AND department_name <> 'Super Administrator'"
+        );
         $stmt->execute([':id' => $departmentId]);
         return (int)$stmt->fetchColumn() > 0;
     }

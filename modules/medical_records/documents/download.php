@@ -17,8 +17,10 @@ if (!($result['success'] ?? false)) {
 $download = $result['data'];
 $stream = $download['stream'];
 $filename = preg_replace('/[\x00-\x1F\x7F"\\\\]/u', '_', (string)$download['filename']) ?: 'document';
+$disposition = (string)($_GET['disposition'] ?? 'attachment');
+$disposition = $disposition === 'inline' ? 'inline' : 'attachment';
 header('Content-Type: ' . (string)$download['mime_type']);
-header('Content-Disposition: attachment; filename="' . $filename . '"; filename*=UTF-8\'\'' . rawurlencode($filename));
+header('Content-Disposition: ' . $disposition . '; filename="' . $filename . '"; filename*=UTF-8\'\'' . rawurlencode($filename));
 header('Content-Length: ' . (int)$download['file_size']);
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: ' . (string)$download['cache_control']);

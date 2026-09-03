@@ -173,6 +173,7 @@ $enableWritingMode = isset($permissionService)
             <select id="to_department_id" name="to_department_id" required>
                 <option value="">Select department</option>
                 <?php foreach ($departments as $department): ?>
+                    <?php if ((string)($department['department_name'] ?? '') === 'Super Administrator') { continue; } ?>
                     <option value="<?= (int)$department['id'] ?>">
                         <?= e((string)$department['department_name']) ?>
                     </option>
@@ -210,6 +211,8 @@ $enableWritingMode = isset($permissionService)
                 <option value="">Select user</option>
                 <?php foreach ($notificationUsers as $notificationUser): ?>
                     <?php if ((int)$notificationUser['id'] === (int)($currentUser['id'] ?? 0)) { continue; } ?>
+                    <?php if ((string)($notificationUser['role_name'] ?? '') === 'Super Administrator') { continue; } ?>
+                    <?php if ((string)($notificationUser['department_name'] ?? '') === 'Super Administrator') { continue; } ?>
                     <option value="<?= (int)$notificationUser['id'] ?>">
                         <?= e(trim((string)$notificationUser['first_name'] . ' ' . (string)$notificationUser['last_name'])) ?>
                         — <?= e((string)$notificationUser['role_name']) ?>

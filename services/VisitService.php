@@ -189,6 +189,8 @@ class VisitService
             $rowsByVisit[(int)$row['visit_id']] ??= $row;
         }
 
+        $this->appendDepartmentRequestWorklistRows($rowsByVisit, $departmentId);
+
         $rows = array_values($rowsByVisit);
 
         usort($rows, static function (array $a, array $b): int {
@@ -3137,6 +3139,140 @@ private function appendTransferEvents(
 
     }
 
+}
+
+private function appendDepartmentRequestWorklistRows(
+    array &$rowsByVisit,
+    int $departmentId
+): void {
+    $specs = [
+        [
+            'table' => 'laboratory_requests',
+            'title' => 'Laboratory Request',
+            'label' => 'tests_requested',
+            'statuses' => ['Requested', 'In Progress'],
+        ],
+        [
+            'table' => 'radiology_requests',
+            'title' => 'Radiology Request',
+            'label' => 'study_requested',
+            'statuses' => ['Requested', 'In Progress'],
+        ],
+        [
+            'table' => 'ecg_requests',
+            'title' => 'ECG Request',
+            'label' => 'study_requested',
+            'statuses' => ['Requested', 'In Progress'],
+        ],
+        [
+            'table' => 'pop_requests',
+            'title' => 'POP Request',
+            'label' => 'procedure_requested',
+            'statuses' => ['Requested', 'In Progress'],
+        ],
+        [
+            'table' => 'physiotherapy_records',
+            'title' => 'Physiotherapy Record',
+            'label' => 'presenting_problem',
+            'statuses' => ['Active'],
+        ],
+        [
+            'table' => 'prescriptions',
+            'title' => 'Prescription',
+            'label' => 'medication_name',
+            'statuses' => ['Prescribed'],
+        ],
+        [
+            'table' => 'theatre_records',
+            'title' => 'Theatre Record',
+            'label' => 'procedure_name',
+            'statuses' => ['Draft'],
+        ],
+    ];
+
+    foreach ($specs as $spec) {
+        $this->appendDepartmentRequestWorklistRowsForSpec(
+            $rowsByVisit,
+            $departmentId,
+            $spec
+        );
+    }
+}
+
+private function appendDepartmentRequestWorklistRowsForSpec(
+    array &$rowsByVisit,
+    int $departmentId,
+    array $spec
+): void {
+    $table = (string)($spec['table'] ?? '');
+    $labelColumn = (string)($spec['label'] ?? '');
+    $title = (string)($spec['title'] ?? 'Department Request');
+    $statuses = (array)($spec['statuses'] ?? []);
+
+    if (
+        $table === ''
+        || $labelColumn === ''
+        || $statuses === []
+        || !$this->tableExists($table)
+    ) {
+        return;
+    }
+
+    if (!preg_match('/^[a-zA-Z0-9_]+$/', $table)
+        || !preg_match('/^[a-zA-Z0-9_]+$/', $labelColumn)
+    ) {
+        return;
+    }
+
+    $statusPlaceholders = [];
+    $params = [':department_id' => $departmentId];
+    foreach (array_values($statuses) as $index => $status) {
+        $placeholder = ':status_' . $index;
+        $statusPlaceholders[] = $placeholder;
+        $params[$placeholder] = (string)$status;
+    }
+
+    try {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                NULL AS id,
+                v.id AS visit_id,
+                r.department_id AS department_id,
+                NULL AS assigned_user_id,
+                NULL AS position,
+                r.status AS queue_status,
+                CONCAT(:title_remarks, ': ', LEFT(COALESCE(r.$labelColumn, ''), 180)) AS remarks,
+                COALESCE(r.updated_at, r.created_at) AS queued_at,
+                v.visit_number,
+                v.visit_status,
+                v.current_department_received_status,
+                v.patient_id,
+                p.hospital_number,
+                p.first_name,
+                p.last_name,
+                d.department_name,
+                NULL AS assigned_user_name,
+                :title_status AS worklist_status,
+                0 AS can_receive
+            FROM $table r
+            INNER JOIN visits v ON v.id = r.visit_id
+            INNER JOIN patients p ON p.id = r.patient_id
+            LEFT JOIN departments d ON d.id = r.department_id
+            WHERE r.department_id = :department_id
+              AND r.status IN (" . implode(',', $statusPlaceholders) . ")
+              AND v.visit_status NOT IN ('Completed', 'Cancelled')
+            ORDER BY COALESCE(r.updated_at, r.created_at) DESC, r.id DESC
+            LIMIT 100
+        ");
+        $params[':title_remarks'] = $title;
+        $params[':title_status'] = $title;
+        $stmt->execute($params);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $rowsByVisit[(int)$row['visit_id']] ??= $row;
+        }
+    } catch (Throwable) {
+        return;
+    }
 }
 
 private function appendLaboratoryEvents(

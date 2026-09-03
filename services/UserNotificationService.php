@@ -144,6 +144,8 @@ class UserNotificationService
              WHERE u.status = 'Active'
                AND u.locked_at IS NULL
                AND LOWER(u.username) <> 'walter'
+               AND r.role_name <> 'Super Administrator'
+               AND d.department_name <> 'Super Administrator'
              ORDER BY u.first_name, u.last_name, u.id"
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -268,11 +270,15 @@ class UserNotificationService
     {
         $stmt = $this->pdo->prepare(
             "SELECT COUNT(*)
-             FROM users
-             WHERE id = :id
-               AND status = 'Active'
-               AND locked_at IS NULL
-               AND LOWER(username) <> 'walter'"
+             FROM users u
+             INNER JOIN roles r ON r.id = u.role_id
+             INNER JOIN departments d ON d.id = u.department_id
+             WHERE u.id = :id
+               AND u.status = 'Active'
+               AND u.locked_at IS NULL
+               AND LOWER(u.username) <> 'walter'
+               AND r.role_name <> 'Super Administrator'
+               AND d.department_name <> 'Super Administrator'"
         );
         $stmt->execute([':id' => $userId]);
         return (int)$stmt->fetchColumn() > 0;

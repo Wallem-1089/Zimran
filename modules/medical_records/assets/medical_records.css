@@ -70,3 +70,85 @@
         flex-direction: column;
     }
 }
+
+/* ==========================================================================
+   Responsive patient chart hardening
+   ========================================================================== */
+
+.patient-chart-header,
+.chart-header-actions,
+.chart-navigation,
+.chart-summary-grid,
+.chart-detail-grid,
+.record-actions,
+.form-actions{
+    min-width:0;
+}
+
+.chart-navigation{
+    -webkit-overflow-scrolling:touch;
+    overflow-x:auto;
+    padding-bottom:0.35rem;
+}
+
+.chart-navigation a{
+    flex:0 0 auto;
+    min-height:42px;
+    white-space:nowrap;
+}
+
+.chart-summary-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));
+}
+
+.chart-detail-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));
+}
+
+.chart-detail-grid > div,
+.chart-summary-grid .summary-card,
+.history-entry,
+.card{
+    min-width:0;
+    overflow-wrap:anywhere;
+}
+
+.table-responsive{
+    -webkit-overflow-scrolling:touch;
+    overflow-x:auto;
+}
+
+.table-responsive table{
+    min-width:680px;
+}
+
+@media (max-width: 720px) {
+    .chart-header-actions,
+    .form-actions,
+    .record-actions{
+        align-items:stretch;
+        flex-direction:column;
+        width:100%;
+    }
+
+    .chart-header-actions a,
+    .chart-header-actions button,
+    .form-actions a,
+    .form-actions button,
+    .record-actions a,
+    .record-actions button{
+        justify-content:center;
+        width:100%;
+    }
+
+    .chart-summary-grid,
+    .chart-detail-grid{
+        grid-template-columns:1fr;
+    }
+
+    .table-responsive table{
+        min-width:620px;
+    }
+}

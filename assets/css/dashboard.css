@@ -136,6 +136,360 @@ body{
 }
 
 /* ==========================================================================
+   Responsive component hardening
+   ========================================================================== */
+
+img,
+svg,
+canvas,
+video{
+    max-width:100%;
+}
+
+.page-header,
+.card-header,
+.section-header,
+.module-header,
+.filter-header{
+    align-items:flex-start;
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px;
+    justify-content:space-between;
+    min-width:0;
+}
+
+.page-header > *,
+.card-header > *,
+.section-header > *,
+.module-header > *,
+.filter-header > *{
+    min-width:0;
+}
+
+.card,
+.form-card,
+.summary-card,
+.action-card,
+.workspace-card,
+.report-card,
+.dashboard-card{
+    overflow-wrap:anywhere;
+}
+
+.summary-grid,
+.stats-grid,
+.dashboard-grid,
+.metric-grid,
+.form-grid,
+.filter-grid,
+.chart-summary-grid,
+.chart-detail-grid{
+    display:grid;
+    gap:16px;
+    grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));
+}
+
+.summary-item,
+.stat-card,
+.metric-card{
+    min-width:0;
+}
+
+.summary-label,
+.summary-value{
+    overflow-wrap:anywhere;
+}
+
+.summary-item{
+    align-items:flex-start;
+    gap:8px;
+}
+
+.form-group,
+.field-group{
+    min-width:0;
+}
+
+input,
+select,
+textarea,
+button{
+    max-width:100%;
+}
+
+textarea{
+    min-height:120px;
+}
+
+select,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="tel"],
+input[type="search"],
+textarea{
+    min-height:44px;
+}
+
+.form-actions,
+.actions,
+.button-group,
+.table-actions,
+.record-actions,
+.quick-actions,
+.navbar-actions,
+.chart-header-actions,
+.patient-actions{
+    align-items:center;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+}
+
+.form-actions{
+    justify-content:flex-end;
+}
+
+.actions a,
+.quick-actions a,
+.form-actions a,
+.form-actions button,
+.table-actions a,
+.table-actions button,
+.record-actions a,
+.record-actions button,
+.button-group a,
+.button-group button,
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.btn-small{
+    align-items:center;
+    display:inline-flex;
+    justify-content:center;
+    line-height:1.25;
+    min-height:40px;
+    text-align:center;
+    white-space:normal;
+}
+
+.table-responsive,
+.responsive-table,
+.table-scroll{
+    -webkit-overflow-scrolling:touch;
+    overflow-x:auto;
+    width:100%;
+}
+
+.table-responsive table,
+.responsive-table table,
+.table-scroll table{
+    min-width:720px;
+}
+
+table{
+    max-width:100%;
+}
+
+th,
+td{
+    vertical-align:top;
+}
+
+.nav-tabs,
+.workspace-tabs,
+.chart-navigation{
+    -webkit-overflow-scrolling:touch;
+    max-width:100%;
+    overflow-x:auto;
+    scrollbar-width:thin;
+}
+
+.nav-tabs a,
+.workspace-tabs a,
+.chart-navigation a{
+    white-space:nowrap;
+}
+
+.sidebar{
+    flex:0 0 260px;
+}
+
+.main-container{
+    min-width:0;
+}
+
+@media(max-width:1180px){
+    .summary-grid,
+    .stats-grid,
+    .dashboard-grid,
+    .metric-grid,
+    .form-grid,
+    .filter-grid{
+        grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));
+    }
+}
+
+@media(max-width:900px){
+    .wrapper{
+        flex-direction:column;
+    }
+
+    .sidebar{
+        flex:0 0 auto;
+        max-height:none;
+        width:100%;
+    }
+
+    .sidebar-nav ul{
+        display:grid;
+        gap:8px;
+        grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    }
+
+    .sidebar-nav li{
+        margin-bottom:0;
+    }
+
+    .content{
+        padding:16px;
+    }
+
+    .navbar{
+        align-items:stretch;
+        flex-direction:column;
+    }
+
+    .navbar-right,
+    .navbar-actions{
+        justify-content:flex-start;
+        width:100%;
+    }
+
+    .user-details{
+        text-align:left;
+    }
+
+    .page-header,
+    .card-header,
+    .section-header,
+    .module-header,
+    .filter-header{
+        flex-direction:column;
+    }
+
+    .page-header .actions,
+    .page-header .form-actions,
+    .card-header .actions,
+    .module-header .actions{
+        width:100%;
+    }
+}
+
+@media(max-width:640px){
+    body{
+        font-size:14px;
+    }
+
+    .content{
+        padding:12px;
+    }
+
+    .card,
+    .form-card,
+    .departments,
+    .activity{
+        border-radius:12px;
+        padding:16px;
+    }
+
+    .summary-grid,
+    .stats-grid,
+    .dashboard-grid,
+    .metric-grid,
+    .form-grid,
+    .filter-grid,
+    .chart-summary-grid,
+    .chart-detail-grid{
+        grid-template-columns:1fr;
+    }
+
+    .summary-item{
+        align-items:flex-start;
+        flex-direction:column;
+    }
+
+    .summary-value{
+        width:100%;
+    }
+
+    .form-actions,
+    .actions,
+    .button-group,
+    .record-actions,
+    .quick-actions,
+    .chart-header-actions,
+    .patient-actions{
+        align-items:stretch;
+        flex-direction:column;
+        width:100%;
+    }
+
+    .form-actions a,
+    .form-actions button,
+    .actions a,
+    .actions button,
+    .quick-actions a,
+    .quick-actions button,
+    .record-actions a,
+    .record-actions button,
+    .button-group a,
+    .button-group button,
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger{
+        width:100%;
+    }
+
+    .table-actions{
+        align-items:stretch;
+        flex-direction:column;
+    }
+
+    .table-actions a,
+    .table-actions button{
+        width:100%;
+    }
+
+    .table-responsive table,
+    .responsive-table table,
+    .table-scroll table{
+        min-width:640px;
+    }
+
+    .writing-mode-switch{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        width:100%;
+    }
+
+    .consultation-writing-toolbar,
+    .handwriting-pad-top,
+    .handwriting-pad-actions{
+        align-items:stretch;
+        flex-direction:column;
+    }
+
+    .handwriting-canvas{
+        min-height:360px;
+    }
+}
+
+/* ==========================================================================
    Consultation handwriting pad
    ========================================================================== */
 

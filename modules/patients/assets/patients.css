@@ -367,3 +367,74 @@ table th {
     color: #666666;
     font-size: 14px;
 }
+
+/* ==========================================================================
+   Responsive patient module hardening
+   ========================================================================== */
+
+.patient-summary,
+.patient-actions-grid,
+.form-grid{
+    grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));
+}
+
+.card,
+.summary-card,
+.patient-card,
+.action-card{
+    min-width:0;
+    overflow-wrap:anywhere;
+}
+
+.table-responsive{
+    -webkit-overflow-scrolling:touch;
+}
+
+.table-responsive table{
+    min-width:680px;
+}
+
+@media (max-width: 640px) {
+    .card {
+        padding: 16px;
+    }
+
+    .patient-summary,
+    .patient-actions-grid,
+    .form-grid{
+        grid-template-columns:1fr;
+    }
+
+    .summary-item{
+        align-items:flex-start;
+        flex-direction:column;
+        gap:4px;
+    }
+
+    .summary-item strong{
+        margin-right:0;
+    }
+
+    .patient-actions,
+    .form-actions{
+        align-items:stretch;
+        width:100%;
+    }
+
+    .patient-actions a,
+    .patient-actions button,
+    .form-actions a,
+    .form-actions button{
+        justify-content:center;
+        text-align:center;
+        width:100%;
+    }
+
+    .action-card{
+        align-items:flex-start;
+    }
+
+    .action-icon{
+        flex:0 0 52px;
+    }
+}
