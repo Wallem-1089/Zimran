@@ -20,6 +20,7 @@ if ($visitId <= 0) {
 $visitService = new VisitService($pdo);
 $permissionService = new PermissionService($pdo);
 $visit = $visitService->getVisitById($visitId);
+$enableWritingMode = $permissionService->canUseConsultationHandwriting($currentUser);
 
 if (!$visit) {
     http_response_code(404);
@@ -64,14 +65,12 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
             not reversed or deleted.
         </p>
 
-        <form method="post" action="reopen_save.php">
+        <form method="post" action="reopen_save.php" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
             <?= csrfField() ?>
             <input type="hidden" name="visit_id" value="<?= (int)$visitId ?>">
 
-            <div class="form-group">
-                <label for="reopen_reason">Reason for Reopening <span class="required">*</span></label>
-                <textarea id="reopen_reason" name="reopen_reason" rows="5" required><?= e((string)($_SESSION['old_input']['reopen_reason'] ?? '')) ?></textarea>
-            </div>
+            <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Reopen Reason Entry Mode'); ?>
+            <?php hmsRenderHandwritingTextarea('reopen_reason', 'Reason for Reopening', (string)($_SESSION['old_input']['reopen_reason'] ?? ''), 5, true, $enableWritingMode); ?>
 
             <?php unset($_SESSION['old_input']); ?>
 
@@ -80,6 +79,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
                 <a class="btn-secondary" href="workspace.php?id=<?= (int)$visitId ?>">Cancel</a>
             </div>
         </form>
+        <?php hmsRenderHandwritingScript($enableWritingMode); ?>
     </div>
 </main>
 

@@ -7,9 +7,12 @@ $wards = $wards ?? [];
 $beds = $beds ?? [];
 $action = $action ?? 'save.php';
 $buttonLabel = $buttonLabel ?? 'Admit Patient';
+$enableWritingMode ??= isset($permissionService)
+    && method_exists($permissionService, 'canUseConsultationHandwriting')
+    && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
 ?>
 
-<form method="post" action="<?= e($action) ?>" class="card form-card">
+<form method="post" action="<?= e($action) ?>" class="card form-card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
     <?= csrfField() ?>
     <input type="hidden" name="visit_id" value="<?= (int)($visit['id'] ?? $admission['visit_id'] ?? 0) ?>">
     <input type="hidden" name="patient_id" value="<?= (int)($visit['patient_id'] ?? $admission['patient_id'] ?? 0) ?>">
@@ -54,18 +57,13 @@ $buttonLabel = $buttonLabel ?? 'Admit Patient';
         </div>
     </div>
 
-    <div class="form-group">
-        <label for="admission_diagnosis">Admission Diagnosis</label>
-        <textarea id="admission_diagnosis" name="admission_diagnosis" rows="4"><?= e((string)($admission['admission_diagnosis'] ?? '')) ?></textarea>
-    </div>
-
-    <div class="form-group">
-        <label for="admission_notes">Admission Notes</label>
-        <textarea id="admission_notes" name="admission_notes" rows="5"><?= e((string)($admission['admission_notes'] ?? '')) ?></textarea>
-    </div>
+    <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Admission Entry Mode'); ?>
+    <?php hmsRenderHandwritingTextarea('admission_diagnosis', 'Admission Diagnosis', (string)($admission['admission_diagnosis'] ?? ''), 4, false, $enableWritingMode); ?>
+    <?php hmsRenderHandwritingTextarea('admission_notes', 'Admission Notes', (string)($admission['admission_notes'] ?? ''), 5, false, $enableWritingMode); ?>
 
     <div class="form-actions">
         <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>
         <a class="btn-secondary" href="<?= e(admissionBackToWorkspace((int)($visit['id'] ?? $admission['visit_id'] ?? 0))) ?>">Cancel</a>
     </div>
 </form>
+<?php hmsRenderHandwritingScript($enableWritingMode); ?>

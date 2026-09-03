@@ -95,7 +95,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     ] as $field => $label): ?>
         <div class="card">
             <h3><?= e($label) ?></h3>
-            <p><?= nl2br(e((string)($theatre[$field] ?? ''))) ?></p>
+            <p><?php hmsRenderNarrative((string)($theatre[$field] ?? '')); ?></p>
         </div>
     <?php endforeach; ?>
 </main>

@@ -14,9 +14,12 @@ foreach ($prescriptions as $prescriptionOption) {
         break;
     }
 }
+$enableWritingMode ??= isset($permissionService)
+    && method_exists($permissionService, 'canUseConsultationHandwriting')
+    && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
 ?>
 
-<form method="post" action="<?= e($action) ?>" class="card">
+<form method="post" action="<?= e($action) ?>" class="card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
     <?= csrfField() ?>
     <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
     <input type="hidden" name="patient_id" value="<?= (int)$visit['patient_id'] ?>">
@@ -94,10 +97,8 @@ foreach ($prescriptions as $prescriptionOption) {
             </select>
         </div>
 
-        <div class="form-group">
-            <label for="notes">Notes</label>
-            <textarea id="notes" name="notes" rows="4"><?= e((string)($record['notes'] ?? '')) ?></textarea>
-        </div>
+        <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Drug Chart Entry Mode'); ?>
+        <?php hmsRenderHandwritingTextarea('notes', 'Notes', (string)($record['notes'] ?? ''), 4, false, $enableWritingMode); ?>
     </div>
 
     <div class="form-actions">
@@ -105,6 +106,7 @@ foreach ($prescriptions as $prescriptionOption) {
         <a class="btn-secondary" href="<?= e(drugChartBackToWorkspace((int)$visit['id'])) ?>">Cancel</a>
     </div>
 </form>
+<?php hmsRenderHandwritingScript($enableWritingMode); ?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {

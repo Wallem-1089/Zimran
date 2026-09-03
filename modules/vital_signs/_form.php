@@ -5,9 +5,12 @@ declare(strict_types=1);
 $vitalSigns ??= [];
 $action ??= 'save.php';
 $buttonLabel ??= 'Save Vital Signs';
+$enableWritingMode ??= isset($permissionService)
+    && method_exists($permissionService, 'canUseConsultationHandwriting')
+    && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
 ?>
 
-<form method="post" action="<?= e($action) ?>" class="card">
+<form method="post" action="<?= e($action) ?>" class="card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
     <?= csrfField() ?>
     <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
     <input type="hidden" name="patient_id" value="<?= (int)$visit['patient_id'] ?>">
@@ -29,13 +32,13 @@ $buttonLabel ??= 'Save Vital Signs';
         <div class="form-group"><label for="pain_score">Pain Score (0-10)</label><input type="number" step="1" min="0" max="10" id="pain_score" name="pain_score" value="<?= e((string)($vitalSigns['pain_score'] ?? '')) ?>"></div>
     </div>
 
-    <div class="form-group">
-        <label for="notes">Notes</label>
-        <textarea id="notes" name="notes" rows="4"><?= e((string)($vitalSigns['notes'] ?? '')) ?></textarea>
-    </div>
+    <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Vital Signs Entry Mode'); ?>
+    <?php hmsRenderHandwritingTextarea('notes', 'Notes', (string)($vitalSigns['notes'] ?? ''), 4, false, $enableWritingMode); ?>
 
     <div class="form-actions">
         <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>
         <a class="btn-secondary" href="<?= e(vitalSignsBackToWorkspace((int)$visit['id'])) ?>">Cancel</a>
     </div>
 </form>
+
+<?php hmsRenderHandwritingScript($enableWritingMode); ?>

@@ -93,86 +93,15 @@ function consultationRequireAccess(PermissionService $permissions, array $visit,
 
 function consultationHandwritingPrefix(): string
 {
-    return '__HMS_HANDWRITING_V1__';
+    return hmsHandwritingPrefix();
 }
 
 function consultationExtractHandwriting(string $value): ?array
 {
-    $prefix = consultationHandwritingPrefix();
-    if (!str_starts_with($value, $prefix)) {
-        return null;
-    }
-
-    $payload = json_decode(substr($value, strlen($prefix)), true);
-    if (!is_array($payload) || !isset($payload['strokes']) || !is_array($payload['strokes'])) {
-        return null;
-    }
-
-    return $payload;
+    return hmsExtractHandwriting($value);
 }
 
 function consultationRenderNarrative(string $value): void
 {
-    $handwriting = consultationExtractHandwriting($value);
-    if ($handwriting === null) {
-        echo '<p>' . nl2br(e($value)) . '</p>';
-        return;
-    }
-
-    $width = max(320, min(1400, (int)($handwriting['width'] ?? 900)));
-    $height = max(180, min(900, (int)($handwriting['height'] ?? 280)));
-    $paths = [];
-
-    foreach ($handwriting['strokes'] as $stroke) {
-        if (!is_array($stroke) || count($stroke) < 1) {
-            continue;
-        }
-
-        $points = [];
-        foreach ($stroke as $point) {
-            if (!is_array($point) || count($point) < 2) {
-                continue;
-            }
-
-            $x = max(0, min($width, (float)$point[0]));
-            $y = max(0, min($height, (float)$point[1]));
-            $points[] = [round($x, 1), round($y, 1)];
-        }
-
-        if ($points === []) {
-            continue;
-        }
-
-        if (count($points) === 1) {
-            $x = $points[0][0];
-            $y = $points[0][1];
-            $paths[] = 'M ' . $x . ' ' . $y . ' m -1.8 0 a 1.8 1.8 0 1 0 3.6 0 a 1.8 1.8 0 1 0 -3.6 0';
-            continue;
-        }
-
-        $path = 'M ' . $points[0][0] . ' ' . $points[0][1];
-        for ($index = 1, $count = count($points); $index < $count; $index++) {
-            $previous = $points[$index - 1];
-            $current = $points[$index];
-            $middleX = round(($previous[0] + $current[0]) / 2, 1);
-            $middleY = round(($previous[1] + $current[1]) / 2, 1);
-            $path .= ' Q ' . $previous[0] . ' ' . $previous[1] . ' ' . $middleX . ' ' . $middleY;
-        }
-        $last = $points[count($points) - 1];
-        $path .= ' L ' . $last[0] . ' ' . $last[1];
-        $paths[] = $path;
-    }
-
-    if ($paths === []) {
-        echo '<p class="text-muted">No handwritten content captured.</p>';
-        return;
-    }
-
-    echo '<div class="consultation-handwriting-view" role="img" aria-label="Handwritten consultation note">';
-    echo '<svg viewBox="0 0 ' . $width . ' ' . $height . '" preserveAspectRatio="xMidYMin meet">';
-    foreach ($paths as $path) {
-        echo '<path d="' . e($path) . '" />';
-    }
-    echo '</svg>';
-    echo '</div>';
+    hmsRenderNarrative($value);
 }

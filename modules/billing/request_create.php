@@ -31,6 +31,7 @@ $items = array_values(array_filter($items, static fn (array $item): bool => !emp
 $sourceModule = trim((string)($_GET['source_module'] ?? 'General'));
 $sourceRecordId = filter_input(INPUT_GET, 'source_record_id', FILTER_VALIDATE_INT) ?: null;
 $defaultDescription = trim((string)($_GET['description'] ?? ''));
+$enableWritingMode = $permissionService->canUseConsultationHandwriting($currentUser);
 
 $pageTitle = 'Request Billing';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -54,7 +55,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="card">
         <h3>Billing Recommendation</h3>
         <p class="text-muted">This does not create a charge yet. Accounts will review it and choose the official billable item/price.</p>
-        <form method="post" action="request_save.php" class="form-grid">
+        <form method="post" action="request_save.php" class="form-grid" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
             <?= csrfField() ?>
             <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
             <input type="hidden" name="source_module" value="<?= e($sourceModule !== '' ? $sourceModule : 'General') ?>">
@@ -63,8 +64,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
 
             <div class="form-group full-width">
-                <label for="description">Description</label>
-                <textarea id="description" name="description" rows="5" required placeholder="Example: Full Blood Count and Malaria Parasite done."><?= e($defaultDescription) ?></textarea>
+                <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Billing Request Entry Mode'); ?>
+                <?php hmsRenderHandwritingTextarea('description', 'Description', $defaultDescription, 5, true, $enableWritingMode); ?>
+                <small class="text-muted">Example: Full Blood Count and Malaria Parasite done.</small>
             </div>
 
             <div class="form-group">
@@ -88,6 +90,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <button class="btn-primary" type="submit">Submit Billing Request</button>
             </div>
         </form>
+        <?php hmsRenderHandwritingScript($enableWritingMode); ?>
     </div>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>

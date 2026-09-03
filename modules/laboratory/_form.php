@@ -6,9 +6,12 @@ $laboratoryRequest ??= [];
 $action ??= 'save.php';
 $buttonLabel ??= 'Save Laboratory Request';
 $requestSource = (string)($laboratoryRequest['request_source'] ?? ($requestSource ?? 'Clinical'));
+$enableWritingMode ??= isset($permissionService)
+    && method_exists($permissionService, 'canUseConsultationHandwriting')
+    && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
 ?>
 
-<form method="post" action="<?= e($action) ?>" class="card">
+<form method="post" action="<?= e($action) ?>" class="card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
     <?= csrfField() ?>
     <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
     <input type="hidden" name="patient_id" value="<?= (int)$patient['id'] ?>">
@@ -29,18 +32,14 @@ $requestSource = (string)($laboratoryRequest['request_source'] ?? ($requestSourc
         </select>
     </div>
 
-    <div class="form-group">
-        <label for="tests_requested">Tests Requested</label>
-        <textarea id="tests_requested" name="tests_requested" rows="4" required><?= e((string)($laboratoryRequest['tests_requested'] ?? '')) ?></textarea>
-    </div>
-
-    <div class="form-group">
-        <label for="clinical_information">Clinical Information</label>
-        <textarea id="clinical_information" name="clinical_information" rows="4"><?= e((string)($laboratoryRequest['clinical_information'] ?? '')) ?></textarea>
-    </div>
+    <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Laboratory Request Entry Mode'); ?>
+    <?php hmsRenderHandwritingTextarea('tests_requested', 'Tests Requested', (string)($laboratoryRequest['tests_requested'] ?? ''), 4, true, $enableWritingMode); ?>
+    <?php hmsRenderHandwritingTextarea('clinical_information', 'Clinical Information', (string)($laboratoryRequest['clinical_information'] ?? ''), 4, false, $enableWritingMode); ?>
 
     <div class="form-actions">
         <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>
         <a class="btn-secondary" href="<?= e(laboratoryBackToWorkspace((int)$visit['id'])) ?>">Cancel</a>
     </div>
 </form>
+
+<?php hmsRenderHandwritingScript($enableWritingMode); ?>

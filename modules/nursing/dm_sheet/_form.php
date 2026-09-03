@@ -6,9 +6,12 @@ $record ??= [];
 $action ??= 'save.php';
 $buttonLabel ??= 'Save DM Sheet Entry';
 $mealStatuses = $diabetesMonitoringService->getMealStatuses();
+$enableWritingMode ??= isset($permissionService)
+    && method_exists($permissionService, 'canUseConsultationHandwriting')
+    && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
 ?>
 
-<form method="post" action="<?= e($action) ?>" class="card">
+<form method="post" action="<?= e($action) ?>" class="card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
     <?= csrfField() ?>
     <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
     <input type="hidden" name="patient_id" value="<?= (int)$visit['patient_id'] ?>">
@@ -41,15 +44,9 @@ $mealStatuses = $diabetesMonitoringService->getMealStatuses();
             <input id="insulin_given" name="insulin_given" maxlength="255" placeholder="e.g. 6 units soluble insulin" value="<?= e((string)($record['insulin_given'] ?? '')) ?>">
         </div>
 
-        <div class="form-group">
-            <label for="symptoms">Symptoms</label>
-            <textarea id="symptoms" name="symptoms" rows="4"><?= e((string)($record['symptoms'] ?? '')) ?></textarea>
-        </div>
-
-        <div class="form-group">
-            <label for="notes">Notes</label>
-            <textarea id="notes" name="notes" rows="4"><?= e((string)($record['notes'] ?? '')) ?></textarea>
-        </div>
+        <?php hmsRenderHandwritingToolbar($enableWritingMode, 'DM Sheet Entry Mode'); ?>
+        <?php hmsRenderHandwritingTextarea('symptoms', 'Symptoms', (string)($record['symptoms'] ?? ''), 4, false, $enableWritingMode); ?>
+        <?php hmsRenderHandwritingTextarea('notes', 'Notes', (string)($record['notes'] ?? ''), 4, false, $enableWritingMode); ?>
     </div>
 
     <div class="form-actions">
@@ -57,3 +54,4 @@ $mealStatuses = $diabetesMonitoringService->getMealStatuses();
         <a class="btn-secondary" href="<?= e(dmSheetBackToWorkspace((int)$visit['id'])) ?>">Cancel</a>
     </div>
 </form>
+<?php hmsRenderHandwritingScript($enableWritingMode); ?>

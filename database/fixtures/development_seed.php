@@ -37,6 +37,7 @@ $pdo = new PDO(
 );
 
 $fixtures = [
+    ['DEV-WALTER-001', 'Walter', 'Ikhile', 'walter', 'Super Administrator', 'Super Administrator'],
     ['DEV-REC-001', 'Development', 'Receptionist', 'dev_reception', 'Reception', 'Receptionist'],
     ['DEV-REC-002', 'Development', 'Records', 'dev_records', 'Records', 'Records Officer'],
     ['DEV-NUR-001', 'Development', 'Nurse', 'dev_nurse', 'Nursing', 'Nurse'],

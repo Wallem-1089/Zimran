@@ -94,7 +94,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <h3>Study Requested</h3>
-        <p><?= nl2br(e((string)($request['study_requested'] ?? 'ECG'))) ?></p>
+        <p><?php hmsRenderNarrative((string)($request['study_requested'] ?? 'ECG')); ?></p>
     </div>
 
     <div class="card">
@@ -102,7 +102,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?php if (trim((string)($request['clinical_indication'] ?? '')) === ''): ?>
             <p class="text-muted">No clinical indication recorded.</p>
         <?php else: ?>
-            <p><?= nl2br(e((string)$request['clinical_indication'])) ?></p>
+            <p><?php hmsRenderNarrative((string)$request['clinical_indication']); ?></p>
         <?php endif; ?>
     </div>
 
@@ -151,9 +151,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <div class="summary-item"><span class="summary-label">Completed At</span> <span class="summary-value"><?= e((string)($report['report_completed_at'] ?? '-')) ?></span></div>
             </div>
             <h4>Notes</h4>
-            <p><?= trim((string)($report['notes'] ?? '')) === '' ? '<span class="text-muted">No ECG notes recorded.</span>' : nl2br(e((string)$report['notes'])) ?></p>
+            <p><?php trim((string)($report['notes'] ?? '')) === '' ? print '<span class="text-muted">No ECG notes recorded.</span>' : hmsRenderNarrative((string)$report['notes']); ?></p>
             <h4>Remarks</h4>
-            <p><?= trim((string)($report['remarks'] ?? '')) === '' ? '<span class="text-muted">No ECG remarks recorded.</span>' : nl2br(e((string)$report['remarks'])) ?></p>
+            <p><?php trim((string)($report['remarks'] ?? '')) === '' ? print '<span class="text-muted">No ECG remarks recorded.</span>' : hmsRenderNarrative((string)$report['remarks']); ?></p>
         <?php else: ?>
             <p class="text-muted">No scanned ECG chart or notes recorded.</p>
         <?php endif; ?>
@@ -161,4 +161,3 @@ require __DIR__ . '/../../layouts/sidebar.php';
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
-

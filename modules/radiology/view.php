@@ -93,7 +93,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <h3>Study Requested</h3>
-        <p><?= nl2br(e((string)($request['study_requested'] ?? $request['tests_requested'] ?? '')) ) ?></p>
+        <p><?php hmsRenderNarrative((string)($request['study_requested'] ?? $request['tests_requested'] ?? '')); ?></p>
     </div>
 
     <div class="card">
@@ -101,7 +101,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?php if (trim((string)($request['clinical_indication'] ?? $request['clinical_information'] ?? '')) === ''): ?>
             <p class="text-muted">No clinical indication recorded.</p>
         <?php else: ?>
-            <p><?= nl2br(e((string)($request['clinical_indication'] ?? $request['clinical_information'] ?? '')) ) ?></p>
+            <p><?php hmsRenderNarrative((string)($request['clinical_indication'] ?? $request['clinical_information'] ?? '')); ?></p>
         <?php endif; ?>
     </div>
 
@@ -140,9 +140,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p class="text-muted">No radiology result recorded.</p>
         <?php else: ?>
             <div class="summary-grid">
-                <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?= e((string)($result['findings'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Impression</span> <span class="summary-value"><?= e((string)($result['impression'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Recommendation</span> <span class="summary-value"><?= e((string)($result['recommendation'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?php hmsRenderNarrative((string)($result['findings'] ?? '-')); ?></span></div>
+                <div class="summary-item"><span class="summary-label">Impression</span> <span class="summary-value"><?php hmsRenderNarrative((string)($result['impression'] ?? '-')); ?></span></div>
+                <div class="summary-item"><span class="summary-label">Recommendation</span> <span class="summary-value"><?php hmsRenderNarrative((string)($result['recommendation'] ?? '-')); ?></span></div>
                 <div class="summary-item"><span class="summary-label">Uploaded Document</span> <span class="summary-value">
                     <?php if (!empty($result['chart_stored_path'])): ?>
                         <a href="download_chart.php?id=<?= (int)$request['id'] ?>" target="_blank" rel="noopener">Open scanned X-Ray/Radiology document</a>
@@ -156,13 +156,13 @@ require __DIR__ . '/../../layouts/sidebar.php';
             </div>
             <?php if (trim((string)($result['findings'] ?? '')) !== ''): ?>
                 <h4>Findings</h4>
-                <p><?= nl2br(e((string)$result['findings'])) ?></p>
+                <p><?php hmsRenderNarrative((string)$result['findings']); ?></p>
             <?php endif; ?>
             <h4>Impression</h4>
-            <p><?= nl2br(e((string)$result['impression'])) ?></p>
+            <p><?php hmsRenderNarrative((string)$result['impression']); ?></p>
             <?php if (trim((string)($result['recommendation'] ?? '')) !== ''): ?>
                 <h4>Recommendation</h4>
-                <p><?= nl2br(e((string)$result['recommendation'])) ?></p>
+                <p><?php hmsRenderNarrative((string)$result['recommendation']); ?></p>
             <?php endif; ?>
         <?php endif; ?>
     </div>

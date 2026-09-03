@@ -20,6 +20,7 @@ if ($visitId <= 0) {
 $visitService = new VisitService($pdo);
 $permissionService = new PermissionService($pdo);
 $visit = $visitService->getVisitById($visitId);
+$enableWritingMode = $permissionService->canUseConsultationHandwriting($currentUser);
 
 if (!$visit) {
     http_response_code(404);
@@ -66,24 +67,14 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
         <h2>Discharge / Completion Review</h2>
         <p class="text-muted">Complete this encounter only after the necessary clinical and operational work is finished.</p>
 
-        <form method="post" action="complete_save.php">
+        <form method="post" action="complete_save.php" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
             <?= csrfField() ?>
             <input type="hidden" name="visit_id" value="<?= (int)$visitId ?>">
 
-            <div class="form-group">
-                <label for="discharge_diagnosis">Final / Discharge Diagnosis <span class="required">*</span></label>
-                <textarea id="discharge_diagnosis" name="discharge_diagnosis" rows="4" required><?= e((string)($_SESSION['old_input']['discharge_diagnosis'] ?? $visit['discharge_diagnosis'] ?? '')) ?></textarea>
-            </div>
-
-            <div class="form-group">
-                <label for="discharge_notes">Discharge Notes</label>
-                <textarea id="discharge_notes" name="discharge_notes" rows="5"><?= e((string)($_SESSION['old_input']['discharge_notes'] ?? $visit['discharge_notes'] ?? '')) ?></textarea>
-            </div>
-
-            <div class="form-group">
-                <label for="follow_up_instructions">Follow-up Instructions</label>
-                <textarea id="follow_up_instructions" name="follow_up_instructions" rows="4"><?= e((string)($_SESSION['old_input']['follow_up_instructions'] ?? $visit['follow_up_instructions'] ?? '')) ?></textarea>
-            </div>
+            <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Encounter Completion Entry Mode'); ?>
+            <?php hmsRenderHandwritingTextarea('discharge_diagnosis', 'Final / Discharge Diagnosis', (string)($_SESSION['old_input']['discharge_diagnosis'] ?? $visit['discharge_diagnosis'] ?? ''), 4, true, $enableWritingMode); ?>
+            <?php hmsRenderHandwritingTextarea('discharge_notes', 'Discharge Notes', (string)($_SESSION['old_input']['discharge_notes'] ?? $visit['discharge_notes'] ?? ''), 5, false, $enableWritingMode); ?>
+            <?php hmsRenderHandwritingTextarea('follow_up_instructions', 'Follow-up Instructions', (string)($_SESSION['old_input']['follow_up_instructions'] ?? $visit['follow_up_instructions'] ?? ''), 4, false, $enableWritingMode); ?>
 
             <?php unset($_SESSION['old_input']); ?>
 
@@ -92,6 +83,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
                 <a class="btn-secondary" href="workspace.php?id=<?= (int)$visitId ?>">Cancel</a>
             </div>
         </form>
+        <?php hmsRenderHandwritingScript($enableWritingMode); ?>
     </div>
 </main>
 

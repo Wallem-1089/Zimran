@@ -102,8 +102,16 @@ $nurseId = (int)$nurse['id'];
 $pdo->prepare('DELETE FROM user_permissions WHERE user_id IN (?, ?)')
     ->execute([$doctorId, $nurseId]);
 
-assertUserPermissionOverride($permissionService->canUseConsultationHandwriting($doctor), 'Doctor should inherit Consultation handwriting by role.');
+assertUserPermissionOverride(!$permissionService->canUseConsultationHandwriting($doctor), 'Doctor should not inherit handwriting by role.');
 assertUserPermissionOverride($permissionService->hasPermission('create_vital_signs', $nurse), 'Nurse should inherit Vital Signs creation by role.');
+
+$allowDoctorWriting = $permissionService->assignUserPermissionOverrides(
+    $doctorId,
+    [(int)$permissionIds['use_consultation_handwriting'] => 'Allow'],
+    (int)$admin['id']
+);
+assertUserPermissionOverride(($allowDoctorWriting['success'] ?? false) === true, 'Doctor handwriting allow override should save.');
+assertUserPermissionOverride($permissionService->canUseConsultationHandwriting($doctor), 'User-level allow should grant Consultation handwriting to this doctor.');
 
 $denyDoctorWriting = $permissionService->assignUserPermissionOverrides(
     $doctorId,

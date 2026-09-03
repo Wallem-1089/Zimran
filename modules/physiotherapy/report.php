@@ -64,6 +64,7 @@ if (in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'],
     http_response_code(403);
     exit('Completed or cancelled encounters are read-only.');
 }
+$enableWritingMode = $permissionService->canUseConsultationHandwriting($currentUser);
 
 $pageTitle = 'Physiotherapy Session';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -105,7 +106,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
     </div>
 
-    <form method="post" action="<?= e($action) ?>" class="card">
+    <form method="post" action="<?= e($action) ?>" class="card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
         <?= csrfField() ?>
         <input type="hidden" name="physiotherapy_record_id" value="<?= (int)$recordId ?>">
         <input type="hidden" name="session_id" value="<?= (int)($physiotherapySession['id'] ?? 0) ?>">
@@ -115,31 +116,18 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <input type="datetime-local" id="session_date" name="session_date" value="<?= e(date('Y-m-d\TH:i', strtotime((string)($physiotherapySession['session_date'] ?? 'now')))) ?>" required>
         </div>
 
-        <div class="form-group">
-            <label for="treatment_given">Treatment Given</label>
-            <textarea id="treatment_given" name="treatment_given" rows="5" required><?= e((string)($physiotherapySession['treatment_given'] ?? '')) ?></textarea>
-        </div>
-
-        <div class="form-group">
-            <label for="patient_response">Patient Response</label>
-            <textarea id="patient_response" name="patient_response" rows="4"><?= e((string)($physiotherapySession['patient_response'] ?? '')) ?></textarea>
-        </div>
-
-        <div class="form-group">
-            <label for="progress_notes">Progress Notes</label>
-            <textarea id="progress_notes" name="progress_notes" rows="4"><?= e((string)($physiotherapySession['progress_notes'] ?? '')) ?></textarea>
-        </div>
-
-        <div class="form-group">
-            <label for="next_plan">Next Plan</label>
-            <textarea id="next_plan" name="next_plan" rows="4"><?= e((string)($physiotherapySession['next_plan'] ?? '')) ?></textarea>
-        </div>
+        <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Physiotherapy Session Entry Mode'); ?>
+        <?php hmsRenderHandwritingTextarea('treatment_given', 'Treatment Given', (string)($physiotherapySession['treatment_given'] ?? ''), 5, true, $enableWritingMode); ?>
+        <?php hmsRenderHandwritingTextarea('patient_response', 'Patient Response', (string)($physiotherapySession['patient_response'] ?? ''), 4, false, $enableWritingMode); ?>
+        <?php hmsRenderHandwritingTextarea('progress_notes', 'Progress Notes', (string)($physiotherapySession['progress_notes'] ?? ''), 4, false, $enableWritingMode); ?>
+        <?php hmsRenderHandwritingTextarea('next_plan', 'Next Plan', (string)($physiotherapySession['next_plan'] ?? ''), 4, false, $enableWritingMode); ?>
 
         <div class="form-actions">
             <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>
             <a class="btn-secondary" href="view.php?id=<?= (int)$recordId ?>">Cancel</a>
         </div>
     </form>
+    <?php hmsRenderHandwritingScript($enableWritingMode); ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

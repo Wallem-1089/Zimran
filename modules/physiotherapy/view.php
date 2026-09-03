@@ -92,42 +92,42 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <h3>Referral Reason</h3>
-        <p><?= nl2br(e((string)($record['referral_reason'] ?? ''))) ?: '<span class="text-muted">No referral reason recorded.</span>' ?></p>
+        <p><?php trim((string)($record['referral_reason'] ?? '')) === '' ? print '<span class="text-muted">No referral reason recorded.</span>' : hmsRenderNarrative((string)$record['referral_reason']); ?></p>
     </div>
 
     <div class="card">
         <h3>Presenting Problem</h3>
-        <p><?= nl2br(e((string)($record['presenting_problem'] ?? ''))) ?></p>
+        <p><?php hmsRenderNarrative((string)($record['presenting_problem'] ?? '')); ?></p>
     </div>
 
     <div class="card">
         <h3>Assessment</h3>
-        <p><?= nl2br(e((string)($record['assessment'] ?? ''))) ?></p>
+        <p><?php hmsRenderNarrative((string)($record['assessment'] ?? '')); ?></p>
     </div>
 
     <div class="card">
         <h3>Treatment Plan</h3>
-        <p><?= nl2br(e((string)($record['treatment_plan'] ?? ''))) ?></p>
+        <p><?php hmsRenderNarrative((string)($record['treatment_plan'] ?? '')); ?></p>
     </div>
 
     <?php if (trim((string)($record['functional_limitations'] ?? '')) !== ''): ?>
         <div class="card">
             <h3>Functional Limitations</h3>
-            <p><?= nl2br(e((string)$record['functional_limitations'])) ?></p>
+            <p><?php hmsRenderNarrative((string)$record['functional_limitations']); ?></p>
         </div>
     <?php endif; ?>
 
     <?php if (trim((string)($record['goals'] ?? '')) !== ''): ?>
         <div class="card">
             <h3>Goals</h3>
-            <p><?= nl2br(e((string)$record['goals'])) ?></p>
+            <p><?php hmsRenderNarrative((string)$record['goals']); ?></p>
         </div>
     <?php endif; ?>
 
     <?php if (trim((string)($record['precautions'] ?? '')) !== ''): ?>
         <div class="card">
             <h3>Precautions</h3>
-            <p><?= nl2br(e((string)$record['precautions'])) ?></p>
+            <p><?php hmsRenderNarrative((string)$record['precautions']); ?></p>
         </div>
     <?php endif; ?>
 
@@ -161,10 +161,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
                         <?php foreach ($sessions as $session): ?>
                             <tr>
                                 <td><?= e((string)($session['session_date'] ?? '-')) ?></td>
-                                <td><?= e((string)($session['treatment_given'] ?? '-')) ?></td>
-                                <td><?= e((string)($session['patient_response'] ?? '-')) ?></td>
-                                <td><?= e((string)($session['progress_notes'] ?? '-')) ?></td>
-                                <td><?= e((string)($session['next_plan'] ?? '-')) ?></td>
+                                <td><?php hmsRenderNarrative((string)($session['treatment_given'] ?? '-')); ?></td>
+                                <td><?php hmsRenderNarrative((string)($session['patient_response'] ?? '-')); ?></td>
+                                <td><?php hmsRenderNarrative((string)($session['progress_notes'] ?? '-')); ?></td>
+                                <td><?php hmsRenderNarrative((string)($session['next_plan'] ?? '-')); ?></td>
                                 <td><?= e((string)($session['recorded_by_name'] ?? '-')) ?></td>
                                 <td>
                                     <?php if (!$isClosed && $canManageSessions && (string)$record['status'] === 'Active'): ?>
@@ -186,8 +186,8 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?php else: ?>
             <div class="summary-grid">
                 <div class="summary-item"><span class="summary-label">Date</span> <span class="summary-value"><?= e((string)($latestSession['session_date'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Treatment Given</span> <span class="summary-value"><?= e((string)($latestSession['treatment_given'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Patient Response</span> <span class="summary-value"><?= e((string)($latestSession['patient_response'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Treatment Given</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestSession['treatment_given'] ?? '-')); ?></span></div>
+                <div class="summary-item"><span class="summary-label">Patient Response</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestSession['patient_response'] ?? '-')); ?></span></div>
                 <div class="summary-item"><span class="summary-label">Recorded By</span> <span class="summary-value"><?= e((string)($latestSession['recorded_by_name'] ?? '-')) ?></span></div>
             </div>
         <?php endif; ?>

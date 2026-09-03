@@ -3213,14 +3213,14 @@ WHERE r.role_name = 'Receptionist'
   AND p.permission_key IN ('view_admissions', 'create_admission', 'transfer_admission');
 
 INSERT INTO permissions (permission_key, permission_name, module, description, is_active)
-SELECT 'use_consultation_handwriting', 'Use Consultation Handwriting', 'Consultation', 'Use the handwriting/touch-pad entry mode on Consultation forms.', 1
+SELECT 'use_consultation_handwriting', 'Use Handwriting Entry Mode', 'Clinical Entry', 'Use the handwriting/touch-pad entry mode on supported narrative forms.', 1
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE permission_key = 'use_consultation_handwriting');
 
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
 INNER JOIN permissions p
-WHERE r.role_name IN ('System Administrator', 'Doctor')
+WHERE r.role_name = 'Super Administrator'
   AND p.permission_key = 'use_consultation_handwriting';
 
 -- Super Administrator / ordinary Administrator split baseline.

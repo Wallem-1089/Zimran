@@ -16,17 +16,17 @@ if (!isset($latest) || !is_array($latest)) {
 </div>
 <table>
     <tbody>
-        <tr><th>General Condition</th><td><?= nl2br(e((string)($latest['general_condition'] ?? '-'))) ?></td></tr>
-        <tr><th>Nursing Observation</th><td><?= nl2br(e((string)($latest['nursing_observation'] ?? '-'))) ?></td></tr>
-        <tr><th>Pain Assessment</th><td><?= nl2br(e((string)($latest['pain_assessment'] ?? '-'))) ?></td></tr>
-        <tr><th>Mobility</th><td><?= nl2br(e((string)($latest['mobility'] ?? '-'))) ?></td></tr>
-        <tr><th>Nutrition</th><td><?= nl2br(e((string)($latest['nutrition'] ?? '-'))) ?></td></tr>
-        <tr><th>Elimination</th><td><?= nl2br(e((string)($latest['elimination'] ?? '-'))) ?></td></tr>
-        <tr><th>Skin Assessment</th><td><?= nl2br(e((string)($latest['skin_assessment'] ?? '-'))) ?></td></tr>
-        <tr><th>Fall Risk</th><td><?= nl2br(e((string)($latest['fall_risk'] ?? '-'))) ?></td></tr>
-        <tr><th>Nursing Interventions</th><td><?= nl2br(e((string)($latest['nursing_interventions'] ?? '-'))) ?></td></tr>
-        <tr><th>Patient Response</th><td><?= nl2br(e((string)($latest['patient_response'] ?? '-'))) ?></td></tr>
-        <tr><th>Handover Notes</th><td><?= nl2br(e((string)($latest['handover_notes'] ?? '-'))) ?></td></tr>
-        <tr><th>Additional Notes</th><td><?= nl2br(e((string)($latest['additional_notes'] ?? '-'))) ?></td></tr>
+        <tr><th>General Condition</th><td><?php hmsRenderNarrative((string)($latest['general_condition'] ?? '-')); ?></td></tr>
+        <tr><th>Nursing Observation</th><td><?php hmsRenderNarrative((string)($latest['nursing_observation'] ?? '-')); ?></td></tr>
+        <tr><th>Pain Assessment</th><td><?php hmsRenderNarrative((string)($latest['pain_assessment'] ?? '-')); ?></td></tr>
+        <tr><th>Mobility</th><td><?php hmsRenderNarrative((string)($latest['mobility'] ?? '-')); ?></td></tr>
+        <tr><th>Nutrition</th><td><?php hmsRenderNarrative((string)($latest['nutrition'] ?? '-')); ?></td></tr>
+        <tr><th>Elimination</th><td><?php hmsRenderNarrative((string)($latest['elimination'] ?? '-')); ?></td></tr>
+        <tr><th>Skin Assessment</th><td><?php hmsRenderNarrative((string)($latest['skin_assessment'] ?? '-')); ?></td></tr>
+        <tr><th>Fall Risk</th><td><?php hmsRenderNarrative((string)($latest['fall_risk'] ?? '-')); ?></td></tr>
+        <tr><th>Nursing Interventions</th><td><?php hmsRenderNarrative((string)($latest['nursing_interventions'] ?? '-')); ?></td></tr>
+        <tr><th>Patient Response</th><td><?php hmsRenderNarrative((string)($latest['patient_response'] ?? '-')); ?></td></tr>
+        <tr><th>Handover Notes</th><td><?php hmsRenderNarrative((string)($latest['handover_notes'] ?? '-')); ?></td></tr>
+        <tr><th>Additional Notes</th><td><?php hmsRenderNarrative((string)($latest['additional_notes'] ?? '-')); ?></td></tr>
     </tbody>
 </table>

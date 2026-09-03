@@ -11,8 +11,11 @@ $contextQuery = clinicalSafetyQuery($visitId);
 if (!($canViewConfidential ?? false)) {
     $confidentialityLevels = ['Standard'];
 }
+$enableWritingMode ??= isset($permissionService)
+    && method_exists($permissionService, 'canUseConsultationHandwriting')
+    && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
 ?>
-<form class="card" method="post" action="<?= e($alertAction) ?>">
+<form class="card" method="post" action="<?= e($alertAction) ?>" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
     <?= csrfField() ?>
     <input type="hidden" name="patient_id" value="<?= (int)$patient['id'] ?>">
     <?php if ($visitId !== null): ?>
@@ -28,8 +31,10 @@ if (!($canViewConfidential ?? false)) {
         <div><label for="starts_at">Starts</label><input id="starts_at" type="datetime-local" name="starts_at" value="<?= e(isset($alert['starts_at']) ? str_replace(' ', 'T', substr((string)$alert['starts_at'], 0, 16)) : '') ?>"></div>
         <div><label for="expires_at">Expires</label><input id="expires_at" type="datetime-local" name="expires_at" value="<?= e(isset($alert['expires_at']) ? str_replace(' ', 'T', substr((string)$alert['expires_at'], 0, 16)) : '') ?>"></div>
     </div>
-    <label for="reason">Clinical reason</label><textarea id="reason" name="reason" required><?= e($alert['reason'] ?? '') ?></textarea>
-    <label for="change_reason">Change reason</label><textarea id="change_reason" name="change_reason" required><?= empty($alert['id']) ? 'Initial clinical safety alert.' : '' ?></textarea>
+    <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Clinical Alert Entry Mode'); ?>
+    <?php hmsRenderHandwritingTextarea('reason', 'Clinical reason', (string)($alert['reason'] ?? ''), 4, true, $enableWritingMode); ?>
+    <?php hmsRenderHandwritingTextarea('change_reason', 'Change reason', empty($alert['id']) ? 'Initial clinical safety alert.' : '', 3, true, $enableWritingMode); ?>
     <button class="btn-primary" type="submit"><?= e($alertSubmitLabel) ?></button>
     <a class="btn-secondary" href="index.php?patient=<?= (int)$patient['id'] ?><?= e($contextQuery) ?>#alerts">Cancel</a>
 </form>
+<?php hmsRenderHandwritingScript($enableWritingMode); ?>

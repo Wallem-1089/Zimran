@@ -7,9 +7,12 @@ if (!isset($pharmacyPrescription, $inventoryItems, $requestSource, $formAction, 
 }
 
 $selectedInventoryItemId = (int)($pharmacyPrescription['inventory_item_id'] ?? 0);
+$enableWritingMode ??= isset($permissionService)
+    && method_exists($permissionService, 'canUseConsultationHandwriting')
+    && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
 ?>
 
-<form method="post" action="<?= e($formAction) ?>" class="card">
+<form method="post" action="<?= e($formAction) ?>" class="card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
     <?= csrfField() ?>
     <input type="hidden" name="visit_id" value="<?= (int)$pharmacyPrescription['visit_id'] ?>">
     <input type="hidden" name="patient_id" value="<?= (int)$pharmacyPrescription['patient_id'] ?>">
@@ -45,20 +48,10 @@ $selectedInventoryItemId = (int)($pharmacyPrescription['inventory_item_id'] ?? 0
             required>
     </div>
 
-    <div class="form-group">
-        <label for="dosage">Dosage</label>
-        <textarea id="dosage" name="dosage" rows="2"><?= e((string)($pharmacyPrescription['dosage'] ?? '')) ?></textarea>
-    </div>
-
-    <div class="form-group">
-        <label for="frequency">Frequency</label>
-        <textarea id="frequency" name="frequency" rows="2"><?= e((string)($pharmacyPrescription['frequency'] ?? '')) ?></textarea>
-    </div>
-
-    <div class="form-group">
-        <label for="duration">Duration</label>
-        <textarea id="duration" name="duration" rows="2"><?= e((string)($pharmacyPrescription['duration'] ?? '')) ?></textarea>
-    </div>
+    <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Prescription Entry Mode'); ?>
+    <?php hmsRenderHandwritingTextarea('dosage', 'Dosage', (string)($pharmacyPrescription['dosage'] ?? ''), 2, false, $enableWritingMode); ?>
+    <?php hmsRenderHandwritingTextarea('frequency', 'Frequency', (string)($pharmacyPrescription['frequency'] ?? ''), 2, false, $enableWritingMode); ?>
+    <?php hmsRenderHandwritingTextarea('duration', 'Duration', (string)($pharmacyPrescription['duration'] ?? ''), 2, false, $enableWritingMode); ?>
 
     <div class="form-group">
         <label for="quantity">Quantity</label>
@@ -72,13 +65,12 @@ $selectedInventoryItemId = (int)($pharmacyPrescription['inventory_item_id'] ?? 0
             required>
     </div>
 
-    <div class="form-group">
-        <label for="instructions">Instructions</label>
-        <textarea id="instructions" name="instructions" rows="4"><?= e((string)($pharmacyPrescription['instructions'] ?? '')) ?></textarea>
-    </div>
+    <?php hmsRenderHandwritingTextarea('instructions', 'Instructions', (string)($pharmacyPrescription['instructions'] ?? ''), 4, false, $enableWritingMode); ?>
 
     <div class="form-actions">
         <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>
         <a class="btn-secondary" href="<?= e(pharmacyBackToWorkspace((int)$pharmacyPrescription['visit_id'])) ?>">Workspace</a>
     </div>
 </form>
+
+<?php hmsRenderHandwritingScript($enableWritingMode); ?>

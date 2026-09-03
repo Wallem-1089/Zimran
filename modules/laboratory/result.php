@@ -24,6 +24,7 @@ if (!$request) {
 $visit = laboratoryRequireVisit($visitService, (int)$request['visit_id']);
 $result = $laboratoryService->getResult($requestId, $currentUser);
 $isClosed = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
+$enableWritingMode = $permissionService->canUseConsultationHandwriting($currentUser);
 
 if ($isClosed && !$permissionService->isAdministrator($currentUser)) {
     header('Location: view.php?id=' . $requestId);
@@ -95,35 +96,22 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
     </div>
 
-    <form method="post" action="<?= e($action) ?>" class="card">
+    <form method="post" action="<?= e($action) ?>" class="card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
         <?= csrfField() ?>
         <input type="hidden" name="laboratory_request_id" value="<?= (int)$requestId ?>">
 
-        <div class="form-group">
-            <label for="sample_taken">Sample Taken</label>
-            <textarea id="sample_taken" name="sample_taken" rows="3"><?= e((string)($laboratoryResult['sample_taken'] ?? '')) ?></textarea>
-        </div>
-
-        <div class="form-group">
-            <label for="findings">Findings</label>
-            <textarea id="findings" name="findings" rows="5"><?= e((string)($laboratoryResult['findings'] ?? '')) ?></textarea>
-        </div>
-
-        <div class="form-group">
-            <label for="result">Result</label>
-            <textarea id="result" name="result" rows="8" required><?= e((string)($laboratoryResult['result'] ?? '')) ?></textarea>
-        </div>
-
-        <div class="form-group">
-            <label for="interpretation">Interpretation</label>
-            <textarea id="interpretation" name="interpretation" rows="4"><?= e((string)($laboratoryResult['interpretation'] ?? '')) ?></textarea>
-        </div>
+        <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Laboratory Result Entry Mode'); ?>
+        <?php hmsRenderHandwritingTextarea('sample_taken', 'Sample Taken', (string)($laboratoryResult['sample_taken'] ?? ''), 3, false, $enableWritingMode); ?>
+        <?php hmsRenderHandwritingTextarea('findings', 'Findings', (string)($laboratoryResult['findings'] ?? ''), 5, false, $enableWritingMode); ?>
+        <?php hmsRenderHandwritingTextarea('result', 'Result', (string)($laboratoryResult['result'] ?? ''), 8, true, $enableWritingMode); ?>
+        <?php hmsRenderHandwritingTextarea('interpretation', 'Interpretation', (string)($laboratoryResult['interpretation'] ?? ''), 4, false, $enableWritingMode); ?>
 
         <div class="form-actions">
             <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>
             <a class="btn-secondary" href="view.php?id=<?= (int)$requestId ?>">Cancel</a>
         </div>
     </form>
+    <?php hmsRenderHandwritingScript($enableWritingMode); ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

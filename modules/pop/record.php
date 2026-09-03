@@ -24,6 +24,7 @@ $record = $popService->getRecord($requestId, $currentUser);
 $hasRecord = $record !== null && !empty($record['record_id']);
 $isClosed = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
 $isRequestClosed = in_array((string)($request['status'] ?? ''), ['Completed', 'Cancelled'], true);
+$enableWritingMode = $permissionService->canUseConsultationHandwriting($currentUser);
 
 if (($isClosed && !$permissionService->isAdministrator($currentUser)) || $isRequestClosed) {
     header('Location: view.php?id=' . $requestId);
@@ -83,7 +84,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
     </div>
 
-    <form method="post" action="<?= e($action) ?>" class="card">
+    <form method="post" action="<?= e($action) ?>" class="card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
         <?= csrfField() ?>
         <input type="hidden" name="pop_request_id" value="<?= (int)$requestId ?>">
 
@@ -98,28 +99,18 @@ require __DIR__ . '/../../layouts/sidebar.php';
             </div>
         </div>
 
-        <div class="form-group">
-            <label for="procedure_notes">Procedure Notes</label>
-            <textarea id="procedure_notes" name="procedure_notes" rows="7" required><?= e((string)($record['procedure_notes'] ?? '')) ?></textarea>
-        </div>
-        <div class="form-group">
-            <label for="materials_used">Materials Used</label>
-            <textarea id="materials_used" name="materials_used" rows="4"><?= e((string)($record['materials_used'] ?? '')) ?></textarea>
-        </div>
-        <div class="form-group">
-            <label for="aftercare_instructions">Aftercare Instructions</label>
-            <textarea id="aftercare_instructions" name="aftercare_instructions" rows="4"><?= e((string)($record['aftercare_instructions'] ?? '')) ?></textarea>
-        </div>
-        <div class="form-group">
-            <label for="remarks">Remarks</label>
-            <textarea id="remarks" name="remarks" rows="4"><?= e((string)($record['remarks'] ?? '')) ?></textarea>
-        </div>
+        <?php hmsRenderHandwritingToolbar($enableWritingMode, 'POP Procedure Entry Mode'); ?>
+        <?php hmsRenderHandwritingTextarea('procedure_notes', 'Procedure Notes', (string)($record['procedure_notes'] ?? ''), 7, true, $enableWritingMode); ?>
+        <?php hmsRenderHandwritingTextarea('materials_used', 'Materials Used', (string)($record['materials_used'] ?? ''), 4, false, $enableWritingMode); ?>
+        <?php hmsRenderHandwritingTextarea('aftercare_instructions', 'Aftercare Instructions', (string)($record['aftercare_instructions'] ?? ''), 4, false, $enableWritingMode); ?>
+        <?php hmsRenderHandwritingTextarea('remarks', 'Remarks', (string)($record['remarks'] ?? ''), 4, false, $enableWritingMode); ?>
 
         <div class="form-actions">
             <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>
             <a class="btn-secondary" href="view.php?id=<?= (int)$requestId ?>">Cancel</a>
         </div>
     </form>
+    <?php hmsRenderHandwritingScript($enableWritingMode); ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

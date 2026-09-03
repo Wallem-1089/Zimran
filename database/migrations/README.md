@@ -534,3 +534,11 @@ ward/bed master-data setup permissions.
 practical permission visibility except patient deletion, forces the generated
 staff batch to change password on first login, and adds optional PDF/JPG/PNG
 upload metadata to `radiology_reports` for scanned X-Ray/Radiology documents.
+
+## Migration 063 - Handwriting Entry Superadmin Default
+
+`063_handwriting_superadmin_only_up.sql` keeps the existing
+`use_consultation_handwriting` permission key but renames its description to a
+general supported narrative-form handwriting entry mode. Default role access is
+restricted to `Super Administrator`; selected users can still receive the
+feature later through user-level permission overrides.

@@ -93,7 +93,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <h3>Tests Requested</h3>
-        <p><?= nl2br(e((string)$request['tests_requested'])) ?></p>
+        <p><?php hmsRenderNarrative((string)$request['tests_requested']); ?></p>
     </div>
 
     <div class="card">
@@ -101,7 +101,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?php if (trim((string)($request['clinical_information'] ?? '')) === ''): ?>
             <p class="text-muted">No clinical information recorded.</p>
         <?php else: ?>
-            <p><?= nl2br(e((string)$request['clinical_information'])) ?></p>
+            <p><?php hmsRenderNarrative((string)$request['clinical_information']); ?></p>
         <?php endif; ?>
     </div>
 
@@ -140,27 +140,27 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p class="text-muted">No laboratory result recorded.</p>
         <?php else: ?>
             <div class="summary-grid">
-                <div class="summary-item"><span class="summary-label">Sample Taken</span> <span class="summary-value"><?= e((string)($result['sample_taken'] ?? '-')) ?></span></div>
-                <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?= e((string)($result['findings'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Sample Taken</span> <span class="summary-value"><?php hmsRenderNarrative((string)($result['sample_taken'] ?? '-')); ?></span></div>
+                <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?php hmsRenderNarrative((string)($result['findings'] ?? '-')); ?></span></div>
                 <div class="summary-item"><span class="summary-label">Performed By</span> <span class="summary-value"><?= e((string)($result['performed_by_name'] ?? '-')) ?></span></div>
                 <div class="summary-item"><span class="summary-label">Completed By</span> <span class="summary-value"><?= e((string)($result['completed_by_name'] ?? '-')) ?></span></div>
                 <div class="summary-item"><span class="summary-label">Completed At</span> <span class="summary-value"><?= e((string)($result['result_completed_at'] ?? '-')) ?></span></div>
             </div>
             <?php if (trim((string)($result['sample_taken'] ?? '')) !== ''): ?>
                 <h4>Sample Taken</h4>
-                <p><?= nl2br(e((string)$result['sample_taken'])) ?></p>
+                <p><?php hmsRenderNarrative((string)$result['sample_taken']); ?></p>
             <?php endif; ?>
             <?php if (trim((string)($result['findings'] ?? '')) !== ''): ?>
                 <h4>Findings</h4>
-                <p><?= nl2br(e((string)$result['findings'])) ?></p>
+                <p><?php hmsRenderNarrative((string)$result['findings']); ?></p>
             <?php endif; ?>
             <h4>Result</h4>
-            <p><?= nl2br(e((string)$result['result'])) ?></p>
+            <p><?php hmsRenderNarrative((string)$result['result']); ?></p>
             <h4>Interpretation</h4>
             <?php if (trim((string)($result['interpretation'] ?? '')) === ''): ?>
                 <p class="text-muted">No interpretation recorded.</p>
             <?php else: ?>
-                <p><?= nl2br(e((string)$result['interpretation'])) ?></p>
+                <p><?php hmsRenderNarrative((string)$result['interpretation']); ?></p>
             <?php endif; ?>
         <?php endif; ?>
     </div>

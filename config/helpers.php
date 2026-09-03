@@ -450,7 +450,7 @@ function hmsRenderNarrative(mixed $value, string $emptyText = 'Not recorded.'): 
     echo '<div class="consultation-handwriting-view" role="img" aria-label="Handwritten clinical note">';
     echo '<svg viewBox="0 0 ' . $width . ' ' . $height . '" preserveAspectRatio="xMidYMin meet">';
     foreach ($paths as $path) {
-        echo '<path d="' . e($path) . '" />';
+        echo '<path d="' . e($path) . '" fill="none" stroke="#0f172a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" />';
     }
     echo '</svg>';
     echo '</div>';
@@ -487,14 +487,14 @@ function hmsRenderHandwritingTextarea(
     echo '</div>';
 }
 
-function hmsRenderHandwritingToolbar(bool $enableWritingMode): void
+function hmsRenderHandwritingToolbar(bool $enableWritingMode, string $title = 'Entry Mode'): void
 {
     if (!$enableWritingMode) {
         return;
     }
 
     echo '<div class="consultation-writing-toolbar">';
-    echo '<div><h3>Entry Mode</h3><p>Type normally, or switch to writing mode for a larger handwriting area.</p></div>';
+    echo '<div><h3>' . e($title) . '</h3><p>Type normally, or switch to writing mode for a larger handwriting area.</p></div>';
     echo '<div class="writing-mode-switch" role="group" aria-label="Entry mode">';
     echo '<button type="button" class="writing-mode-option active" data-consultation-mode="type">Type</button>';
     echo '<button type="button" class="writing-mode-option" data-consultation-mode="write">Write</button>';

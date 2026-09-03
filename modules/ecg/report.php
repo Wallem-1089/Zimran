@@ -26,6 +26,7 @@ $report = $ecgService->getReport($requestId, $currentUser);
 $hasReport = $report !== null && !empty($report['report_id']);
 $isClosed = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
 $isRequestClosed = in_array((string)($request['status'] ?? ''), ['Completed', 'Cancelled'], true);
+$enableWritingMode = $permissionService->canUseConsultationHandwriting($currentUser);
 
 if (($isClosed && !$permissionService->isAdministrator($currentUser)) || $isRequestClosed) {
     header('Location: view.php?id=' . $requestId);
@@ -94,7 +95,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
     </div>
 
-    <form method="post" action="<?= e($action) ?>" enctype="multipart/form-data" class="card">
+    <form method="post" action="<?= e($action) ?>" enctype="multipart/form-data" class="card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
         <?= csrfField() ?>
         <input type="hidden" name="ecg_request_id" value="<?= (int)$requestId ?>">
 
@@ -107,22 +108,16 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
         </div>
 
-        <div class="form-group">
-            <label for="notes">ECG Notes</label>
-            <textarea id="notes" name="notes" rows="7"><?= e((string)($report['notes'] ?? '')) ?></textarea>
-        </div>
-
-        <div class="form-group">
-            <label for="remarks">Remarks</label>
-            <textarea id="remarks" name="remarks" rows="5"><?= e((string)($report['remarks'] ?? '')) ?></textarea>
-        </div>
+        <?php hmsRenderHandwritingToolbar($enableWritingMode, 'ECG Notes Entry Mode'); ?>
+        <?php hmsRenderHandwritingTextarea('notes', 'ECG Notes', (string)($report['notes'] ?? ''), 7, false, $enableWritingMode); ?>
+        <?php hmsRenderHandwritingTextarea('remarks', 'Remarks', (string)($report['remarks'] ?? ''), 5, false, $enableWritingMode); ?>
 
         <div class="form-actions">
             <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>
             <a class="btn-secondary" href="view.php?id=<?= (int)$requestId ?>">Cancel</a>
         </div>
     </form>
+    <?php hmsRenderHandwritingScript($enableWritingMode); ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
-

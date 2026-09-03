@@ -145,9 +145,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             </ul>
             <?php if ($latestLaboratoryResult !== null && trim((string)($latestLaboratoryResult['result'] ?? '')) !== ''): ?>
                 <div class="summary-grid">
-                    <div class="summary-item"><span class="summary-label">Sample Taken</span> <span class="summary-value"><?= e((string)($latestLaboratoryResult['sample_taken'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?= e((string)($latestLaboratoryResult['findings'] ?? '-')) ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Result</span> <span class="summary-value"><?= e((string)$latestLaboratoryResult['result']) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Sample Taken</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestLaboratoryResult['sample_taken'] ?? '-')); ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestLaboratoryResult['findings'] ?? '-')); ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Result</span> <span class="summary-value"><?php hmsRenderNarrative((string)$latestLaboratoryResult['result']); ?></span></div>
                 </div>
             <?php endif; ?>
         <?php endif; ?>
@@ -177,9 +177,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             </ul>
                 <?php if ($latestRadiologyReport !== null && trim((string)($latestRadiologyReport['impression'] ?? '')) !== ''): ?>
                     <div class="summary-grid">
-                        <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?= e((string)($latestRadiologyReport['findings'] ?? '-')) ?></span></div>
-                        <div class="summary-item"><span class="summary-label">Impression</span> <span class="summary-value"><?= e((string)($latestRadiologyReport['impression'] ?? '-')) ?></span></div>
-                        <div class="summary-item"><span class="summary-label">Recommendation</span> <span class="summary-value"><?= e((string)($latestRadiologyReport['recommendation'] ?? '-')) ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestRadiologyReport['findings'] ?? '-')); ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Impression</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestRadiologyReport['impression'] ?? '-')); ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Recommendation</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestRadiologyReport['recommendation'] ?? '-')); ?></span></div>
                     </div>
                 <?php endif; ?>
         <?php endif; ?>
@@ -212,8 +212,8 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php if ($latestEcgReport !== null && !empty($latestEcgReport['report_id'])): ?>
                 <div class="summary-grid">
                     <div class="summary-item"><span class="summary-label">Chart</span> <span class="summary-value"><?= !empty($latestEcgReport['chart_stored_path']) ? 'Uploaded' : 'Pending' ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Notes</span> <span class="summary-value"><?= e(trim((string)($latestEcgReport['notes'] ?? '')) !== '' ? (string)$latestEcgReport['notes'] : '-') ?></span></div>
-                    <div class="summary-item"><span class="summary-label">Remarks</span> <span class="summary-value"><?= e(trim((string)($latestEcgReport['remarks'] ?? '')) !== '' ? (string)$latestEcgReport['remarks'] : '-') ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Notes</span> <span class="summary-value"><?php hmsRenderNarrative(trim((string)($latestEcgReport['notes'] ?? '')) !== '' ? (string)$latestEcgReport['notes'] : '-'); ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Remarks</span> <span class="summary-value"><?php hmsRenderNarrative(trim((string)($latestEcgReport['remarks'] ?? '')) !== '' ? (string)$latestEcgReport['remarks'] : '-'); ?></span></div>
                 </div>
             <?php endif; ?>
         <?php endif; ?>
@@ -287,9 +287,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 </ul>
                 <?php if ($latestPhysiotherapySession !== null && trim((string)($latestPhysiotherapySession['treatment_given'] ?? '')) !== ''): ?>
                     <div class="summary-grid">
-                        <div class="summary-item"><span class="summary-label">Treatment Given</span> <span class="summary-value"><?= e((string)($latestPhysiotherapySession['treatment_given'] ?? '-')) ?></span></div>
-                        <div class="summary-item"><span class="summary-label">Patient Response</span> <span class="summary-value"><?= e((string)($latestPhysiotherapySession['patient_response'] ?? '-')) ?></span></div>
-                        <div class="summary-item"><span class="summary-label">Next Plan</span> <span class="summary-value"><?= e((string)($latestPhysiotherapySession['next_plan'] ?? '-')) ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Treatment Given</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestPhysiotherapySession['treatment_given'] ?? '-')); ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Patient Response</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestPhysiotherapySession['patient_response'] ?? '-')); ?></span></div>
+                        <div class="summary-item"><span class="summary-label">Next Plan</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestPhysiotherapySession['next_plan'] ?? '-')); ?></span></div>
                     </div>
                 <?php endif; ?>
             <?php endif; ?>

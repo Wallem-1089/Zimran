@@ -16,6 +16,7 @@ $canChooseDepartment = $permissionService->canReviewStockRequest($currentUser)
     || $permissionService->isAdministrator($currentUser);
 $old = $_SESSION['old_stock_request'] ?? [];
 unset($_SESSION['old_stock_request']);
+$enableWritingMode = $permissionService->canUseConsultationHandwriting($currentUser);
 
 $pageTitle = 'New Stock Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -32,7 +33,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div><a class="btn-secondary" href="index.php">Back</a></div>
     </div>
 
-    <form class="card" method="post" action="save.php">
+    <form class="card" method="post" action="save.php" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
         <?= csrfField() ?>
         <?php if ($canChooseDepartment): ?>
             <label>Requesting Department
@@ -45,9 +46,8 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 </select>
             </label>
         <?php endif; ?>
-        <label>Reason / Notes
-            <textarea name="reason" maxlength="2000"><?= e((string)($old['reason'] ?? '')) ?></textarea>
-        </label>
+        <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Stock Request Entry Mode'); ?>
+        <?php hmsRenderHandwritingTextarea('reason', 'Reason / Notes', (string)($old['reason'] ?? ''), 4, false, $enableWritingMode, 2000); ?>
 
         <h3>Requested Items</h3>
         <div class="table-responsive">
@@ -78,6 +78,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <a class="btn-secondary" href="index.php">Cancel</a>
         </div>
     </form>
+    <?php hmsRenderHandwritingScript($enableWritingMode); ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

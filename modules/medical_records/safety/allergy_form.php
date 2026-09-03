@@ -7,8 +7,11 @@ $allergyTypes = $clinicalSafetyService->getAllowedAllergyTypes();
 $severityValues = $clinicalSafetyService->getAllowedSeverityValues();
 $visitId = $visitId ?? null;
 $contextQuery = clinicalSafetyQuery($visitId);
+$enableWritingMode ??= isset($permissionService)
+    && method_exists($permissionService, 'canUseConsultationHandwriting')
+    && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
 ?>
-<form class="card" method="post" action="<?= e($allergyAction) ?>">
+<form class="card" method="post" action="<?= e($allergyAction) ?>" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
     <?= csrfField() ?>
     <input type="hidden" name="patient_id" value="<?= (int)$patient['id'] ?>">
     <?php if ($visitId !== null): ?>
@@ -25,9 +28,11 @@ $contextQuery = clinicalSafetyQuery($visitId);
         <div><label for="severity">Severity</label><select id="severity" name="severity" required><?php foreach ($severityValues as $severity): ?><option value="<?= e($severity) ?>" <?= ($allergy['severity'] ?? 'Unknown') === $severity ? 'selected' : '' ?>><?= e($severity) ?></option><?php endforeach; ?></select></div>
         <div><label for="onset_date">Onset Date</label><input id="onset_date" type="date" name="onset_date" value="<?= e($allergy['onset_date'] ?? '') ?>"></div>
     </div>
-    <label for="reaction">Reaction</label><textarea id="reaction" name="reaction" maxlength="500"><?= e($allergy['reaction'] ?? '') ?></textarea>
-    <label for="notes">Notes</label><textarea id="notes" name="notes"><?= e($allergy['notes'] ?? '') ?></textarea>
-    <label for="reason">Reason</label><textarea id="reason" name="reason" required></textarea>
+    <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Allergy Entry Mode'); ?>
+    <?php hmsRenderHandwritingTextarea('reaction', 'Reaction', (string)($allergy['reaction'] ?? ''), 3, false, $enableWritingMode, 500); ?>
+    <?php hmsRenderHandwritingTextarea('notes', 'Notes', (string)($allergy['notes'] ?? ''), 4, false, $enableWritingMode); ?>
+    <?php hmsRenderHandwritingTextarea('reason', 'Reason', '', 3, true, $enableWritingMode); ?>
     <button class="btn-primary" type="submit"><?= e($allergySubmitLabel) ?></button>
     <a class="btn-secondary" href="index.php?patient=<?= (int)$patient['id'] ?><?= e($contextQuery) ?>#allergies">Cancel</a>
 </form>
+<?php hmsRenderHandwritingScript($enableWritingMode); ?>

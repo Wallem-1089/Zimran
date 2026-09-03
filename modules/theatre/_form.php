@@ -5,6 +5,9 @@ declare(strict_types=1);
 if (!isset($theatre)) {
     $theatre = [];
 }
+$enableWritingMode ??= isset($permissionService)
+    && method_exists($permissionService, 'canUseConsultationHandwriting')
+    && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
 
 $fields = [
     'procedure_name' => 'Procedure Name',
@@ -19,18 +22,20 @@ $fields = [
 ];
 ?>
 
-<form method="post" action="<?= e($action) ?>" class="card form-card">
+<form method="post" action="<?= e($action) ?>" class="card form-card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
     <?= csrfField() ?>
     <input type="hidden" name="visit_id" value="<?= (int)($theatre['visit_id'] ?? 0) ?>">
     <?php if (!empty($theatre['id'])): ?>
         <input type="hidden" name="id" value="<?= (int)$theatre['id'] ?>">
     <?php endif; ?>
 
+    <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Theatre Entry Mode'); ?>
+
     <div class="form-grid">
         <?php foreach ($fields as $field => $label): ?>
-            <div class="form-group <?= in_array($field, ['procedure_details','preoperative_notes','indication','findings','complications','postoperative_notes','postoperative_plan','anaesthesia_notes'], true) ? 'full-width' : '' ?>">
-                <label for="<?= e($field) ?>"><?= e($label) ?></label>
-                <?php if ($field === 'procedure_name'): ?>
+            <?php if ($field === 'procedure_name'): ?>
+                <div class="form-group">
+                    <label for="<?= e($field) ?>"><?= e($label) ?></label>
                     <input
                         type="text"
                         id="<?= e($field) ?>"
@@ -38,14 +43,17 @@ $fields = [
                         value="<?= e((string)($theatre[$field] ?? '')) ?>"
                         required
                     >
-                <?php else: ?>
-                    <textarea
-                        id="<?= e($field) ?>"
-                        name="<?= e($field) ?>"
-                        rows="<?= in_array($field, ['procedure_details','postoperative_plan','anaesthesia_notes'], true) ? 6 : 4 ?>"
-                    ><?= e((string)($theatre[$field] ?? '')) ?></textarea>
-                <?php endif; ?>
-            </div>
+                </div>
+            <?php else: ?>
+                <?php hmsRenderHandwritingTextarea(
+                    $field,
+                    $label,
+                    (string)($theatre[$field] ?? ''),
+                    in_array($field, ['procedure_details','postoperative_plan','anaesthesia_notes'], true) ? 6 : 4,
+                    false,
+                    $enableWritingMode
+                ); ?>
+            <?php endif; ?>
         <?php endforeach; ?>
     </div>
 
@@ -55,3 +63,4 @@ $fields = [
     </div>
 </form>
 
+<?php hmsRenderHandwritingScript($enableWritingMode); ?>

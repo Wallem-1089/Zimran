@@ -63,12 +63,12 @@ require __DIR__ . '/../../../layouts/sidebar.php';
 
         <?php if (trim((string)($record['prescribed_instructions'] ?? '')) !== ''): ?>
             <h3>Prescription Instructions</h3>
-            <p><?= nl2br(e((string)$record['prescribed_instructions'])) ?></p>
+            <p><?php hmsRenderNarrative((string)$record['prescribed_instructions']); ?></p>
         <?php endif; ?>
 
         <?php if (trim((string)($record['notes'] ?? '')) !== ''): ?>
             <h3>Notes</h3>
-            <p><?= nl2br(e((string)$record['notes'])) ?></p>
+            <p><?php hmsRenderNarrative((string)$record['notes']); ?></p>
         <?php endif; ?>
     </div>
 </main>

@@ -17,6 +17,9 @@ if (!isset($visit)) {
     return;
 
 }
+$enableWritingMode = isset($permissionService)
+    && method_exists($permissionService, 'canUseConsultationHandwriting')
+    && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
 
 ?>
 
@@ -161,7 +164,7 @@ if (!isset($visit)) {
         Request attention from another department without transferring encounter ownership.
     </p>
 
-    <form method="post" action="notify_department_save.php" class="form-grid">
+    <form method="post" action="notify_department_save.php" class="form-grid" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
         <?= csrfField() ?>
         <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
 
@@ -178,14 +181,15 @@ if (!isset($visit)) {
         </div>
 
         <div class="form-group">
-            <label for="notification_reason">Reason</label>
-            <textarea id="notification_reason" name="reason" rows="3" required></textarea>
+            <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Department Notification Entry Mode'); ?>
+            <?php hmsRenderHandwritingTextarea('reason', 'Reason', '', 3, true, $enableWritingMode); ?>
         </div>
 
         <div class="form-actions">
             <button type="submit" class="btn-primary">Send Notification</button>
         </div>
     </form>
+    <?php hmsRenderHandwritingScript($enableWritingMode); ?>
 </div>
 <?php endif; ?>
 
@@ -196,7 +200,7 @@ if (!isset($visit)) {
         Send a direct attention request to a specific staff account. This does not transfer encounter ownership.
     </p>
 
-    <form method="post" action="notify_user_save.php" class="form-grid">
+    <form method="post" action="notify_user_save.php" class="form-grid" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
         <?= csrfField() ?>
         <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
 
@@ -217,14 +221,15 @@ if (!isset($visit)) {
         </div>
 
         <div class="form-group">
-            <label for="user_notification_message">Message</label>
-            <textarea id="user_notification_message" name="message" rows="3" required></textarea>
+            <?php hmsRenderHandwritingToolbar($enableWritingMode, 'User Notification Entry Mode'); ?>
+            <?php hmsRenderHandwritingTextarea('message', 'Message', '', 3, true, $enableWritingMode); ?>
         </div>
 
         <div class="form-actions">
             <button type="submit" class="btn-primary">Send User Notification</button>
         </div>
     </form>
+    <?php hmsRenderHandwritingScript($enableWritingMode); ?>
 </div>
 <?php elseif (!($userNotificationTablesReady ?? false)): ?>
 <div class="card">

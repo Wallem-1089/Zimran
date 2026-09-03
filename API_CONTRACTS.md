@@ -204,9 +204,11 @@ Consultation writes are Doctor/Admin, Vital Signs writes are Doctor/Nurse/Admin,
 Laboratory writes are Laboratory Scientist/Admin, Radiology writes are
 Radiographer/Admin, Pharmacy dispensing is Pharmacist/Admin, and equivalent
 department ownership remains in place for the other clinical modules.
-Consultation handwriting/touch-pad entry is separately controlled by
-`use_consultation_handwriting`; users still need the normal Consultation
-create/edit permission before the form can mutate records.
+Handwriting/touch-pad entry is separately controlled by
+`use_consultation_handwriting`. It is reusable across supported narrative
+forms and is granted to Super Administrator by default only. A user still needs
+the normal create/edit permission for that form before any record can be
+mutated.
 
 See [PERMISSION_MATRIX.md](PERMISSION_MATRIX.md) for the implemented permission catalogue and module requirements.
 

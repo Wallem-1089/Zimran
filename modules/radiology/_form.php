@@ -6,9 +6,12 @@ $radiologyRequest ??= [];
 $action ??= 'save.php';
 $buttonLabel ??= 'Save Radiology Request';
 $requestSource = (string)($radiologyRequest['request_source'] ?? ($requestSource ?? 'Clinical'));
+$enableWritingMode ??= isset($permissionService)
+    && method_exists($permissionService, 'canUseConsultationHandwriting')
+    && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
 ?>
 
-<form method="post" action="<?= e($action) ?>" class="card">
+<form method="post" action="<?= e($action) ?>" class="card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
     <?= csrfField() ?>
     <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
     <input type="hidden" name="patient_id" value="<?= (int)$patient['id'] ?>">
@@ -29,15 +32,9 @@ $requestSource = (string)($radiologyRequest['request_source'] ?? ($requestSource
         </select>
     </div>
 
-    <div class="form-group">
-        <label for="study_requested">Study Requested</label>
-        <textarea id="study_requested" name="study_requested" rows="4" required><?= e((string)($radiologyRequest['study_requested'] ?? $radiologyRequest['tests_requested'] ?? '')) ?></textarea>
-    </div>
-
-    <div class="form-group">
-        <label for="clinical_indication">Clinical Indication</label>
-        <textarea id="clinical_indication" name="clinical_indication" rows="4"><?= e((string)($radiologyRequest['clinical_indication'] ?? $radiologyRequest['clinical_information'] ?? '')) ?></textarea>
-    </div>
+    <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Radiology Request Entry Mode'); ?>
+    <?php hmsRenderHandwritingTextarea('study_requested', 'Study Requested', (string)($radiologyRequest['study_requested'] ?? $radiologyRequest['tests_requested'] ?? ''), 4, true, $enableWritingMode); ?>
+    <?php hmsRenderHandwritingTextarea('clinical_indication', 'Clinical Indication', (string)($radiologyRequest['clinical_indication'] ?? $radiologyRequest['clinical_information'] ?? ''), 4, false, $enableWritingMode); ?>
 
     <div class="form-actions">
         <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>
@@ -45,3 +42,4 @@ $requestSource = (string)($radiologyRequest['request_source'] ?? ($requestSource
     </div>
 </form>
 
+<?php hmsRenderHandwritingScript($enableWritingMode); ?>

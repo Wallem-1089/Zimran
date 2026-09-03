@@ -3,8 +3,11 @@
 declare(strict_types=1);
 
 $entry = $entry ?? [];
+$enableWritingMode ??= isset($permissionService)
+    && method_exists($permissionService, 'canUseConsultationHandwriting')
+    && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
 ?>
-<form method="post" action="<?= e($historyAction) ?>" class="card">
+<form method="post" action="<?= e($historyAction) ?>" class="card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
     <?= csrfField() ?>
     <input type="hidden" name="patient_id" value="<?= (int)$patient['id'] ?>">
     <input type="hidden" name="id" value="<?= (int)($entry['id'] ?? 0) ?>">
@@ -19,8 +22,10 @@ $entry = $entry ?? [];
         <label>Source <input maxlength="255" name="source" value="<?= e($entry['source'] ?? '') ?>"></label>
         <label>Confidentiality <select name="confidentiality_level"><?php foreach ($problemListService->getAllowedConfidentialityLevels() as $value): ?><option <?= ($entry['confidentiality_level'] ?? 'Standard') === $value ? 'selected' : '' ?>><?= e($value) ?></option><?php endforeach; ?></select></label>
     </div>
-    <label>Description <textarea required name="description" maxlength="10000"><?= e($entry['description'] ?? '') ?></textarea></label>
-    <label>Clinical reason <textarea required name="reason" maxlength="1000"></textarea></label>
+    <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Medical History Entry Mode'); ?>
+    <?php hmsRenderHandwritingTextarea('description', 'Description', (string)($entry['description'] ?? ''), 5, true, $enableWritingMode, 10000); ?>
+    <?php hmsRenderHandwritingTextarea('reason', 'Clinical reason', '', 3, true, $enableWritingMode, 1000); ?>
     <button class="btn-primary" type="submit"><?= e($historySubmitLabel) ?></button>
     <a class="btn-secondary" href="../chart.php?patient=<?= (int)$patient['id'] ?>&tab=medical_history<?= e(longitudinalQuery($visitId ?? null)) ?>">Cancel</a>
 </form>
+<?php hmsRenderHandwritingScript($enableWritingMode); ?>

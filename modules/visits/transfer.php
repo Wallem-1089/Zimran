@@ -65,6 +65,7 @@ if (!$visit) {
 }
 
 $permissionService = new PermissionService($pdo);
+$enableWritingMode = $permissionService->canUseConsultationHandwriting($currentUser);
 
 if (!$permissionService->canTransferEncounter($visit, $currentUser)) {
     securityFailure(
@@ -263,7 +264,8 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
     method="POST"
 
-    class="card">
+    class="card"
+    <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
 
     <?= csrfField() ?>
 
@@ -363,23 +365,8 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
     </div>
 
-    <div class="form-group">
-
-        <label>
-
-            Remarks
-
-        </label>
-
-        <textarea
-
-            name="remarks"
-
-            rows="5"
-
-            placeholder="Reason for transfer..."></textarea>
-
-    </div>
+    <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Transfer Remarks Entry Mode'); ?>
+    <?php hmsRenderHandwritingTextarea('remarks', 'Remarks', '', 5, false, $enableWritingMode); ?>
 
     <div class="form-actions">
 
@@ -406,6 +393,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
     </div>
 
 </form>
+<?php hmsRenderHandwritingScript($enableWritingMode); ?>
 
 </main>
 

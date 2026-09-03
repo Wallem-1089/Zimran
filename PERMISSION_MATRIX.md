@@ -65,11 +65,18 @@ Role activation/deactivation is implemented through `RoleService`. Role inherita
 | `manage_roles` | Administration | Implemented for administrator override; role assignment available |
 | `manage_permissions` | Administration | Implemented for administrator override; role assignment available |
 | `manage_settings` | Administration | Implemented for administrator override; role assignment available |
-| `use_consultation_handwriting` | Consultation | Implemented; controls the Consultation handwriting/touch-pad entry mode |
+| `use_consultation_handwriting` | Clinical Entry | Implemented; controls the Type/Write handwriting entry mode on supported narrative forms |
 
 Most current clinical, financial, inventory, and reporting permissions are now
 database-backed. Future permissions should be added only when a new workflow
 requires a distinct authorization decision.
+
+`use_consultation_handwriting` is now the reusable handwriting-entry permission.
+It is granted to `Super Administrator` by default only. Later, administrators
+with permission-management access can grant it to selected user accounts through
+user-level permission overrides without giving that user full Superadmin access.
+The permission exposes the Write mode only; users still need the normal
+create/edit permission for the form they are using.
 
 ## Current Permission Matrix
 

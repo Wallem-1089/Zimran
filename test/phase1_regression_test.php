@@ -66,6 +66,22 @@ try {
     $authService = new AuthService($pdo);
     $dashboardService = new DashboardService($pdo);
 
+    $departmentIds = $pdo->query("
+        SELECT department_name, id
+        FROM departments
+        WHERE department_name IN ('Administrator', 'Reception', 'Doctor', 'Nursing')
+    ")->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    $administratorDepartmentId = (int)($departmentIds['Administrator'] ?? 0);
+    $receptionDepartmentId = (int)($departmentIds['Reception'] ?? 0);
+    $doctorDepartmentId = (int)($departmentIds['Doctor'] ?? 0);
+    $nursingDepartmentId = (int)($departmentIds['Nursing'] ?? 0);
+
+    assertRegression(
+        $administratorDepartmentId > 0 && $receptionDepartmentId > 0 && $doctorDepartmentId > 0 && $nursingDepartmentId > 0,
+        'Required department fixtures are missing.'
+    );
+
     $staleRegressionVisits = $pdo->query("
         SELECT v.id
         FROM visits v
@@ -124,7 +140,7 @@ try {
         'email' => null,
         'username' => 'phase1.regression.' . strtolower($unique),
         'password' => 'Regression@123',
-        'department_id' => 2,
+        'department_id' => $receptionDepartmentId,
         'role_id' => (int)$receptionRole,
         'status' => 'Active',
         'must_change_password' => 1
@@ -133,7 +149,7 @@ try {
 
     $primaryMemberships = (int)$pdo->query(
         'SELECT COUNT(*) FROM user_departments WHERE user_id = '
-        . $temporaryUserId . ' AND department_id = 2 AND is_primary = 1 AND is_active = 1'
+        . $temporaryUserId . ' AND department_id = ' . $receptionDepartmentId . ' AND is_primary = 1 AND is_active = 1'
     )->fetchColumn();
     assertRegression($primaryMemberships === 1, 'User primary department was not synchronized on creation.');
 
@@ -169,7 +185,7 @@ try {
         'phone' => null,
         'email' => null,
         'username' => 'phase1.regression.' . strtolower($unique),
-        'department_id' => 4,
+        'department_id' => $doctorDepartmentId,
         'role_id' => (int)$receptionRole,
         'status' => 'Active',
         'must_change_password' => 1
@@ -177,7 +193,7 @@ try {
 
     $primaryMemberships = (int)$pdo->query(
         'SELECT COUNT(*) FROM user_departments WHERE user_id = '
-        . $temporaryUserId . ' AND department_id = 4 AND is_primary = 1 AND is_active = 1'
+        . $temporaryUserId . ' AND department_id = ' . $doctorDepartmentId . ' AND is_primary = 1 AND is_active = 1'
     )->fetchColumn();
     assertRegression($primaryMemberships === 1, 'User primary department was not synchronized on update.');
 
@@ -189,19 +205,19 @@ try {
 
     $adminHadReception = (bool)$pdo->query(
         'SELECT 1 FROM user_departments WHERE user_id = ' . $adminId
-        . ' AND department_id = 2 AND is_active = 1 LIMIT 1'
+        . ' AND department_id = ' . $receptionDepartmentId . ' AND is_active = 1 LIMIT 1'
     )->fetchColumn();
 
     if (!$adminHadReception) {
-        successful($userDepartmentService->assignDepartment($adminId, 2, $adminId), 'Secondary department assignment');
+        successful($userDepartmentService->assignDepartment($adminId, $receptionDepartmentId, $adminId), 'Secondary department assignment');
         $temporarySecondaryAssignment = true;
     }
 
-    successful($userDepartmentService->switchDepartment($adminId, 2, $adminId), 'Active department switch');
+    successful($userDepartmentService->switchDepartment($adminId, $receptionDepartmentId, $adminId), 'Active department switch');
     successful($userDepartmentService->switchDepartment($adminId, (int)$admin['department_id'], $adminId), 'Primary department switch');
 
     if ($temporarySecondaryAssignment) {
-        successful($userDepartmentService->removeDepartment($adminId, 2, $adminId), 'Secondary department removal');
+        successful($userDepartmentService->removeDepartment($adminId, $receptionDepartmentId, $adminId), 'Secondary department removal');
         $temporarySecondaryAssignment = false;
     }
 
@@ -243,7 +259,7 @@ try {
         'patient_id' => $patientId,
         'visit_date' => date('Y-m-d H:i:s'),
         'visit_type' => 'Outpatient',
-        'current_department_id' => 1
+        'current_department_id' => $administratorDepartmentId
     ], $adminId);
     assertRegression(!$invalidEncounter['success'], 'Unsupported department status was accepted.');
 
@@ -251,7 +267,7 @@ try {
         'patient_id' => $patientId,
         'visit_date' => date('Y-m-d H:i:s'),
         'visit_type' => 'Outpatient',
-        'current_department_id' => 2
+        'current_department_id' => $receptionDepartmentId
     ], $adminId), 'Encounter creation');
     $visitId = (int)$encounter['visit_id'];
 
@@ -260,21 +276,21 @@ try {
 
     successful($visitService->updateVisit($visitId, [
         'visit_type' => 'Outpatient',
-        'current_department_id' => 2,
+        'current_department_id' => $receptionDepartmentId,
         'attending_doctor_id' => null
     ], $adminId), 'Encounter administrative update');
 
     $bypassedTransfer = $visitService->updateVisit($visitId, [
         'visit_type' => 'Outpatient',
-        'current_department_id' => 5,
+        'current_department_id' => $doctorDepartmentId,
         'attending_doctor_id' => null
     ], $adminId);
     assertRegression(!$bypassedTransfer['success'], 'Encounter edit bypassed the transfer workflow.');
 
-    $duplicateQueue = $visitService->enqueueEncounter($visitId, 2, $adminId);
+    $duplicateQueue = $visitService->enqueueEncounter($visitId, $receptionDepartmentId, $adminId);
     assertRegression(!$duplicateQueue['success'], 'Duplicate active queue entry was not prevented.');
 
-    $called = successful($visitService->callNextPatient(2, $adminId), 'Queue call');
+    $called = successful($visitService->callNextPatient($receptionDepartmentId, $adminId), 'Queue call');
     assertRegression((int)$called['visit_id'] === $visitId, 'Queue ordering returned the wrong encounter.');
     successful($visitService->startService((int)$called['queue_id'], $adminId), 'Queue service start');
     successful($visitService->completeQueueEntry((int)$called['queue_id'], $adminId), 'Queue service completion');
@@ -282,19 +298,19 @@ try {
     $invalidTransfer = $visitService->transferVisit($visitId, 1, $adminId);
     assertRegression(!$invalidTransfer['success'], 'Unsupported workflow department accepted a transfer.');
 
-    successful($visitService->transferVisit($visitId, 5, $adminId), 'Transfer to Nursing');
+    successful($visitService->transferVisit($visitId, $nursingDepartmentId, $adminId), 'Transfer to Nursing');
     $nursingQueue = $visitService->getQueueEntryForVisit($visitId);
     assertRegression((bool)$nursingQueue, 'Transferred encounter was not queued.');
-    $nursingCalled = successful($visitService->callNextPatient(5, $adminId), 'Nursing queue call');
+    $nursingCalled = successful($visitService->callNextPatient($nursingDepartmentId, $adminId), 'Nursing queue call');
     $prematureStart = $visitService->startService((int)$nursingCalled['queue_id'], $adminId);
     assertRegression(!$prematureStart['success'], 'Pending transfer started service before receipt.');
     successful($visitService->receiveVisit($visitId, $adminId), 'Nursing receipt');
     successful($visitService->startService((int)$nursingCalled['queue_id'], $adminId), 'Nursing service start');
     successful($visitService->completeQueueEntry((int)$nursingCalled['queue_id'], $adminId), 'Nursing service completion');
 
-    successful($visitService->transferVisit($visitId, 4, $adminId), 'Transfer to Doctor');
+    successful($visitService->transferVisit($visitId, $doctorDepartmentId, $adminId), 'Transfer to Doctor');
     successful($visitService->receiveVisit($visitId, $adminId), 'Doctor receipt');
-    $doctorId = (int)$pdo->query("SELECT u.id FROM users u INNER JOIN roles r ON r.id = u.role_id WHERE r.role_name = 'Doctor' AND u.department_id = 4 AND u.status = 'Active' ORDER BY u.id LIMIT 1")->fetchColumn();
+    $doctorId = (int)$pdo->query("SELECT u.id FROM users u INNER JOIN roles r ON r.id = u.role_id WHERE r.role_name = 'Doctor' AND u.department_id = " . $doctorDepartmentId . " AND u.status = 'Active' ORDER BY u.id LIMIT 1")->fetchColumn();
     assertRegression($doctorId > 0, 'An active Doctor account is required.');
     successful($visitService->assignDoctor($visitId, $doctorId, $adminId), 'Doctor assignment');
     successful($visitService->updateStatus($visitId, 'Completed'), 'Encounter completion');
@@ -363,8 +379,8 @@ try {
     echo 'PASS: Phase 1 administration, security, patient, encounter, queue, transfer, receive, assignment, lifecycle, timeline, and audit regression.' . PHP_EOL;
 } finally {
     if ($temporarySecondaryAssignment) {
-        $pdo->prepare('UPDATE user_departments SET is_active = 0, is_primary = 0 WHERE user_id = :user_id AND department_id = 2')
-            ->execute([':user_id' => $adminId]);
+        $pdo->prepare('UPDATE user_departments SET is_active = 0, is_primary = 0 WHERE user_id = :user_id AND department_id = :department_id')
+            ->execute([':user_id' => $adminId, ':department_id' => $receptionDepartmentId]);
     }
 
     if ($temporaryUserId !== null) {

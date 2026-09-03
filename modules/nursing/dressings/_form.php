@@ -5,9 +5,12 @@ declare(strict_types=1);
 $dressingRecord ??= [];
 $action ??= 'save.php';
 $buttonLabel ??= 'Save Dressing Record';
+$enableWritingMode ??= isset($permissionService)
+    && method_exists($permissionService, 'canUseConsultationHandwriting')
+    && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
 ?>
 
-<form method="post" action="<?= e($action) ?>" class="card">
+<form method="post" action="<?= e($action) ?>" class="card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
     <?= csrfField() ?>
     <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
     <input type="hidden" name="patient_id" value="<?= (int)$visit['patient_id'] ?>">
@@ -26,20 +29,10 @@ $buttonLabel ??= 'Save Dressing Record';
             <input id="next_dressing_date" name="next_dressing_date" type="date" value="<?= e((string)($dressingRecord['next_dressing_date'] ?? '')) ?>">
         </div>
 
-        <div class="form-group">
-            <label for="wound_condition">Wound Condition</label>
-            <textarea id="wound_condition" name="wound_condition" rows="4"><?= e((string)($dressingRecord['wound_condition'] ?? '')) ?></textarea>
-        </div>
-
-        <div class="form-group">
-            <label for="dressing_done">Dressing Done</label>
-            <textarea id="dressing_done" name="dressing_done" rows="4"><?= e((string)($dressingRecord['dressing_done'] ?? '')) ?></textarea>
-        </div>
-
-        <div class="form-group">
-            <label for="supplies_used">Supplies Used</label>
-            <textarea id="supplies_used" name="supplies_used" rows="3"><?= e((string)($dressingRecord['supplies_used'] ?? '')) ?></textarea>
-        </div>
+        <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Dressing Record Entry Mode'); ?>
+        <?php hmsRenderHandwritingTextarea('wound_condition', 'Wound Condition', (string)($dressingRecord['wound_condition'] ?? ''), 4, false, $enableWritingMode); ?>
+        <?php hmsRenderHandwritingTextarea('dressing_done', 'Dressing Done', (string)($dressingRecord['dressing_done'] ?? ''), 4, false, $enableWritingMode); ?>
+        <?php hmsRenderHandwritingTextarea('supplies_used', 'Supplies Used', (string)($dressingRecord['supplies_used'] ?? ''), 3, false, $enableWritingMode); ?>
     </div>
 
     <div class="form-actions">
@@ -47,3 +40,4 @@ $buttonLabel ??= 'Save Dressing Record';
         <a class="btn-secondary" href="<?= e(dressingBackToWorkspace((int)$visit['id'])) ?>">Cancel</a>
     </div>
 </form>
+<?php hmsRenderHandwritingScript($enableWritingMode); ?>

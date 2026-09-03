@@ -24,6 +24,7 @@ if (!$request) {
 $visit = radiologyRequireVisit($visitService, (int)$request['visit_id']);
 $result = $radiologyService->getResult($requestId, $currentUser);
 $isClosed = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
+$enableWritingMode = $permissionService->canUseConsultationHandwriting($currentUser);
 
 if ($isClosed && !$permissionService->isAdministrator($currentUser)) {
     header('Location: view.php?id=' . $requestId);
@@ -94,7 +95,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
     </div>
 
-    <form method="post" action="<?= e($action) ?>" enctype="multipart/form-data" class="card">
+    <form method="post" action="<?= e($action) ?>" enctype="multipart/form-data" class="card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
         <?= csrfField() ?>
         <input type="hidden" name="radiology_request_id" value="<?= (int)$requestId ?>">
 
@@ -107,26 +108,17 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
         </div>
 
-        <div class="form-group">
-            <label for="findings">Findings</label>
-            <textarea id="findings" name="findings" rows="5"><?= e((string)($radiologyResult['findings'] ?? '')) ?></textarea>
-        </div>
-
-        <div class="form-group">
-            <label for="impression">Impression</label>
-            <textarea id="impression" name="impression" rows="6" required><?= e((string)($radiologyResult['impression'] ?? '')) ?></textarea>
-        </div>
-
-        <div class="form-group">
-            <label for="recommendation">Recommendation</label>
-            <textarea id="recommendation" name="recommendation" rows="4"><?= e((string)($radiologyResult['recommendation'] ?? '')) ?></textarea>
-        </div>
+        <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Radiology Report Entry Mode'); ?>
+        <?php hmsRenderHandwritingTextarea('findings', 'Findings', (string)($radiologyResult['findings'] ?? ''), 5, false, $enableWritingMode); ?>
+        <?php hmsRenderHandwritingTextarea('impression', 'Impression', (string)($radiologyResult['impression'] ?? ''), 6, true, $enableWritingMode); ?>
+        <?php hmsRenderHandwritingTextarea('recommendation', 'Recommendation', (string)($radiologyResult['recommendation'] ?? ''), 4, false, $enableWritingMode); ?>
 
         <div class="form-actions">
             <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>
             <a class="btn-secondary" href="view.php?id=<?= (int)$requestId ?>">Cancel</a>
         </div>
     </form>
+    <?php hmsRenderHandwritingScript($enableWritingMode); ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

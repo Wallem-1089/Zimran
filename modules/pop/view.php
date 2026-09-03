@@ -89,9 +89,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <h3>Procedure Requested</h3>
-        <p><?= nl2br(e((string)($request['procedure_requested'] ?? 'POP / Casting'))) ?></p>
+        <p><?php hmsRenderNarrative((string)($request['procedure_requested'] ?? 'POP / Casting')); ?></p>
         <h3>Clinical Indication / Reason</h3>
-        <p><?= trim((string)($request['clinical_indication'] ?? '')) === '' ? '<span class="text-muted">No clinical indication recorded.</span>' : nl2br(e((string)$request['clinical_indication'])) ?></p>
+        <p><?php trim((string)($request['clinical_indication'] ?? '')) === '' ? print '<span class="text-muted">No clinical indication recorded.</span>' : hmsRenderNarrative((string)$request['clinical_indication']); ?></p>
     </div>
 
     <div class="card">
@@ -120,10 +120,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <div class="summary-item"><span class="summary-label">Performed By</span> <span class="summary-value"><?= e((string)($record['performed_by_name'] ?? '-')) ?></span></div>
                 <div class="summary-item"><span class="summary-label">Completed By</span> <span class="summary-value"><?= e((string)($record['completed_by_name'] ?? '-')) ?></span></div>
             </div>
-            <h4>Procedure Notes</h4><p><?= nl2br(e((string)($record['procedure_notes'] ?? ''))) ?></p>
-            <h4>Materials Used</h4><p><?= trim((string)($record['materials_used'] ?? '')) === '' ? '<span class="text-muted">No materials recorded.</span>' : nl2br(e((string)$record['materials_used'])) ?></p>
-            <h4>Aftercare Instructions</h4><p><?= trim((string)($record['aftercare_instructions'] ?? '')) === '' ? '<span class="text-muted">No aftercare instructions recorded.</span>' : nl2br(e((string)$record['aftercare_instructions'])) ?></p>
-            <h4>Remarks</h4><p><?= trim((string)($record['remarks'] ?? '')) === '' ? '<span class="text-muted">No remarks recorded.</span>' : nl2br(e((string)$record['remarks'])) ?></p>
+            <h4>Procedure Notes</h4><p><?php hmsRenderNarrative((string)($record['procedure_notes'] ?? '')); ?></p>
+            <h4>Materials Used</h4><p><?php trim((string)($record['materials_used'] ?? '')) === '' ? print '<span class="text-muted">No materials recorded.</span>' : hmsRenderNarrative((string)$record['materials_used']); ?></p>
+            <h4>Aftercare Instructions</h4><p><?php trim((string)($record['aftercare_instructions'] ?? '')) === '' ? print '<span class="text-muted">No aftercare instructions recorded.</span>' : hmsRenderNarrative((string)$record['aftercare_instructions']); ?></p>
+            <h4>Remarks</h4><p><?php trim((string)($record['remarks'] ?? '')) === '' ? print '<span class="text-muted">No remarks recorded.</span>' : hmsRenderNarrative((string)$record['remarks']); ?></p>
         <?php else: ?>
             <p class="text-muted">No POP procedure record yet.</p>
         <?php endif; ?>

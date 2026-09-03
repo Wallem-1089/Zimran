@@ -6,9 +6,12 @@ $physiotherapyRecord ??= [];
 $action ??= 'save.php';
 $buttonLabel ??= 'Save Physiotherapy Record';
 $recordSource = (string)($physiotherapyRecord['record_source'] ?? ($recordSource ?? 'Clinical'));
+$enableWritingMode ??= isset($permissionService)
+    && method_exists($permissionService, 'canUseConsultationHandwriting')
+    && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
 ?>
 
-<form method="post" action="<?= e($action) ?>" class="card">
+<form method="post" action="<?= e($action) ?>" class="card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
     <?= csrfField() ?>
     <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
     <input type="hidden" name="patient_id" value="<?= (int)$patient['id'] ?>">
@@ -21,43 +24,19 @@ $recordSource = (string)($physiotherapyRecord['record_source'] ?? ($recordSource
         </select>
     </div>
 
-    <div class="form-group">
-        <label for="referral_reason">Referral Reason</label>
-        <textarea id="referral_reason" name="referral_reason" rows="3"><?= e((string)($physiotherapyRecord['referral_reason'] ?? '')) ?></textarea>
-    </div>
-
-    <div class="form-group">
-        <label for="presenting_problem">Presenting Problem</label>
-        <textarea id="presenting_problem" name="presenting_problem" rows="4" required><?= e((string)($physiotherapyRecord['presenting_problem'] ?? '')) ?></textarea>
-    </div>
-
-    <div class="form-group">
-        <label for="assessment">Assessment</label>
-        <textarea id="assessment" name="assessment" rows="5" required><?= e((string)($physiotherapyRecord['assessment'] ?? '')) ?></textarea>
-    </div>
-
-    <div class="form-group">
-        <label for="functional_limitations">Functional Limitations</label>
-        <textarea id="functional_limitations" name="functional_limitations" rows="4"><?= e((string)($physiotherapyRecord['functional_limitations'] ?? '')) ?></textarea>
-    </div>
-
-    <div class="form-group">
-        <label for="treatment_plan">Treatment Plan</label>
-        <textarea id="treatment_plan" name="treatment_plan" rows="5" required><?= e((string)($physiotherapyRecord['treatment_plan'] ?? '')) ?></textarea>
-    </div>
-
-    <div class="form-group">
-        <label for="goals">Goals</label>
-        <textarea id="goals" name="goals" rows="4"><?= e((string)($physiotherapyRecord['goals'] ?? '')) ?></textarea>
-    </div>
-
-    <div class="form-group">
-        <label for="precautions">Precautions</label>
-        <textarea id="precautions" name="precautions" rows="4"><?= e((string)($physiotherapyRecord['precautions'] ?? '')) ?></textarea>
-    </div>
+    <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Physiotherapy Entry Mode'); ?>
+    <?php hmsRenderHandwritingTextarea('referral_reason', 'Referral Reason', (string)($physiotherapyRecord['referral_reason'] ?? ''), 3, false, $enableWritingMode); ?>
+    <?php hmsRenderHandwritingTextarea('presenting_problem', 'Presenting Problem', (string)($physiotherapyRecord['presenting_problem'] ?? ''), 4, true, $enableWritingMode); ?>
+    <?php hmsRenderHandwritingTextarea('assessment', 'Assessment', (string)($physiotherapyRecord['assessment'] ?? ''), 5, true, $enableWritingMode); ?>
+    <?php hmsRenderHandwritingTextarea('functional_limitations', 'Functional Limitations', (string)($physiotherapyRecord['functional_limitations'] ?? ''), 4, false, $enableWritingMode); ?>
+    <?php hmsRenderHandwritingTextarea('treatment_plan', 'Treatment Plan', (string)($physiotherapyRecord['treatment_plan'] ?? ''), 5, true, $enableWritingMode); ?>
+    <?php hmsRenderHandwritingTextarea('goals', 'Goals', (string)($physiotherapyRecord['goals'] ?? ''), 4, false, $enableWritingMode); ?>
+    <?php hmsRenderHandwritingTextarea('precautions', 'Precautions', (string)($physiotherapyRecord['precautions'] ?? ''), 4, false, $enableWritingMode); ?>
 
     <div class="form-actions">
         <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>
         <a class="btn-secondary" href="<?= e(physiotherapyBackToWorkspace((int)$visit['id'])) ?>">Cancel</a>
     </div>
 </form>
+
+<?php hmsRenderHandwritingScript($enableWritingMode); ?>

@@ -45,6 +45,7 @@ $departments = patientStockUsageDepartments($pdo);
 $availableStock = $patientStockUsageService->listAvailableDepartmentStock($selectedDepartmentId, $currentUser);
 $old = $_SESSION['old_patient_stock_usage'] ?? [];
 unset($_SESSION['old_patient_stock_usage']);
+$enableWritingMode = $permissionService->canUseConsultationHandwriting($currentUser);
 
 $pageTitle = 'Record Patient Stock Usage';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -94,7 +95,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <noscript><button class="btn-secondary" type="submit">Load Stock</button></noscript>
     </form>
 
-    <form method="post" action="save.php" class="card">
+    <form method="post" action="save.php" class="card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
         <?= csrfField() ?>
         <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
         <input type="hidden" name="patient_id" value="<?= (int)$visit['patient_id'] ?>">
@@ -124,8 +125,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             </div>
 
             <div class="form-group full-width">
-                <label for="usage_reason">Usage Reason</label>
-                <textarea id="usage_reason" name="usage_reason" rows="4" placeholder="e.g. IV cannulation, dressing care, procedure consumables"><?= e((string)($old['usage_reason'] ?? '')) ?></textarea>
+                <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Stock Usage Entry Mode'); ?>
+                <?php hmsRenderHandwritingTextarea('usage_reason', 'Usage Reason', (string)($old['usage_reason'] ?? ''), 4, false, $enableWritingMode); ?>
+                <small class="text-muted">e.g. IV cannulation, dressing care, procedure consumables.</small>
             </div>
 
             <div class="form-group full-width">
@@ -142,6 +144,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <a class="btn-secondary" href="<?= e(patientStockUsageBackToWorkspace((int)$visit['id'])) ?>">Cancel</a>
         </div>
     </form>
+    <?php hmsRenderHandwritingScript($enableWritingMode); ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
