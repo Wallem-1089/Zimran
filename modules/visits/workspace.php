@@ -626,13 +626,13 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
             <h2>
 
-                Patient Awaiting Department Reception
+                Transferred — Awaiting Receive
 
             </h2>
 
             <p>
 
-                This patient has been transferred to
+                This encounter has been transferred to
 
                 <strong>
 

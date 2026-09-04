@@ -167,7 +167,7 @@ $canAssignDoctor = !isset($permissionService)
 
             <span class="status-label">
 
-                Current Department
+                Encounter Owner / Current Department
 
             </span>
 

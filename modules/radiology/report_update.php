@@ -27,6 +27,6 @@ if (!$permissionService->canEditRadiologyResult($visit, $currentUser)) {
 $result = $radiologyService->updateResult($_POST, $currentUser, $_FILES['radiology_chart'] ?? null);
 radiologyFlash($result, 'Radiology report updated.');
 
-header('Location: report.php?id=' . $requestId);
+header('Location: ' . (($result['success'] ?? false) ? 'view.php' : 'report.php') . '?id=' . $requestId);
 exit;
 

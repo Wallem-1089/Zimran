@@ -268,7 +268,7 @@ $isClosedEncounter = in_array(
 
                 <th>
 
-                    Current Department
+                    Encounter Owner / Current Department
 
                 </th>
 
@@ -354,13 +354,13 @@ $isClosedEncounter = in_array(
 
     <h3>
 
-        ⏳ Patient Awaiting Department Reception
+        ⏳ Transferred — Awaiting Receive
 
     </h3>
 
     <p>
 
-        This patient has been transferred to
+        This encounter has been transferred to
 
         <strong>
 
@@ -411,7 +411,7 @@ $isClosedEncounter = in_array(
 
             <th>
 
-                Current Department
+                Encounter Owner / Current Department
 
             </th>
 

@@ -572,7 +572,7 @@ class StoreService
 
     public function getDepartmentBalance(int $itemId, int $departmentId, ?array $user = null): ?array
     {
-        if ($user !== null && !$this->permissionService->canViewInventory($user)) {
+        if ($user !== null && !$this->canViewDepartmentStock($departmentId, $user)) {
             return null;
         }
 
@@ -630,7 +630,10 @@ class StoreService
 
     public function listDepartmentStock(?int $departmentId = null, ?array $user = null): array
     {
-        if ($user !== null && !$this->permissionService->canViewInventory($user)) {
+        if ($user !== null
+            && !$this->permissionService->canViewInventory($user)
+            && ($departmentId === null || !$this->canViewDepartmentStock($departmentId, $user))
+        ) {
             return [];
         }
 
@@ -698,7 +701,7 @@ class StoreService
 
     public function listDepartmentLedger(int $departmentId, ?array $user = null, int $limit = 50): array
     {
-        if ($departmentId <= 0 || ($user !== null && !$this->permissionService->canViewInventory($user))) {
+        if ($departmentId <= 0 || ($user !== null && !$this->canViewDepartmentStock($departmentId, $user))) {
             return [];
         }
 
@@ -729,6 +732,32 @@ class StoreService
         ]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function canViewDepartmentStock(int $departmentId, array $user): bool
+    {
+        if ($this->permissionService->canViewInventory($user)) {
+            return true;
+        }
+
+        if (!$this->permissionService->canViewStockRequests($user)
+            && !$this->permissionService->canViewPatientStockUsage($user)
+        ) {
+            return false;
+        }
+
+        return $departmentId > 0
+            && $departmentId === $this->activeDepartmentId($user);
+    }
+
+    private function activeDepartmentId(array $user): int
+    {
+        return (int)(
+            $user['active_department_id']
+            ?? $_SESSION['active_department_id']
+            ?? $user['department_id']
+            ?? 0
+        );
     }
 
     private function recordMovement(

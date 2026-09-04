@@ -40,7 +40,7 @@ $completedAt = !empty($visit['completed_at'])
             </div>
 
             <div class="summary-item">
-                <span class="summary-label">Current Department</span>
+                <span class="summary-label">Encounter Owner / Current Department</span>
                 <span class="summary-value"><?= e((string)($visit['department_name'] ?? 'Not Assigned')) ?></span>
             </div>
         </div>
@@ -51,7 +51,7 @@ $completedAt = !empty($visit['completed_at'])
 
         <div class="summary-grid">
             <div class="summary-item">
-                <span class="summary-label">Department</span>
+                <span class="summary-label">Clinical Department Context</span>
                 <span class="summary-value"><?= e((string)($visit['department_name'] ?? 'Not Assigned')) ?></span>
             </div>
 

@@ -24,9 +24,13 @@ if (!$request) {
 $visit = radiologyRequireVisit($visitService, (int)$request['visit_id']);
 $result = $radiologyService->getResult($requestId, $currentUser);
 $isClosed = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
+$isRequestClosed = in_array((string)($request['status'] ?? ''), ['Completed', 'Cancelled'], true);
 $enableWritingMode = $permissionService->canUseConsultationHandwriting($currentUser);
 
-if ($isClosed && !$permissionService->isAdministrator($currentUser)) {
+if (($isClosed && !$permissionService->isAdministrator($currentUser)) || $isRequestClosed) {
+    if ($isRequestClosed) {
+        $_SESSION['validation_errors'] = ['Completed or cancelled radiology requests are read-only.'];
+    }
     header('Location: view.php?id=' . $requestId);
     exit;
 }
