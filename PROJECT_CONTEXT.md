@@ -1225,6 +1225,18 @@ timestamped SQL dumps in `database/backups/`, records the action in
 Database restore remains manual/CLI-only and must be tested against a separate
 restore database rather than the live application database.
 
+Medical Document access distinguishes browser viewing from file download.
+Authorized patient-context users may open permitted documents in the browser,
+but attachment-style file downloads are restricted to documents uploaded by
+the user's active department unless
+`download_cross_department_medical_documents` is explicitly granted. Super
+Administrator receives that cross-department download permission by default.
+
+The Encounter Workspace and Patient Chart have responsive table spacing for
+the newer clinical/workflow sections. Notes tables, Author/Updated columns,
+and action columns use responsive wrappers and clearer button spacing so
+tablet/mobile views do not collapse readable columns together.
+
 Verified blockers fixed during the pass:
 
 - `StoreService::recordMovement()` no longer references an undefined
@@ -1258,3 +1270,14 @@ Administrator.
 - Walter Ikhile / username `walter` is the protected Super Administrator
   account.
 - The original `admin` account remains an ordinary System Administrator.
+
+## Configurable Extra Form Fields
+
+Administration includes `Form Settings` for controlled optional form
+extensions. Core workflow fields remain coded normally. Configurable fields
+are for extra/custom narrative or checklist content only. Current configurable
+targets are Nursing Assessment, Theatre Record, Admission Record, Dressing
+Record, DM Sheet, ECG Report, POP Procedure Record, and Physiotherapy Record.
+Active fields appear under `Additional Configured Fields` and are stored in
+flexible response tables linked to the source record, patient, and encounter
+where applicable.

@@ -21,6 +21,24 @@ if (!$permissionService->canRecordPopProcedure($visit, $currentUser)) {
     exit('You cannot record this POP procedure.');
 }
 
-popFlash($popService->saveRecord($_POST, $currentUser), 'POP record saved.');
+$result = $popService->saveRecord($_POST, $currentUser);
+if (($result['success'] ?? false) === true) {
+    $configuredResult = $configurableFormService->saveResponse(
+        'pop_record',
+        (int)$request['patient_id'],
+        (int)$request['visit_id'],
+        'POP Record',
+        $requestId,
+        $_POST,
+        $currentUser
+    );
+    if (($configuredResult['success'] ?? false) !== true) {
+        $_SESSION['old_configured_fields'] = $_POST['configured_fields'] ?? [];
+        $_SESSION['validation_errors'] = $configuredResult['errors'] ?? ['Unable to save configured form fields.'];
+        header('Location: record.php?id=' . $requestId);
+        exit;
+    }
+}
+popFlash($result, 'POP record saved.');
 header('Location: record.php?id=' . $requestId);
 exit;

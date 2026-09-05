@@ -20,6 +20,7 @@ $canEdit = $permissionService->canEditNursing($visit, $currentUser)
     );
 $isClosed = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
 $canRequestBilling = !$isClosed && $permissionService->canCreateBillingRequest($currentUser);
+$dressingConfiguredDisplayValues = $configurableFormService->getResponseValues('dressing_record', 'Dressing Record', (int)$record['id']);
 
 $pageTitle = 'Dressing Record';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -67,6 +68,7 @@ require __DIR__ . '/../../../layouts/sidebar.php';
             <p><?php hmsRenderNarrative((string)($record[$field] ?? '-')); ?></p>
         </div>
     <?php endforeach; ?>
+    <?php hmsRenderConfiguredValues($dressingConfiguredDisplayValues); ?>
 </main>
 <?php require __DIR__ . '/../../../layouts/footer.php'; ?>
 </div>

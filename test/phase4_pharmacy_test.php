@@ -50,6 +50,22 @@ function createPharmacyEncounter(PDO $pdo, array $actor, int $patientId, int $de
     return (int)$pdo->lastInsertId();
 }
 
+function routePharmacyEncounter(PDO $pdo, int $visitId, int $departmentId): void
+{
+    $stmt = $pdo->prepare("
+        UPDATE visits
+        SET current_department_id = :department_id,
+            current_department_received_status = 'Received',
+            visit_status = 'Pharmacy',
+            updated_at = NOW()
+        WHERE id = :visit_id
+    ");
+    $stmt->execute([
+        ':department_id' => $departmentId,
+        ':visit_id' => $visitId,
+    ]);
+}
+
 $config = require __DIR__ . '/../config/app.php';
 $resolved = DatabaseSafety::resolveTestDatabase($config);
 $databaseName = (string)$pdo->query('SELECT DATABASE()')->fetchColumn();
@@ -293,6 +309,7 @@ try {
     ], $pharmacist), 'Create direct prescription');
     $directPrescriptionId = (int)$pharmacyCreate['prescription_id'];
 
+    routePharmacyEncounter($pdo, $doctorVisitId, $pharmacyDepartmentId);
     $dispenseResult = requirePharmacySuccess($service->dispense($clinicalPrescriptionId, [
         'quantity_dispensed' => 15,
         'dispensing_notes' => 'Dispensed at the counter.',

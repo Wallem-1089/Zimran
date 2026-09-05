@@ -248,6 +248,12 @@ if ($theatreAccessDenied) {
 $hasPendingTransfer = $visitService->hasPendingTransfer($visitId);
 
 $canAccessDepartment = !$hasPendingTransfer;
+$canReceiveCurrentEncounter = $hasPendingTransfer
+    && $permissionService->canReceiveEncounter(
+        $visit,
+        ['to_department_id' => (int)($visit['current_department_id'] ?? 0)],
+        $currentUser
+    );
 
 /*
 |--------------------------------------------------------------------------
@@ -584,39 +590,71 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
     <?php endif; ?>
 
-    <?php require __DIR__ . '/partials/encounter_header.php'; ?>
+    <section class="card workspace-collapse-card">
+        <details class="workspace-collapse-panel">
+            <summary class="workspace-collapse-summary">
+                <span class="workspace-collapse-main">
+                    <span class="workspace-collapse-title">Patient / Encounter Context</span>
+                    <span class="workspace-collapse-subtitle">
+                        Patient identity, clinical safety, longitudinal summary, and latest key results.
+                    </span>
+                </span>
+                <span class="workspace-collapse-toggle" aria-hidden="true">Expand</span>
+            </summary>
 
-    <?php if ($canViewClinicalSafety): ?>
-        <?php $safetyBannerUrl = '../medical_records/chart.php?patient=' . (int)$visit['patient_id'] . '&tab=safety&visit=' . $visitId; ?>
-        <?php require __DIR__ . '/../medical_records/partials/clinical_safety_banner.php'; ?>
-    <?php endif; ?>
+            <div class="workspace-collapse-body">
+                <?php require __DIR__ . '/partials/encounter_header.php'; ?>
 
-    <?php if ($canViewProblemList || $canViewMedicalHistory): ?>
-        <?php require __DIR__ . '/partials/longitudinal_summary.php'; ?>
-    <?php endif; ?>
+                <?php if ($canViewClinicalSafety): ?>
+                    <?php $safetyBannerUrl = '../medical_records/chart.php?patient=' . (int)$visit['patient_id'] . '&tab=safety&visit=' . $visitId; ?>
+                    <?php require __DIR__ . '/../medical_records/partials/clinical_safety_banner.php'; ?>
+                <?php endif; ?>
 
-    <?php if ($latestLaboratoryResult !== null && trim((string)($latestLaboratoryResult['result'] ?? '')) !== ''): ?>
-        <div class="card">
-            <h3>Latest Laboratory Result</h3>
-            <div class="summary-grid">
-                <div class="summary-item"><span class="summary-label">Sample Taken</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestLaboratoryResult['sample_taken'] ?? '-')); ?></span></div>
-                <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestLaboratoryResult['findings'] ?? '-')); ?></span></div>
-                <div class="summary-item"><span class="summary-label">Result</span> <span class="summary-value"><?php hmsRenderNarrative((string)$latestLaboratoryResult['result']); ?></span></div>
-                <div class="summary-item"><span class="summary-label">Interpretation</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestLaboratoryResult['interpretation'] ?? '-')); ?></span></div>
+                <?php if ($canViewProblemList || $canViewMedicalHistory): ?>
+                    <?php require __DIR__ . '/partials/longitudinal_summary.php'; ?>
+                <?php endif; ?>
+
+                <?php if ($latestLaboratoryResult !== null && trim((string)($latestLaboratoryResult['result'] ?? '')) !== ''): ?>
+                    <div class="card">
+                        <h3>Latest Laboratory Result</h3>
+                        <div class="summary-grid">
+                            <div class="summary-item"><span class="summary-label">Sample Taken</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestLaboratoryResult['sample_taken'] ?? '-')); ?></span></div>
+                            <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestLaboratoryResult['findings'] ?? '-')); ?></span></div>
+                            <div class="summary-item"><span class="summary-label">Result</span> <span class="summary-value"><?php hmsRenderNarrative((string)$latestLaboratoryResult['result']); ?></span></div>
+                            <div class="summary-item"><span class="summary-label">Interpretation</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestLaboratoryResult['interpretation'] ?? '-')); ?></span></div>
+                        </div>
+                        <div class="form-actions">
+                            <a class="btn-secondary" href="../laboratory/view.php?id=<?= (int)$latestLaboratoryRequest['id'] ?>">Open Result</a>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
-            <div class="form-actions">
-                <a class="btn-secondary" href="../laboratory/view.php?id=<?= (int)$latestLaboratoryRequest['id'] ?>">Open Result</a>
+        </details>
+    </section>
+
+    <section class="card workspace-collapse-card">
+        <details class="workspace-collapse-panel">
+            <summary class="workspace-collapse-summary">
+                <span class="workspace-collapse-main">
+                    <span class="workspace-collapse-title">Workflow Actions / Status</span>
+                    <span class="workspace-collapse-subtitle">
+                        Transfer, receive, assignment, notifications, encounter status, and summary details.
+                    </span>
+                </span>
+                <span class="workspace-collapse-toggle" aria-hidden="true">Expand</span>
+            </summary>
+
+            <div class="workspace-collapse-body">
+                <?php require __DIR__ . '/partials/quick_actions.php'; ?>
+
+                <?php require __DIR__ . '/partials/queue_status.php'; ?>
+
+                <?php require __DIR__ . '/partials/encounter_summary.php'; ?>
+
+                <?php require __DIR__ . '/partials/encounter_status.php'; ?>
             </div>
-        </div>
-    <?php endif; ?>
-
-    <?php require __DIR__ . '/partials/quick_actions.php'; ?>
-
-    <?php require __DIR__ . '/partials/queue_status.php'; ?>
-
-    <?php require __DIR__ . '/partials/encounter_summary.php'; ?>
-
-    <?php require __DIR__ . '/partials/encounter_status.php'; ?>
+        </details>
+    </section>
 
     <?php require __DIR__ . '/partials/timeline.php'; ?>
 
@@ -651,6 +689,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
             </p>
 
+            <?php if ($canReceiveCurrentEncounter) : ?>
             <a
 
                 href="receive.php?visit=<?= (int)$visit['id'] ?>"
@@ -660,6 +699,9 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
                 Receive Patient
 
             </a>
+            <?php else : ?>
+                <p class="text-muted">Only the receiving department can receive this encounter.</p>
+            <?php endif; ?>
 
         </div>
 

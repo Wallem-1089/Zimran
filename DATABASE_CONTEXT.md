@@ -1359,6 +1359,24 @@ setting so Medical Records can upload paper-form equivalents including
 operation consent forms, Theatre operation notes, continuation sheets,
 observation charts, nursing checklists, dressing records, drug charts, DM
 sheets, emergency records, and department report books.
+
+Migration 068 does not add tables. It adds the
+`download_cross_department_medical_documents` permission so Medical Documents
+can distinguish authorized browser viewing from attachment-style file
+downloads across department boundaries.
+
+Migration 070 adds the configurable extra-form foundation:
+`form_definitions`, `form_fields`, `form_responses`, and
+`form_response_values`. It seeds `nursing_assessment` and three inactive
+optional textarea fields: Mental Status, Fall Prevention Advice, and Patient
+Education Given. Administrators activate selected fields from Form Settings;
+core coded form columns remain unchanged.
+
+Migration 071 seeds additional configurable form targets for Theatre,
+Admission, Dressing Book, DM Sheet, ECG, POP, and Physiotherapy. These seeds
+add inactive optional extra fields only; they do not modify the clinical module
+tables or their required workflow columns.
+
 ## POP / Casting tables
 
 Migration 059 creates `pop_requests` and `pop_records`.

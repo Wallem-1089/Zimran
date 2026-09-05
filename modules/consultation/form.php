@@ -35,7 +35,7 @@ $fields = [
             $label,
             (string)($consultation[$field] ?? ''),
             in_array($field, ['advice', 'follow_up', 'referral_notes'], true) ? 3 : 5,
-            !in_array($field, ['advice', 'follow_up', 'referral_notes'], true),
+            $field === 'presenting_complaint',
             $enableWritingMode
         ); ?>
     <?php endforeach; ?>

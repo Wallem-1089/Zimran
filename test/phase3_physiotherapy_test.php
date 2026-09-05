@@ -48,6 +48,22 @@ function createEncounter(PDO $pdo, array $actor, int $patientId, int $department
     return (int)$pdo->lastInsertId();
 }
 
+function routePhysioEncounter(PDO $pdo, int $visitId, int $departmentId): void
+{
+    $stmt = $pdo->prepare("
+        UPDATE visits
+        SET current_department_id = :department_id,
+            current_department_received_status = 'Received',
+            visit_status = 'Physiotherapy',
+            updated_at = NOW()
+        WHERE id = :visit_id
+    ");
+    $stmt->execute([
+        ':department_id' => $departmentId,
+        ':visit_id' => $visitId,
+    ]);
+}
+
 $config = require __DIR__ . '/../config/app.php';
 $resolved = DatabaseSafety::resolveTestDatabase($config);
 $databaseName = (string)$pdo->query('SELECT DATABASE()')->fetchColumn();
@@ -179,6 +195,7 @@ try {
 
     $worklist = $service->listWorklist($physio, ['status' => 'Active']);
     assertPhysio($worklist !== [], 'Physiotherapy worklist did not include the clinical record.');
+    routePhysioEncounter($pdo, $doctorVisitId, $deptId);
 
     $doctorDenied = $service->createRecord([
         'visit_id' => $doctorVisitId,

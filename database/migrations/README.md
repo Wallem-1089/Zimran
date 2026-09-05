@@ -542,3 +542,46 @@ upload metadata to `radiology_reports` for scanned X-Ray/Radiology documents.
 general supported narrative-form handwriting entry mode. Default role access is
 restricted to `Super Administrator`; selected users can still receive the
 feature later through user-level permission overrides.
+
+## Migration 066 - Department Permission Alignment
+
+`066_department_permission_alignment_up.sql` aligns ECG Technician and POP
+Technician with the current patient-specific clinical context rule. They can
+view encounter context, clinical summaries, billing request context, inventory
+lookup, stock requests, patient stock usage, and clinical reports where
+permitted, while mutation remains department-owned for ECG and POP workflows.
+
+## Migration 068 - Cross-Department Document Download Permission
+
+`068_cross_department_document_download_permission_up.sql` adds
+`download_cross_department_medical_documents`. Medical documents can still be
+opened in the browser by authorized patient-context users, but direct file
+downloads are restricted to the uploading department unless this explicit
+permission is granted. Super Administrator receives the permission by default.
+
+## Migration 069 - Patient Communications / WhatsApp Tracking
+
+`069_patient_communications_tracking_up.sql` adds `patients.whatsapp_number`
+and creates `patient_communications` for tracked patient communication
+handoffs. Stage 2 WhatsApp tracking records Radiology report and Medical
+Document WhatsApp handoff attempts while keeping file attachment manual and
+secure. The migration also adds `view_patient_communications` for future/read-only
+communication history views.
+
+## Migration 070 - Configurable Form Fields
+
+`070_configurable_form_fields_up.sql` adds the controlled configurable-form
+foundation: `form_definitions`, `form_fields`, `form_responses`, and
+`form_response_values`. It seeds Nursing Assessment as the first configurable
+form and adds optional inactive fields for Mental Status, Fall Prevention
+Advice, and Patient Education Given. Administrators can activate selected
+fields from Administration → Form Settings, and enabled fields appear under
+Additional Configured Fields without changing coded Nursing columns.
+
+## Migration 071 - Additional Configurable Form Targets
+
+`071_additional_configurable_form_targets_up.sql` extends configurable extra
+fields to other safe narrative/checklist-style forms: Theatre Record,
+Admission Record, Dressing Record, DM Sheet, ECG Report, POP Procedure Record,
+and Physiotherapy Record. Seeded fields remain inactive until an administrator
+activates them from Form Settings.

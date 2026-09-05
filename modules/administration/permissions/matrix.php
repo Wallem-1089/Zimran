@@ -175,7 +175,7 @@ require_once __DIR__ . '/../../../layouts/sidebar.php';
                             <?php
                                 $label = trim((string)($user['first_name'] ?? '') . ' ' . (string)($user['last_name'] ?? ''));
                                 $label = ($label !== '' ? $label : (string)$user['username'])
-                                    . ' — ' . (string)($user['username'] ?? '')
+                                    . ' - ' . (string)($user['username'] ?? '')
                                     . ' / ' . (string)($user['role_name'] ?? '');
                             ?>
                             <option value="<?= (int)$user['id'] ?>" <?= (int)$user['id'] === $selectedUserId ? 'selected' : '' ?>><?= e($label) ?></option>

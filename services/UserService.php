@@ -391,7 +391,10 @@ class UserService
     public function getDepartments(): array
     {
         return $this->db->query(
-            'SELECT id, department_name, description FROM departments ORDER BY department_name'
+            'SELECT id, department_name, description
+             FROM departments
+             WHERE is_active = 1
+             ORDER BY department_name'
         )->fetchAll(PDO::FETCH_ASSOC);
     }
 

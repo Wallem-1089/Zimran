@@ -16,6 +16,7 @@ nursingRequireAccess($permissionService, $visit, $currentUser);
 $isClosedEncounter = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
 $canEdit = $permissionService->canEditNursing($visit, $currentUser)
     && (!$isClosedEncounter || $permissionService->isAdministrator($currentUser));
+$dmSheetConfiguredDisplayValues = $configurableFormService->getResponseValues('dm_sheet', 'DM Sheet', (int)$record['id']);
 
 $pageTitle = 'DM Sheet Entry';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -59,6 +60,7 @@ require __DIR__ . '/../../../layouts/sidebar.php';
             <p><?php hmsRenderNarrative((string)$record['notes']); ?></p>
         <?php endif; ?>
     </div>
+    <?php hmsRenderConfiguredValues($dmSheetConfiguredDisplayValues); ?>
 </main>
 <?php require __DIR__ . '/../../../layouts/footer.php'; ?>
 </div>

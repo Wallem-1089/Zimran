@@ -107,6 +107,9 @@ $requestSource = $laboratoryRequestSource ?? 'Clinical';
                         <button type="submit" class="btn-secondary">Complete</button>
                     </form>
                 <?php endif; ?>
+                <?php if (!$isClosedEncounter && !empty($billingRequestsReady) && !empty($canCreateBillingRequest)): ?>
+                    <a href="../billing/request_create.php?visit=<?= (int)$visit['id'] ?>&source_module=Laboratory&source_record_id=<?= (int)$latest['id'] ?>&description=<?= rawurlencode('Laboratory: ' . (string)($latest['tests_requested'] ?? '')) ?>" class="btn-secondary">Request Billing</a>
+                <?php endif; ?>
             </div>
         </div>
 

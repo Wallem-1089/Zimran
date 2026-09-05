@@ -24,6 +24,7 @@ class PatientService
         'occupation',
         'place_of_work',
         'phone',
+        'whatsapp_number',
         'email',
         'address',
         'state_of_origin',
@@ -147,6 +148,8 @@ class PatientService
 
                     phone,
 
+                    whatsapp_number,
+
                     normalized_phone,
 
                     email,
@@ -209,6 +212,8 @@ class PatientService
 
                     :phone,
 
+                    :whatsapp_number,
+
                     :normalized_phone,
 
                     :email,
@@ -261,6 +266,7 @@ class PatientService
                 ':occupation'        => $patient['occupation'],
                 ':place_of_work'     => $patient['place_of_work'],
                 ':phone'             => $patient['phone'],
+                ':whatsapp_number'   => $patient['whatsapp_number'] ?? null,
                 ':normalized_phone'  => $this->normalizePhone($patient['phone']),
                 ':email'             => $patient['email'],
                 ':normalized_email'  => $this->normalizeEmail($patient['email']),
@@ -454,11 +460,17 @@ class PatientService
 
     private function generateHospitalNumber(int $patientId): string
     {
+        $hospitalCode = (string)$this->settingsService->get(
+            'hospital.code',
+            $this->config['hospital']['code'] ?? 'HMS'
+        );
+        $hospitalCode = preg_replace('/[^A-Za-z0-9_-]/', '', trim($hospitalCode)) ?: 'HMS';
+
         return sprintf(
 
             '%s-%s-%06d',
 
-            $this->config['hospital']['code'],
+            $hospitalCode,
 
             date('Y'),
 
@@ -1241,6 +1253,7 @@ public function updatePatientWithContext(
                 occupation = :occupation,
                 place_of_work = :place_of_work,
                 phone = :phone,
+                whatsapp_number = :whatsapp_number,
                 normalized_phone = :normalized_phone,
                 email = :email,
                 normalized_email = :normalized_email,
@@ -1271,6 +1284,7 @@ public function updatePatientWithContext(
             ':occupation' => $updated['occupation'],
             ':place_of_work' => $updated['place_of_work'],
             ':phone' => $updated['phone'],
+            ':whatsapp_number' => $updated['whatsapp_number'] ?? null,
             ':normalized_phone' => $this->normalizePhone($updated['phone']),
             ':email' => $updated['email'],
             ':normalized_email' => $this->normalizeEmail($updated['email']),

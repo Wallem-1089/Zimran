@@ -7,6 +7,7 @@ if (!isset($patient)) {
 }
 
 $latest = $latestPhysiotherapyRecord ?? null;
+$physiotherapyPreviewRows = array_slice($physiotherapyHistory ?? [], 0, 10);
 ?>
 
 <section class="card">
@@ -44,6 +45,9 @@ $latest = $latestPhysiotherapyRecord ?? null;
     <?php if (empty($physiotherapyHistory)): ?>
         <p class="text-muted">No physiotherapy records recorded.</p>
     <?php else: ?>
+        <?php if (count($physiotherapyHistory) > count($physiotherapyPreviewRows)): ?>
+            <p class="text-muted">Showing latest <?= count($physiotherapyPreviewRows) ?> of <?= count($physiotherapyHistory) ?> physiotherapy records. Open history to see all records.</p>
+        <?php endif; ?>
         <div class="table-responsive">
             <table class="table">
                 <thead>
@@ -57,7 +61,7 @@ $latest = $latestPhysiotherapyRecord ?? null;
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($physiotherapyHistory as $record): ?>
+                    <?php foreach ($physiotherapyPreviewRows as $record): ?>
                         <tr>
                             <td><?= e((string)($record['created_at'] ?? '-')) ?></td>
                             <td><?= e((string)$record['record_source']) ?></td>

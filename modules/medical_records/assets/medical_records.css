@@ -124,6 +124,53 @@
     min-width:680px;
 }
 
+.summary-table th,
+.summary-table td,
+.table-responsive th,
+.table-responsive td{
+    padding:12px 14px;
+    vertical-align:top;
+}
+
+.summary-table th,
+.table-responsive th{
+    white-space:nowrap;
+}
+
+.summary-table td,
+.table-responsive td{
+    min-width:110px;
+}
+
+.summary-table td:first-child,
+.table-responsive td:first-child{
+    min-width:180px;
+}
+
+.table-actions,
+.table-actions-column{
+    text-align:right;
+    white-space:nowrap;
+}
+
+.summary-table th:last-child,
+.summary-table td:last-child,
+.table-responsive th:last-child,
+.table-responsive td:last-child{
+    text-align:right;
+    white-space:nowrap;
+}
+
+.table-actions{
+    min-width:120px;
+}
+
+.table-actions a,
+.table-actions button{
+    display:inline-flex;
+    margin:2px 0 2px 8px;
+}
+
 @media (max-width: 720px) {
     .chart-header-actions,
     .form-actions,
@@ -151,4 +198,31 @@
     .table-responsive table{
         min-width:620px;
     }
+}
+
+/* Readability hardening for wrapped chart text, tables, and clinical fields. */
+.medical-records,
+.medical-records input,
+.medical-records select,
+.medical-records textarea,
+.summary-table th,
+.summary-table td,
+.table-responsive th,
+.table-responsive td,
+.record-card,
+.summary-item{
+    line-height:1.5;
+}
+
+.medical-records textarea{
+    line-height:1.65;
+    min-height:120px;
+}
+
+.summary-table td,
+.table-responsive td,
+.record-card,
+.summary-item{
+    overflow-wrap:break-word;
+    word-break:normal;
 }

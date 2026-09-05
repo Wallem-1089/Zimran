@@ -73,6 +73,9 @@ $canCompleteTheatre = $canCompleteTheatre ?? false;
                         <button class="btn-primary" type="submit">Complete</button>
                     </form>
                 <?php endif; ?>
+                <?php if (!$isClosedEncounter && !empty($billingRequestsReady) && !empty($canCreateBillingRequest)): ?>
+                    <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$visit['id'] ?>&source_module=Theatre&source_record_id=<?= (int)$theatreRecord['id'] ?>&description=<?= rawurlencode('Theatre: ' . (string)($theatreRecord['procedure_name'] ?? '')) ?>">Request Billing</a>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
     </div>

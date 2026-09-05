@@ -21,6 +21,24 @@ if (!$permissionService->canEditPopRecord($visit, $currentUser)) {
     exit('You cannot edit this POP record.');
 }
 
-popFlash($popService->updateRecord($_POST, $currentUser), 'POP record updated.');
+$result = $popService->updateRecord($_POST, $currentUser);
+if (($result['success'] ?? false) === true) {
+    $configuredResult = $configurableFormService->saveResponse(
+        'pop_record',
+        (int)$request['patient_id'],
+        (int)$request['visit_id'],
+        'POP Record',
+        $requestId,
+        $_POST,
+        $currentUser
+    );
+    if (($configuredResult['success'] ?? false) !== true) {
+        $_SESSION['old_configured_fields'] = $_POST['configured_fields'] ?? [];
+        $_SESSION['validation_errors'] = $configuredResult['errors'] ?? ['Unable to save configured form fields.'];
+        header('Location: record.php?id=' . $requestId);
+        exit;
+    }
+}
+popFlash($result, 'POP record updated.');
 header('Location: record.php?id=' . $requestId);
 exit;

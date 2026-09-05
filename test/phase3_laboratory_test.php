@@ -56,6 +56,22 @@ function createLaboratoryEncounter(PDO $pdo, array $actor, int $patientId, int $
     return (int)$pdo->lastInsertId();
 }
 
+function routeLaboratoryEncounter(PDO $pdo, int $visitId, array $departmentUser): void
+{
+    $stmt = $pdo->prepare("
+        UPDATE visits
+        SET current_department_id = :department_id,
+            current_department_received_status = 'Received',
+            visit_status = 'Laboratory',
+            updated_at = NOW()
+        WHERE id = :visit_id
+    ");
+    $stmt->execute([
+        ':department_id' => (int)$departmentUser['department_id'],
+        ':visit_id' => $visitId,
+    ]);
+}
+
 function fileContains(string $path, string $needle): bool
 {
     $contents = file_get_contents($path);
@@ -221,6 +237,7 @@ try {
     assertLaboratory($laboratoryService->listByPatient($patientId, $doctor) !== [], 'Patient laboratory history is empty.');
     assertLaboratory($laboratoryService->listWorklist($lab, ['status' => 'Requested']) !== [], 'Worklist did not include the created request.');
 
+    routeLaboratoryEncounter($pdo, $doctorVisitId, $lab);
     $startClinical = requireLaboratorySuccess($laboratoryService->startRequest($clinicalRequestId, $lab), 'Clinical request start');
     assertLaboratory(($startClinical['success'] ?? false) === true, 'Clinical request start failed.');
 

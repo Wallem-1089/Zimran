@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 require __DIR__ . '/_bootstrap.php';
 
+requireCsrfToken();
+
 $visitId = filter_input(INPUT_POST, 'visit_id', FILTER_VALIDATE_INT) ?: 0;
 $patientId = filter_input(INPUT_POST, 'patient_id', FILTER_VALIDATE_INT) ?: 0;
 $recordSource = physiotherapyRequestSourceLabel((string)($_POST['record_source'] ?? 'Clinical'));
@@ -34,7 +36,24 @@ if (($result['success'] ?? false) !== true) {
         'goals' => (string)($_POST['goals'] ?? ''),
         'precautions' => (string)($_POST['precautions'] ?? ''),
     ];
+    $_SESSION['old_configured_fields'] = $_POST['configured_fields'] ?? [];
     header('Location: request.php?visit=' . $visitId . '&source=' . urlencode($recordSource));
+    exit;
+}
+
+$configuredResult = $configurableFormService->saveResponse(
+    'physiotherapy_record',
+    (int)$visit['patient_id'],
+    (int)$visit['id'],
+    'Physiotherapy Record',
+    (int)$result['physiotherapy_record_id'],
+    $_POST,
+    $currentUser
+);
+if (($configuredResult['success'] ?? false) !== true) {
+    $_SESSION['validation_errors'] = $configuredResult['errors'] ?? ['Unable to save configured form fields.'];
+    $_SESSION['old_configured_fields'] = $_POST['configured_fields'] ?? [];
+    header('Location: edit.php?id=' . (int)$result['physiotherapy_record_id']);
     exit;
 }
 

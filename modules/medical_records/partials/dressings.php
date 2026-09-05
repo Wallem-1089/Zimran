@@ -1,6 +1,8 @@
 <?php
 
 declare(strict_types=1);
+
+$dressingPreviewRows = array_slice($dressingHistory ?? [], 0, 10);
 ?>
 <section class="card">
     <div class="section-heading">
@@ -17,6 +19,9 @@ declare(strict_types=1);
     <?php if (empty($dressingHistory)): ?>
         <p class="text-muted">No dressing records found.</p>
     <?php else: ?>
+        <?php if (count($dressingHistory) > count($dressingPreviewRows)): ?>
+            <p class="text-muted">Showing latest <?= count($dressingPreviewRows) ?> of <?= count($dressingHistory) ?> dressing records. Open full history to see all records.</p>
+        <?php endif; ?>
         <div class="summary-grid">
             <div class="summary-item"><span class="summary-label">Latest Wound Site</span> <span class="summary-value"><?= e((string)($latestDressingRecord['wound_site'] ?? '-')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Latest Date</span> <span class="summary-value"><?= e((string)($latestDressingRecord['created_at'] ?? '-')) ?></span></div>
@@ -38,7 +43,7 @@ declare(strict_types=1);
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($dressingHistory as $record): ?>
+                    <?php foreach ($dressingPreviewRows as $record): ?>
                         <tr>
                             <td><?= e((string)($record['created_at'] ?? '-')) ?></td>
                             <td><?= e((string)($record['visit_number'] ?? ('#' . (int)$record['visit_id']))) ?></td>

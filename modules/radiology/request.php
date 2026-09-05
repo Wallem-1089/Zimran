@@ -13,9 +13,16 @@ if (!$visitId) {
 }
 
 $visit = radiologyRequireVisit($visitService, $visitId);
-$requestSource = in_array($requestedSource, ['Clinical', 'Direct'], true)
-    ? $requestedSource
-    : (in_array((string)($visit['department_name'] ?? ''), ['Radiology', 'X-Ray'], true) ? 'Direct' : 'Clinical');
+$isDirectRadiologyEncounter = in_array((string)($visit['department_name'] ?? ''), ['Radiology', 'X-Ray'], true);
+$requestSourceNote = '';
+if ($requestedSource === 'Direct' && !$isDirectRadiologyEncounter) {
+    $requestSource = 'Clinical';
+    $requestSourceNote = 'Direct is only for active encounters currently in Radiology/X-Ray. This request is being recorded as Clinical.';
+} elseif (in_array($requestedSource, ['Clinical', 'Direct'], true)) {
+    $requestSource = $requestedSource;
+} else {
+    $requestSource = $isDirectRadiologyEncounter ? 'Direct' : 'Clinical';
+}
 radiologyRequireAccess($permissionService, $visit, $currentUser, $requestSource);
 
 if (!$radiologyTablesReady) {
@@ -35,6 +42,7 @@ $radiologyRequest = $_SESSION['old_radiology_request'] ?? [
     'study_requested' => '',
     'clinical_indication' => ''
 ];
+$radiologyRequest['request_source'] = $requestSource;
 unset($_SESSION['old_radiology_request']);
 
 $existingRequests = $radiologyService->listByVisit($visitId, $currentUser);

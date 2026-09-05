@@ -52,6 +52,22 @@ function createRadiologyEncounter(PDO $pdo, array $actor, int $patientId, int $d
     return (int)$pdo->lastInsertId();
 }
 
+function routeRadiologyEncounter(PDO $pdo, int $visitId, array $departmentUser): void
+{
+    $stmt = $pdo->prepare("
+        UPDATE visits
+        SET current_department_id = :department_id,
+            current_department_received_status = 'Received',
+            visit_status = 'Radiology',
+            updated_at = NOW()
+        WHERE id = :visit_id
+    ");
+    $stmt->execute([
+        ':department_id' => (int)$departmentUser['department_id'],
+        ':visit_id' => $visitId,
+    ]);
+}
+
 function fileContains(string $path, string $needle): bool
 {
     $contents = file_get_contents($path);
@@ -176,6 +192,7 @@ try {
     ], $doctor);
     assertRadiology(($notAllowed['success'] ?? true) === false, 'Patient/visit mismatch was accepted.');
 
+    routeRadiologyEncounter($pdo, $clinicalVisitId, $radiographer);
     $startClinical = requireRadiologySuccess($radiologyService->startRequest($clinicalRequestId, $radiographer), 'Clinical radiology start');
     assertRadiology(($startClinical['success'] ?? false) === true, 'Clinical radiology start failed.');
 

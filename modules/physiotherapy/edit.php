@@ -39,6 +39,13 @@ if (in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'],
     exit('Completed or cancelled encounters are read-only.');
 }
 
+$physiotherapyConfiguredFields = $configurableFormService->listFields('physiotherapy_record', true);
+$physiotherapyConfiguredValues = $configurableFormService->getResponseValueMap('physiotherapy_record', 'Physiotherapy Record', $recordId);
+if (isset($_SESSION['old_configured_fields']) && is_array($_SESSION['old_configured_fields'])) {
+    $physiotherapyConfiguredValues = $_SESSION['old_configured_fields'];
+    unset($_SESSION['old_configured_fields']);
+}
+
 $pageTitle = 'Edit Physiotherapy Record';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 

@@ -20,6 +20,9 @@ $dressingRecord = $_SESSION['old_dressing_record'] ?? [
     'patient_id' => (int)$visit['patient_id'],
 ];
 unset($_SESSION['old_dressing_record']);
+$dressingConfiguredFields = $configurableFormService->listFields('dressing_record', true);
+$dressingConfiguredValues = $_SESSION['old_configured_fields'] ?? [];
+unset($_SESSION['old_configured_fields']);
 
 require __DIR__ . '/../../../layouts/header.php';
 require __DIR__ . '/../../../layouts/sidebar.php';

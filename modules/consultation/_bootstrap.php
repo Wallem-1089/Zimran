@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../services/ConsultationService.php';
 require_once __DIR__ . '/../../services/LaboratoryService.php';
 require_once __DIR__ . '/../../services/RadiologyService.php';
 require_once __DIR__ . '/../../services/ECGService.php';
+require_once __DIR__ . '/../../services/POPService.php';
 require_once __DIR__ . '/../../services/PhysiotherapyService.php';
 require_once __DIR__ . '/../../services/TheatreService.php';
 require_once __DIR__ . '/../../services/ClinicalSafetyService.php';
@@ -46,6 +47,9 @@ $radiologyService = $radiologyTablesReady ? new RadiologyService($pdo, null, nul
 $ecgTablesReady = consultationTableExists($pdo, 'ecg_requests')
     && consultationTableExists($pdo, 'ecg_reports');
 $ecgService = $ecgTablesReady ? new ECGService($pdo, null, null, $permissionService) : null;
+$popTablesReady = consultationTableExists($pdo, 'pop_requests')
+    && consultationTableExists($pdo, 'pop_records');
+$popService = $popTablesReady ? new POPService($pdo, null, null, $permissionService) : null;
 $physiotherapyTablesReady = consultationTableExists($pdo, 'physiotherapy_records')
     && consultationTableExists($pdo, 'physiotherapy_sessions');
 $physiotherapyService = $physiotherapyTablesReady ? new PhysiotherapyService($pdo, null, null, $permissionService) : null;

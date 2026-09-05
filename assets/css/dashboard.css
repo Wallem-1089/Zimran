@@ -136,6 +136,54 @@ body{
 }
 
 /* ==========================================================================
+   Text and form readability hardening
+   ========================================================================== */
+
+body,
+input,
+select,
+textarea,
+button{
+    line-height:1.5;
+}
+
+input,
+select,
+textarea{
+    padding-top:12px;
+    padding-bottom:12px;
+}
+
+textarea{
+    line-height:1.65;
+    min-height:120px;
+    overflow-wrap:break-word;
+    word-break:normal;
+}
+
+table th,
+table td,
+.table th,
+.table td,
+.summary-table th,
+.summary-table td,
+.summary-item,
+.readonly-field,
+.empty-state,
+.alert,
+.alert-success,
+.alert-danger{
+    line-height:1.5;
+}
+
+table td,
+.table td,
+.summary-table td{
+    overflow-wrap:break-word;
+    word-break:normal;
+}
+
+/* ==========================================================================
    Responsive component hardening
    ========================================================================== */
 

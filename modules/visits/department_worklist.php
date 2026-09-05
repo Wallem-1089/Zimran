@@ -109,8 +109,20 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
     .department-worklist-table .table-actions {
         display: flex;
         flex-wrap: wrap;
-        gap: .5rem;
+        gap: .65rem;
         align-items: center;
+        min-width: 190px;
+    }
+
+    .department-worklist-table .table-actions a,
+    .department-worklist-table .table-actions button {
+        white-space: nowrap;
+        text-decoration: none;
+    }
+
+    .department-worklist-table th:last-child,
+    .department-worklist-table td:last-child {
+        min-width: 210px;
     }
 </style>
 
@@ -189,8 +201,8 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
                                     <td><?= e((string)($request['display_quantity'] ?? '1')) ?></td>
                                     <td><?= e((string)($request['requested_by_name'] ?? '—')) ?></td>
                                     <td class="table-actions">
-                                        <a class="btn-primary" href="../billing/request_review.php?id=<?= (int)$request['id'] ?>">Create Charge</a>
-                                        <a class="btn-secondary" href="workspace.php?id=<?= (int)$request['visit_id'] ?>&tab=billing">Open Encounter</a>
+                                        <a class="btn-primary btn-sm" href="../billing/request_review.php?id=<?= (int)$request['id'] ?>">Create Charge</a>
+                                        <a class="btn-secondary btn-sm" href="workspace.php?id=<?= (int)$request['visit_id'] ?>&tab=billing">Open Encounter</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -265,9 +277,9 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
                                 <td><?= !empty($row['queued_at']) ? e(date('d M Y h:i A', strtotime((string)$row['queued_at']))) : '—' ?></td>
                                 <td class="table-actions">
                                     <?php if ($awaitingReceive && $canActOnSelectedDepartment): ?>
-                                        <a class="btn-primary" href="receive.php?visit=<?= $visitId ?>">Receive</a>
+                                        <a class="btn-primary btn-sm" href="receive.php?visit=<?= $visitId ?>">Receive</a>
                                     <?php endif; ?>
-                                    <a class="btn-secondary" href="workspace.php?id=<?= $visitId ?>">Open Encounter</a>
+                                    <a class="btn-secondary btn-sm" href="workspace.php?id=<?= $visitId ?>">Open Encounter</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

@@ -1,6 +1,9 @@
 <?php
 
 declare(strict_types=1);
+
+$bloodCardLaboratoryPreviewRows = array_slice($bloodCardLaboratoryHistory ?? [], 0, 10);
+$bloodCardDocumentPreviewRows = array_slice($bloodCardDocuments ?? [], 0, 10);
 ?>
 <section class="card">
     <div class="section-heading">
@@ -50,6 +53,9 @@ declare(strict_types=1);
     <?php if (empty($bloodCardLaboratoryHistory)): ?>
         <p class="text-muted">No blood-related laboratory records found.</p>
     <?php else: ?>
+        <?php if (count($bloodCardLaboratoryHistory) > count($bloodCardLaboratoryPreviewRows)): ?>
+            <p class="text-muted">Showing latest <?= count($bloodCardLaboratoryPreviewRows) ?> of <?= count($bloodCardLaboratoryHistory) ?> blood-related lab records. Open laboratory history to see all records.</p>
+        <?php endif; ?>
         <div class="table-responsive">
             <table class="table">
                 <thead>
@@ -63,7 +69,7 @@ declare(strict_types=1);
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($bloodCardLaboratoryHistory as $request): ?>
+                    <?php foreach ($bloodCardLaboratoryPreviewRows as $request): ?>
                         <?php
                         $summaryParts = array_filter([
                             trim((string)($request['sample_taken'] ?? '')),
@@ -105,6 +111,9 @@ declare(strict_types=1);
     <?php if (empty($bloodCardDocuments)): ?>
         <p class="text-muted">No blood-related Medical Documents found.</p>
     <?php else: ?>
+        <?php if (count($bloodCardDocuments) > count($bloodCardDocumentPreviewRows)): ?>
+            <p class="text-muted">Showing latest <?= count($bloodCardDocumentPreviewRows) ?> of <?= count($bloodCardDocuments) ?> blood-related documents. Open Medical Documents to see all files.</p>
+        <?php endif; ?>
         <div class="table-responsive">
             <table class="table">
                 <thead>
@@ -119,7 +128,7 @@ declare(strict_types=1);
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($bloodCardDocuments as $document): ?>
+                    <?php foreach ($bloodCardDocumentPreviewRows as $document): ?>
                         <tr>
                             <td><?= e((string)($document['uploaded_at'] ?? '-')) ?></td>
                             <td><?= e((string)($document['title'] ?? '-')) ?><?= !empty($document['confidential_hidden']) ? ' (details hidden)' : '' ?></td>

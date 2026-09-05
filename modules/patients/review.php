@@ -111,6 +111,8 @@ $fields = [
 
     'phone',
 
+    'whatsapp_number',
+
     'email',
 
     'address',
@@ -149,9 +151,10 @@ foreach ($fields as $field) {
 
 }
 
+$permissionService = new PermissionService($pdo);
+
 if ($isUpdate) {
     $patientId = (int)$_POST['id'];
-    $permissionService = new PermissionService($pdo);
 
     if (!$permissionService->canEditPatientDemographics(
         $patientId,
@@ -167,6 +170,9 @@ if ($isUpdate) {
         http_response_code(403);
         exit('You do not have permission to edit this patient record.');
     }
+} elseif (!$permissionService->canRegisterPatient($currentUser)) {
+    http_response_code(403);
+    exit('You do not have permission to register patients.');
 }
 
 if (!in_array($patient['gender'], PatientService::supportedGenders(), true)) {
@@ -354,6 +360,11 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
         reviewItem(
             'Phone Number',
             $patient['phone']
+        );
+
+        reviewItem(
+            'WhatsApp Number',
+            $patient['whatsapp_number'] ?? ''
         );
 
         reviewItem(

@@ -47,6 +47,12 @@ if (!$patient) {
 
 $action = $hasRecord ? 'record_update.php' : 'record_save.php';
 $buttonLabel = $hasRecord ? 'Update POP Record' : 'Save POP Record';
+$popConfiguredFields = $configurableFormService->listFields('pop_record', true);
+$popConfiguredValues = $configurableFormService->getResponseValueMap('pop_record', 'POP Record', $requestId);
+if (isset($_SESSION['old_configured_fields']) && is_array($_SESSION['old_configured_fields'])) {
+    $popConfiguredValues = $_SESSION['old_configured_fields'];
+    unset($_SESSION['old_configured_fields']);
+}
 
 $pageTitle = 'POP Procedure Record';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -104,6 +110,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?php hmsRenderHandwritingTextarea('materials_used', 'Materials Used', (string)($record['materials_used'] ?? ''), 4, false, $enableWritingMode); ?>
         <?php hmsRenderHandwritingTextarea('aftercare_instructions', 'Aftercare Instructions', (string)($record['aftercare_instructions'] ?? ''), 4, false, $enableWritingMode); ?>
         <?php hmsRenderHandwritingTextarea('remarks', 'Remarks', (string)($record['remarks'] ?? ''), 4, false, $enableWritingMode); ?>
+        <?php hmsRenderConfiguredFields($popConfiguredFields, $popConfiguredValues); ?>
 
         <div class="form-actions">
             <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>

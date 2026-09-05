@@ -704,7 +704,7 @@ Mutable logical current record owned by `MedicalDocumentService`.
 | `document_type` | VARCHAR(80), required | Settings-controlled type key |
 | `title` | VARCHAR(200), required | Safe display title |
 | `description` | TEXT, nullable | Authorized metadata description |
-| `department_id` | INT, nullable | Uploading department context |
+| `department_id` | INT, nullable | Uploading department context; also used by service authorization to distinguish same-department file downloads from cross-department browser viewing |
 | `confidentiality_level` | ENUM, default `Standard` | Standard, Restricted, Confidential, Highly Confidential |
 | `document_status` | ENUM, default `Active` | Active, Archived, Entered-in-error |
 | `current_version` | INT, default 1 | Current immutable file-version number |

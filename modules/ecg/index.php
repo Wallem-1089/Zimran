@@ -78,7 +78,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                                 <td><?= e((string)($request['visit_number'] ?? '-')) ?></td>
                                 <td><?= e((string)($request['study_requested'] ?? 'ECG')) ?></td>
                                 <td><?= e((string)($request['request_source'] ?? '-')) ?></td>
-                                <td><?= e((string)($request['priority'] ?? '-')) ?></td>
+                                <td><?php $priority = (string)($request['priority'] ?? '-'); ?><?php if ($priority === 'Urgent'): ?><span class="status-badge status-warning priority-badge">Urgent</span><?php else: ?><?= e($priority) ?><?php endif; ?></td>
                                 <td><?= e((string)($request['requested_by_name'] ?? '-')) ?></td>
                                 <td><?= e((string)($request['created_at'] ?? '-')) ?></td>
                                 <td><?= e((string)($request['status'] ?? '-')) ?></td>
@@ -96,4 +96,3 @@ require __DIR__ . '/../../layouts/sidebar.php';
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
-

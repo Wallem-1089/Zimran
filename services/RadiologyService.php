@@ -173,7 +173,7 @@ class RadiologyService
             $params[':status'] = $status;
         }
 
-        $stmt = $this->pdo->prepare($this->baseSelect() . $where . ' ORDER BY lr.created_at DESC, lr.id DESC');
+        $stmt = $this->pdo->prepare($this->baseSelect() . $where . ' ORDER BY CASE WHEN lr.priority = \'Urgent\' THEN 0 ELSE 1 END, lr.created_at ASC, lr.id ASC');
         $stmt->execute($params);
         return $this->filterRows($stmt->fetchAll(PDO::FETCH_ASSOC), $user);
     }
@@ -190,7 +190,7 @@ class RadiologyService
 
     public function updateResult(array $data, array $user, ?array $file = null): array
     {
-        return $this->saveOrUpdateResult($data, $user, $file, true, 'edit_radiology_report');
+        return $this->saveOrUpdateResult($data, $user, $file, false, 'edit_radiology_report');
     }
 
     public function getResult(int $requestId, ?array $user = null): ?array
@@ -217,6 +217,10 @@ class RadiologyService
         }
 
         if ($user !== null && !$this->canViewRow($row, $user)) {
+            return null;
+        }
+
+        if (empty($row['result_id'])) {
             return null;
         }
 
@@ -566,7 +570,6 @@ class RadiologyService
             if (!$this->permissionService->canCreateRadiologyRequest($visit, $user, 'Direct')) {
                 $errors[] = 'You cannot create a direct radiology request.';
             }
-
             if (!$this->isRadiologyEncounter($visit)) {
                 $errors[] = 'Direct radiology requests require an active Radiology encounter.';
             }

@@ -22,6 +22,16 @@ if (!$permissionService->canEditNursing($visit, $currentUser) || (string)$assess
 $pageTitle = 'Edit Nursing Assessment';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 $nursingAssessment = $assessment;
+$nursingConfiguredFields = $configurableFormService->listFields('nursing_assessment', true);
+$nursingConfiguredRows = $configurableFormService->getResponseValues('nursing_assessment', 'Nursing Assessment', (int)$assessment['id']);
+$nursingConfiguredValues = [];
+foreach ($nursingConfiguredRows as $configuredRow) {
+    $nursingConfiguredValues[(string)$configuredRow['field_key']] = (string)($configuredRow['value_text'] ?? '');
+}
+if (isset($_SESSION['old_configured_fields']) && is_array($_SESSION['old_configured_fields'])) {
+    $nursingConfiguredValues = $_SESSION['old_configured_fields'];
+    unset($_SESSION['old_configured_fields']);
+}
 $latestVitalSigns = $vitalSignsService ? $vitalSignsService->getLatestByVisit((int)$visit['id'], $currentUser) : null;
 $clinicalSafetySummary = nursingSafetySummary($clinicalSafetyService, (int)$visit['patient_id'], $currentUser, (int)$visit['id']);
 $problemSummary = $problemListService->getProblemSummary((int)$visit['patient_id'], $currentUser);

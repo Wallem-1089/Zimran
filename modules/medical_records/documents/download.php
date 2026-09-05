@@ -9,7 +9,9 @@ if (!$documentId) {
     http_response_code(404);
     exit('Medical Document not found.');
 }
-$result = $medicalDocumentService->prepareDownload((int)$documentId, $currentUser, $versionId);
+$disposition = (string)($_GET['disposition'] ?? 'attachment');
+$disposition = $disposition === 'inline' ? 'inline' : 'attachment';
+$result = $medicalDocumentService->prepareDownload((int)$documentId, $currentUser, $versionId, $disposition);
 if (!($result['success'] ?? false)) {
     http_response_code(!empty($result['audit_failed']) ? 503 : (!empty($result['forbidden']) ? 403 : 404));
     exit('The requested Medical Document is unavailable.');
@@ -17,8 +19,6 @@ if (!($result['success'] ?? false)) {
 $download = $result['data'];
 $stream = $download['stream'];
 $filename = preg_replace('/[\x00-\x1F\x7F"\\\\]/u', '_', (string)$download['filename']) ?: 'document';
-$disposition = (string)($_GET['disposition'] ?? 'attachment');
-$disposition = $disposition === 'inline' ? 'inline' : 'attachment';
 header('Content-Type: ' . (string)$download['mime_type']);
 header('Content-Disposition: ' . $disposition . '; filename="' . $filename . '"; filename*=UTF-8\'\'' . rawurlencode($filename));
 header('Content-Length: ' . (int)$download['file_size']);

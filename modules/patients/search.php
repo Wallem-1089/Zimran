@@ -23,6 +23,10 @@ require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
 require_once __DIR__ . '/../../services/VisitService.php';
 
+$currentUser = $currentUser ?? ($_SESSION['user'] ?? null);
+$permissionService = new PermissionService($pdo);
+$canRegisterPatient = $permissionService->canRegisterPatient($currentUser);
+
 require_once __DIR__ . '/../../layouts/header.php';
 require_once __DIR__ . '/../../layouts/sidebar.php';
 
@@ -48,6 +52,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
     </div>
 
+    <?php if ($canRegisterPatient): ?>
     <div>
 
         <a
@@ -59,6 +64,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
         </a>
 
     </div>
+    <?php endif; ?>
 
 </div>
 
@@ -182,7 +188,6 @@ if (!empty($_GET)) {
     */
 
     $patientService = new PatientService($pdo);
-    $permissionService = new PermissionService($pdo);
     $visitService = new VisitService($pdo);
 
     /*

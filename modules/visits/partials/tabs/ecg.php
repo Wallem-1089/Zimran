@@ -114,6 +114,9 @@ $requestClosed = $latest !== null && in_array((string)($latest['status'] ?? ''),
                         <button type="submit" class="btn-secondary">Complete</button>
                     </form>
                 <?php endif; ?>
+                <?php if (!$isClosedEncounter && !$requestClosed && !empty($billingRequestsReady) && !empty($canCreateBillingRequest)): ?>
+                    <a href="../billing/request_create.php?visit=<?= (int)$visit['id'] ?>&source_module=ECG&source_record_id=<?= (int)$latest['id'] ?>&description=<?= rawurlencode('ECG: ' . (string)($latest['study_requested'] ?? '')) ?>" class="btn-secondary">Request Billing</a>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -143,4 +146,3 @@ $requestClosed = $latest !== null && in_array((string)($latest['status'] ?? ''),
         <?php endif; ?>
     <?php endif; ?>
 </section>
-

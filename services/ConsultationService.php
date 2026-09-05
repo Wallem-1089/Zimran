@@ -153,6 +153,7 @@ class ConsultationService
 
             $visit = $this->lockVisit((int)$consultation['visit_id']);
             $errors = $this->validateVisitForMutation($visit, $user, 'complete_consultation');
+            $errors = array_merge($errors, $this->validateReadyForCompletion($consultation));
             if ((string)$consultation['status'] !== 'Draft') {
                 $errors[] = 'Only draft consultations can be completed.';
             }
@@ -201,18 +202,31 @@ class ConsultationService
     private function validateConsultation(array $data, array $visit, array $user, string $permission): array
     {
         $errors = $this->validateVisitForMutation($visit, $user, $permission);
-        foreach ([
-            'presenting_complaint' => 'Presenting complaint',
-            'history_of_presenting_complaint' => 'History of presenting complaint',
-            'examination_findings' => 'Examination findings',
-            'assessment' => 'Assessment',
-            'diagnosis' => 'Diagnosis',
-            'treatment_plan' => 'Treatment plan'
-        ] as $field => $label) {
-            if (trim((string)($data[$field] ?? '')) === '') {
-                $errors[] = $label . ' is required.';
-            }
+
+        if (trim((string)($data['presenting_complaint'] ?? '')) === '') {
+            $errors[] = 'Presenting complaint is required.';
         }
+
+        return $errors;
+    }
+
+    private function validateReadyForCompletion(array $consultation): array
+    {
+        $hasClinicalConclusion = trim((string)($consultation['diagnosis'] ?? '')) !== ''
+            || trim((string)($consultation['assessment'] ?? '')) !== '';
+        $hasCarePlan = trim((string)($consultation['treatment_plan'] ?? '')) !== ''
+            || trim((string)($consultation['advice'] ?? '')) !== ''
+            || trim((string)($consultation['follow_up'] ?? '')) !== ''
+            || trim((string)($consultation['referral_notes'] ?? '')) !== '';
+
+        $errors = [];
+        if (!$hasClinicalConclusion) {
+            $errors[] = 'Add an assessment or diagnosis before completing the consultation.';
+        }
+        if (!$hasCarePlan) {
+            $errors[] = 'Add a treatment plan, advice, follow-up, or referral note before completing the consultation.';
+        }
+
         return $errors;
     }
 

@@ -34,7 +34,7 @@ function reportsFilterForm(array $filters, array $departments, array $options = 
 {
     $showStatus = !empty($options['status']);
     $statusValues = $options['status_values']
-        ?? ['Waiting','Reception','Records','Nursing','Doctor','Laboratory','X-Ray','Pharmacy','Physiotherapy','Theatre','Accounts','Store','Completed','Cancelled'];
+        ?? ['Waiting','Reception','Records','Nursing','Doctor','Laboratory','Radiology','X-Ray','ECG','POP','Pharmacy','Physiotherapy','Theatre','Accounts','Store','Orderly','Completed','Cancelled'];
     $showItems = !empty($options['items']);
     $items = $options['items'] ?? [];
     ?>

@@ -24,9 +24,19 @@ $latestVitalSigns = $vitalSignsService
 $latestLaboratoryRequests = $laboratoryService
     ? $laboratoryService->listByVisit($visitId, $currentUser)
     : [];
+$latestRadiologyRequests = $radiologyService
+    ? $radiologyService->listByVisit($visitId, $currentUser)
+    : [];
 $latestEcgRequests = $ecgService
     ? $ecgService->listByVisit($visitId, $currentUser)
     : [];
+$latestPopRequests = $popService
+    ? $popService->listByVisit($visitId, $currentUser)
+    : [];
+$latestPharmacyPrescriptions = $pharmacyService
+    ? $pharmacyService->listByVisit($visitId, $currentUser)
+    : [];
+$canCreatePrescription = $permissionService->canCreatePrescription($visit, $currentUser, 'Clinical');
 unset($_SESSION['old_consultation']);
 
 $pageTitle = 'Start Consultation';
@@ -93,6 +103,32 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="card">
         <div class="card-header">
             <div>
+                <h3>X-Ray / Radiology Requests</h3>
+                <p>Request imaging for this encounter or review existing requests.</p>
+            </div>
+            <?php if ($radiologyService && $permissionService->canCreateRadiologyRequest($visit, $currentUser, 'Clinical')): ?>
+                <a class="btn-primary" href="../radiology/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request X-Ray / Radiology</a>
+            <?php endif; ?>
+        </div>
+        <?php if (!$radiologyService): ?>
+            <p class="text-muted">Radiology tables are not available yet.</p>
+        <?php elseif ($latestRadiologyRequests === []): ?>
+            <p class="text-muted">No X-Ray / Radiology requests recorded.</p>
+        <?php else: ?>
+            <ul class="clean-list">
+                <?php foreach (array_slice($latestRadiologyRequests, 0, 3) as $request): ?>
+                    <li>
+                        <a href="../radiology/view.php?id=<?= (int)$request['id'] ?>">#<?= (int)$request['id'] ?></a>
+                        — <?= e((string)($request['study_requested'] ?? 'Radiology study')) ?>
+                        (<?= e((string)$request['status']) ?>)
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <div>
                 <h3>ECG Requests</h3>
                 <p>Request ECG for this encounter or review scanned ECG charts.</p>
             </div>
@@ -111,6 +147,58 @@ require __DIR__ . '/../../layouts/sidebar.php';
                         <a href="../ecg/view.php?id=<?= (int)$request['id'] ?>">#<?= (int)$request['id'] ?></a>
                         — <?= e((string)($request['study_requested'] ?? 'ECG')) ?>
                         (<?= e((string)$request['status']) ?>)
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3>POP / Casting Requests</h3>
+                <p>Request POP, casting or splinting support for this encounter.</p>
+            </div>
+            <?php if ($popService && $permissionService->canCreatePopRequest($visit, $currentUser, 'Clinical')): ?>
+                <a class="btn-primary" href="../pop/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request POP / Casting</a>
+            <?php endif; ?>
+        </div>
+        <?php if (!$popService): ?>
+            <p class="text-muted">POP tables are not available yet.</p>
+        <?php elseif ($latestPopRequests === []): ?>
+            <p class="text-muted">No POP / Casting requests recorded.</p>
+        <?php else: ?>
+            <ul class="clean-list">
+                <?php foreach (array_slice($latestPopRequests, 0, 3) as $request): ?>
+                    <li>
+                        <a href="../pop/view.php?id=<?= (int)$request['id'] ?>">#<?= (int)$request['id'] ?></a>
+                        — <?= e((string)($request['procedure_requested'] ?? 'POP / Casting')) ?>
+                        (<?= e((string)$request['status']) ?>)
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3>Pharmacy Prescriptions</h3>
+                <p>Create a clinical prescription for Pharmacy to review and dispense.</p>
+            </div>
+            <?php if ($pharmacyService && $canCreatePrescription): ?>
+                <a class="btn-primary" href="../pharmacy/prescribe.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Create Prescription</a>
+            <?php endif; ?>
+        </div>
+        <?php if (!$pharmacyService): ?>
+            <p class="text-muted">Pharmacy tables are not available yet.</p>
+        <?php elseif ($latestPharmacyPrescriptions === []): ?>
+            <p class="text-muted">No prescriptions recorded for this encounter.</p>
+        <?php else: ?>
+            <ul class="clean-list">
+                <?php foreach (array_slice($latestPharmacyPrescriptions, 0, 3) as $prescription): ?>
+                    <li>
+                        <a href="../pharmacy/view.php?id=<?= (int)$prescription['id'] ?>">#<?= (int)$prescription['id'] ?></a>
+                        — <?= e((string)$prescription['medication_name']) ?>
+                        (<?= e((string)$prescription['status']) ?>)
                     </li>
                 <?php endforeach; ?>
             </ul>

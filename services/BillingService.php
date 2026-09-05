@@ -553,6 +553,24 @@ class BillingService
         return array_map([$this, 'decoratePayment'], $stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
+    public function listPaymentsFiltered(array $filters = [], ?array $user = null, int $limit = 0): array
+    {
+        if ($user !== null && !$this->permissionService->canViewBilling($user)) {
+            return [];
+        }
+
+        [$where, $params] = $this->buildPaymentFilters($filters);
+        $limitSql = '';
+        if ($limit > 0) {
+            $limitSql = ' LIMIT ' . min($limit, 500);
+        }
+
+        $stmt = $this->pdo->prepare($this->paymentBaseSelect() . $where . ' ORDER BY p.created_at DESC, p.id DESC' . $limitSql);
+        $stmt->execute($params);
+
+        return array_map([$this, 'decoratePayment'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
     public function getReceiptData(int $paymentId, ?array $user = null): ?array
     {
         $stmt = $this->pdo->prepare($this->paymentBaseSelect() . ' WHERE p.id = :id LIMIT 1');
@@ -757,7 +775,13 @@ class BillingService
         }
 
         [$where, $params] = $this->buildBillingRequestFilters($filters);
-        $stmt = $this->pdo->prepare($this->billingRequestBaseSelect() . $where . ' ORDER BY br.created_at DESC, br.id DESC LIMIT 100');
+        $limit = (int)($filters['limit'] ?? 100);
+        $limitSql = '';
+        if ($limit > 0) {
+            $limitSql = ' LIMIT ' . min($limit, 500);
+        }
+
+        $stmt = $this->pdo->prepare($this->billingRequestBaseSelect() . $where . ' ORDER BY br.created_at DESC, br.id DESC' . $limitSql);
         $stmt->execute($params);
 
         $rows = array_map([$this, 'decorateBillingRequest'], $stmt->fetchAll(PDO::FETCH_ASSOC));
@@ -1162,6 +1186,12 @@ class BillingService
             $params[':invoice_number'] = '%' . trim((string)$filters['invoice_number']) . '%';
         }
 
+        $visitId = (int)($filters['visit_id'] ?? $filters['encounter_id'] ?? 0);
+        if ($visitId > 0) {
+            $where[] = 'i.visit_id = :visit_id';
+            $params[':visit_id'] = $visitId;
+        }
+
         if (!empty($filters['visit_number'])) {
             $where[] = 'v.visit_number LIKE :visit_number';
             $params[':visit_number'] = '%' . trim((string)$filters['visit_number']) . '%';
@@ -1183,6 +1213,16 @@ class BillingService
             $params[':status'] = $status;
         }
 
+        if (!empty($filters['payment_reference'])) {
+            $where[] = 'EXISTS (
+                SELECT 1
+                FROM payments payment_filter
+                WHERE payment_filter.invoice_id = i.id
+                  AND payment_filter.reference LIKE :payment_reference
+            )';
+            $params[':payment_reference'] = '%' . trim((string)$filters['payment_reference']) . '%';
+        }
+
         return [
             $where === [] ? '' : ' WHERE ' . implode(' AND ', $where),
             $params,
@@ -1193,6 +1233,12 @@ class BillingService
     {
         $where = [];
         $params = [];
+
+        $visitId = (int)($filters['visit_id'] ?? $filters['encounter_id'] ?? 0);
+        if ($visitId > 0) {
+            $where[] = 'v.id = :visit_id';
+            $params[':visit_id'] = $visitId;
+        }
 
         if (!empty($filters['visit_number'])) {
             $where[] = 'v.visit_number LIKE :visit_number';
@@ -1209,8 +1255,18 @@ class BillingService
             $params[':patient_name'] = '%' . trim((string)$filters['patient_name']) . '%';
         }
 
+        if (!empty($filters['payment_reference'])) {
+            $where[] = 'EXISTS (
+                SELECT 1
+                FROM payments payment_filter
+                WHERE payment_filter.visit_id = v.id
+                  AND payment_filter.reference LIKE :payment_reference
+            )';
+            $params[':payment_reference'] = '%' . trim((string)$filters['payment_reference']) . '%';
+        }
+
         $status = trim((string)($filters['visit_status'] ?? ''));
-        if ($status !== '' && in_array($status, ['Waiting', 'Reception', 'Records', 'Nursing', 'Doctor', 'Laboratory', 'X-Ray', 'Pharmacy', 'Physiotherapy', 'Theatre', 'Accounts', 'Store', 'Completed', 'Cancelled'], true)) {
+        if ($status !== '' && in_array($status, ['Waiting', 'Reception', 'Records', 'Nursing', 'Doctor', 'Laboratory', 'Radiology', 'X-Ray', 'ECG', 'POP', 'Pharmacy', 'Physiotherapy', 'Theatre', 'Accounts', 'Store', 'Orderly', 'Completed', 'Cancelled'], true)) {
             $where[] = 'v.visit_status = :visit_status';
             $params[':visit_status'] = $status;
         }
@@ -1230,6 +1286,12 @@ class BillingService
         if ($visitId > 0) {
             $where[] = 'br.visit_id = :visit_id';
             $params[':visit_id'] = $visitId;
+        }
+
+        $encounterId = (int)($filters['encounter_id'] ?? 0);
+        if ($encounterId > 0 && $visitId <= 0) {
+            $where[] = 'br.visit_id = :encounter_id';
+            $params[':encounter_id'] = $encounterId;
         }
 
         $departmentId = (int)($filters['department_id'] ?? 0);
@@ -1263,6 +1325,48 @@ class BillingService
         if (!empty($filters['visit_number'])) {
             $where[] = 'v.visit_number LIKE :visit_number';
             $params[':visit_number'] = '%' . trim((string)$filters['visit_number']) . '%';
+        }
+
+        return [
+            $where === [] ? '' : ' WHERE ' . implode(' AND ', $where),
+            $params,
+        ];
+    }
+
+    private function buildPaymentFilters(array $filters): array
+    {
+        $where = [];
+        $params = [];
+
+        $visitId = (int)($filters['visit_id'] ?? $filters['encounter_id'] ?? 0);
+        if ($visitId > 0) {
+            $where[] = 'p.visit_id = :visit_id';
+            $params[':visit_id'] = $visitId;
+        }
+
+        if (!empty($filters['invoice_number'])) {
+            $where[] = 'i.invoice_number LIKE :invoice_number';
+            $params[':invoice_number'] = '%' . trim((string)$filters['invoice_number']) . '%';
+        }
+
+        if (!empty($filters['visit_number'])) {
+            $where[] = 'v.visit_number LIKE :visit_number';
+            $params[':visit_number'] = '%' . trim((string)$filters['visit_number']) . '%';
+        }
+
+        if (!empty($filters['hospital_number'])) {
+            $where[] = 'patient.hospital_number LIKE :hospital_number';
+            $params[':hospital_number'] = '%' . trim((string)$filters['hospital_number']) . '%';
+        }
+
+        if (!empty($filters['patient_name'])) {
+            $where[] = '(CONCAT(patient.first_name, " ", patient.last_name) LIKE :patient_name OR patient.first_name LIKE :patient_name OR patient.last_name LIKE :patient_name)';
+            $params[':patient_name'] = '%' . trim((string)$filters['patient_name']) . '%';
+        }
+
+        if (!empty($filters['payment_reference'])) {
+            $where[] = 'p.reference LIKE :payment_reference';
+            $params[':payment_reference'] = '%' . trim((string)$filters['payment_reference']) . '%';
         }
 
         return [

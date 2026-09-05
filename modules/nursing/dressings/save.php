@@ -22,12 +22,28 @@ if (!$permissionService->canCreateNursing($visit, $currentUser)) {
 
 $result = $dressingRecordService->create($_POST, $currentUser);
 if (($result['success'] ?? false) === true) {
+    $configuredResult = $configurableFormService->saveResponse(
+        'dressing_record',
+        (int)$visit['patient_id'],
+        (int)$visit['id'],
+        'Dressing Record',
+        (int)$result['dressing_record_id'],
+        $_POST,
+        $currentUser
+    );
+    if (($configuredResult['success'] ?? false) !== true) {
+        $_SESSION['validation_errors'] = $configuredResult['errors'] ?? ['Unable to save configured form fields.'];
+        $_SESSION['old_configured_fields'] = $_POST['configured_fields'] ?? [];
+        header('Location: edit.php?id=' . (int)$result['dressing_record_id']);
+        exit;
+    }
     $_SESSION['success_message'] = 'Dressing record saved.';
     header('Location: view.php?id=' . (int)$result['dressing_record_id']);
     exit;
 }
 
 $_SESSION['old_dressing_record'] = $_POST;
+$_SESSION['old_configured_fields'] = $_POST['configured_fields'] ?? [];
 dressingFlash($result, 'Dressing record saved.');
 header('Location: create.php?visit=' . $visitId);
 exit;

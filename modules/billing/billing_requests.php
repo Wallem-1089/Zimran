@@ -13,10 +13,13 @@ if (!$billingTablesReady || !$billingRequestsReady) {
 
 $filters = [
     'status' => trim((string)($_GET['status'] ?? 'Pending')),
+    'encounter_id' => trim((string)($_GET['encounter_id'] ?? '')),
     'patient_name' => trim((string)($_GET['patient_name'] ?? '')),
     'hospital_number' => trim((string)($_GET['hospital_number'] ?? '')),
     'visit_number' => trim((string)($_GET['visit_number'] ?? '')),
 ];
+$showFullHistory = (string)($_GET['full'] ?? '') === '1';
+$filters['limit'] = $showFullHistory ? 0 : 50;
 
 $requests = $billingService->listBillingRequests($filters, $currentUser);
 $pendingCount = count(array_filter($requests, static fn (array $row): bool => (string)($row['status'] ?? '') === 'Pending'));
@@ -45,11 +48,16 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
         <div class="form-actions">
             <a class="btn-secondary" href="index.php">Billing Home</a>
+            <?php if (!$showFullHistory): ?>
+                <a class="btn-secondary" href="billing_requests.php?<?= e(http_build_query(array_merge($_GET, ['full' => '1']))) ?>">Full History</a>
+            <?php else: ?>
+                <a class="btn-secondary" href="billing_requests.php?<?= e(http_build_query(array_diff_key($_GET, ['full' => true]))) ?>">Show Recent</a>
+            <?php endif; ?>
         </div>
     </div>
 
     <div class="summary-grid">
-        <div class="summary-item"><span class="summary-label">Filtered Requests</span> <span class="summary-value"><?= count($requests) ?></span></div>
+        <div class="summary-item"><span class="summary-label"><?= $showFullHistory ? 'Filtered Requests' : 'Recent Requests' ?></span> <span class="summary-value"><?= count($requests) ?></span></div>
         <div class="summary-item"><span class="summary-label">Pending</span> <span class="summary-value"><?= $pendingCount ?></span></div>
     </div>
 
@@ -62,6 +70,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
                         <option value="<?= e($status) ?>" <?= $filters['status'] === $status ? 'selected' : '' ?>><?= e($status === '' ? 'All' : $status) ?></option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+            <div class="form-group">
+                <label for="encounter_id">Encounter ID</label>
+                <input id="encounter_id" name="encounter_id" inputmode="numeric" value="<?= e($filters['encounter_id']) ?>" placeholder="e.g. 32">
             </div>
             <div class="form-group">
                 <label for="patient_name">Patient Name</label>
@@ -83,7 +95,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
     </form>
 
     <div class="card">
-        <h3>Requests</h3>
+        <div class="section-header">
+            <div>
+                <h3>Requests</h3>
+                <p class="text-muted"><?= $showFullHistory ? 'Showing full matching history.' : 'Showing latest 50 matching requests.' ?></p>
+            </div>
+        </div>
         <?php if ($requests === []): ?>
             <div class="empty-state">No billing requests found.</div>
         <?php else: ?>
@@ -93,6 +110,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                         <tr>
                             <th>Patient</th>
                             <th>Visit</th>
+                            <th>Encounter ID</th>
                             <th>Department</th>
                             <th>Description</th>
                             <th>Suggested Item</th>
@@ -107,6 +125,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                             <tr>
                                 <td><?= e((string)($request['patient_name'] ?? '-')) ?><br><small><?= e((string)($request['hospital_number'] ?? '-')) ?></small></td>
                                 <td><?= e((string)($request['visit_number'] ?? ('#' . (int)$request['visit_id']))) ?></td>
+                                <td>#<?= (int)$request['visit_id'] ?></td>
                                 <td><?= e((string)($request['department_name'] ?? '-')) ?></td>
                                 <td><?= e((string)($request['description'] ?? '-')) ?></td>
                                 <td><?= e((string)($request['suggested_item_name'] ?? '—')) ?></td>

@@ -94,6 +94,18 @@ if (!empty($dateOfBirth)) {
 
             </div>
 
+            <div class="summary-item">
+
+                <strong>WhatsApp</strong>
+
+                <span>
+
+                    <?= e(($patient['whatsapp_number'] ?? '') ?: '-') ?>
+
+                </span>
+
+            </div>
+
         </div>
 
         <div class="summary-card">

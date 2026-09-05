@@ -24,6 +24,9 @@ if ($theatreService->getByVisit($visitId, $currentUser)) {
 
 $theatre = $_SESSION['old_theatre'] ?? ['visit_id' => $visitId];
 unset($_SESSION['old_theatre']);
+$theatreConfiguredFields = $configurableFormService->listFields('theatre_record', true);
+$theatreConfiguredValues = $_SESSION['old_configured_fields'] ?? [];
+unset($_SESSION['old_configured_fields']);
 
 $latestVitalSigns = $vitalSignsService
     ? $vitalSignsService->getLatestByVisit($visitId, $currentUser)
@@ -71,4 +74,3 @@ require __DIR__ . '/../../layouts/sidebar.php';
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
-

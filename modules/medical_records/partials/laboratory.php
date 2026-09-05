@@ -7,6 +7,7 @@ if (!isset($patient)) {
 }
 
 $latest = $latestLaboratoryRequest ?? null;
+$laboratoryPreviewRows = array_slice($laboratoryHistory ?? [], 0, 10);
 ?>
 
 <section class="card">
@@ -44,6 +45,9 @@ $latest = $latestLaboratoryRequest ?? null;
     <?php if (empty($laboratoryHistory)): ?>
         <p class="text-muted">No laboratory requests recorded.</p>
     <?php else: ?>
+        <?php if (count($laboratoryHistory) > count($laboratoryPreviewRows)): ?>
+            <p class="text-muted">Showing latest <?= count($laboratoryPreviewRows) ?> of <?= count($laboratoryHistory) ?> laboratory requests. Open history to see all requests.</p>
+        <?php endif; ?>
         <div class="table-responsive">
             <table class="table">
                 <thead>
@@ -58,7 +62,7 @@ $latest = $latestLaboratoryRequest ?? null;
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($laboratoryHistory as $request): ?>
+                    <?php foreach ($laboratoryPreviewRows as $request): ?>
                         <tr>
                             <td>#<?= (int)$request['id'] ?></td>
                             <td><?= e((string)$request['tests_requested']) ?></td>

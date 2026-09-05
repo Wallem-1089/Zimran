@@ -2,6 +2,83 @@
     overflow: hidden;
 }
 
+.visit-workspace .workspace-collapse-card {
+    overflow: hidden;
+    padding: 0;
+}
+
+.visit-workspace .workspace-collapse-panel {
+    border-radius: 18px;
+}
+
+.visit-workspace .workspace-collapse-summary {
+    align-items: center;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.05), rgba(37, 99, 235, 0.08));
+    cursor: pointer;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    list-style: none;
+    padding: 18px 22px;
+}
+
+.visit-workspace .workspace-collapse-summary::-webkit-details-marker {
+    display: none;
+}
+
+.visit-workspace .workspace-collapse-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.visit-workspace .workspace-collapse-title {
+    color: #0f172a;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.visit-workspace .workspace-collapse-subtitle {
+    color: #64748b;
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+.visit-workspace .workspace-collapse-toggle {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    border-radius: 999px;
+    color: #2563eb;
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 0;
+    font-weight: 700;
+    justify-content: center;
+    min-width: 96px;
+    padding: 8px 14px;
+}
+
+.visit-workspace .workspace-collapse-toggle::before {
+    content: "Expand";
+    font-size: 0.9rem;
+}
+
+.visit-workspace .workspace-collapse-panel[open] .workspace-collapse-toggle::before {
+    content: "Collapse";
+}
+
+.visit-workspace .workspace-collapse-body {
+    border-top: 1px solid rgba(148, 163, 184, 0.22);
+    padding: 18px 22px 22px;
+}
+
+.visit-workspace .workspace-collapse-body > .card:last-child,
+.visit-workspace .workspace-collapse-body > .encounter-summary-split:last-child {
+    margin-bottom: 0;
+}
+
 .visit-workspace .timeline-panel {
     border-radius: 18px;
 }
@@ -97,6 +174,20 @@
 }
 
 @media (max-width: 768px) {
+    .visit-workspace .workspace-collapse-summary {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 16px 18px;
+    }
+
+    .visit-workspace .workspace-collapse-toggle {
+        width: 100%;
+    }
+
+    .visit-workspace .workspace-collapse-body {
+        padding: 16px;
+    }
+
     .visit-workspace .timeline-summary {
         align-items: flex-start;
         flex-direction: column;
@@ -104,6 +195,22 @@
 
     .visit-workspace .timeline-toggle-text {
         width: 100%;
+    }
+}
+
+@media (max-width: 520px) {
+    .visit-workspace .workspace-collapse-title,
+    .visit-workspace .timeline-summary-title {
+        font-size: 1rem;
+    }
+
+    .visit-workspace .workspace-collapse-subtitle,
+    .visit-workspace .timeline-summary-subtitle {
+        font-size: 0.86rem;
+    }
+
+    .visit-workspace .workspace-collapse-body {
+        padding: 14px;
     }
 }
 
@@ -375,6 +482,26 @@
 
 .encounter-summary-card .summary-value {
     font-size: 1rem;
-    line-height: 1.2;
+    line-height: 1.45;
     margin-top: 2px;
+}
+
+/* Final workspace readability override for wrapped text in compact boxes. */
+.visit-workspace .summary-item,
+.visit-workspace .summary-label,
+.visit-workspace .summary-value,
+.visit-workspace .workspace-card,
+.visit-workspace .table th,
+.visit-workspace .table td,
+.visit-workspace .summary-table th,
+.visit-workspace .summary-table td,
+.visit-workspace input,
+.visit-workspace select,
+.visit-workspace textarea{
+    line-height:1.5;
+}
+
+.visit-workspace textarea{
+    line-height:1.65;
+    min-height:120px;
 }

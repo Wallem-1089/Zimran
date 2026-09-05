@@ -54,6 +54,7 @@ Role activation/deactivation is implemented through `RoleService`. Role inherita
 | Permission key | Module | Current state |
 |---|---|---|
 | `view_encounter` | Visits | Implemented |
+| `register_patient` | Patients | Implemented |
 | `create_encounter` | Visits | Implemented |
 | `transfer_encounter` | Visits | Implemented |
 | `receive_encounter` | Visits | Implemented |
@@ -80,7 +81,7 @@ create/edit permission for the form they are using.
 
 ## Current Permission Matrix
 
-The migration seeds the common encounter permissions for non-administrator roles and gives `Receptionist` and `Nurse` encounter creation permission. `Doctor` has doctor-assignment permission. The administrator is not dependent on role-permission rows because of the explicit override. Encounter creation may place the patient into the selected active department queue, but that does not grant the creating user broad access to browse that department's full worklist.
+The migration seeds the common encounter permissions for non-administrator roles and gives `Receptionist` and `Nurse` encounter creation permission. Patient registration is separately controlled by `register_patient`, granted by default to Super Administrator, System Administrator, Receptionist, and Records Officer only. `Doctor` has doctor-assignment permission. The administrator is not dependent on role-permission rows because of the explicit override. Encounter creation may place the patient into the selected active department queue, but that does not grant the creating user broad access to browse that department's full worklist.
 
 | Role | View | Create | Transfer | Receive | Assign doctor | Status | Edit | Manage users | Manage roles | Manage permissions | Manage settings |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -180,7 +181,7 @@ users.
 | System settings | `manage_settings` / administrator | Implemented |
 | User department assignment | administrator route guard | Implemented |
 | Active department switching | active assigned membership | Implemented |
-| Patient registration | Reception workflow and existing route validation | Implemented |
+| Patient registration | `register_patient`; Super/System Admin, Receptionist, Records Officer | Implemented |
 | Encounter creation | `create_encounter` | Implemented |
 | Encounter workspace | `view_encounter` plus department/lifecycle validation | Implemented |
 | Transfer | `transfer_encounter` plus current department | Implemented |
@@ -244,14 +245,17 @@ until their workflows are implemented.
 | Permission | Status | Seeded roles |
 |---|---|---|
 | `view_medical_record` | Implemented | Reception, Records, Doctor, Nurse, Laboratory, Pharmacy, Physiotherapy, Radiology, Theatre; treatment scope applies outside Records/Reception |
-| `edit_patient_demographics` | Implemented | Receptionist, Records Officer |
-| `delete_patient` | Implemented | Administrator override; Doctor and Records Officer by default |
+| `edit_patient_demographics` | Implemented | Super Administrator, Receptionist, Records Officer; Doctor only by user-specific Allow override |
+| `delete_patient` | Implemented | Super Administrator only |
 | `view_patient_audit_history` | Implemented | Records Officer |
 
-Administrators retain the existing override. Chart authorization then requires
-the database permission and either Records/Reception scope or an active
-treatment relationship through the current encounter department or assigned
-doctor. Patient audit history remains more restrictive than general chart view.
+Super Administrators retain the existing global override. Patient demographic
+edits are default-limited to Reception/Records ownership, with per-account
+Doctor exceptions handled through user permission overrides. Chart authorization
+then requires the database permission and either Records/Reception scope or an
+active treatment relationship through the current encounter department or
+assigned doctor. Patient audit history remains more restrictive than general
+chart view.
 Patient deletion is implemented as a soft delete/void action. Linked encounter,
 clinical, billing, document, identifier, and audit records are retained for
 integrity, while the patient is hidden from normal search and blocked from new
@@ -261,7 +265,7 @@ encounter creation. Deletion does not reset patient or encounter ID generators.
 
 | Permission | Status | Seeded roles |
 |---|---|---|
-| `view_radiology` | Implemented | Records Officer plus clinical roles: Doctor, Nurse, Laboratory Scientist, Radiographer, Physiotherapist, Theatre Staff, Pharmacist |
+| `view_radiology` | Implemented | Records Officer plus clinical roles: Doctor, Nurse, Laboratory Scientist, Radiographer, ECG Technician, POP Technician, Physiotherapist, Theatre Staff, Pharmacist |
 | `create_radiology_request` | Implemented | Doctor, Radiographer |
 | `process_radiology_request` | Implemented | Radiographer |
 | `enter_radiology_report` | Implemented | Radiographer |
@@ -272,7 +276,7 @@ encounter creation. Deletion does not reset patient or encounter ID generators.
 
 | Permission | Status | Seeded roles |
 |---|---|---|
-| `view_ecg` | Implemented | Records Officer plus clinical roles: Doctor, Nurse, Laboratory Scientist, Radiographer, ECG Technician, Physiotherapist, Theatre Staff, Pharmacist |
+| `view_ecg` | Implemented | Records Officer plus clinical roles: Doctor, Nurse, Laboratory Scientist, Radiographer, ECG Technician, POP Technician, Physiotherapist, Theatre Staff, Pharmacist |
 | `create_ecg_request` | Implemented | Doctor, ECG Technician |
 | `process_ecg_request` | Implemented | ECG Technician |
 | `upload_ecg_chart` | Implemented | ECG Technician |
@@ -290,7 +294,7 @@ context where permitted.
 
 | Permission | Status | Seeded roles |
 |---|---|---|
-| `view_physiotherapy` | Implemented | Records Officer plus clinical roles: Doctor, Nurse, Laboratory Scientist, Radiographer, Physiotherapist, Theatre Staff, Pharmacist |
+| `view_physiotherapy` | Implemented | Records Officer plus clinical roles: Doctor, Nurse, Laboratory Scientist, Radiographer, ECG Technician, POP Technician, Physiotherapist, Theatre Staff, Pharmacist |
 | `create_physiotherapy` | Implemented | Doctor, Physiotherapist |
 | `edit_physiotherapy` | Implemented | Physiotherapist |
 | `manage_physiotherapy_sessions` | Implemented | Physiotherapist |
@@ -300,7 +304,7 @@ context where permitted.
 
 | Permission | Status | Seeded roles |
 |---|---|---|
-| `view_theatre` | Implemented | Records Officer plus clinical roles: Doctor, Nurse, Laboratory Scientist, Radiographer, Physiotherapist, Theatre Staff, Pharmacist |
+| `view_theatre` | Implemented | Records Officer plus clinical roles: Doctor, Nurse, Laboratory Scientist, Radiographer, ECG Technician, POP Technician, Physiotherapist, Theatre Staff, Pharmacist |
 | `create_theatre` | Implemented | Doctor, Theatre Staff |
 | `edit_theatre` | Implemented | Doctor, Theatre Staff |
 | `complete_theatre` | Implemented | Doctor, Theatre Staff |
@@ -308,6 +312,11 @@ context where permitted.
 Radiology permissions are encounter-scoped and respect active-encounter
 locking. Direct requests are limited to Radiographer or Administrator users,
 while clinical requests remain Doctor-initiated through the encounter context.
+
+Migration 066 aligns ECG Technician and POP Technician with the same
+patient-specific clinical context view pattern used by Laboratory, X-Ray,
+Physiotherapy, Theatre, and Pharmacy. They can view patient-context clinical
+tabs where permitted, but their mutation permissions remain department-owned.
 
 ## MPI and Identifier Permissions
 
@@ -371,13 +380,14 @@ access and the existing treatment/department relationship.
 
 ## Phase 2.5 Medical Document permissions
 
-| Permission | Administrator | Records Officer | Doctor | Nurse | Reception | Other clinical | Accounts | Store |
+| Permission | Super Administrator | Records Officer | Doctor | Nurse | Reception | Other clinical | Accounts | Store |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | `view_medical_documents` | Yes | Yes | Treatment scope | Treatment scope | Yes | Treatment scope | Authorized scope | No |
 | `upload_medical_documents` | Yes | Yes | Yes | Yes | Limited types | Encounter-relevant | Insurance/correspondence | No |
 | `replace_medical_documents` | Yes | Yes | Yes | No | No | No | No | No |
 | `archive_medical_documents` | Yes | Yes | No | No | No | No | No | No |
-| `download_medical_documents` | Yes | Yes | Yes | Yes | Restricted scope | Encounter-relevant | Authorized scope | No |
+| `download_medical_documents` | Yes | Same-department file download; cross-department only if explicitly permitted | Same-department file download; cross-department only if explicitly permitted | Same-department file download; cross-department only if explicitly permitted | Restricted scope | Same-department file download; cross-department only if explicitly permitted | Authorized scope | No |
+| `download_cross_department_medical_documents` | Yes | Optional explicit grant | Optional explicit grant | Optional explicit grant | Optional explicit grant | Optional explicit grant | Optional explicit grant | No |
 | `view_confidential_documents` | Yes, audited | Yes, audited | Yes, audited | No | No | No by default | No | No |
 | `view_document_history` | Yes | Yes | Yes | No | No | No | No | No |
 
@@ -385,7 +395,10 @@ All grants still require service-level patient scope. Encounter-linked access
 also validates visit ownership and encounter access; Records Officers retain
 their explicit records-management boundary. Confidential metadata is masked
 unless `view_confidential_documents` succeeds. Authorization is rechecked
-immediately before access audit and stream creation.
+immediately before access audit and stream creation. Users may open/view an
+authorized document in the browser, but attachment-style file download is
+restricted to the uploading department unless
+`download_cross_department_medical_documents` is granted.
 
 ## Clinical Notes permissions — implemented
 
@@ -454,11 +467,13 @@ permission keys are introduced.
 Drug Chart entries may link to Pharmacy prescriptions, but Pharmacy
 permissions do not grant medication-administration mutation. Pharmacy remains
 responsible for prescriptions and dispensing; Nursing records bedside
-administration.
+administration. Pharmacy can record non-prescription patient stock usage for
+consumables used from Pharmacy department stock; prescription dispensing still
+uses the dedicated Pharmacy dispensing workflow.
 
 ## Phase 3.4 Laboratory permissions
 
-| Permission | Administrator | Laboratory Scientist | Doctor | Nurse | Radiology/X-Ray | Pharmacy | Other clinical roles | Other roles |
+| Permission | Administrator | Laboratory Scientist | Doctor | Nurse | Diagnostic departments | Pharmacy | Other clinical roles | Other roles |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | `view_laboratory` | Yes | Yes | Yes | Yes | Yes | Yes | Yes | No default |
 | `create_laboratory_request` | Yes | Direct requests | Clinical requests | No | No | No | No | No |
@@ -473,7 +488,7 @@ attention only and do not transfer encounter ownership.
 
 ## Phase 4.1 Accounts / Price Catalogue permissions
 
-| Permission | Administrator | Accountant | Doctor | Nurse | Laboratory | Radiology | Physiotherapy | Theatre | Pharmacy | Store | Other |
+| Permission | Administrator | Accountant | Doctor | Nurse | Laboratory | Diagnostic departments | Physiotherapy | Theatre | Pharmacy | Store | Other |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `view_billable_items` | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | No default |
 | `create_billable_items` | Yes | Yes | No | No | No | No | No | No | No | No | No |
@@ -486,7 +501,7 @@ receipts.
 
 ## Phase 4.2 Store / Inventory permissions
 
-| Permission | Administrator | Store Officer | Accountant | Doctor | Nurse | Laboratory | Radiology | Physiotherapy | Theatre | Pharmacy | Reception | Records | Other |
+| Permission | Administrator | Store Officer | Accountant | Doctor | Nurse | Laboratory | Diagnostic departments | Physiotherapy | Theatre | Pharmacy | Reception | Records | Other |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `view_inventory` | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | No default |
 | `manage_inventory_items` | Yes | Yes | No | No | No | No | No | No | No | No | No | No | No |
@@ -514,9 +529,13 @@ Department Stock Requests are standalone sidebar workflow records. Creating a
 request does not change stock. Store/Admin review and issue requests, and the
 actual issue uses the Store stock ledger.
 
+In these summary tables, “Diagnostic departments” means X-Ray/Radiology, ECG,
+and POP where the relevant permission exists. Each keeps its own mutation
+permissions department-owned.
+
 ## Phase 4.3 Pharmacy permissions
 
-| Permission | Administrator | Pharmacist | Doctor | Nurse | Laboratory | Radiology/X-Ray | Other clinical roles | Other roles |
+| Permission | Administrator | Pharmacist | Doctor | Nurse | Laboratory | Diagnostic departments | Other clinical roles | Other roles |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | `view_pharmacy` | Yes | Yes | Yes | Yes | Yes | Yes | Yes | No default |
 | `create_prescription` | Yes | Direct prescriptions | Clinical prescriptions | No | No | No | No | No |
@@ -635,6 +654,7 @@ where they have permission, but they do not browse the full POP worklist.
 | Full permission override | Yes | No |
 | Administration dashboard | Yes | Yes |
 | Manage users/roles/permissions/settings | Yes | Yes |
+| Manage configurable form fields | Yes | Yes |
 | View other department worklists | Yes | Yes |
 | Clinical module mutation by override | Yes | No |
 | Billing/stock/pharmacy mutation by override | Yes | No |
@@ -642,3 +662,20 @@ where they have permission, but they do not browse the full POP worklist.
 
 Walter Ikhile / username `walter` is the protected Super Administrator account.
 The original `admin` account remains a protected ordinary System Administrator.
+
+## Configurable Form Permissions
+
+| Permission | Super Administrator | System Administrator | Other users |
+| --- | ---: | ---: | ---: |
+| `manage_configurable_forms` | Yes | Yes | No by default |
+| `view_configurable_form_responses` | Yes | Yes | No by default |
+
+Configured field access does not override parent clinical permissions. For
+example, a user must still be allowed to create/edit Nursing before saving
+Nursing configured field responses.
+
+Current configurable-form targets are Nursing Assessment, Theatre Record,
+Admission Record, Dressing Record, DM Sheet, ECG Report, POP Procedure Record,
+and Physiotherapy Record. Billing, payments, stock movement quantities,
+patient identity fields, permissions, and encounter lifecycle fields are not
+configurable through this feature.

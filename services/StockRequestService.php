@@ -336,7 +336,7 @@ class StockRequestService
     {
         $errors = [];
         $departmentId = (int)($data['requesting_department_id'] ?? 0);
-        if (!$this->canSeeAllRequests($user)) {
+        if (!$this->permissionService->isAdministrator($user)) {
             $departmentId = $this->activeDepartmentId($user);
         }
         if ($departmentId <= 0 || !$this->departmentExists($departmentId)) {

@@ -438,3 +438,28 @@ table th {
         flex:0 0 52px;
     }
 }
+
+/* Readability hardening for wrapped patient text, tables, and registration fields. */
+.form-group input,
+.form-group select,
+.form-group textarea,
+table th,
+table td,
+.summary-item,
+.summary-card,
+.patient-card{
+    line-height:1.5;
+}
+
+.form-group textarea{
+    line-height:1.65;
+    min-height:120px;
+}
+
+table td,
+.summary-item,
+.summary-card,
+.patient-card{
+    overflow-wrap:break-word;
+    word-break:normal;
+}

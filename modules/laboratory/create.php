@@ -13,9 +13,16 @@ if (!$visitId) {
 }
 
 $visit = laboratoryRequireVisit($visitService, $visitId);
-$requestSource = in_array($requestedSource, ['Clinical', 'Direct'], true)
-    ? $requestedSource
-    : ((string)($visit['department_name'] ?? '') === 'Laboratory' ? 'Direct' : 'Clinical');
+$isDirectLaboratoryEncounter = (string)($visit['department_name'] ?? '') === 'Laboratory';
+$requestSourceNote = '';
+if ($requestedSource === 'Direct' && !$isDirectLaboratoryEncounter) {
+    $requestSource = 'Clinical';
+    $requestSourceNote = 'Direct is only for active encounters currently in Laboratory. This request is being recorded as Clinical.';
+} elseif (in_array($requestedSource, ['Clinical', 'Direct'], true)) {
+    $requestSource = $requestedSource;
+} else {
+    $requestSource = $isDirectLaboratoryEncounter ? 'Direct' : 'Clinical';
+}
 laboratoryRequireAccess($permissionService, $visit, $currentUser, $requestSource);
 
 if (!$laboratoryTablesReady) {
@@ -35,6 +42,7 @@ $laboratoryRequest = $_SESSION['old_laboratory_request'] ?? [
     'tests_requested' => '',
     'clinical_information' => ''
 ];
+$laboratoryRequest['request_source'] = $requestSource;
 unset($_SESSION['old_laboratory_request']);
 
 $existingRequests = $laboratoryService->listByVisit($visitId, $currentUser);

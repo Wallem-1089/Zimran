@@ -25,6 +25,12 @@ if (isset($_SESSION['old_dressing_record'])) {
     $dressingRecord = array_merge($dressingRecord, (array)$_SESSION['old_dressing_record']);
     unset($_SESSION['old_dressing_record']);
 }
+$dressingConfiguredFields = $configurableFormService->listFields('dressing_record', true);
+$dressingConfiguredValues = $configurableFormService->getResponseValueMap('dressing_record', 'Dressing Record', (int)$dressingRecord['id']);
+if (isset($_SESSION['old_configured_fields']) && is_array($_SESSION['old_configured_fields'])) {
+    $dressingConfiguredValues = $_SESSION['old_configured_fields'];
+    unset($_SESSION['old_configured_fields']);
+}
 
 require __DIR__ . '/../../../layouts/header.php';
 require __DIR__ . '/../../../layouts/sidebar.php';

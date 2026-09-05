@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
+require_once __DIR__ . '/../../services/ConfigurableFormService.php';
 require_once __DIR__ . '/../../services/TheatreService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
 require_once __DIR__ . '/../../services/VisitService.php';
@@ -26,6 +27,7 @@ function theatreTableExists(PDO $pdo, string $table): bool
 
 $visitService = new VisitService($pdo);
 $permissionService = new PermissionService($pdo);
+$configurableFormService = new ConfigurableFormService($pdo, $permissionService);
 $theatreTablesReady = theatreTableExists($pdo, 'theatre_records');
 $theatreService = $theatreTablesReady ? new TheatreService($pdo, null, null, $permissionService) : null;
 $vitalSignsTablesReady = theatreTableExists($pdo, 'vital_signs');
@@ -63,4 +65,3 @@ function theatreRequireAccess(PermissionService $permissions, array $visit, arra
         exit('Theatre access denied.');
     }
 }
-

@@ -178,9 +178,73 @@
     box-shadow:0 8px 18px rgba(18,183,106,.18);
 }
 
+.status-badge.status-warning{
+    background:#fff4d6;
+    border:1px solid #f4c95d;
+    color:#8a5a00;
+    box-shadow:none;
+}
+
+.priority-badge{
+    display:inline-block;
+    margin:0;
+    padding:4px 9px;
+    font-size:.82rem;
+    line-height:1.2;
+}
+
 .summary-table th,
 .summary-table td{
     border-bottom:1px solid #e4eaf2;
+    padding:12px 14px;
+    vertical-align:top;
+}
+
+.summary-table.data-table th,
+.summary-table.data-table td,
+.table-responsive .summary-table th,
+.table-responsive .summary-table td{
+    display:table-cell;
+    width:auto;
+}
+
+.summary-table.data-table th,
+.table-responsive .summary-table th{
+    white-space:nowrap;
+}
+
+.summary-table.data-table td,
+.table-responsive .summary-table td{
+    min-width:110px;
+}
+
+.summary-table.data-table td:first-child,
+.table-responsive .summary-table td:first-child{
+    min-width:180px;
+}
+
+.table-actions,
+.table-actions-column{
+    text-align:right;
+    white-space:nowrap;
+}
+
+.summary-table th:last-child,
+.summary-table td:last-child,
+.table-responsive .summary-table th:last-child,
+.table-responsive .summary-table td:last-child{
+    text-align:right;
+    white-space:nowrap;
+}
+
+.table-actions{
+    min-width:120px;
+}
+
+.table-actions a,
+.table-actions button{
+    display:inline-flex;
+    margin:2px 0 2px 8px;
 }
 
 .workspace-grid{
@@ -210,6 +274,12 @@
     background:#eff6ff;
     color:#1d4ed8;
     font-size:26px;
+}
+
+.workspace-svg-icon{
+    display:block;
+    width:28px;
+    height:28px;
 }
 
 .workspace-content strong{
@@ -337,6 +407,18 @@
     width:28px;
 }
 
+.readonly-field{
+    align-items:center;
+    background:#f8fafc;
+    border:1px solid #d6e0ec;
+    border-radius:10px;
+    color:#172033;
+    display:flex;
+    font-weight:700;
+    min-height:44px;
+    padding:10px 14px;
+}
+
 @media(max-width:900px){
     .encounter-header{
         gap:16px;
@@ -350,6 +432,14 @@
     .summary-table td{
         display:block;
         width:100%;
+    }
+
+    .table-responsive .summary-table th,
+    .table-responsive .summary-table td,
+    .summary-table.data-table th,
+    .summary-table.data-table td{
+        display:table-cell;
+        width:auto;
     }
 
     .summary-table th{
@@ -382,4 +472,32 @@
     .visit-workspace .table-responsive table{
         min-width:640px;
     }
+}
+
+/* Readability hardening for wrapped text inside workspace boxes/tables/forms. */
+.visit-workspace,
+.visit-workspace input,
+.visit-workspace select,
+.visit-workspace textarea,
+.summary-table th,
+.summary-table td,
+.table-responsive th,
+.table-responsive td,
+.workspace-card,
+.summary-item,
+.readonly-field{
+    line-height:1.5;
+}
+
+.visit-workspace textarea{
+    line-height:1.65;
+    min-height:120px;
+}
+
+.summary-table td,
+.table-responsive td,
+.workspace-card,
+.summary-item{
+    overflow-wrap:break-word;
+    word-break:normal;
 }

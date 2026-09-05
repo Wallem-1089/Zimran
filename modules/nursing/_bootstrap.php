@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/ClinicalSafetyService.php';
+require_once __DIR__ . '/../../services/ConfigurableFormService.php';
 require_once __DIR__ . '/../../services/DiabetesMonitoringService.php';
 require_once __DIR__ . '/../../services/DressingRecordService.php';
 require_once __DIR__ . '/../../services/MedicalRecordService.php';
@@ -84,6 +85,7 @@ function nursingSafetySummary(
 
 $patientService = new PatientService($pdo);
 $permissionService = new PermissionService($pdo);
+$configurableFormService = new ConfigurableFormService($pdo, $permissionService);
 $visitService = new VisitService($pdo);
 $nursingService = new NursingService($pdo, null, null, $permissionService);
 $dressingTablesReady = nursingTableExists($pdo, 'dressing_records');

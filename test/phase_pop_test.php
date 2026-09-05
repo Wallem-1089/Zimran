@@ -97,6 +97,22 @@ function popCreateEncounter(PDO $pdo, array $actor, int $patientId, int $departm
     return (int)$pdo->lastInsertId();
 }
 
+function routePopEncounter(PDO $pdo, int $visitId, array $departmentUser): void
+{
+    $stmt = $pdo->prepare("
+        UPDATE visits
+        SET current_department_id = :department_id,
+            current_department_received_status = 'Received',
+            visit_status = 'POP',
+            updated_at = NOW()
+        WHERE id = :visit_id
+    ");
+    $stmt->execute([
+        ':department_id' => (int)$departmentUser['department_id'],
+        ':visit_id' => $visitId,
+    ]);
+}
+
 function popWorklistContains(array $rows, int $requestId): bool
 {
     foreach ($rows as $row) {
@@ -154,6 +170,7 @@ $clinical = requirePopSuccess($popService->createRequest([
 $clinicalRequestId = (int)$clinical['pop_request_id'];
 assertPop(popWorklistContains($popService->listWorklist($popTech, ['status' => 'Requested']), $clinicalRequestId), 'POP worklist did not show the clinical request.');
 
+routePopEncounter($pdo, $clinicalVisitId, $popTech);
 requirePopSuccess($popService->startRequest($clinicalRequestId, $popTech), 'Start POP request');
 requirePopSuccess($popService->saveRecord([
     'pop_request_id' => $clinicalRequestId,

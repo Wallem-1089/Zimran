@@ -42,6 +42,12 @@ $latestEcgRequests = $ecgService
 $latestEcgReport = ($latestEcgRequests !== [] && $ecgService)
     ? $ecgService->getReport((int)$latestEcgRequests[0]['id'], $currentUser)
     : null;
+$latestPopRequests = $popService
+    ? $popService->listByVisit((int)$visit['id'], $currentUser)
+    : [];
+$latestPopRecord = ($latestPopRequests !== [] && $popService)
+    ? $popService->getRecord((int)$latestPopRequests[0]['id'], $currentUser)
+    : null;
 $latestPharmacyRequests = $pharmacyService
     ? $pharmacyService->listByVisit((int)$visit['id'], $currentUser)
     : [];
@@ -160,7 +166,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <p>Encounter radiology requests and reports.</p>
             </div>
             <?php if ($permissionService->canCreateRadiologyRequest($visit, $currentUser, 'Clinical')): ?>
-                <a class="btn-primary" href="../radiology/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request Radiology Study</a>
+                <a class="btn-primary" href="../radiology/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request X-Ray / Radiology</a>
             <?php endif; ?>
         </div>
         <?php if ($latestRadiologyRequests === []): ?>
@@ -214,6 +220,40 @@ require __DIR__ . '/../../layouts/sidebar.php';
                     <div class="summary-item"><span class="summary-label">Chart</span> <span class="summary-value"><?= !empty($latestEcgReport['chart_stored_path']) ? 'Uploaded' : 'Pending' ?></span></div>
                     <div class="summary-item"><span class="summary-label">Notes</span> <span class="summary-value"><?php hmsRenderNarrative(trim((string)($latestEcgReport['notes'] ?? '')) !== '' ? (string)$latestEcgReport['notes'] : '-'); ?></span></div>
                     <div class="summary-item"><span class="summary-label">Remarks</span> <span class="summary-value"><?php hmsRenderNarrative(trim((string)($latestEcgReport['remarks'] ?? '')) !== '' ? (string)$latestEcgReport['remarks'] : '-'); ?></span></div>
+                </div>
+            <?php endif; ?>
+        <?php endif; ?>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3>POP / Casting Requests</h3>
+                <p>Encounter POP, casting and splinting requests.</p>
+            </div>
+            <?php if ($popService && $permissionService->canCreatePopRequest($visit, $currentUser, 'Clinical')): ?>
+                <a class="btn-primary" href="../pop/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request POP / Casting</a>
+            <?php endif; ?>
+        </div>
+        <?php if (!$popService): ?>
+            <p class="text-muted">POP tables are not available yet.</p>
+        <?php elseif ($latestPopRequests === []): ?>
+            <p class="text-muted">No POP / Casting requests recorded.</p>
+        <?php else: ?>
+            <ul class="clean-list">
+                <?php foreach (array_slice($latestPopRequests, 0, 5) as $request): ?>
+                    <li>
+                        <a href="../pop/view.php?id=<?= (int)$request['id'] ?>">#<?= (int)$request['id'] ?></a>
+                        — <?= e((string)($request['procedure_requested'] ?? 'POP / Casting')) ?>
+                        (<?= e((string)$request['status']) ?>)
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+            <?php if ($latestPopRecord !== null && !empty($latestPopRecord['record_id'])): ?>
+                <div class="summary-grid">
+                    <div class="summary-item"><span class="summary-label">Procedure Done</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestPopRecord['procedure_done'] ?? '-')); ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestPopRecord['findings'] ?? '-')); ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Remarks</span> <span class="summary-value"><?php hmsRenderNarrative((string)($latestPopRecord['remarks'] ?? '-')); ?></span></div>
                 </div>
             <?php endif; ?>
         <?php endif; ?>

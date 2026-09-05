@@ -1,8 +1,84 @@
 <?php
+
 declare(strict_types=1);
-if (!isset($visit,$patient,$notes)) { return; }
+
+if (!isset($visit, $patient, $notes)) {
+    return;
+}
+
 ?>
 <section id="tab-notes" class="workspace-tab">
-<div class="card"><div class="card-header"><div><h2>Encounter Clinical Notes</h2><p>Signed encounter notes are immutable; corrections use the amendment workflow.</p></div><?php if($canCreateEncounterNotes):?><a href="../medical_records/notes/create.php?patient=<?=(int)$patient['id']?>&visit=<?=(int)$visit['id']?>" class="btn-primary">Add Note</a><?php endif;?></div><div class="summary-grid"><div class="summary-item"><span class="summary-label">Encounter</span> <span class="summary-value">#<?=(int)$visit['id']?></span></div><div class="summary-item"><span class="summary-label">Total visible notes</span> <span class="summary-value"><?=count($notes)?></span></div></div></div>
-<div class="card"><h3>Notes</h3><?php if(!$canViewClinicalNotes):?><div class="alert-info">Clinical Note access is not assigned.</div><?php elseif(!$notes):?><div class="empty-state">No Clinical Notes have been recorded for this encounter.</div><?php else:?><table class="summary-table"><thead><tr><th>Title</th><th>Type</th><th>Status</th><th>Author</th><th>Updated</th><th></th></tr></thead><tbody><?php foreach($notes as $note):?><tr><td><?=e($note['title'])?></td><td><?=e(ucwords(str_replace('_',' ',$note['note_type'])))?></td><td><?=e($note['note_status'])?></td><td><?=e($note['author_name']??'Protected')?></td><td><?=e($note['updated_at']??$note['created_at'])?></td><td><a href="../medical_records/notes/view.php?id=<?=(int)$note['id']?>&visit=<?=(int)$visit['id']?>">View</a></td></tr><?php endforeach;?></tbody></table><?php endif;?><p><a href="../medical_records/chart.php?patient=<?=(int)$patient['id']?>&tab=notes&visit=<?=(int)$visit['id']?>">Open Patient Chart Clinical Notes</a></p></div>
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h2>Encounter Clinical Notes</h2>
+                <p>Signed encounter notes are immutable; corrections use the amendment workflow.</p>
+            </div>
+            <?php if ($canCreateEncounterNotes): ?>
+                <a
+                    href="../medical_records/notes/create.php?patient=<?= (int)$patient['id'] ?>&visit=<?= (int)$visit['id'] ?>"
+                    class="btn-primary"
+                >Add Note</a>
+            <?php endif; ?>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-item">
+                <span class="summary-label">Encounter</span>
+                <span class="summary-value">#<?= (int)$visit['id'] ?></span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Total visible notes</span>
+                <span class="summary-value"><?= count($notes) ?></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Notes</h3>
+
+        <?php if (!$canViewClinicalNotes): ?>
+            <div class="alert-info">Clinical Note access is not assigned.</div>
+        <?php elseif (!$notes): ?>
+            <div class="empty-state">No Clinical Notes have been recorded for this encounter.</div>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="summary-table data-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Author</th>
+                            <th>Updated</th>
+                            <th class="table-actions-column">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($notes as $note): ?>
+                            <tr>
+                                <td><?= e($note['title']) ?></td>
+                                <td><?= e(ucwords(str_replace('_', ' ', $note['note_type']))) ?></td>
+                                <td><?= e($note['note_status']) ?></td>
+                                <td><?= e($note['author_name'] ?? 'Protected') ?></td>
+                                <td><?= e($note['updated_at'] ?? $note['created_at']) ?></td>
+                                <td class="table-actions">
+                                    <a
+                                        class="btn-secondary btn-sm"
+                                        href="../medical_records/notes/view.php?id=<?= (int)$note['id'] ?>&visit=<?= (int)$visit['id'] ?>"
+                                    >View</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+
+        <p>
+            <a href="../medical_records/chart.php?patient=<?= (int)$patient['id'] ?>&tab=notes&visit=<?= (int)$visit['id'] ?>">
+                Open Patient Chart Clinical Notes
+            </a>
+        </p>
+    </div>
 </section>

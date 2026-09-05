@@ -15,6 +15,9 @@ if (!$permissionService->canCreateNursing($visit, $currentUser)) {
 
 $record = $_SESSION['old_dm_sheet'] ?? [];
 unset($_SESSION['old_dm_sheet']);
+$dmSheetConfiguredFields = $configurableFormService->listFields('dm_sheet', true);
+$dmSheetConfiguredValues = $_SESSION['old_configured_fields'] ?? [];
+unset($_SESSION['old_configured_fields']);
 
 $pageTitle = 'New DM Sheet Entry';
 $moduleStylesheet = '/modules/visits/assets/visits.css';

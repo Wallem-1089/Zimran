@@ -1,6 +1,8 @@
 <?php
 
 declare(strict_types=1);
+
+$diabetesMonitoringPreviewRows = array_slice($diabetesMonitoringHistory ?? [], 0, 10);
 ?>
 <section class="card">
     <div class="section-heading">
@@ -17,6 +19,9 @@ declare(strict_types=1);
     <?php if (empty($diabetesMonitoringHistory)): ?>
         <p class="text-muted">No DM Sheet entries found.</p>
     <?php else: ?>
+        <?php if (count($diabetesMonitoringHistory) > count($diabetesMonitoringPreviewRows)): ?>
+            <p class="text-muted">Showing latest <?= count($diabetesMonitoringPreviewRows) ?> of <?= count($diabetesMonitoringHistory) ?> DM Sheet entries. Open full history to see all entries.</p>
+        <?php endif; ?>
         <div class="summary-grid">
             <div class="summary-item"><span class="summary-label">Latest Blood Glucose</span> <span class="summary-value"><?= e((string)($latestDiabetesMonitoringRecord['blood_glucose'] ?? '-')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Latest Meal Status</span> <span class="summary-value"><?= e((string)($latestDiabetesMonitoringRecord['meal_status'] ?? '-')) ?></span></div>
@@ -38,7 +43,7 @@ declare(strict_types=1);
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($diabetesMonitoringHistory as $record): ?>
+                    <?php foreach ($diabetesMonitoringPreviewRows as $record): ?>
                         <tr>
                             <td><?= e((string)$record['recorded_at']) ?></td>
                             <td><?= e((string)($record['visit_number'] ?? ('#' . (int)$record['visit_id']))) ?></td>

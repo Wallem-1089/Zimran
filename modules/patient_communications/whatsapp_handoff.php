@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/AuditService.php';
 require_once __DIR__ . '/../../services/MedicalDocumentService.php';
+require_once __DIR__ . '/../../services/PatientCommunicationService.php';
 require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
 require_once __DIR__ . '/../../services/RadiologyService.php';
@@ -30,6 +31,7 @@ try {
     $patientService = new PatientService($pdo);
     $visitService = new VisitService($pdo);
     $auditService = new AuditService($pdo);
+    $patientCommunicationService = new PatientCommunicationService($pdo);
 
     $payload = match ($sourceType) {
         'radiology_report' => radiologyHandoffPayload(
@@ -49,7 +51,10 @@ try {
         default => throw new RuntimeException('Unsupported WhatsApp handoff source.'),
     };
 
-    $phone = normalizeWhatsappPhone((string)($payload['patient']['phone'] ?? ''));
+    $phone = normalizeWhatsappPhone((string)($payload['patient']['whatsapp_number'] ?? ''));
+    if ($phone === '') {
+        $phone = normalizeWhatsappPhone((string)($payload['patient']['phone'] ?? ''));
+    }
     if ($phone === '') {
         $_SESSION['validation_errors'] = ['Patient phone number is missing or invalid.'];
         header('Location: ' . safeReturnUrl($returnUrl));
@@ -71,6 +76,25 @@ try {
 
     if (!$logged) {
         $_SESSION['validation_errors'] = ['Unable to audit WhatsApp handoff. Please try again.'];
+        header('Location: ' . safeReturnUrl($returnUrl));
+        exit;
+    }
+
+    $communication = $patientCommunicationService->recordWhatsAppHandoff([
+        'patient_id' => (int)$payload['patient']['id'],
+        'visit_id' => $payload['visit_id'],
+        'source_module' => (string)$payload['source_module'],
+        'source_type' => (string)$payload['type'],
+        'source_record_id' => $payload['source_record_id'],
+        'document_id' => $payload['document_id'] ?? null,
+        'recipient_phone' => $phone,
+        'message' => $message,
+        'consent_confirmed' => true,
+        'status' => 'Initiated',
+    ], $currentUser);
+
+    if (!($communication['success'] ?? false)) {
+        $_SESSION['validation_errors'] = $communication['errors'] ?? ['Unable to track WhatsApp handoff. Please try again.'];
         header('Location: ' . safeReturnUrl($returnUrl));
         exit;
     }
@@ -119,6 +143,9 @@ function radiologyHandoffPayload(
 
     return [
         'type' => 'radiology_report',
+        'source_module' => 'Radiology',
+        'source_record_id' => $requestId,
+        'document_id' => null,
         'patient' => $patient,
         'visit_id' => (int)$request['visit_id'],
         'visit_number' => (string)($request['visit_number'] ?? ''),
@@ -156,6 +183,9 @@ function documentHandoffPayload(
 
     return [
         'type' => 'medical_document',
+        'source_module' => 'Medical Documents',
+        'source_record_id' => $documentId,
+        'document_id' => $documentId,
         'patient' => $patient,
         'visit_id' => !empty($document['visit_id']) ? (int)$document['visit_id'] : null,
         'visit_number' => '',

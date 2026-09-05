@@ -34,6 +34,7 @@ $canEdit = $permissionService->canEditPhysiotherapy($visit, $currentUser);
 $canManageSessions = $permissionService->canManagePhysiotherapySessions($visit, $currentUser);
 $canComplete = $permissionService->canCompletePhysiotherapy($visit, $currentUser);
 $isClosed = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
+$physiotherapyConfiguredDisplayValues = $configurableFormService->getResponseValues('physiotherapy_record', 'Physiotherapy Record', (int)$record['id']);
 
 $pageTitle = 'Physiotherapy Record';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -130,6 +131,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p><?php hmsRenderNarrative((string)$record['precautions']); ?></p>
         </div>
     <?php endif; ?>
+    <?php hmsRenderConfiguredValues($physiotherapyConfiguredDisplayValues); ?>
 
     <div class="card">
         <div class="section-heading">

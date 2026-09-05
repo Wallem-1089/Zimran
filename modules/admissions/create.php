@@ -24,6 +24,9 @@ $wards = $admissionService->listWards(true);
 $beds = $admissionService->listAvailableBeds();
 $admission = $_SESSION['old_admission'] ?? [];
 unset($_SESSION['old_admission']);
+$admissionConfiguredFields = $configurableFormService->listFields('admission_record', true);
+$admissionConfiguredValues = $_SESSION['old_configured_fields'] ?? [];
+unset($_SESSION['old_configured_fields']);
 
 $pageTitle = 'Admit Patient';
 $moduleStylesheet = '/modules/visits/assets/visits.css';

@@ -13,9 +13,16 @@ if (!$visitId) {
 }
 
 $visit = popRequireVisit($visitService, $visitId);
-$requestSource = in_array($requestedSource, ['Clinical', 'Direct'], true)
-    ? $requestedSource
-    : ((string)($visit['department_name'] ?? '') === 'POP' ? 'Direct' : 'Clinical');
+$isDirectPopEncounter = (string)($visit['department_name'] ?? '') === 'POP';
+$requestSourceNote = '';
+if ($requestedSource === 'Direct' && !$isDirectPopEncounter) {
+    $requestSource = 'Clinical';
+    $requestSourceNote = 'Direct is only for active encounters currently in POP. This request is being recorded as Clinical.';
+} elseif (in_array($requestedSource, ['Clinical', 'Direct'], true)) {
+    $requestSource = $requestedSource;
+} else {
+    $requestSource = $isDirectPopEncounter ? 'Direct' : 'Clinical';
+}
 popRequireCreateAccess($permissionService, $visit, $currentUser, $requestSource);
 
 if (!$popTablesReady) {
@@ -35,6 +42,7 @@ $popRequest = $_SESSION['old_pop_request'] ?? [
     'procedure_requested' => 'POP / Casting',
     'clinical_indication' => ''
 ];
+$popRequest['request_source'] = $requestSource;
 unset($_SESSION['old_pop_request']);
 
 $pageTitle = 'Create POP Request';

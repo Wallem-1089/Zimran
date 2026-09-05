@@ -5,6 +5,8 @@ declare(strict_types=1);
 $nursingAssessment ??= [];
 $action ??= 'save.php';
 $buttonLabel ??= 'Save Nursing Assessment';
+$nursingConfiguredFields ??= [];
+$nursingConfiguredValues ??= [];
 $enableWritingMode ??= isset($permissionService)
     && method_exists($permissionService, 'canUseConsultationHandwriting')
     && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
@@ -37,6 +39,8 @@ $enableWritingMode ??= isset($permissionService)
             <?php hmsRenderHandwritingTextarea($field, $label, (string)($nursingAssessment[$field] ?? ''), 3, false, $enableWritingMode); ?>
         <?php endforeach; ?>
     </div>
+
+    <?php hmsRenderConfiguredFields($nursingConfiguredFields, $nursingConfiguredValues); ?>
 
     <div class="form-actions">
         <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>

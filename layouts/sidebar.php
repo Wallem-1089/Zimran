@@ -630,6 +630,20 @@ $sidebarBranding = appBranding($pdo ?? null);
 
             <?php endif; ?>
 
+            <?php if (isset($sidebarPermissionService) && $sidebarPermissionService->canManageConfigurableForms($currentUser)): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/administration/form_settings/index.php">
+
+                        Form Settings
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
             <?php if ($canAccessDepartmentSwitchSidebar): ?>
 
                 <li>

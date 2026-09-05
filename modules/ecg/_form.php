@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 $ecgRequest = $ecgRequest ?? [];
 $requestSource = ecgRequestSourceLabel((string)($ecgRequest['request_source'] ?? $requestSource ?? 'Clinical'));
+$requestSourceNote ??= $requestSource === 'Direct'
+    ? 'Direct ECG is for patients whose active encounter is currently in ECG.'
+    : 'Clinical requests are linked to this encounter without transferring ownership.';
 $enableWritingMode ??= isset($permissionService)
     && method_exists($permissionService, 'canUseConsultationHandwriting')
     && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
@@ -14,6 +17,12 @@ $enableWritingMode ??= isset($permissionService)
     <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
     <input type="hidden" name="patient_id" value="<?= (int)$visit['patient_id'] ?>">
     <input type="hidden" name="request_source" value="<?= e($requestSource) ?>">
+
+    <div class="form-group">
+        <label>Request Source</label>
+        <div class="readonly-field"><?= e($requestSource) ?></div>
+        <p class="text-muted"><?= e($requestSourceNote) ?></p>
+    </div>
 
     <div class="form-group">
         <label for="study_requested">Study Requested</label>

@@ -6,6 +6,9 @@ $laboratoryRequest ??= [];
 $action ??= 'save.php';
 $buttonLabel ??= 'Save Laboratory Request';
 $requestSource = (string)($laboratoryRequest['request_source'] ?? ($requestSource ?? 'Clinical'));
+$requestSourceNote ??= $requestSource === 'Direct'
+    ? 'Direct Laboratory is for patients whose active encounter is currently in Laboratory.'
+    : 'Clinical requests are linked to this encounter without transferring ownership.';
 $enableWritingMode ??= isset($permissionService)
     && method_exists($permissionService, 'canUseConsultationHandwriting')
     && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
@@ -15,13 +18,12 @@ $enableWritingMode ??= isset($permissionService)
     <?= csrfField() ?>
     <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
     <input type="hidden" name="patient_id" value="<?= (int)$patient['id'] ?>">
+    <input type="hidden" name="request_source" value="<?= e($requestSource) ?>">
 
     <div class="form-group">
-        <label for="request_source">Request Source</label>
-        <select id="request_source" name="request_source" required>
-            <option value="Clinical" <?= $requestSource === 'Clinical' ? 'selected' : '' ?>>Clinical</option>
-            <option value="Direct" <?= $requestSource === 'Direct' ? 'selected' : '' ?>>Direct</option>
-        </select>
+        <label>Request Source</label>
+        <div class="readonly-field"><?= e($requestSource) ?></div>
+        <p class="text-muted"><?= e($requestSourceNote) ?></p>
     </div>
 
     <div class="form-group">

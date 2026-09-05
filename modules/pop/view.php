@@ -34,6 +34,7 @@ $canComplete = $permissionService->canCompletePopRequest($visit, $currentUser);
 $isClosed = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
 $isRequestClosed = in_array((string)($request['status'] ?? ''), ['Completed', 'Cancelled'], true);
 $hasRecord = $record && !empty($record['record_id']);
+$popConfiguredDisplayValues = $configurableFormService->getResponseValues('pop_record', 'POP Record', $requestId);
 
 $pageTitle = 'POP Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -128,6 +129,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p class="text-muted">No POP procedure record yet.</p>
         <?php endif; ?>
     </div>
+    <?php hmsRenderConfiguredValues($popConfiguredDisplayValues); ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

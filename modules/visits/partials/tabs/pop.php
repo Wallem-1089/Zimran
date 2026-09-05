@@ -88,6 +88,9 @@ $requestClosed = $latest !== null && in_array((string)($latest['status'] ?? ''),
                 <?php if (!$isClosedEncounter && !$requestClosed && !empty($canCompletePopRequest)): ?>
                     <form method="post" action="../pop/complete.php"><?= csrfField() ?><input type="hidden" name="id" value="<?= (int)$latest['id'] ?>"><button type="submit" class="btn-secondary">Complete</button></form>
                 <?php endif; ?>
+                <?php if (!$isClosedEncounter && !$requestClosed && !empty($billingRequestsReady) && !empty($canCreateBillingRequest)): ?>
+                    <a href="../billing/request_create.php?visit=<?= (int)$visit['id'] ?>&source_module=POP&source_record_id=<?= (int)$latest['id'] ?>&description=<?= rawurlencode('POP: ' . (string)($latest['procedure_requested'] ?? '')) ?>" class="btn-secondary">Request Billing</a>
+                <?php endif; ?>
             </div>
         </div>
 

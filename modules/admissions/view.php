@@ -23,6 +23,7 @@ $canTransfer = $activeAdmission && $permissionService->canTransferAdmission($vis
 $canDischarge = $activeAdmission && $permissionService->canDischargeAdmission($visit, $currentUser);
 $encounterLocked = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
 $canRequestBilling = !$encounterLocked && $permissionService->canCreateBillingRequest($currentUser);
+$admissionConfiguredDisplayValues = $configurableFormService->getResponseValues('admission_record', 'Admission Record', (int)$admission['id']);
 
 $pageTitle = 'Admission';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -61,6 +62,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     </div>
     <div class="card"><h3>Admission Diagnosis</h3><p><?= nl2br(e((string)($admission['admission_diagnosis'] ?? ''))) ?></p></div>
     <div class="card"><h3>Admission Notes</h3><p><?= nl2br(e((string)($admission['admission_notes'] ?? ''))) ?></p></div>
+    <?php hmsRenderConfiguredValues($admissionConfiguredDisplayValues); ?>
     <?php if (!empty($admission['discharge_notes'])): ?><div class="card"><h3>Discharge Notes</h3><p><?= nl2br(e((string)$admission['discharge_notes'])) ?></p></div><?php endif; ?>
     <div class="card">
         <h3>Movement History</h3>

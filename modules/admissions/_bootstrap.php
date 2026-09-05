@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/AdmissionService.php';
+require_once __DIR__ . '/../../services/ConfigurableFormService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
 require_once __DIR__ . '/../../services/VisitService.php';
 
@@ -76,6 +77,7 @@ function admissionBackToWorkspace(int $visitId): string
 }
 
 $permissionService = new PermissionService($pdo);
+$configurableFormService = new ConfigurableFormService($pdo, $permissionService);
 $visitService = new VisitService($pdo);
 $admissionTablesReady = admissionTablesReady($pdo);
 $admissionService = $admissionTablesReady ? new AdmissionService($pdo, null, null, $permissionService) : null;

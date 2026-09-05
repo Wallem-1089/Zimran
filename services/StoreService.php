@@ -699,6 +699,74 @@ class StoreService
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function listStockLedger(array $filters = [], ?array $user = null, int $limit = 200): array
+    {
+        if ($user !== null && !$this->permissionService->canViewInventory($user)) {
+            return [];
+        }
+
+        $limit = max(1, min(500, $limit));
+        $where = [];
+        $params = [];
+
+        $itemId = (int)($filters['item_id'] ?? 0);
+        if ($itemId > 0) {
+            $where[] = 'st.inventory_item_id = :item_id';
+            $params[':item_id'] = $itemId;
+        }
+
+        $departmentId = (int)($filters['department_id'] ?? 0);
+        if ($departmentId > 0) {
+            $where[] = '(st.from_department_id = :department_id OR st.to_department_id = :department_id)';
+            $params[':department_id'] = $departmentId;
+        }
+
+        $transactionType = trim((string)($filters['transaction_type'] ?? ''));
+        if (in_array($transactionType, ['Receipt', 'Issue', 'Return', 'Adjustment', 'Consumption'], true)) {
+            $where[] = 'st.transaction_type = :transaction_type';
+            $params[':transaction_type'] = $transactionType;
+        }
+
+        $dateFrom = trim((string)($filters['date_from'] ?? ''));
+        if ($dateFrom !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom)) {
+            $where[] = 'st.created_at >= :date_from';
+            $params[':date_from'] = $dateFrom . ' 00:00:00';
+        }
+
+        $dateTo = trim((string)($filters['date_to'] ?? ''));
+        if ($dateTo !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
+            $where[] = 'st.created_at <= :date_to';
+            $params[':date_to'] = $dateTo . ' 23:59:59';
+        }
+
+        $sql = '
+            SELECT
+                st.*,
+                ii.item_code,
+                ii.item_name,
+                ii.unit,
+                CONCAT(performed_by.first_name, " ", performed_by.last_name) AS performed_by_name,
+                fd.department_name AS from_department_name,
+                td.department_name AS to_department_name
+            FROM stock_transactions st
+            INNER JOIN inventory_items ii ON ii.id = st.inventory_item_id
+            LEFT JOIN users performed_by ON performed_by.id = st.performed_by
+            LEFT JOIN departments fd ON fd.id = st.from_department_id
+            LEFT JOIN departments td ON td.id = st.to_department_id
+        ';
+
+        if ($where !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+
+        $sql .= ' ORDER BY st.created_at DESC, st.id DESC LIMIT ' . $limit;
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function listDepartmentLedger(int $departmentId, ?array $user = null, int $limit = 50): array
     {
         if ($departmentId <= 0 || ($user !== null && !$this->canViewDepartmentStock($departmentId, $user))) {

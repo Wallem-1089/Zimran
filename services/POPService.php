@@ -127,7 +127,7 @@ class POPService
             $where = ' WHERE pr.status = :status';
             $params[':status'] = $status;
         }
-        $stmt = $this->pdo->prepare($this->baseSelect() . $where . ' ORDER BY pr.created_at DESC, pr.id DESC');
+        $stmt = $this->pdo->prepare($this->baseSelect() . $where . " ORDER BY CASE WHEN pr.priority = 'Urgent' THEN 0 ELSE 1 END, pr.created_at ASC, pr.id ASC");
         $stmt->execute($params);
         return $this->filterRows($stmt->fetchAll(PDO::FETCH_ASSOC), $user);
     }
@@ -149,7 +149,12 @@ class POPService
 
     public function getRecord(int $requestId, ?array $user = null): ?array
     {
-        return $this->getRequestById($requestId, $user);
+        $row = $this->getRequestById($requestId, $user);
+        if (!$row || empty($row['record_id'])) {
+            return null;
+        }
+
+        return $row;
     }
 
     public function completeRequest(int $requestId, array $user): array

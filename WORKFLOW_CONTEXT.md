@@ -1330,6 +1330,20 @@ treated as the current workspace. Empty legacy `dashboard/`, `includes/`, and
 password is not implemented; administrator password reset is the current
 recovery workflow.
 
+The active Encounter Workspace keeps the Clinical Workspace tabs visible as
+the main working area. Long supporting areas above it, such as patient/context
+information, workflow actions/status, and the encounter timeline, are
+collapsible to reduce vertical page length. Patient Chart and Workspace tables
+use responsive wrappers and spaced action columns so Author, Updated, View,
+History, and Open Encounter actions remain visually separated.
+
+Medical Documents can be opened in the browser by authorized patient-context
+users. Downloading the file as an attachment is narrower: the user must be in
+the uploading department, have
+`download_cross_department_medical_documents`, or be Super Administrator.
+This lets staff view patient-context documents without broadly exporting files
+from departments they do not belong to.
+
 ## Super Administrator / Administrator workflow
 
 Super Administrator is the only role with full override access across clinical,
@@ -1338,3 +1352,14 @@ Administrator is for administration support: managing users, roles,
 permissions, settings/security, and viewing department worklists. Ordinary
 administrators do not automatically gain department clinical mutation rights or
 financial/stock mutation rights.
+
+## Configurable Extra Form Fields
+
+Administrators can use Administration -> Form Settings to activate optional
+extra fields for selected clinical forms. Supported targets are Nursing
+Assessment, Theatre Record, Admission Record, Dressing Record, DM Sheet, ECG
+Report, POP Procedure Record, and Physiotherapy Record. Enabled fields appear
+below the coded form fields as `Additional Configured Fields`; inactive fields
+remain hidden. These responses are linked to the patient, encounter, and source
+record and do not change core Nursing, billing, stock, patient identity, or
+encounter lifecycle fields.

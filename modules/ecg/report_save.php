@@ -25,8 +25,24 @@ if (!$permissionService->canUploadEcgChart($visit, $currentUser)) {
 }
 
 $result = $ecgService->saveReport($_POST, $currentUser, $_FILES['ecg_chart'] ?? null);
+if (($result['success'] ?? false) === true) {
+    $configuredResult = $configurableFormService->saveResponse(
+        'ecg_report',
+        (int)$request['patient_id'],
+        (int)$request['visit_id'],
+        'ECG Report',
+        $requestId,
+        $_POST,
+        $currentUser
+    );
+    if (($configuredResult['success'] ?? false) !== true) {
+        $_SESSION['old_configured_fields'] = $_POST['configured_fields'] ?? [];
+        $_SESSION['validation_errors'] = $configuredResult['errors'] ?? ['Unable to save configured form fields.'];
+        header('Location: report.php?id=' . $requestId);
+        exit;
+    }
+}
 ecgFlash($result, 'ECG chart and notes saved.');
 
 header('Location: report.php?id=' . $requestId);
 exit;
-

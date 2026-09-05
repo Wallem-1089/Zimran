@@ -7,6 +7,9 @@ if (!isset($pharmacyPrescription, $inventoryItems, $requestSource, $formAction, 
 }
 
 $selectedInventoryItemId = (int)($pharmacyPrescription['inventory_item_id'] ?? 0);
+$requestSourceNote ??= $requestSource === 'Direct'
+    ? 'Direct Pharmacy is for patients whose active encounter is currently in Pharmacy.'
+    : 'Clinical prescriptions are linked to this encounter without transferring ownership.';
 $enableWritingMode ??= isset($permissionService)
     && method_exists($permissionService, 'canUseConsultationHandwriting')
     && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
@@ -20,6 +23,12 @@ $enableWritingMode ??= isset($permissionService)
     <?php if (isset($pharmacyPrescription['id'])): ?>
         <input type="hidden" name="id" value="<?= (int)$pharmacyPrescription['id'] ?>">
     <?php endif; ?>
+
+    <div class="form-group">
+        <label>Prescription Source</label>
+        <div class="readonly-field"><?= e($requestSource) ?></div>
+        <p class="text-muted"><?= e($requestSourceNote) ?></p>
+    </div>
 
     <div class="form-group">
         <label for="inventory_item_id">Medication / Inventory Item</label>

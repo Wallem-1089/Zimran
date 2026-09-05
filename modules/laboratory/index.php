@@ -65,7 +65,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                                 <td><?= e((string)($row['visit_number'] ?? '-')) ?></td>
                                 <td><?= e((string)($row['tests_requested'] ?? '-')) ?></td>
                                 <td><?= e((string)($row['request_source'] ?? '-')) ?></td>
-                                <td><?= e((string)($row['priority'] ?? '-')) ?></td>
+                                <td><?php $priority = (string)($row['priority'] ?? '-'); ?><?php if ($priority === 'Urgent'): ?><span class="status-badge status-warning priority-badge">Urgent</span><?php else: ?><?= e($priority) ?><?php endif; ?></td>
                                 <td><?= e((string)($row['status'] ?? '-')) ?></td>
                                 <td><?= e((string)($row['requested_by_name'] ?? '-')) ?></td>
                                 <td><?= e((string)($row['created_at'] ?? '-')) ?></td>

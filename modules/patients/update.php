@@ -89,6 +89,8 @@ $patient = [
 
     'phone'             => trim($_POST['phone'] ?? ''),
 
+    'whatsapp_number'   => trim($_POST['whatsapp_number'] ?? ''),
+
     'email'             => trim($_POST['email'] ?? ''),
 
     'address'           => trim($_POST['address'] ?? ''),

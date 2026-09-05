@@ -6,6 +6,9 @@ $popRequest = $popRequest ?? [];
 $visitId = (int)($visit['id'] ?? $popRequest['visit_id'] ?? 0);
 $patientId = (int)($visit['patient_id'] ?? $popRequest['patient_id'] ?? 0);
 $requestSource = (string)($popRequest['request_source'] ?? $requestSource ?? 'Clinical');
+$requestSourceNote ??= $requestSource === 'Direct'
+    ? 'Direct POP is for patients whose active encounter is currently in POP.'
+    : 'Clinical requests are linked to this encounter without transferring ownership.';
 $enableWritingMode ??= isset($permissionService)
     && method_exists($permissionService, 'canUseConsultationHandwriting')
     && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
@@ -16,6 +19,12 @@ $enableWritingMode ??= isset($permissionService)
     <input type="hidden" name="visit_id" value="<?= $visitId ?>">
     <input type="hidden" name="patient_id" value="<?= $patientId ?>">
     <input type="hidden" name="request_source" value="<?= e($requestSource) ?>">
+
+    <div class="form-group">
+        <label>Request Source</label>
+        <div class="readonly-field"><?= e($requestSource) ?></div>
+        <p class="text-muted"><?= e($requestSourceNote) ?></p>
+    </div>
 
     <div class="form-grid">
         <div class="form-group">

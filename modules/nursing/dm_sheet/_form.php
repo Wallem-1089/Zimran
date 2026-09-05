@@ -6,6 +6,8 @@ $record ??= [];
 $action ??= 'save.php';
 $buttonLabel ??= 'Save DM Sheet Entry';
 $mealStatuses = $diabetesMonitoringService->getMealStatuses();
+$dmSheetConfiguredFields ??= [];
+$dmSheetConfiguredValues ??= [];
 $enableWritingMode ??= isset($permissionService)
     && method_exists($permissionService, 'canUseConsultationHandwriting')
     && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
@@ -48,6 +50,8 @@ $enableWritingMode ??= isset($permissionService)
         <?php hmsRenderHandwritingTextarea('symptoms', 'Symptoms', (string)($record['symptoms'] ?? ''), 4, false, $enableWritingMode); ?>
         <?php hmsRenderHandwritingTextarea('notes', 'Notes', (string)($record['notes'] ?? ''), 4, false, $enableWritingMode); ?>
     </div>
+
+    <?php hmsRenderConfiguredFields($dmSheetConfiguredFields, $dmSheetConfiguredValues); ?>
 
     <div class="form-actions">
         <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>

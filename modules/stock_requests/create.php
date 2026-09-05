@@ -12,8 +12,9 @@ if (!$permissionService->canCreateStockRequest($currentUser)) {
 
 $items = stockRequestInventoryItems($pdo);
 $departments = stockRequestDepartments($pdo);
-$canChooseDepartment = $permissionService->canReviewStockRequest($currentUser)
-    || $permissionService->isAdministrator($currentUser);
+$canChooseDepartment = $permissionService->isAdministrator($currentUser);
+$currentDepartmentId = (int)($currentUser['active_department_id'] ?? $currentUser['department_id'] ?? 0);
+$currentDepartmentName = (string)($currentUser['active_department_name'] ?? $currentUser['department_name'] ?? 'Your Department');
 $old = $_SESSION['old_stock_request'] ?? [];
 unset($_SESSION['old_stock_request']);
 $enableWritingMode = $permissionService->canUseConsultationHandwriting($currentUser);
@@ -45,6 +46,13 @@ require __DIR__ . '/../../layouts/sidebar.php';
                     <?php endforeach; ?>
                 </select>
             </label>
+        <?php else: ?>
+            <input type="hidden" name="requesting_department_id" value="<?= (int)$currentDepartmentId ?>">
+            <div class="form-group">
+                <label>Requesting Department</label>
+                <div class="readonly-field"><?= e($currentDepartmentName) ?></div>
+                <p class="text-muted">Stock requests are fixed to your department.</p>
+            </div>
         <?php endif; ?>
         <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Stock Request Entry Mode'); ?>
         <?php hmsRenderHandwritingTextarea('reason', 'Reason / Notes', (string)($old['reason'] ?? ''), 4, false, $enableWritingMode, 2000); ?>

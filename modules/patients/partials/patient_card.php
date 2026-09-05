@@ -128,6 +128,18 @@ if (!empty($patient['date_of_birth'])) {
 
             <div class="patient-item">
 
+                <strong>WhatsApp</strong>
+
+                <span>
+
+                    <?= e(($patient['whatsapp_number'] ?? '') ?: '-') ?>
+
+                </span>
+
+            </div>
+
+            <div class="patient-item">
+
                 <strong>Email</strong>
 
                 <span>

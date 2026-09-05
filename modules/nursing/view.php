@@ -18,6 +18,7 @@ $canComplete = $permissionService->canCompleteNursing($visit, $currentUser)
     && (string)($assessment['status'] ?? '') === 'Draft';
 $latestVitalSigns = $vitalSignsService ? $vitalSignsService->getLatestByVisit((int)$visit['id'], $currentUser) : null;
 $clinicalSafetySummary = nursingSafetySummary($clinicalSafetyService, (int)$visit['patient_id'], $currentUser, (int)$visit['id']);
+$nursingConfiguredDisplayValues = $configurableFormService->getResponseValues('nursing_assessment', 'Nursing Assessment', (int)$assessment['id']);
 
 $pageTitle = 'Nursing Assessment';
 $moduleStylesheet = '/modules/visits/assets/visits.css';

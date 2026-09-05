@@ -5,6 +5,8 @@ declare(strict_types=1);
 $dressingRecord ??= [];
 $action ??= 'save.php';
 $buttonLabel ??= 'Save Dressing Record';
+$dressingConfiguredFields ??= [];
+$dressingConfiguredValues ??= [];
 $enableWritingMode ??= isset($permissionService)
     && method_exists($permissionService, 'canUseConsultationHandwriting')
     && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
@@ -34,6 +36,8 @@ $enableWritingMode ??= isset($permissionService)
         <?php hmsRenderHandwritingTextarea('dressing_done', 'Dressing Done', (string)($dressingRecord['dressing_done'] ?? ''), 4, false, $enableWritingMode); ?>
         <?php hmsRenderHandwritingTextarea('supplies_used', 'Supplies Used', (string)($dressingRecord['supplies_used'] ?? ''), 3, false, $enableWritingMode); ?>
     </div>
+
+    <?php hmsRenderConfiguredFields($dressingConfiguredFields, $dressingConfiguredValues); ?>
 
     <div class="form-actions">
         <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>

@@ -498,6 +498,20 @@ sets `display_errors=0`, `display_startup_errors=0`, `log_errors=1`, and
 `error_log=storage/logs/php_errors.log` by default when `HMS_APP_ENV` is not
 set or is `production`.
 
+Medical Document regression should verify both access modes:
+
+- authorized users can open permitted documents in the browser;
+- users cannot attachment-download documents uploaded by another department
+  unless `download_cross_department_medical_documents` is granted;
+- same-department upload/download still works;
+- Super Administrator can download cross-department documents;
+- confidential document masking and audit logging still apply.
+
+UI regression should include Encounter Workspace Notes and Patient Chart
+Clinical Notes on desktop, tablet, and phone widths. Author, Updated, and
+action columns should remain visually separated, with table overflow handled
+by the responsive wrapper rather than crushed columns.
+
 Backup restore drills must restore a selected backup into a separate database,
 not the live application database. The 2026-08-26 drill restored
 `before_053_patient_stock_usage_20260825_115230.sql` into `hms_restore_test`,
@@ -518,3 +532,18 @@ to Super Administrator, the original admin account remaining ordinary System
 Administrator, Super Administrator full override behavior, ordinary
 administrator Administration access, all-department worklist access, and denial
 of inherited clinical mutation override for ordinary admin.
+
+## Configurable Form Fields
+
+Migration 070 regression should verify:
+
+- `form_definitions`, `form_fields`, `form_responses`, and
+  `form_response_values` exist.
+- Administration -> Form Settings loads for Super Administrator/System
+  Administrator.
+- Activating Nursing, Theatre, Admission, Dressing, DM Sheet, ECG, POP, or
+  Physiotherapy fields shows them under `Additional Configured Fields`.
+- Inactive fields remain hidden.
+- Create/update saves configured field responses for the source record.
+- View pages display saved configured field responses.
+- CSRF and parent-record permissions still apply.

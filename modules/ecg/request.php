@@ -13,9 +13,16 @@ if (!$visitId) {
 }
 
 $visit = ecgRequireVisit($visitService, $visitId);
-$requestSource = in_array($requestedSource, ['Clinical', 'Direct'], true)
-    ? $requestedSource
-    : ((string)($visit['department_name'] ?? '') === 'ECG' ? 'Direct' : 'Clinical');
+$isDirectEcgEncounter = (string)($visit['department_name'] ?? '') === 'ECG';
+$requestSourceNote = '';
+if ($requestedSource === 'Direct' && !$isDirectEcgEncounter) {
+    $requestSource = 'Clinical';
+    $requestSourceNote = 'Direct is only for active encounters currently in ECG. This request is being recorded as Clinical.';
+} elseif (in_array($requestedSource, ['Clinical', 'Direct'], true)) {
+    $requestSource = $requestedSource;
+} else {
+    $requestSource = $isDirectEcgEncounter ? 'Direct' : 'Clinical';
+}
 ecgRequireCreateAccess($permissionService, $visit, $currentUser, $requestSource);
 
 if (!$ecgTablesReady) {
@@ -35,6 +42,7 @@ $ecgRequest = $_SESSION['old_ecg_request'] ?? [
     'study_requested' => 'ECG',
     'clinical_indication' => ''
 ];
+$ecgRequest['request_source'] = $requestSource;
 unset($_SESSION['old_ecg_request']);
 
 $pageTitle = 'Create ECG Request';
@@ -82,4 +90,3 @@ require __DIR__ . '/../../layouts/sidebar.php';
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
-

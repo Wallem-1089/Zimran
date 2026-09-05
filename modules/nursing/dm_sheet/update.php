@@ -28,12 +28,28 @@ if (!$permissionService->canEditNursing($visit, $currentUser)) {
 
 $result = $diabetesMonitoringService->update($recordId, $_POST, $currentUser);
 if (($result['success'] ?? false) === true) {
+    $configuredResult = $configurableFormService->saveResponse(
+        'dm_sheet',
+        (int)$visit['patient_id'],
+        (int)$visit['id'],
+        'DM Sheet',
+        $recordId,
+        $_POST,
+        $currentUser
+    );
+    if (($configuredResult['success'] ?? false) !== true) {
+        $_SESSION['validation_errors'] = $configuredResult['errors'] ?? ['Unable to save configured form fields.'];
+        $_SESSION['old_configured_fields'] = $_POST['configured_fields'] ?? [];
+        header('Location: edit.php?id=' . $recordId);
+        exit;
+    }
     $_SESSION['success_message'] = 'DM Sheet entry updated.';
     header('Location: view.php?id=' . $recordId);
     exit;
 }
 
 $_SESSION['old_dm_sheet'] = $_POST;
+$_SESSION['old_configured_fields'] = $_POST['configured_fields'] ?? [];
 dmSheetFlash($result, 'DM Sheet entry updated.');
 header('Location: edit.php?id=' . $recordId);
 exit;

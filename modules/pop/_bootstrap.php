@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
+require_once __DIR__ . '/../../services/ConfigurableFormService.php';
 require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
 require_once __DIR__ . '/../../services/POPService.php';
@@ -65,5 +66,6 @@ function popRequestSourceLabel(string $source): string
 $visitService = new VisitService($pdo);
 $patientService = new PatientService($pdo);
 $permissionService = new PermissionService($pdo);
+$configurableFormService = new ConfigurableFormService($pdo, $permissionService);
 $popService = new POPService($pdo, null, null, $permissionService);
 $popTablesReady = popTableExists($pdo, 'pop_requests') && popTableExists($pdo, 'pop_records');

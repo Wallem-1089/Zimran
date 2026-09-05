@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/AuditService.php';
+require_once __DIR__ . '/../../services/ConfigurableFormService.php';
 require_once __DIR__ . '/../../services/PhysiotherapyService.php';
 require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
@@ -76,6 +77,7 @@ function physiotherapyRequestSourceLabel(string $source): string
 $visitService = new VisitService($pdo);
 $patientService = new PatientService($pdo);
 $permissionService = new PermissionService($pdo);
+$configurableFormService = new ConfigurableFormService($pdo, $permissionService);
 $physiotherapyService = new PhysiotherapyService($pdo, null, null, $permissionService);
 $physiotherapyTablesReady = physiotherapyTableExists($pdo, 'physiotherapy_records')
     && physiotherapyTableExists($pdo, 'physiotherapy_sessions');

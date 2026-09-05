@@ -7,6 +7,7 @@ $lastName = $patient['last_name'] ?? '';
 $hospitalNumber = $patient['hospital_number'] ?? '';
 $gender = $patient['gender'] ?? '';
 $phone = $patient['phone'] ?? '';
+$whatsappNumber = $patient['whatsapp_number'] ?? '';
 $dateOfBirth = $patient['date_of_birth'] ?? '';
 
 $age = '-';

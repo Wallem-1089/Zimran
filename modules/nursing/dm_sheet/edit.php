@@ -24,6 +24,12 @@ unset($_SESSION['old_dm_sheet']);
 if (is_array($old)) {
     $record = array_merge($record, $old);
 }
+$dmSheetConfiguredFields = $configurableFormService->listFields('dm_sheet', true);
+$dmSheetConfiguredValues = $configurableFormService->getResponseValueMap('dm_sheet', 'DM Sheet', (int)$record['id']);
+if (isset($_SESSION['old_configured_fields']) && is_array($_SESSION['old_configured_fields'])) {
+    $dmSheetConfiguredValues = $_SESSION['old_configured_fields'];
+    unset($_SESSION['old_configured_fields']);
+}
 $action = 'update.php';
 $buttonLabel = 'Update DM Sheet Entry';
 

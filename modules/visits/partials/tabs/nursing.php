@@ -95,6 +95,9 @@ $isClosedEncounter = in_array((string)($visit['visit_status'] ?? ''), ['Complete
                 <?php if ($canEditNursing && !$isClosedEncounter && (string)($assessment['status'] ?? '') === 'Draft'): ?>
                     <a href="../nursing/edit.php?id=<?= (int)$assessment['id'] ?>" class="btn-secondary">Edit Draft</a>
                 <?php endif; ?>
+                <?php if (!$isClosedEncounter && !empty($billingRequestsReady) && !empty($canCreateBillingRequest)): ?>
+                    <a href="../billing/request_create.php?visit=<?= (int)$visit['id'] ?>&source_module=Nursing&source_record_id=<?= (int)$assessment['id'] ?>&description=<?= rawurlencode('Nursing assessment') ?>" class="btn-secondary">Request Billing</a>
+                <?php endif; ?>
             </div>
         </div>
     <?php endif; ?>
@@ -256,6 +259,9 @@ $isClosedEncounter = in_array((string)($visit['visit_status'] ?? ''), ['Complete
                 <a href="../nursing/dressings/view.php?id=<?= (int)$latestDressingRecord['id'] ?>" class="btn-secondary">View Latest</a>
                 <?php if ($canEditNursing && !$isClosedEncounter): ?>
                     <a href="../nursing/dressings/edit.php?id=<?= (int)$latestDressingRecord['id'] ?>" class="btn-secondary">Edit Latest</a>
+                <?php endif; ?>
+                <?php if (!$isClosedEncounter && !empty($billingRequestsReady) && !empty($canCreateBillingRequest)): ?>
+                    <a href="../billing/request_create.php?visit=<?= (int)$visit['id'] ?>&source_module=Dressing&source_record_id=<?= (int)$latestDressingRecord['id'] ?>&description=<?= rawurlencode('Dressing: ' . (string)($latestDressingRecord['wound_site'] ?? '')) ?>" class="btn-secondary">Request Billing</a>
                 <?php endif; ?>
             </div>
         <?php endif; ?>

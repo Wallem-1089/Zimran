@@ -219,7 +219,9 @@ function isActiveTab(
 
             <div class="workspace-icon">
 
-                ECG
+                <svg class="workspace-svg-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M3 12h3l2-5 4 10 3-7 2 2h4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
 
             </div>
 
@@ -247,7 +249,10 @@ function isActiveTab(
 
             <div class="workspace-icon">
 
-                POP
+                <svg class="workspace-svg-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M8 6.5a3 3 0 0 1 4.24 0l.26.26.26-.26A3 3 0 0 1 17 10.74l-6.5 6.5-6.5-6.5A3 3 0 0 1 8 6.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                    <path d="M15 13.5l4.5 4.5M17.25 15.75l2.25-2.25M12.75 11.25l2.25-2.25" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
 
             </div>
 

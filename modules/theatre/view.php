@@ -22,6 +22,7 @@ $canComplete = (string)$theatre['status'] === 'Draft'
 $latestVitalSigns = $vitalSignsService
     ? $vitalSignsService->getLatestByVisit((int)$visit['id'], $currentUser)
     : null;
+$theatreConfiguredDisplayValues = $configurableFormService->getResponseValues('theatre_record', 'Theatre Record', (int)$theatre['id']);
 
 $pageTitle = 'Theatre Record';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -98,6 +99,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <p><?php hmsRenderNarrative((string)($theatre[$field] ?? '')); ?></p>
         </div>
     <?php endforeach; ?>
+    <?php hmsRenderConfiguredValues($theatreConfiguredDisplayValues); ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

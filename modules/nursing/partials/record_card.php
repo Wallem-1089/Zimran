@@ -30,3 +30,4 @@ if (!isset($latest) || !is_array($latest)) {
         <tr><th>Additional Notes</th><td><?php hmsRenderNarrative((string)($latest['additional_notes'] ?? '-')); ?></td></tr>
     </tbody>
 </table>
+<?php hmsRenderConfiguredValues($nursingConfiguredDisplayValues ?? []); ?>

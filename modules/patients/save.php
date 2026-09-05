@@ -13,6 +13,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 
 require_once __DIR__ . '/../../services/PatientService.php';
+require_once __DIR__ . '/../../services/PermissionService.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -77,6 +78,8 @@ $patient = [
 
     'phone' => trim($_POST['phone'] ?? ''),
 
+    'whatsapp_number' => trim($_POST['whatsapp_number'] ?? ''),
+
     'email' => trim($_POST['email'] ?? ''),
 
     'address' => trim($_POST['address'] ?? ''),
@@ -129,6 +132,13 @@ if (!$currentUser) {
 
     exit;
 
+}
+
+$permissionService = new PermissionService($pdo);
+
+if (!$permissionService->canRegisterPatient($currentUser)) {
+    http_response_code(403);
+    exit('You do not have permission to register patients.');
 }
 
 $registeredBy = (int)$currentUser['id'];

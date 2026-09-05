@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 require __DIR__ . '/_bootstrap.php';
 
+requireCsrfToken();
+
 $recordId = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT) ?: 0;
 if (!$recordId) {
     header('Location: index.php');
@@ -31,6 +33,23 @@ if (in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'],
 $result = $physiotherapyService->updateRecord($recordId, $_POST, $currentUser);
 if (($result['success'] ?? false) !== true) {
     $_SESSION['validation_errors'] = $result['errors'] ?? ['Unable to update physiotherapy record.'];
+    $_SESSION['old_configured_fields'] = $_POST['configured_fields'] ?? [];
+    header('Location: edit.php?id=' . $recordId);
+    exit;
+}
+
+$configuredResult = $configurableFormService->saveResponse(
+    'physiotherapy_record',
+    (int)$record['patient_id'],
+    (int)$record['visit_id'],
+    'Physiotherapy Record',
+    $recordId,
+    $_POST,
+    $currentUser
+);
+if (($configuredResult['success'] ?? false) !== true) {
+    $_SESSION['validation_errors'] = $configuredResult['errors'] ?? ['Unable to save configured form fields.'];
+    $_SESSION['old_configured_fields'] = $_POST['configured_fields'] ?? [];
     header('Location: edit.php?id=' . $recordId);
     exit;
 }

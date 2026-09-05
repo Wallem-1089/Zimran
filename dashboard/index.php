@@ -12,12 +12,23 @@ require_once __DIR__ . '/../services/PermissionService.php';
 $currentDate = date('l, d F Y');
 $permissionService = new PermissionService($pdo);
 $isAdministrator = $permissionService->isAdministrator($currentUser);
+$canRegisterPatient = $permissionService->canRegisterPatient($currentUser);
+$canCreateEncounter = $permissionService->hasPermission('create_encounter', $currentUser);
+$canViewReports = $permissionService->canViewReports($currentUser)
+    || $permissionService->canViewClinicalReports($currentUser)
+    || $permissionService->canViewFinancialReports($currentUser)
+    || $permissionService->canViewInventoryReports($currentUser);
 $activeDepartmentId = (int)($currentUser['active_department_id'] ?? $currentUser['department_id'] ?? 0);
 $activeDepartmentName = trim((string)($currentUser['active_department_name'] ?? $currentUser['department_name'] ?? 'Department'));
 $isStockRequestOnlyUser = !$isAdministrator
     && (
         (string)($currentUser['role_name'] ?? '') === 'Orderly'
         || $activeDepartmentName === 'Orderly'
+    );
+$isStockWorkflowDashboardUser = !$isAdministrator
+    && (
+        in_array((string)($currentUser['role_name'] ?? ''), ['Store Officer', 'Orderly'], true)
+        || in_array($activeDepartmentName, ['Store', 'Orderly'], true)
     );
 
 $todayPatients = (int)$pdo
@@ -58,6 +69,41 @@ if ((int)$pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table
     ");
     $pendingBillsStmt->execute([':department_id' => $activeDepartmentId]);
     $pendingBills = number_format((float)$pendingBillsStmt->fetchColumn(), 2);
+}
+
+$stockRequestsReady = (int)$pdo
+    ->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'stock_requests'")
+    ->fetchColumn() > 0;
+$pendingStockRequests = 0;
+$departmentStockItems = 0;
+
+if ($stockRequestsReady && $isStockWorkflowDashboardUser) {
+    $pendingStockSql = "
+        SELECT COUNT(*)
+        FROM stock_requests
+        WHERE status = 'Pending'
+    ";
+    $pendingStockParams = [];
+    if (strcasecmp($activeDepartmentName, 'Store') !== 0 && !$permissionService->canIssueStockRequests($currentUser)) {
+        $pendingStockSql .= ' AND requesting_department_id = :department_id';
+        $pendingStockParams[':department_id'] = $activeDepartmentId;
+    }
+    $pendingStockStmt = $pdo->prepare($pendingStockSql);
+    $pendingStockStmt->execute($pendingStockParams);
+    $pendingStockRequests = (int)$pendingStockStmt->fetchColumn();
+}
+
+if ($activeDepartmentId > 0
+    && (int)$pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'department_stock_balances'")->fetchColumn() > 0
+) {
+    $departmentStockStmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM department_stock_balances
+        WHERE department_id = :department_id
+          AND quantity > 0
+    ");
+    $departmentStockStmt->execute([':department_id' => $activeDepartmentId]);
+    $departmentStockItems = (int)$departmentStockStmt->fetchColumn();
 }
 
 $activeEncounterSql = "
@@ -110,7 +156,17 @@ require_once __DIR__ . '/../layouts/sidebar.php';
             <h2><?= (int)$todayPatients ?></h2>
         </div>
 
-        <?php if (!$isStockRequestOnlyUser): ?>
+        <?php if ($isStockWorkflowDashboardUser): ?>
+            <div class="card">
+                <h3>Pending Stock Requests</h3>
+                <h2><?= (int)$pendingStockRequests ?></h2>
+            </div>
+
+            <div class="card">
+                <h3><?= e($activeDepartmentName) ?> Stock Items</h3>
+                <h2><?= (int)$departmentStockItems ?></h2>
+            </div>
+        <?php else: ?>
 
         <div class="card">
             <h3><?= $isAdministrator ? 'Active Encounters' : e($activeDepartmentName) . ' Active Encounters' ?></h3>
@@ -126,28 +182,36 @@ require_once __DIR__ . '/../layouts/sidebar.php';
             <h3><?= e($activeDepartmentName) ?> Pending Bills</h3>
             <h2>₦<?= e($pendingBills) ?></h2>
         </div>
-    </section>
-
         <?php endif; ?>
+    </section>
 
     <section class="quick-actions">
         <h2>Quick Actions</h2>
 
         <div class="actions">
-            <?php if ($isStockRequestOnlyUser): ?>
+            <?php if ($isStockWorkflowDashboardUser): ?>
                 <a href="../modules/stock_requests/index.php">Stock Requests</a>
                 <a href="../modules/stock_requests/create.php">New Stock Request</a>
                 <a href="../modules/stock_requests/my_department_stock.php">My Department Stock</a>
+                <?php if ($permissionService->canViewInventory($currentUser)): ?>
+                    <a href="../modules/store/index.php">Store Inventory</a>
+                <?php endif; ?>
             <?php else: ?>
-                <a href="../modules/patients/register.php">Register Patient</a>
-                <a href="../modules/visits/create.php">New Encounter</a>
+                <?php if ($canRegisterPatient): ?>
+                    <a href="../modules/patients/register.php">Register Patient</a>
+                <?php endif; ?>
+                <?php if ($canCreateEncounter): ?>
+                    <a href="../modules/visits/create.php">New Encounter</a>
+                <?php endif; ?>
                 <a href="../modules/patients/search.php">Find Encounter</a>
-                <a href="../modules/reports/index.php">Reports</a>
+                <?php if ($canViewReports): ?>
+                    <a href="../modules/reports/index.php">Reports</a>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </section>
 
-    <?php if (!$isStockRequestOnlyUser): ?>
+    <?php if (!$isStockWorkflowDashboardUser): ?>
 
     <section class="card">
         <h2>Current Working Encounters</h2>
@@ -206,7 +270,7 @@ require_once __DIR__ . '/../layouts/sidebar.php';
                 </tr>
             </thead>
             <tbody>
-                <?php foreach (['Reception', 'Records', 'Doctors', 'Nursing', 'Laboratory', 'Radiology', 'Pharmacy', 'Accounts', 'Theatre', 'Store'] as $department): ?>
+                <?php foreach (['Reception', 'Records', 'Doctors', 'Nursing', 'Laboratory', 'X-Ray / Radiology', 'ECG', 'POP', 'Physiotherapy', 'Theatre', 'Pharmacy', 'Accounts', 'Store', 'Orderly'] as $department): ?>
                     <tr>
                         <td><?= e($department) ?></td>
                         <td>Ready</td>

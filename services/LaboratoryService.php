@@ -167,7 +167,7 @@ class LaboratoryService
             $params[':status'] = $status;
         }
 
-        $stmt = $this->pdo->prepare($this->baseSelect() . $where . ' ORDER BY lr.created_at DESC, lr.id DESC');
+        $stmt = $this->pdo->prepare($this->baseSelect() . $where . ' ORDER BY CASE WHEN lr.priority = \'Urgent\' THEN 0 ELSE 1 END, lr.created_at ASC, lr.id ASC');
         $stmt->execute($params);
         return $this->filterRows($stmt->fetchAll(PDO::FETCH_ASSOC), $user);
     }
@@ -210,6 +210,10 @@ class LaboratoryService
         }
 
         if ($user !== null && !$this->canViewRow($row, $user)) {
+            return null;
+        }
+
+        if (empty($row['result_id'])) {
             return null;
         }
 
@@ -467,7 +471,6 @@ class LaboratoryService
             if (!$this->permissionService->canCreateLaboratoryRequest($visit, $user, 'Direct')) {
                 $errors[] = 'You cannot create a direct laboratory request.';
             }
-
             if (!$this->isLaboratoryEncounter($visit)) {
                 $errors[] = 'Direct laboratory requests require an active Laboratory encounter.';
             }

@@ -22,6 +22,22 @@ if (!$permissionService->canCreateNursing($visit, $currentUser)) {
 
 $result = $nursingService->create($_POST, $currentUser);
 if (($result['success'] ?? false) === true) {
+    $configuredResult = $configurableFormService->saveResponse(
+        'nursing_assessment',
+        (int)$visit['patient_id'],
+        (int)$visit['id'],
+        'Nursing Assessment',
+        (int)$result['nursing_assessment_id'],
+        $_POST,
+        $currentUser
+    );
+    if (($configuredResult['success'] ?? false) !== true) {
+        $_SESSION['validation_errors'] = $configuredResult['errors'] ?? ['Unable to save configured form fields.'];
+        $_SESSION['old_nursing_assessment'] = $_POST;
+        $_SESSION['old_configured_fields'] = $_POST['configured_fields'] ?? [];
+        header('Location: edit.php?id=' . (int)$result['nursing_assessment_id']);
+        exit;
+    }
     $_SESSION['success_message'] = 'Nursing assessment saved.';
     header('Location: view.php?id=' . (int)$result['nursing_assessment_id']);
     exit;
@@ -29,6 +45,7 @@ if (($result['success'] ?? false) === true) {
 
 $_SESSION['validation_errors'] = $result['errors'] ?? ['Unable to save nursing assessment.'];
 $_SESSION['old_nursing_assessment'] = $_POST;
+$_SESSION['old_configured_fields'] = $_POST['configured_fields'] ?? [];
 $_SESSION['error_message'] = 'Unable to save nursing assessment.';
 header('Location: create.php?visit=' . $visitId);
 exit;

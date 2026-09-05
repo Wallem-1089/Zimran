@@ -13,9 +13,16 @@ if (!$visitId) {
 }
 
 $visit = physiotherapyRequireVisit($visitService, $visitId);
-$recordSource = in_array($requestedSource, ['Clinical', 'Direct'], true)
-    ? $requestedSource
-    : (in_array((string)($visit['department_name'] ?? ''), ['Physiotherapy', 'Physio', 'Rehabilitation'], true) ? 'Direct' : 'Clinical');
+$isDirectPhysiotherapyEncounter = in_array((string)($visit['department_name'] ?? ''), ['Physiotherapy', 'Physio', 'Rehabilitation'], true);
+$recordSourceNote = '';
+if ($requestedSource === 'Direct' && !$isDirectPhysiotherapyEncounter) {
+    $recordSource = 'Clinical';
+    $recordSourceNote = 'Direct is only for active encounters currently in Physiotherapy. This record is being created as Clinical.';
+} elseif (in_array($requestedSource, ['Clinical', 'Direct'], true)) {
+    $recordSource = $requestedSource;
+} else {
+    $recordSource = $isDirectPhysiotherapyEncounter ? 'Direct' : 'Clinical';
+}
 physiotherapyRequireAccess($permissionService, $visit, $currentUser, $recordSource);
 
 if (!$physiotherapyTablesReady) {
@@ -39,7 +46,11 @@ $physiotherapyRecord = $_SESSION['old_physiotherapy_request'] ?? [
     'goals' => '',
     'precautions' => '',
 ];
+$physiotherapyRecord['record_source'] = $recordSource;
 unset($_SESSION['old_physiotherapy_request']);
+$physiotherapyConfiguredFields = $configurableFormService->listFields('physiotherapy_record', true);
+$physiotherapyConfiguredValues = $_SESSION['old_configured_fields'] ?? [];
+unset($_SESSION['old_configured_fields']);
 
 $existingRecords = $physiotherapyService->listByVisit($visitId, $currentUser);
 $pageTitle = 'Create Physiotherapy Record';

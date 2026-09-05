@@ -29,6 +29,12 @@ if (!$permissionService->canEditTheatre($visit, $currentUser)) {
 $latestVitalSigns = $vitalSignsService
     ? $vitalSignsService->getLatestByVisit((int)$visit['id'], $currentUser)
     : null;
+$theatreConfiguredFields = $configurableFormService->listFields('theatre_record', true);
+$theatreConfiguredValues = $configurableFormService->getResponseValueMap('theatre_record', 'Theatre Record', (int)$theatre['id']);
+if (isset($_SESSION['old_configured_fields']) && is_array($_SESSION['old_configured_fields'])) {
+    $theatreConfiguredValues = $_SESSION['old_configured_fields'];
+    unset($_SESSION['old_configured_fields']);
+}
 
 $pageTitle = 'Edit Theatre Record';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -68,4 +74,3 @@ require __DIR__ . '/../../layouts/sidebar.php';
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
-

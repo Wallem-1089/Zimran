@@ -6,7 +6,13 @@ require __DIR__ . '/_bootstrap.php';
 $document = documentForUser($medicalDocumentService, (int)($_GET['id'] ?? 0), $currentUser);
 $patient = $patientService->getPatientById((int)$document['patient_id']);
 $visitId = documentVisitContext($pdo, $permissionService, $currentUser, (int)$document['patient_id'], $_GET['visit'] ?? $document['visit_id'] ?? null);
-$canDownload = $permissionService->canDownloadMedicalDocuments((int)$document['patient_id'], $currentUser);
+$canOpenDocument = $permissionService->canDownloadMedicalDocuments((int)$document['patient_id'], $currentUser);
+$canDownloadFile = method_exists($permissionService, 'canDownloadMedicalDocumentFile')
+    && $permissionService->canDownloadMedicalDocumentFile(
+        (int)$document['patient_id'],
+        isset($document['department_id']) ? (int)$document['department_id'] : null,
+        $currentUser
+    );
 $canReplace = $permissionService->canReplaceMedicalDocuments((int)$document['patient_id'], $currentUser);
 $canArchive = $permissionService->canArchiveMedicalDocuments((int)$document['patient_id'], $currentUser);
 $canHistory = $permissionService->canViewDocumentHistory((int)$document['patient_id'], $currentUser);
@@ -29,9 +35,13 @@ require __DIR__ . '/../../../layouts/sidebar.php';
 </div>
 <?php if (!empty($document['description'])): ?><div class="card"><h2>Description</h2><p><?= nl2br(e($document['description'])) ?></p></div><?php endif; ?>
 <div class="card"><h2>Actions</h2>
-<?php if ($canDownload && $document['document_status'] !== 'Entered-in-error'): ?>
+<?php if ($canOpenDocument && $document['document_status'] !== 'Entered-in-error'): ?>
 <a class="btn-primary" href="download.php?id=<?= (int)$document['id'] ?>&disposition=inline" target="_blank" rel="noopener">Open in Browser</a>
+<?php endif; ?>
+<?php if ($canDownloadFile && $document['document_status'] !== 'Entered-in-error'): ?>
 <a class="btn-secondary" href="download.php?id=<?= (int)$document['id'] ?>&disposition=attachment">Download current version</a>
+<?php elseif ($canOpenDocument && $document['document_status'] !== 'Entered-in-error'): ?>
+<p class="text-muted">Download is restricted to the uploading department unless cross-department download permission is granted.</p>
 <?php endif; ?>
 <?php if ($canReplace && $document['document_status'] === 'Active'): ?><a class="btn-secondary" href="replace.php?id=<?= (int)$document['id'] ?><?= e(documentContextQuery($visitId)) ?>">Replace</a><?php endif; ?>
 <?php if ($canHistory): ?><a class="btn-secondary" href="versions.php?id=<?= (int)$document['id'] ?>">Version history</a><?php endif; ?>
@@ -40,7 +50,7 @@ require __DIR__ . '/../../../layouts/sidebar.php';
 <form class="inline-form" method="post" action="<?= e($action) ?>.php"><?= csrfField() ?><input type="hidden" name="id" value="<?= (int)$document['id'] ?>"><input type="hidden" name="version" value="<?= (int)$document['version'] ?>"><input required name="reason" maxlength="1000" placeholder="Reason"><button class="btn-secondary" type="submit"><?= e($label) ?></button></form>
 <?php endforeach; endif; ?>
 </div>
-<?php if ($canDownload && $document['document_status'] !== 'Entered-in-error'): ?>
+<?php if ($canDownloadFile && $document['document_status'] !== 'Entered-in-error'): ?>
 <div class="card whatsapp-handoff-card">
     <div class="whatsapp-handoff-header">
         <div>

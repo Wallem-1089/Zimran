@@ -765,6 +765,88 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 HTML;
 }
+
+function hmsRenderConfiguredFields(array $fields, array $values = []): void
+{
+    if ($fields === []) {
+        return;
+    }
+
+    echo '<div class="form-section">';
+    echo '<h3>Additional Configured Fields</h3>';
+    echo '<p class="text-muted">These optional fields are controlled from Administration &rarr; Form Settings.</p>';
+    echo '<div class="form-grid">';
+
+    foreach ($fields as $field) {
+        $fieldKey = (string)($field['field_key'] ?? '');
+        if ($fieldKey === '') {
+            continue;
+        }
+
+        $fieldName = 'configured_fields[' . $fieldKey . ']';
+        $fieldId = 'configured_' . (preg_replace('/[^a-zA-Z0-9_-]+/', '_', $fieldKey) ?: $fieldKey);
+        $fieldLabel = (string)($field['field_label'] ?? $fieldKey);
+        $fieldType = (string)($field['field_type'] ?? 'text');
+        $fieldValue = (string)($values[$fieldKey] ?? '');
+        $requiredAttribute = !empty($field['is_required']) ? ' required' : '';
+        $options = [];
+        if (!empty($field['options_json'])) {
+            $decoded = json_decode((string)$field['options_json'], true);
+            $options = is_array($decoded) ? $decoded : [];
+        }
+
+        echo '<div class="form-group">';
+        echo '<label for="' . e($fieldId) . '">' . e($fieldLabel) . '</label>';
+
+        if ($fieldType === 'textarea') {
+            echo '<textarea id="' . e($fieldId) . '" name="' . e($fieldName) . '" rows="4"' . $requiredAttribute . '>' . e($fieldValue) . '</textarea>';
+        } elseif ($fieldType === 'number') {
+            echo '<input id="' . e($fieldId) . '" name="' . e($fieldName) . '" type="number" step="any" value="' . e($fieldValue) . '"' . $requiredAttribute . '>';
+        } elseif ($fieldType === 'date') {
+            echo '<input id="' . e($fieldId) . '" name="' . e($fieldName) . '" type="date" value="' . e($fieldValue) . '"' . $requiredAttribute . '>';
+        } elseif ($fieldType === 'select') {
+            echo '<select id="' . e($fieldId) . '" name="' . e($fieldName) . '"' . $requiredAttribute . '>';
+            echo '<option value="">Select ' . e($fieldLabel) . '</option>';
+            foreach ($options as $option) {
+                $option = (string)$option;
+                echo '<option value="' . e($option) . '"' . ($fieldValue === $option ? ' selected' : '') . '>' . e($option) . '</option>';
+            }
+            echo '</select>';
+        } elseif ($fieldType === 'checkbox') {
+            echo '<label class="checkbox-inline"><input id="' . e($fieldId) . '" name="' . e($fieldName) . '" type="checkbox" value="1"' . ($fieldValue === 'Yes' ? ' checked' : '') . '> Yes</label>';
+        } elseif ($fieldType === 'yes_no') {
+            echo '<select id="' . e($fieldId) . '" name="' . e($fieldName) . '"' . $requiredAttribute . '>';
+            echo '<option value="">Select</option>';
+            echo '<option value="Yes"' . ($fieldValue === 'Yes' ? ' selected' : '') . '>Yes</option>';
+            echo '<option value="No"' . ($fieldValue === 'No' ? ' selected' : '') . '>No</option>';
+            echo '</select>';
+        } else {
+            echo '<input id="' . e($fieldId) . '" name="' . e($fieldName) . '" type="text" value="' . e($fieldValue) . '"' . $requiredAttribute . '>';
+        }
+
+        echo '</div>';
+    }
+
+    echo '</div></div>';
+}
+
+function hmsRenderConfiguredValues(array $values): void
+{
+    if ($values === []) {
+        return;
+    }
+
+    echo '<div class="card">';
+    echo '<h3>Additional Configured Fields</h3>';
+    echo '<table><tbody>';
+    foreach ($values as $value) {
+        echo '<tr><th>' . e((string)($value['field_label'] ?? $value['field_key'] ?? 'Configured Field')) . '</th><td>';
+        hmsRenderNarrative((string)($value['value_text'] ?? '-'));
+        echo '</td></tr>';
+    }
+    echo '</tbody></table>';
+    echo '</div>';
+}
 function field(
     string $name,
     array $patient,

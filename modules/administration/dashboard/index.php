@@ -26,6 +26,9 @@ require_once __DIR__ . '/../../../layouts/sidebar.php';
         <p><a class="btn-primary" href="../security/dashboard.php">Security Dashboard</a></p>
         <p><a class="btn-primary" href="../security/database_backup.php">Database Safety / Backup Database</a></p>
         <p><a class="btn-primary" href="../settings/index.php">System Settings</a></p>
+        <?php if ($permissionService->canManageConfigurableForms($currentUser)): ?>
+            <p><a class="btn-primary" href="../form_settings/index.php">Form Settings</a></p>
+        <?php endif; ?>
         <p>Total departments: <?= count($departments) ?> | Active: <?= $activeDepartments ?> | Inactive: <?= count($departments) - $activeDepartments ?></p>
 
         <h3>Department Summary</h3>

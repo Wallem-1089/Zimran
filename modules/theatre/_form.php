@@ -5,6 +5,8 @@ declare(strict_types=1);
 if (!isset($theatre)) {
     $theatre = [];
 }
+$theatreConfiguredFields ??= [];
+$theatreConfiguredValues ??= [];
 $enableWritingMode ??= isset($permissionService)
     && method_exists($permissionService, 'canUseConsultationHandwriting')
     && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
@@ -56,6 +58,8 @@ $fields = [
             <?php endif; ?>
         <?php endforeach; ?>
     </div>
+
+    <?php hmsRenderConfiguredFields($theatreConfiguredFields, $theatreConfiguredValues); ?>
 
     <div class="form-actions">
         <button type="submit" class="btn-primary"><?= e($buttonLabel ?? 'Save Theatre Record') ?></button>

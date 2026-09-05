@@ -8,6 +8,28 @@ if (!isset($visit, $patient)) {
 
 $workspaceConsultation = $consultation ?? null;
 $consultationStatus = $workspaceConsultation['status'] ?? 'Not Started';
+$isClosedEncounter = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
+$canCreateClinicalLaboratoryRequest = isset($permissionService)
+    && ($laboratoryTablesReady ?? false)
+    && $permissionService->canCreateLaboratoryRequest($visit, $currentUser, 'Clinical');
+$canCreateClinicalRadiologyRequest = isset($permissionService)
+    && ($radiologyTablesReady ?? false)
+    && $permissionService->canCreateRadiologyRequest($visit, $currentUser, 'Clinical');
+$canCreateClinicalEcgRequest = isset($permissionService)
+    && ($ecgTablesReady ?? false)
+    && $permissionService->canCreateEcgRequest($visit, $currentUser, 'Clinical');
+$canCreateClinicalPopRequest = isset($permissionService)
+    && ($popTablesReady ?? false)
+    && $permissionService->canCreatePopRequest($visit, $currentUser, 'Clinical');
+$canCreateClinicalPhysiotherapyRequest = isset($permissionService)
+    && ($physiotherapyTablesReady ?? false)
+    && $permissionService->canCreatePhysiotherapyRequest($visit, $currentUser, 'Clinical');
+$canStartClinicalTheatreRecord = isset($permissionService)
+    && ($theatreTablesReady ?? false)
+    && $permissionService->canCreateTheatre($visit, $currentUser);
+$canCreateClinicalPrescription = isset($permissionService)
+    && ($pharmacyTablesReady ?? false)
+    && $permissionService->canCreatePrescription($visit, $currentUser, 'Clinical');
 ?>
 
 <section id="tab-consultation" class="workspace-tab">
@@ -27,9 +49,56 @@ $consultationStatus = $workspaceConsultation['status'] ?? 'Not Started';
                     <?php if ((string)$workspaceConsultation['status'] === 'Draft' && $canEditConsultation): ?>
                         <a href="../consultation/edit.php?id=<?= (int)$workspaceConsultation['id'] ?>" class="btn-primary">Continue/Edit</a>
                     <?php endif; ?>
+                    <?php if (!$isClosedEncounter && !empty($billingRequestsReady) && !empty($canCreateBillingRequest)): ?>
+                        <a href="../billing/request_create.php?visit=<?= (int)$visit['id'] ?>&source_module=Consultation&source_record_id=<?= (int)$workspaceConsultation['id'] ?>&description=<?= rawurlencode('Consultation') ?>" class="btn-secondary">Request Billing</a>
+                    <?php endif; ?>
                 <?php endif; ?>
-            </div>
+        </div>
     </div>
+
+    <?php if (!$isClosedEncounter && (
+        $canCreateClinicalLaboratoryRequest
+        || $canCreateClinicalRadiologyRequest
+        || $canCreateClinicalEcgRequest
+        || $canCreateClinicalPopRequest
+        || $canCreateClinicalPhysiotherapyRequest
+        || $canStartClinicalTheatreRecord
+        || $canCreateClinicalPrescription
+    )): ?>
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h3>Clinical Requests &amp; Orders</h3>
+                    <p>Create patient-specific requests from the Consultation context. Processing remains with the receiving department.</p>
+                </div>
+                <div class="form-actions">
+                    <?php if ($canCreateClinicalLaboratoryRequest): ?>
+                        <a class="btn-secondary" href="../laboratory/create.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request Laboratory</a>
+                    <?php endif; ?>
+                    <?php if ($canCreateClinicalRadiologyRequest): ?>
+                        <a class="btn-secondary" href="../radiology/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request X-Ray / Radiology</a>
+                    <?php endif; ?>
+                    <?php if ($canCreateClinicalEcgRequest): ?>
+                        <a class="btn-secondary" href="../ecg/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request ECG</a>
+                    <?php endif; ?>
+                    <?php if ($canCreateClinicalPopRequest): ?>
+                        <a class="btn-secondary" href="../pop/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request POP / Casting</a>
+                    <?php endif; ?>
+                    <?php if ($canCreateClinicalPhysiotherapyRequest): ?>
+                        <a class="btn-secondary" href="../physiotherapy/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Refer Physiotherapy</a>
+                    <?php endif; ?>
+                    <?php if ($canStartClinicalTheatreRecord): ?>
+                        <a class="btn-secondary" href="<?= !empty($latestTheatreRecord) ? '../theatre/view.php?id=' . (int)$latestTheatreRecord['id'] : '../theatre/create.php?visit=' . (int)$visit['id'] ?>">
+                            <?= !empty($latestTheatreRecord) ? 'Open Theatre Record' : 'Start Theatre Record' ?>
+                        </a>
+                    <?php endif; ?>
+                    <?php if ($canCreateClinicalPrescription): ?>
+                        <a class="btn-primary" href="../pharmacy/prescribe.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Create Prescription</a>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
 
     <?php if (isset($canViewVitalSigns) && !$canViewVitalSigns): ?>
         <div class="card alert-warning">

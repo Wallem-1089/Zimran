@@ -104,6 +104,9 @@ $requestSource = $physiotherapyRequestSource ?? 'Clinical';
                         <button type="submit" class="btn-secondary">Complete</button>
                     </form>
                 <?php endif; ?>
+                <?php if (!$isClosedEncounter && !empty($billingRequestsReady) && !empty($canCreateBillingRequest)): ?>
+                    <a href="../billing/request_create.php?visit=<?= (int)$visit['id'] ?>&source_module=Physiotherapy&source_record_id=<?= (int)$record['id'] ?>&description=<?= rawurlencode('Physiotherapy: ' . (string)($record['presenting_problem'] ?? '')) ?>" class="btn-secondary">Request Billing</a>
+                <?php endif; ?>
             </div>
         </div>
 

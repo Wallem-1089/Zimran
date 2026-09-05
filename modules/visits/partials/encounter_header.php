@@ -383,6 +383,7 @@ $isClosedEncounter = in_array(
 
     </p>
 
+    <?php if (!empty($canReceiveCurrentEncounter)) : ?>
     <a
 
         href="receive.php?visit=<?= (int)$visit['id'] ?>"
@@ -392,6 +393,9 @@ $isClosedEncounter = in_array(
         Receive Patient
 
     </a>
+    <?php else : ?>
+        <p class="text-muted">Only the receiving department can receive this encounter.</p>
+    <?php endif; ?>
 
 </div>
 

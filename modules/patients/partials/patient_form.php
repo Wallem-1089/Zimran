@@ -154,6 +154,16 @@ $supportedGenders = PatientService::supportedGenders();
 
         <div class="form-group">
 
+            <label for="whatsapp_number">WhatsApp Number</label>
+
+            <input type="tel" id="whatsapp_number" name="whatsapp_number" maxlength="20"
+                value="<?= field('whatsapp_number', $patient) ?>">
+            <small class="text-muted">Used for WhatsApp handoff when available; normal phone is used as fallback.</small>
+
+        </div>
+
+        <div class="form-group">
+
             <label for="email">Email Address</label>
 
             <input type="email" id="email" name="email" maxlength="150"

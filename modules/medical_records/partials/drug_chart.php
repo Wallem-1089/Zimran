@@ -1,6 +1,8 @@
 <?php
 
 declare(strict_types=1);
+
+$medicationAdministrationPreviewRows = array_slice($medicationAdministrationHistory ?? [], 0, 10);
 ?>
 <section class="card">
     <div class="section-heading">
@@ -17,6 +19,9 @@ declare(strict_types=1);
     <?php if (empty($medicationAdministrationHistory)): ?>
         <p class="text-muted">No drug chart entries found.</p>
     <?php else: ?>
+        <?php if (count($medicationAdministrationHistory) > count($medicationAdministrationPreviewRows)): ?>
+            <p class="text-muted">Showing latest <?= count($medicationAdministrationPreviewRows) ?> of <?= count($medicationAdministrationHistory) ?> drug chart entries. Open full history to see all entries.</p>
+        <?php endif; ?>
         <div class="summary-grid">
             <div class="summary-item"><span class="summary-label">Latest Medication</span> <span class="summary-value"><?= e((string)($latestMedicationAdministrationRecord['medication_name'] ?? '-')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Latest Time</span> <span class="summary-value"><?= e((string)($latestMedicationAdministrationRecord['scheduled_time'] ?? '-')) ?></span></div>
@@ -39,7 +44,7 @@ declare(strict_types=1);
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($medicationAdministrationHistory as $record): ?>
+                    <?php foreach ($medicationAdministrationPreviewRows as $record): ?>
                         <tr>
                             <td><?= e((string)$record['scheduled_time']) ?></td>
                             <td><?= e((string)($record['visit_number'] ?? ('#' . (int)$record['visit_id']))) ?></td>

@@ -11,6 +11,15 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/PatientService.php';
+require_once __DIR__ . '/../../services/PermissionService.php';
+
+$permissionService = new PermissionService($GLOBALS['pdo'] ?? $pdo);
+$currentUser = $currentUser ?? ($_SESSION['user'] ?? null);
+
+if (!$permissionService->canRegisterPatient($currentUser)) {
+    http_response_code(403);
+    exit('You do not have permission to register patients.');
+}
 
 /*
 |--------------------------------------------------------------------------

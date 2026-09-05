@@ -56,6 +56,10 @@ if (!empty($canViewPatientStockUsage)) {
     $chartTabs['stock_usage'] = 'Stock Used';
 }
 
+if (!empty($canViewPatientCommunications)) {
+    $chartTabs['communications'] = 'Communications';
+}
+
 if ($canViewAudit) {
     $chartTabs['audit'] = 'Audit History';
 }

@@ -40,6 +40,7 @@ $canCancelBillingRequest = $permissionService->canCancelBillingRequest($currentU
 $canCreateInvoice = $permissionService->canCreateInvoice($currentUser);
 $canRecordPayment = $permissionService->canRecordPayment($currentUser);
 $canViewReceipts = $permissionService->canViewReceipts($currentUser);
+$billingShowFullHistory = (string)($_GET['history'] ?? '') === 'full';
 $patient = [
     'id' => (int)($visit['patient_id'] ?? 0),
     'hospital_number' => (string)($visit['hospital_number'] ?? ''),

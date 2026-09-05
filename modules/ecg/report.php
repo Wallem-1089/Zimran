@@ -50,6 +50,12 @@ if (!$patient) {
 
 $action = $hasReport ? 'report_update.php' : 'report_save.php';
 $buttonLabel = $hasReport ? 'Update ECG Chart/Notes' : 'Save ECG Chart/Notes';
+$ecgConfiguredFields = $configurableFormService->listFields('ecg_report', true);
+$ecgConfiguredValues = $configurableFormService->getResponseValueMap('ecg_report', 'ECG Report', $requestId);
+if (isset($_SESSION['old_configured_fields']) && is_array($_SESSION['old_configured_fields'])) {
+    $ecgConfiguredValues = $_SESSION['old_configured_fields'];
+    unset($_SESSION['old_configured_fields']);
+}
 
 $pageTitle = 'ECG Chart and Notes';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -111,6 +117,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?php hmsRenderHandwritingToolbar($enableWritingMode, 'ECG Notes Entry Mode'); ?>
         <?php hmsRenderHandwritingTextarea('notes', 'ECG Notes', (string)($report['notes'] ?? ''), 7, false, $enableWritingMode); ?>
         <?php hmsRenderHandwritingTextarea('remarks', 'Remarks', (string)($report['remarks'] ?? ''), 5, false, $enableWritingMode); ?>
+        <?php hmsRenderConfiguredFields($ecgConfiguredFields, $ecgConfiguredValues); ?>
 
         <div class="form-actions">
             <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>

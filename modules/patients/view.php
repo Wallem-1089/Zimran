@@ -47,6 +47,8 @@ $canViewMedicalRecord = $permissionService->canViewMedicalRecord(
     $id,
     $currentUser
 );
+$canViewBilling = $permissionService->canViewBilling($currentUser);
+$canViewLaboratory = $permissionService->canViewLaboratory($id, $currentUser);
 $canDeletePatient = $permissionService->canDeletePatient(
     $id,
     $currentUser
@@ -60,6 +62,8 @@ if ($isDeletedPatient && !$permissionService->canViewDeletedPatient($currentUser
 
 if ($isDeletedPatient) {
     $canViewMedicalRecord = false;
+    $canViewBilling = false;
+    $canViewLaboratory = false;
 }
 
 require_once __DIR__ . '/../../layouts/header.php';
@@ -325,6 +329,18 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
         <div class="review-value">
 
             <?= e((string)($patient['phone'] ?? '')) ?>
+
+        </div>
+
+    </div>
+
+    <div class="review-item">
+
+        <div class="review-label">WhatsApp Number</div>
+
+        <div class="review-value">
+
+            <?= e((string)($patient['whatsapp_number'] ?? '')) ?>
 
         </div>
 

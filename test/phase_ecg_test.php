@@ -97,6 +97,22 @@ function ecgCreateEncounter(PDO $pdo, array $actor, int $patientId, int $departm
     return (int)$pdo->lastInsertId();
 }
 
+function routeEcgEncounter(PDO $pdo, int $visitId, array $departmentUser): void
+{
+    $stmt = $pdo->prepare("
+        UPDATE visits
+        SET current_department_id = :department_id,
+            current_department_received_status = 'Received',
+            visit_status = 'ECG',
+            updated_at = NOW()
+        WHERE id = :visit_id
+    ");
+    $stmt->execute([
+        ':department_id' => (int)$departmentUser['department_id'],
+        ':visit_id' => $visitId,
+    ]);
+}
+
 function ecgWorklistContains(array $rows, int $requestId): bool
 {
     foreach ($rows as $row) {
@@ -167,6 +183,7 @@ if (!ecgWorklistContains($worklist, $clinicalRequestId)) {
 }
 assertEcg(ecgWorklistContains($worklist, $clinicalRequestId), 'ECG worklist did not show the clinical request.');
 
+routeEcgEncounter($pdo, $clinicalVisitId, $ecgTech);
 requireEcgSuccess($ecgService->startRequest($clinicalRequestId, $ecgTech), 'Start ECG request');
 
 $tmpChart = tempnam(sys_get_temp_dir(), 'ecg-');

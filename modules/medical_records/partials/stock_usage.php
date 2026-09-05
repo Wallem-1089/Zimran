@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 $patientStockUsageHistory = $patientStockUsageHistory ?? [];
 $latestPatientStockUsage = $latestPatientStockUsage ?? null;
+$patientStockUsagePreviewRows = array_slice($patientStockUsageHistory, 0, 10);
 ?>
 
 <section class="card">
@@ -12,6 +13,9 @@ $latestPatientStockUsage = $latestPatientStockUsage ?? null;
             <h2>Patient Stock Usage</h2>
             <p>Read-only history of department stock used for this patient.</p>
         </div>
+        <div class="form-actions">
+            <a class="btn-secondary" href="../patient_stock_usage/history.php?patient=<?= (int)$patient['id'] ?>">Open Full History</a>
+        </div>
     </div>
 
     <?php if (!$patientStockUsageTablesReady): ?>
@@ -19,6 +23,9 @@ $latestPatientStockUsage = $latestPatientStockUsage ?? null;
     <?php elseif ($patientStockUsageHistory === []): ?>
         <p class="text-muted">No patient stock usage recorded.</p>
     <?php else: ?>
+        <?php if (count($patientStockUsageHistory) > count($patientStockUsagePreviewRows)): ?>
+            <p class="text-muted">Showing latest <?= count($patientStockUsagePreviewRows) ?> of <?= count($patientStockUsageHistory) ?> patient stock usage records.</p>
+        <?php endif; ?>
         <?php if ($latestPatientStockUsage !== null): ?>
             <div class="summary-grid">
                 <div class="summary-item"><span class="summary-label">Latest Date</span> <span class="summary-value"><?= e((string)$latestPatientStockUsage['created_at']) ?></span></div>
@@ -43,7 +50,7 @@ $latestPatientStockUsage = $latestPatientStockUsage ?? null;
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($patientStockUsageHistory as $usage): ?>
+                    <?php foreach ($patientStockUsagePreviewRows as $usage): ?>
                         <tr>
                             <td><?= e((string)$usage['created_at']) ?></td>
                             <td><?= e((string)($usage['visit_number'] ?? ('#' . (int)$usage['visit_id']))) ?></td>

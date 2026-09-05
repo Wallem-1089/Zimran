@@ -13,17 +13,22 @@ if (!$billingTablesReady) {
 
 $filters = [
     'invoice_number' => trim((string)($_GET['invoice_number'] ?? '')),
+    'encounter_id' => trim((string)($_GET['encounter_id'] ?? '')),
+    'payment_reference' => trim((string)($_GET['payment_reference'] ?? '')),
     'patient_name' => trim((string)($_GET['patient_name'] ?? '')),
     'hospital_number' => trim((string)($_GET['hospital_number'] ?? '')),
     'visit_number' => trim((string)($_GET['visit_number'] ?? '')),
     'status' => trim((string)($_GET['status'] ?? '')),
 ];
+$showFullHistory = (string)($_GET['full'] ?? '') === '1';
 
 $invoices = $billingTablesReady ? $billingService->listInvoices($filters, $currentUser) : [];
-$encounterMatches = ($filters['patient_name'] !== '' || $filters['hospital_number'] !== '' || $filters['visit_number'] !== '')
+$encounterMatches = ($filters['patient_name'] !== '' || $filters['hospital_number'] !== '' || $filters['visit_number'] !== '' || $filters['encounter_id'] !== '' || $filters['payment_reference'] !== '')
     ? $billingService->searchEncountersForBilling($filters, $currentUser)
     : [];
-$recentPayments = $billingTablesReady ? $billingService->listPayments(null, $currentUser) : [];
+$recentPayments = $billingTablesReady ? $billingService->listPaymentsFiltered($filters, $currentUser) : [];
+$displayInvoices = $showFullHistory ? $invoices : array_slice($invoices, 0, 50);
+$displayPayments = $showFullHistory ? $recentPayments : array_slice($recentPayments, 0, 20);
 $billingRequestCount = ($billingTablesReady && $billingRequestsReady && $permissionService->canViewBillingRequests($currentUser))
     ? count($billingService->listBillingRequests(['status' => 'Pending'], $currentUser))
     : 0;
@@ -42,11 +47,16 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <h1>Billing</h1>
             <p>Patient Accounts, invoices, and payments.</p>
         </div>
-        <?php if ($permissionService->canViewBillingRequests($currentUser)): ?>
-            <div class="form-actions">
+        <div class="form-actions">
+            <?php if ($permissionService->canViewBillingRequests($currentUser)): ?>
                 <a class="btn-primary" href="billing_requests.php">Billing Requests</a>
-            </div>
-        <?php endif; ?>
+            <?php endif; ?>
+            <?php if (!$showFullHistory): ?>
+                <a class="btn-secondary" href="index.php?<?= e(http_build_query(array_merge($_GET, ['full' => '1']))) ?>">Full History</a>
+            <?php else: ?>
+                <a class="btn-secondary" href="index.php?<?= e(http_build_query(array_diff_key($_GET, ['full' => true]))) ?>">Show Recent</a>
+            <?php endif; ?>
+        </div>
     </div>
 
     <div class="summary-grid">
@@ -63,6 +73,14 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <div class="form-group">
                 <label for="invoice_number">Invoice Number</label>
                 <input id="invoice_number" name="invoice_number" value="<?= e($filters['invoice_number']) ?>">
+            </div>
+            <div class="form-group">
+                <label for="encounter_id">Encounter ID</label>
+                <input id="encounter_id" name="encounter_id" inputmode="numeric" value="<?= e($filters['encounter_id']) ?>" placeholder="e.g. 32">
+            </div>
+            <div class="form-group">
+                <label for="payment_reference">Transaction Reference</label>
+                <input id="payment_reference" name="payment_reference" value="<?= e($filters['payment_reference']) ?>" placeholder="Receipt / transfer / POS reference">
             </div>
             <div class="form-group">
                 <label for="patient_name">Patient Name</label>
@@ -92,7 +110,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
     </form>
 
-    <?php if ($filters['patient_name'] !== '' || $filters['hospital_number'] !== '' || $filters['visit_number'] !== ''): ?>
+    <?php if ($filters['patient_name'] !== '' || $filters['hospital_number'] !== '' || $filters['visit_number'] !== '' || $filters['encounter_id'] !== '' || $filters['payment_reference'] !== ''): ?>
         <div class="card">
             <h3>Select Patient Encounter</h3>
             <p class="text-muted">Choose the encounter you want to bill. Patient name, hospital number, and visit number will be carried into the billing page.</p>
@@ -106,8 +124,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
                             <tr>
                                 <th>Patient</th>
                                 <th>Hospital Number</th>
-                                <th>Visit Number</th>
-                                <th>Visit Status</th>
+                            <th>Visit Number</th>
+                            <th>Encounter ID</th>
+                            <th>Visit Status</th>
                                 <th>Department</th>
                                 <th>Billing Status</th>
                                 <th>Balance</th>
@@ -120,6 +139,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                                     <td><?= e((string)($match['patient_name'] ?? '-')) ?></td>
                                     <td><?= e((string)($match['hospital_number'] ?? '-')) ?></td>
                                     <td><?= e((string)($match['visit_number'] ?? ('#' . (int)$match['visit_id']))) ?></td>
+                                    <td>#<?= (int)$match['visit_id'] ?></td>
                                     <td><?= e((string)($match['visit_status'] ?? '-')) ?></td>
                                     <td><?= e((string)($match['department_name'] ?? '-')) ?></td>
                                     <td><?= e((string)($match['billing_status'] ?? 'Unbilled')) ?></td>
@@ -140,7 +160,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <?php endif; ?>
 
     <div class="card">
-        <h3>Open Invoices</h3>
+        <div class="section-header">
+            <div>
+                <h3>Open Invoices</h3>
+                <p class="text-muted"><?= $showFullHistory ? 'Showing full matching invoice history.' : 'Showing latest 50 matching invoices.' ?></p>
+            </div>
+        </div>
         <?php if ($invoices === []): ?>
             <div class="empty-state">No invoices found.</div>
         <?php else: ?>
@@ -151,6 +176,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                             <th>Invoice</th>
                             <th>Patient</th>
                             <th>Visit</th>
+                            <th>Encounter ID</th>
                             <th>Total</th>
                             <th>Paid</th>
                             <th>Balance</th>
@@ -159,10 +185,11 @@ require __DIR__ . '/../../layouts/sidebar.php';
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($invoices as $invoice): ?>
+                        <?php foreach ($displayInvoices as $invoice): ?>
                             <tr>
                                 <td><?= e((string)$invoice['invoice_number']) ?></td>
                                 <td><?= e((string)($invoice['patient_name'] ?? '-')) ?></td>
+                                <td><?= e((string)($invoice['visit_number'] ?? ('#' . (int)$invoice['visit_id']))) ?></td>
                                 <td>#<?= (int)$invoice['visit_id'] ?></td>
                                 <td>₦<?= e((string)$invoice['display_total_amount']) ?></td>
                                 <td>₦<?= e((string)$invoice['display_amount_paid']) ?></td>
@@ -171,7 +198,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                                 <td>
                                     <a class="btn-secondary btn-sm" href="view.php?visit=<?= (int)$invoice['visit_id'] ?>">Open</a>
                                     <?php if ($permissionService->canViewReceipts($currentUser) && (float)$invoice['amount_paid'] > 0): ?>
-                                        <a class="btn-secondary btn-sm" href="receipt.php?id=<?= (int)$invoice['id'] ?>">Receipts</a>
+                                        <a class="btn-secondary btn-sm" href="view.php?visit=<?= (int)$invoice['visit_id'] ?>#payments">Receipts</a>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -183,7 +210,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
     </div>
 
     <div class="card">
-        <h3>Recent Payments</h3>
+        <div class="section-header">
+            <div>
+                <h3>Recent Payments</h3>
+                <p class="text-muted"><?= $showFullHistory ? 'Showing full payment history.' : 'Showing latest 20 payments.' ?></p>
+            </div>
+        </div>
         <?php if ($recentPayments === []): ?>
             <div class="empty-state">No payments recorded yet.</div>
         <?php else: ?>
@@ -194,7 +226,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
                             <th>Receipt</th>
                             <th>Patient</th>
                             <th>Visit</th>
+                            <th>Encounter ID</th>
                             <th>Invoice</th>
+                            <th>Reference</th>
                             <th>Amount</th>
                             <th>Method</th>
                             <th>Date</th>
@@ -202,12 +236,14 @@ require __DIR__ . '/../../layouts/sidebar.php';
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach (array_slice($recentPayments, 0, 20) as $payment): ?>
+                        <?php foreach ($displayPayments as $payment): ?>
                             <tr>
                                 <td>#<?= (int)$payment['id'] ?></td>
                                 <td><?= e((string)($payment['patient_name'] ?? '-')) ?></td>
+                                <td><?= e((string)($payment['visit_number'] ?? ('#' . (int)$payment['visit_id']))) ?></td>
                                 <td>#<?= (int)$payment['visit_id'] ?></td>
                                 <td><?= e((string)$payment['invoice_number']) ?></td>
+                                <td><?= e((string)($payment['reference'] ?? '-')) ?></td>
                                 <td>₦<?= e((string)$payment['display_amount']) ?></td>
                                 <td><?= e((string)$payment['payment_method']) ?></td>
                                 <td><?= e((string)$payment['created_at']) ?></td>

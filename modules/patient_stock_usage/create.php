@@ -42,6 +42,13 @@ if (!$permissionService->isAdministrator($currentUser) && $selectedDepartmentId 
     $selectedDepartmentId = $defaultDepartmentId;
 }
 $departments = patientStockUsageDepartments($pdo);
+$selectedDepartmentName = 'Selected department';
+foreach ($departments as $department) {
+    if ((int)$department['id'] === $selectedDepartmentId) {
+        $selectedDepartmentName = (string)$department['department_name'];
+        break;
+    }
+}
 $availableStock = $patientStockUsageService->listAvailableDepartmentStock($selectedDepartmentId, $currentUser);
 $old = $_SESSION['old_patient_stock_usage'] ?? [];
 unset($_SESSION['old_patient_stock_usage']);
@@ -83,16 +90,24 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="form-grid">
             <div class="form-group">
                 <label for="department_filter">Stock Source Department</label>
-                <select id="department_filter" name="department" onchange="this.form.submit()">
-                    <?php foreach ($departments as $department): ?>
-                        <option value="<?= (int)$department['id'] ?>" <?= $selectedDepartmentId === (int)$department['id'] ? 'selected' : '' ?>>
-                            <?= e((string)$department['department_name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+                <?php if ($permissionService->isAdministrator($currentUser)): ?>
+                    <small class="text-muted">Choose the department whose current stock balance should be reduced for this patient usage.</small>
+                    <select id="department_filter" name="department" onchange="this.form.submit()">
+                        <?php foreach ($departments as $department): ?>
+                            <option value="<?= (int)$department['id'] ?>" <?= $selectedDepartmentId === (int)$department['id'] ? 'selected' : '' ?>>
+                                <?= e((string)$department['department_name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                <?php else: ?>
+                    <div class="readonly-field"><?= e($selectedDepartmentName) ?></div>
+                    <small class="text-muted">Patient stock usage can only reduce stock from your own department.</small>
+                <?php endif; ?>
             </div>
         </div>
-        <noscript><button class="btn-secondary" type="submit">Load Stock</button></noscript>
+        <?php if ($permissionService->isAdministrator($currentUser)): ?>
+            <noscript><button class="btn-secondary" type="submit">Load Stock</button></noscript>
+        <?php endif; ?>
     </form>
 
     <form method="post" action="save.php" class="card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>

@@ -531,7 +531,8 @@ class MedicalDocumentService
     public function prepareDownload(
         int $documentId,
         array $user,
-        ?int $versionId = null
+        ?int $versionId = null,
+        string $disposition = 'attachment'
     ): array {
         $stream = null;
         try {
@@ -547,6 +548,17 @@ class MedicalDocumentService
                 return $this->forbidden('You do not have permission to download this document.');
             }
             $this->assertDocumentEncounterAccess($document, $user);
+            if ($disposition !== 'inline'
+                && !$this->permissionService->canDownloadMedicalDocumentFile(
+                    $patientId,
+                    $this->nullableInt($document['department_id'] ?? null),
+                    $user
+                )
+            ) {
+                $this->rollback();
+                $this->auditDenied((int)($user['id'] ?? 0), $patientId, 'DOCUMENT_ACCESS_DENIED');
+                return $this->forbidden('You can view this document, but downloads are restricted to the uploading department.');
+            }
             if ($this->isConfidential($document)
                 && !$this->permissionService->canViewConfidentialDocuments($patientId, $user)
             ) {
@@ -646,6 +658,14 @@ class MedicalDocumentService
             )) {
                 $this->rollback();
                 return $this->forbidden('Document download is not permitted.');
+            }
+            if (!$this->permissionService->canDownloadMedicalDocumentFile(
+                (int)$document['patient_id'],
+                $this->nullableInt($document['department_id'] ?? null),
+                $user
+            )) {
+                $this->rollback();
+                return $this->forbidden('Document file download is restricted to the uploading department.');
             }
             $this->assertDocumentEncounterAccess($document, $user);
             if ($this->isConfidential($document)

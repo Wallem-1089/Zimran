@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 require __DIR__ . '/_bootstrap.php';
 
+requireCsrfToken();
+
 $sessionId = filter_input(INPUT_POST, 'session_id', FILTER_VALIDATE_INT) ?: 0;
 if (!$sessionId) {
     exit('Invalid physiotherapy session.');

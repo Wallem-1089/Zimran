@@ -80,6 +80,12 @@ $errorMessage = $_SESSION['error_message'] ?? null;
 unset($_SESSION['error_message']);
 
 $hasPendingTransfer = $visitService->hasPendingTransfer($visitId);
+$canReceiveCurrentEncounter = $hasPendingTransfer
+    && $permissionService->canReceiveEncounter(
+        $visit,
+        ['to_department_id' => (int)($visit['current_department_id'] ?? 0)],
+        $currentUser
+    );
 
 /*
 |--------------------------------------------------------------------------
@@ -188,7 +194,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
 </div>
 
-<?php if ($hasPendingTransfer): ?>
+<?php if ($canReceiveCurrentEncounter): ?>
 
 <form
     method="POST"
@@ -231,6 +237,16 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 </div>
 
 </form>
+
+<?php elseif ($hasPendingTransfer): ?>
+
+<div class="alert-warning">
+
+    This encounter is awaiting receipt by
+    <strong><?= e((string)($visit['department_name'] ?? 'the receiving department')) ?></strong>,
+    but your active department cannot receive it.
+
+</div>
 
 <?php else: ?>
 

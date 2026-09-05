@@ -688,7 +688,6 @@ class PhysiotherapyService
             if (!$this->permissionService->canCreatePhysiotherapy($visit, $user, 'Direct')) {
                 $errors[] = 'You cannot create a direct physiotherapy record.';
             }
-
             if (!$this->isPhysiotherapyEncounter($visit)) {
                 $errors[] = 'Direct physiotherapy records require an active Physiotherapy encounter.';
             }
@@ -1068,7 +1067,6 @@ class PhysiotherapyService
             if (!$this->permissionService->canCreatePhysiotherapy($visit, $user, 'Direct')) {
                 $errors[] = 'You cannot create a direct physiotherapy record.';
             }
-
             if (!$this->isPhysiotherapyEncounter($visit)) {
                 $errors[] = 'Direct physiotherapy records require an active Physiotherapy encounter.';
             }

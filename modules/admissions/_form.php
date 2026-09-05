@@ -7,6 +7,8 @@ $wards = $wards ?? [];
 $beds = $beds ?? [];
 $action = $action ?? 'save.php';
 $buttonLabel = $buttonLabel ?? 'Admit Patient';
+$admissionConfiguredFields ??= [];
+$admissionConfiguredValues ??= [];
 $enableWritingMode ??= isset($permissionService)
     && method_exists($permissionService, 'canUseConsultationHandwriting')
     && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
@@ -60,6 +62,7 @@ $enableWritingMode ??= isset($permissionService)
     <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Admission Entry Mode'); ?>
     <?php hmsRenderHandwritingTextarea('admission_diagnosis', 'Admission Diagnosis', (string)($admission['admission_diagnosis'] ?? ''), 4, false, $enableWritingMode); ?>
     <?php hmsRenderHandwritingTextarea('admission_notes', 'Admission Notes', (string)($admission['admission_notes'] ?? ''), 5, false, $enableWritingMode); ?>
+    <?php hmsRenderConfiguredFields($admissionConfiguredFields, $admissionConfiguredValues); ?>
 
     <div class="form-actions">
         <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>

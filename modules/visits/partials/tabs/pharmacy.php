@@ -98,6 +98,9 @@ $requestSource = $pharmacyRequestSource ?? 'Clinical';
                 <?php if (!$isClosedEncounter && $canDispensePrescription && (string)$latest['status'] === 'Prescribed'): ?>
                     <a href="../pharmacy/dispense.php?id=<?= (int)$latest['id'] ?>" class="btn-primary">Dispense</a>
                 <?php endif; ?>
+                <?php if (!$isClosedEncounter && !empty($billingRequestsReady) && !empty($canCreateBillingRequest)): ?>
+                    <a href="../billing/request_create.php?visit=<?= (int)$visit['id'] ?>&source_module=Pharmacy&source_record_id=<?= (int)$latest['id'] ?>&description=<?= rawurlencode('Pharmacy: ' . (string)($latest['medication_name'] ?? '') . ' x ' . (string)($latest['quantity'] ?? '')) ?>" class="btn-secondary">Request Billing</a>
+                <?php endif; ?>
                 <?php if (!$isClosedEncounter && !empty($canCreateNursing)): ?>
                     <a href="../nursing/drug_chart/create.php?visit=<?= (int)$visit['id'] ?>&prescription=<?= (int)$latest['id'] ?>" class="btn-secondary">Record in Drug Chart</a>
                 <?php endif; ?>

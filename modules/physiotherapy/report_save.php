@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 require __DIR__ . '/_bootstrap.php';
 
+requireCsrfToken();
+
 $recordId = filter_input(INPUT_POST, 'physiotherapy_record_id', FILTER_VALIDATE_INT) ?: 0;
 if (!$recordId) {
     exit('Invalid physiotherapy record.');

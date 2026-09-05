@@ -842,7 +842,7 @@ around, but cannot participate in, the MySQL transaction.
 | `listEncounterDocuments(int $visitId, array $user): array` | Minimum-necessary list after encounter and patient authorization. |
 | `getDocumentVersions(int $id, array $user): array` | Immutable history; requires history permission and masks confidential version fields without confidential permission. |
 | `getDocumentHistory(int $id, array $user): array` | Compatibility alias for `getDocumentVersions`. |
-| `prepareDownload(int $id, array $user, ?int $versionId = null): array` | Rechecks scope/confidentiality/status/version/malware state, verifies stored size/SHA-256, atomically logs audit and PHI access, then returns a stream and safe response metadata—never a path/key. |
+| `prepareDownload(int $id, array $user, ?int $versionId = null, string $disposition = 'attachment'): array` | Rechecks scope/confidentiality/status/version/malware state, verifies stored size/SHA-256, atomically logs audit and PHI access, then returns a stream and safe response metadata—never a path/key. Attachment downloads additionally require same uploading department or `download_cross_department_medical_documents`; inline browser viewing remains governed by normal document access. |
 | `recordDownload(int $id, int $versionId, array $user): array` | Explicit authorized audit/access contract; does not stream a file. |
 | `getDocumentSummary(int $patientId, array $user): array` | Count and minimum-necessary bounded read model. |
 | `getAllowedDocumentTypes(): array` | Effective supported/settings intersection. |
@@ -874,7 +874,7 @@ storage methods.
 | `documents/replace_save.php` | POST | Yes | `replaceDocument` | Flash + redirect |
 | `documents/archive.php`, `restore.php`, `entered_in_error.php` | POST | Yes | lifecycle method | Flash + redirect |
 | `documents/versions.php` | GET | No | `getDocumentVersions` | Immutable history |
-| `documents/download.php` | GET | No | `prepareDownload` | Authorized attachment stream |
+| `documents/download.php` | GET | No | `prepareDownload` | Authorized inline browser stream or attachment stream. Attachment download is restricted to same-department files unless cross-department download permission is granted. |
 
 Patient Chart and Workspace reads call list contracts. No `PatientService`,
 `VisitService`, or prior public signature changed.

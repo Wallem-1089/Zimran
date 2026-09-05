@@ -5,7 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/_bootstrap.php';
 
 $visitId = filter_input(INPUT_GET, 'visit', FILTER_VALIDATE_INT) ?: 0;
-$requestSource = pharmacyRequestSourceLabel((string)($_GET['source'] ?? 'Clinical'));
+$requestedSource = pharmacyRequestSourceLabel((string)($_GET['source'] ?? ''));
 
 if (!$visitId) {
     header('Location: index.php');
@@ -13,6 +13,16 @@ if (!$visitId) {
 }
 
 $visit = pharmacyRequireVisit($visitService, $visitId);
+$isDirectPharmacyEncounter = (string)($visit['department_name'] ?? '') === 'Pharmacy';
+$requestSourceNote = '';
+if ($requestedSource === 'Direct' && !$isDirectPharmacyEncounter) {
+    $requestSource = 'Clinical';
+    $requestSourceNote = 'Direct Pharmacy is only for active encounters currently in Pharmacy. This prescription is being recorded as Clinical.';
+} elseif (in_array($requestedSource, ['Clinical', 'Direct'], true)) {
+    $requestSource = $requestedSource;
+} else {
+    $requestSource = $isDirectPharmacyEncounter ? 'Direct' : 'Clinical';
+}
 $patient = $patientService->getPatientById((int)$visit['patient_id']);
 if (!$patient) {
     http_response_code(404);
@@ -48,6 +58,7 @@ $pharmacyPrescription = $_SESSION['old_pharmacy_prescription'] ?? [
     'quantity' => '',
     'instructions' => '',
 ];
+$pharmacyPrescription['prescription_source'] = $requestSource;
 unset($_SESSION['old_pharmacy_prescription']);
 
 $canViewClinicalSafety = $permissionService->canViewClinicalSafety((int)$visit['patient_id'], $currentUser);

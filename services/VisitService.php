@@ -1282,12 +1282,26 @@ public function canAccessDepartmentWorkspace(
 
         }
 
+        $targetDepartment = $this->findDepartmentByName($status);
+        $userId = isset($_SESSION['user']['id'])
+            ? (int)$_SESSION['user']['id']
+            : null;
+
+        if ($targetDepartment
+            && (int)($visit['current_department_id'] ?? 0) !== (int)$targetDepartment['id']
+            && !in_array($status, ['Completed', 'Cancelled'], true)
+        ) {
+            return $this->transferVisit(
+                $visitId,
+                (int)$targetDepartment['id'],
+                $userId ?? 0,
+                'Forward',
+                'Encounter status changed to ' . $status . '.'
+            );
+        }
+
         try {
             $this->pdo->beginTransaction();
-
-            $userId = isset($_SESSION['user']['id'])
-                ? (int)$_SESSION['user']['id']
-                : null;
 
             if (in_array($status, ['Completed', 'Cancelled'], true)) {
 
@@ -1368,6 +1382,25 @@ public function canAccessDepartmentWorkspace(
             ];
         }
 
+    }
+
+    private function findDepartmentByName(string $departmentName): ?array
+    {
+        $departmentName = trim($departmentName);
+        if ($departmentName === '') {
+            return null;
+        }
+
+        $stmt = $this->pdo->prepare('
+            SELECT id, department_name
+            FROM departments
+            WHERE department_name = :department_name
+            LIMIT 1
+        ');
+        $stmt->execute([':department_name' => $departmentName]);
+        $department = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $department ?: null;
     }
 
     /*
@@ -1688,9 +1721,77 @@ public function canAccessDepartmentWorkspace(
     |--------------------------------------------------------------------------
     */
 
+    $doctorDepartmentId = (int)($doctor['department_id'] ?? 0);
+    if ($doctorDepartmentId <= 0) {
+        return [
+            'success' => false,
+            'errors' => [
+                'Selected doctor has no department.'
+            ]
+        ];
+    }
+
+    $isMovingToDoctorDepartment = (int)($visit['current_department_id'] ?? 0)
+        !== $doctorDepartmentId;
+    $shouldSetDoctorStatus = $isMovingToDoctorDepartment
+        || (string)($visit['visit_status'] ?? '') !== 'Doctor';
+
     try {
 
         $this->pdo->beginTransaction();
+
+        if ($isMovingToDoctorDepartment) {
+            $queueClose = $this->queueService->closeActiveForTransfer(
+                $visitId,
+                $assignedBy,
+                'assigned to doctor',
+                'DOCTOR_ASSIGNMENT_QUEUE_CLOSE'
+            );
+
+            if (!$queueClose['success']) {
+                throw new RuntimeException(
+                    $queueClose['errors'][0]
+                    ?? 'Unable to close the current queue entry.'
+                );
+            }
+
+            $stmt = $this->pdo->prepare("
+                INSERT INTO visit_transfers (
+                    visit_id,
+                    from_department_id,
+                    to_department_id,
+                    from_status,
+                    to_status,
+                    previous_status,
+                    new_status,
+                    transfer_type,
+                    remarks,
+                    transferred_by,
+                    transferred_at
+                ) VALUES (
+                    :visit_id,
+                    :from_department_id,
+                    :to_department_id,
+                    :from_status,
+                    'Doctor',
+                    :previous_status,
+                    'Doctor',
+                    'Referral',
+                    :remarks,
+                    :transferred_by,
+                    NOW()
+                )
+            ");
+            $stmt->execute([
+                ':visit_id' => $visitId,
+                ':from_department_id' => (int)($visit['current_department_id'] ?? 0) ?: null,
+                ':to_department_id' => $doctorDepartmentId,
+                ':from_status' => (string)($visit['visit_status'] ?? ''),
+                ':previous_status' => (string)($visit['visit_status'] ?? ''),
+                ':remarks' => 'Doctor assigned: ' . $doctor['doctor_name'] . '.',
+                ':transferred_by' => $assignedBy,
+            ]);
+        }
 
         $stmt = $this->pdo->prepare("
 
@@ -1699,6 +1800,16 @@ public function canAccessDepartmentWorkspace(
             SET
 
                 attending_doctor_id = :doctor,
+
+                current_department_id = CASE WHEN :move_department = 1 THEN :doctor_department ELSE current_department_id END,
+
+                visit_status = CASE WHEN :move_status = 1 THEN 'Doctor' ELSE visit_status END,
+
+                current_department_received_status = CASE WHEN :move_receive = 1 THEN 'Pending' ELSE current_department_received_status END,
+
+                current_department_received_by = CASE WHEN :move_received_by = 1 THEN NULL ELSE current_department_received_by END,
+
+                current_department_received_at = CASE WHEN :move_received_at = 1 THEN NULL ELSE current_department_received_at END,
 
                 queue_number = NULL,
 
@@ -1712,16 +1823,48 @@ public function canAccessDepartmentWorkspace(
 
             ':doctor' => $doctorId,
 
+            ':move_department' => $isMovingToDoctorDepartment ? 1 : 0,
+
+            ':doctor_department' => $doctorDepartmentId,
+
+            ':move_status' => $shouldSetDoctorStatus ? 1 : 0,
+
+            ':move_receive' => $isMovingToDoctorDepartment ? 1 : 0,
+
+            ':move_received_by' => $isMovingToDoctorDepartment ? 1 : 0,
+
+            ':move_received_at' => $isMovingToDoctorDepartment ? 1 : 0,
+
             ':visit'  => $visitId
 
         ]);
+
+        if ($isMovingToDoctorDepartment) {
+            $queueResult = $this->queueService->enqueueEncounter(
+                $visitId,
+                $doctorDepartmentId,
+                $assignedBy,
+                $doctorId,
+                'Doctor assigned: ' . $doctor['doctor_name'] . '.',
+                false
+            );
+
+            if (!$queueResult['success']) {
+                throw new RuntimeException(
+                    $queueResult['errors'][0]
+                    ?? 'Unable to queue encounter for doctor.'
+                );
+            }
+        }
 
         $this->recordWorkflowHistory(
             $visitId,
             'DOCTOR_ASSIGNED',
             'Doctor Assigned',
             'Doctor assigned: ' . $doctor['doctor_name'] . '.',
-            (int)$visit['current_department_id'],
+            $isMovingToDoctorDepartment
+                ? $doctorDepartmentId
+                : (int)$visit['current_department_id'],
             $assignedBy,
             'Encounter',
             'ASSIGN_DOCTOR'
@@ -2079,6 +2222,8 @@ public function canAccessDepartmentWorkspace(
                 department_name
 
             FROM departments
+            WHERE is_active = 1
+              AND department_name NOT IN ('Administrator', 'Super Administrator', 'Orderly')
 
             ORDER BY department_name
 

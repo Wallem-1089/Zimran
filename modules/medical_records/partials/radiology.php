@@ -7,6 +7,7 @@ if (!isset($patient)) {
 }
 
 $latest = $latestRadiologyRequest ?? null;
+$radiologyPreviewRows = array_slice($radiologyHistory ?? [], 0, 10);
 ?>
 
 <section class="card">
@@ -44,6 +45,9 @@ $latest = $latestRadiologyRequest ?? null;
     <?php if (empty($radiologyHistory)): ?>
         <p class="text-muted">No radiology requests recorded.</p>
     <?php else: ?>
+        <?php if (count($radiologyHistory) > count($radiologyPreviewRows)): ?>
+            <p class="text-muted">Showing latest <?= count($radiologyPreviewRows) ?> of <?= count($radiologyHistory) ?> radiology requests. Open history to see all requests.</p>
+        <?php endif; ?>
         <div class="table-responsive">
             <table class="table">
                 <thead>
@@ -58,7 +62,7 @@ $latest = $latestRadiologyRequest ?? null;
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($radiologyHistory as $request): ?>
+                    <?php foreach ($radiologyPreviewRows as $request): ?>
                         <tr>
                             <td>#<?= (int)$request['id'] ?></td>
                             <td><?= e((string)($request['study_requested'] ?? $request['tests_requested'] ?? '')) ?></td>
