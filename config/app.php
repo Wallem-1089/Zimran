@@ -59,7 +59,7 @@ $configuredBaseUrl = '/' . trim(
 
 $baseUrl = $configuredBaseUrl !== '/'
     ? $configuredBaseUrl
-    : '/zimran';
+    : '/hospital_management_system';
 
 return [
 

@@ -24,6 +24,12 @@ protected server configuration. Phase 2 Medical Records functionality is
 complete through Milestone 2.6. Full patient merging is postponed; the current
 MPI duplicate-candidate workflow is sufficient for this version.
 
+Patient registration uses controlled dropdowns for marital status,
+nationality, state of origin, blood group, and genotype. Ethnic group is no
+longer shown on the registration form, while the legacy column remains for
+existing stored data. Next-of-kin name, phone number, and address are required
+for patient create/update flows.
+
 ---
 
 # Technology Stack

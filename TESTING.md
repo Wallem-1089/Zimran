@@ -49,6 +49,15 @@ records a database operation log entry, and writes an administration audit log.
 Browser restore is intentionally not available; restore drills must still be
 performed manually against a separate test database, never the live database.
 
+## Patient Registration
+
+Focused patient-registration verification should cover the dropdown fields for
+marital status, nationality, state of origin, blood group, and genotype; confirm
+that Ethnic Group is not shown on the registration form; and verify that
+next-of-kin name, next-of-kin phone number, and next-of-kin address are required
+both by the browser form and by `PatientService`. Existing patient/MPI
+regression fixtures must include the required next-of-kin fields.
+
 ## Phase 3.4 Laboratory CRUD
 
 Use only the explicit dedicated database configuration:

@@ -14,6 +14,85 @@ class PatientService
         'Unknown'
     ];
 
+    public const SUPPORTED_MARITAL_STATUSES = [
+        'Single',
+        'Married',
+        'Divorced',
+        'Widowed',
+        'Separated'
+    ];
+
+    public const SUPPORTED_NATIONALITIES = [
+        'Nigerian',
+        'Ghanaian',
+        'Cameroonian',
+        'Beninese',
+        'Togolese',
+        'Nigerien',
+        'Other'
+    ];
+
+    public const SUPPORTED_NIGERIAN_STATES = [
+        'Abia',
+        'Adamawa',
+        'Akwa Ibom',
+        'Anambra',
+        'Bauchi',
+        'Bayelsa',
+        'Benue',
+        'Borno',
+        'Cross River',
+        'Delta',
+        'Ebonyi',
+        'Edo',
+        'Ekiti',
+        'Enugu',
+        'FCT',
+        'Gombe',
+        'Imo',
+        'Jigawa',
+        'Kaduna',
+        'Kano',
+        'Katsina',
+        'Kebbi',
+        'Kogi',
+        'Kwara',
+        'Lagos',
+        'Nasarawa',
+        'Niger',
+        'Ogun',
+        'Ondo',
+        'Osun',
+        'Oyo',
+        'Plateau',
+        'Rivers',
+        'Sokoto',
+        'Taraba',
+        'Yobe',
+        'Zamfara',
+        'Non-Nigerian'
+    ];
+
+    public const SUPPORTED_BLOOD_GROUPS = [
+        'A+',
+        'A-',
+        'B+',
+        'B-',
+        'AB+',
+        'AB-',
+        'O+',
+        'O-'
+    ];
+
+    public const SUPPORTED_GENOTYPES = [
+        'AA',
+        'AS',
+        'SS',
+        'AC',
+        'SC',
+        'CC'
+    ];
+
     private const DEMOGRAPHIC_FIELDS = [
         'first_name',
         'middle_name',
@@ -63,6 +142,31 @@ class PatientService
     public static function supportedGenders(): array
     {
         return self::SUPPORTED_GENDERS;
+    }
+
+    public static function supportedMaritalStatuses(): array
+    {
+        return self::SUPPORTED_MARITAL_STATUSES;
+    }
+
+    public static function supportedNationalities(): array
+    {
+        return self::SUPPORTED_NATIONALITIES;
+    }
+
+    public static function supportedStatesOfOrigin(): array
+    {
+        return self::SUPPORTED_NIGERIAN_STATES;
+    }
+
+    public static function supportedBloodGroups(): array
+    {
+        return self::SUPPORTED_BLOOD_GROUPS;
+    }
+
+    public static function supportedGenotypes(): array
+    {
+        return self::SUPPORTED_GENOTYPES;
     }
 
     /*
@@ -447,6 +551,18 @@ class PatientService
 
             }
 
+        }
+
+        if (empty($patient['next_of_kin'])) {
+            $errors[] = 'Next of kin name is required.';
+        }
+
+        if (empty($patient['next_of_kin_phone'])) {
+            $errors[] = 'Next of kin phone number is required.';
+        }
+
+        if (empty($patient['next_of_kin_address'])) {
+            $errors[] = 'Next of kin address is required.';
         }
 
         return $errors;

@@ -48,6 +48,7 @@ function mpiPatient(string $suffix, string $phone, bool $acknowledged = false): 
         'next_of_kin' => 'MPI Test Kin',
         'next_of_kin_relationship' => 'Sibling',
         'next_of_kin_phone' => '08000000000',
+        'next_of_kin_address' => 'MPI next of kin address.',
         'duplicate_review_ack' => $acknowledged ? '1' : ''
     ];
 }

@@ -684,6 +684,13 @@ Reception
 * Create Encounter
 * Transfer
 
+Patient registration captures core identity details, contact information,
+selected demographics, blood group/genotype, and next-of-kin details. Marital
+status, nationality, state of origin, blood group, and genotype are selected
+from dropdowns. Ethnic group is not shown on the current registration form.
+Next-of-kin name, phone number, and address are required before registration or
+demographic update can be saved.
+
 Records
 
 * Update demographics

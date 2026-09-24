@@ -388,11 +388,6 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
         );
 
         reviewItem(
-            'Ethnic Group',
-            $patient['ethnic_group']
-        );
-
-        reviewItem(
             'Religion',
             $patient['religion']
         );

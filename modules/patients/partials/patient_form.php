@@ -4,6 +4,37 @@ declare(strict_types=1);
 
 $patient = $patient ?? [];
 $supportedGenders = PatientService::supportedGenders();
+$maritalStatusOptions = PatientService::supportedMaritalStatuses();
+$nationalityOptions = PatientService::supportedNationalities();
+$stateOfOriginOptions = PatientService::supportedStatesOfOrigin();
+$bloodGroupOptions = PatientService::supportedBloodGroups();
+$genotypeOptions = PatientService::supportedGenotypes();
+
+$renderOptions = static function (
+    string $field,
+    array $options,
+    array $patient,
+    string $placeholder
+): void {
+    $current = trim((string)($patient[$field] ?? ''));
+    echo '<option value="">' . e($placeholder) . '</option>';
+
+    $hasCurrent = $current === '';
+    foreach ($options as $option) {
+        if ($current === $option) {
+            $hasCurrent = true;
+        }
+        echo '<option value="' . e($option) . '"'
+            . selected($field, $option, $patient)
+            . '>' . e($option) . '</option>';
+    }
+
+    if (!$hasCurrent) {
+        echo '<option value="' . e($current) . '" selected>'
+            . e($current)
+            . '</option>';
+    }
+};
 ?>
 
 <div class="form-section">
@@ -74,8 +105,9 @@ $supportedGenders = PatientService::supportedGenders();
 
             <label for="marital_status">Marital Status</label>
 
-            <input type="text" id="marital_status" name="marital_status" maxlength="30"
-                value="<?= field('marital_status', $patient) ?>">
+            <select id="marital_status" name="marital_status">
+                <?php $renderOptions('marital_status', $maritalStatusOptions, $patient, 'Select Marital Status'); ?>
+            </select>
 
         </div>
 
@@ -101,8 +133,9 @@ $supportedGenders = PatientService::supportedGenders();
 
             <label for="nationality">Nationality</label>
 
-            <input type="text" id="nationality" name="nationality" maxlength="100"
-                value="<?= field('nationality', $patient) ?>">
+            <select id="nationality" name="nationality">
+                <?php $renderOptions('nationality', $nationalityOptions, $patient, 'Select Nationality'); ?>
+            </select>
 
         </div>
 
@@ -110,19 +143,13 @@ $supportedGenders = PatientService::supportedGenders();
 
             <label for="state_of_origin">State of Origin</label>
 
-            <input type="text" id="state_of_origin" name="state_of_origin" maxlength="100"
-                value="<?= field('state_of_origin', $patient) ?>">
+            <select id="state_of_origin" name="state_of_origin">
+                <?php $renderOptions('state_of_origin', $stateOfOriginOptions, $patient, 'Select State of Origin'); ?>
+            </select>
 
         </div>
 
-        <div class="form-group">
-
-            <label for="ethnic_group">Ethnic Group</label>
-
-            <input type="text" id="ethnic_group" name="ethnic_group" maxlength="100"
-                value="<?= field('ethnic_group', $patient) ?>">
-
-        </div>
+        <input type="hidden" name="ethnic_group" value="<?= field('ethnic_group', $patient) ?>">
 
         <div class="form-group">
 
@@ -193,8 +220,9 @@ $supportedGenders = PatientService::supportedGenders();
 
             <label for="blood_group">Blood Group</label>
 
-            <input type="text" id="blood_group" name="blood_group" maxlength="5"
-                value="<?= field('blood_group', $patient) ?>">
+            <select id="blood_group" name="blood_group">
+                <?php $renderOptions('blood_group', $bloodGroupOptions, $patient, 'Select Blood Group'); ?>
+            </select>
 
         </div>
 
@@ -202,8 +230,9 @@ $supportedGenders = PatientService::supportedGenders();
 
             <label for="genotype">Genotype</label>
 
-            <input type="text" id="genotype" name="genotype" maxlength="5"
-                value="<?= field('genotype', $patient) ?>">
+            <select id="genotype" name="genotype">
+                <?php $renderOptions('genotype', $genotypeOptions, $patient, 'Select Genotype'); ?>
+            </select>
 
         </div>
 
@@ -219,10 +248,10 @@ $supportedGenders = PatientService::supportedGenders();
 
         <div class="form-group">
 
-            <label for="next_of_kin">Full Name</label>
+            <label for="next_of_kin">Full Name <span class="required">*</span></label>
 
             <input type="text" id="next_of_kin" name="next_of_kin" maxlength="150"
-                value="<?= field('next_of_kin', $patient) ?>">
+                required value="<?= field('next_of_kin', $patient) ?>">
 
         </div>
 
@@ -238,18 +267,18 @@ $supportedGenders = PatientService::supportedGenders();
 
         <div class="form-group">
 
-            <label for="next_of_kin_phone">Phone Number</label>
+            <label for="next_of_kin_phone">Phone Number <span class="required">*</span></label>
 
             <input type="tel" id="next_of_kin_phone" name="next_of_kin_phone"
-                maxlength="20" value="<?= field('next_of_kin_phone', $patient) ?>">
+                maxlength="20" required value="<?= field('next_of_kin_phone', $patient) ?>">
 
         </div>
 
         <div class="form-group">
 
-            <label for="next_of_kin_address">Address</label>
+            <label for="next_of_kin_address">Address <span class="required">*</span></label>
 
-            <textarea id="next_of_kin_address" name="next_of_kin_address" rows="3"><?= field('next_of_kin_address', $patient) ?></textarea>
+            <textarea id="next_of_kin_address" name="next_of_kin_address" rows="3" required><?= field('next_of_kin_address', $patient) ?></textarea>
 
         </div>
 

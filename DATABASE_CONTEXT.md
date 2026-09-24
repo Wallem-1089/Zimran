@@ -286,6 +286,14 @@ Unknown
 records legacy empty ENUM sentinels in `phase1_patient_gender_repair` before
 repairing them to `Unknown`; valid patient values are not rewritten.
 
+Patient registration currently captures core identity/contact details, selected
+administrative demographics, blood details, and next-of-kin details. The
+registration form uses fixed dropdowns for marital status, nationality, state
+of origin, blood group, and genotype. Ethnic group remains a legacy database
+column for existing records but is no longer shown as a visible registration
+field. Next-of-kin name, phone number, and address are required by
+`PatientService` and cannot be bypassed by direct POSTs.
+
 Examples
 
 ```
@@ -1308,7 +1316,7 @@ expose narrative PHI.
 ## Patient demographic and encounter completion additions
 
 Migration 035 expands patient registration demographics with additional
-administrative fields such as other names, nationality, ethnic group,
+administrative fields such as other names, nationality, state of origin,
 occupation, place of work, religion, blood group, genotype, next-of-kin details,
 and related address fields. Migration 036 adds simple encounter
 completion/discharge fields directly to `visits`: `completed_at`,

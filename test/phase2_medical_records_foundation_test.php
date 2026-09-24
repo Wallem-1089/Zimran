@@ -94,7 +94,8 @@ try {
         'allergies' => '',
         'next_of_kin' => 'Foundation Kin',
         'next_of_kin_relationship' => 'Sibling',
-        'next_of_kin_phone' => '08000000000'
+        'next_of_kin_phone' => '08000000000',
+        'next_of_kin_address' => 'Foundation next of kin address.'
     ], (int)$admin['id']), 'Patient creation');
     $patientId = (int)$patient['patient_id'];
 

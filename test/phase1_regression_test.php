@@ -235,8 +235,9 @@ try {
         'blood_group' => '',
         'genotype' => '',
         'allergies' => '',
-        'next_of_kin' => '',
-        'next_of_kin_phone' => ''
+        'next_of_kin' => 'Regression Kin',
+        'next_of_kin_phone' => '08000000000',
+        'next_of_kin_address' => 'Regression next of kin address.'
     ], $adminId), 'Patient registration');
     $patientId = (int)$patient['patient_id'];
 
@@ -251,8 +252,9 @@ try {
         'blood_group' => '',
         'genotype' => '',
         'allergies' => '',
-        'next_of_kin' => '',
-        'next_of_kin_phone' => ''
+        'next_of_kin' => 'Regression Kin',
+        'next_of_kin_phone' => '08000000000',
+        'next_of_kin_address' => 'Regression next of kin address.'
     ]), 'Patient update');
 
     $invalidEncounter = $visitService->createVisit([

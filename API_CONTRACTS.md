@@ -245,10 +245,15 @@ Constructor: `__construct(PDO $db, ?AuditService $auditService = null)`. Existin
 | Signature | Purpose/return | Contract |
 |---|---|---|
 | `supportedGenders(): array` | Static canonical patient gender list. | Returns `['Male', 'Female', 'Other', 'Unknown']`; forms, review validation, search and writes share this domain. |
-| `createPatient(array $data, int $userId): array` | Registers patient, generates hospital number, returns `patient_id`/`hospital_number` with structured result. | Transaction; rejects missing or unsupported gender before SQL; `PATIENT_REGISTERED` is written exactly once by the service in the same transaction. |
+| `supportedMaritalStatuses(): array` | Static patient marital-status dropdown list. | Used by patient registration/edit forms. |
+| `supportedNationalities(): array` | Static patient nationality dropdown list. | Used by patient registration/edit forms. |
+| `supportedStatesOfOrigin(): array` | Static state-of-origin dropdown list. | Used by patient registration/edit forms. |
+| `supportedBloodGroups(): array` | Static blood-group dropdown list. | Used by patient registration/edit forms and Blood Card demographics. |
+| `supportedGenotypes(): array` | Static genotype dropdown list. | Used by patient registration/edit forms and Blood Card demographics. |
+| `createPatient(array $data, int $userId): array` | Registers patient, generates hospital number, returns `patient_id`/`hospital_number` with structured result. | Transaction; rejects missing or unsupported gender and missing next-of-kin name/phone/address before SQL; `PATIENT_REGISTERED` is written exactly once by the service in the same transaction. |
 | `getPatientById(int $patientId): ?array` | Patient details with registration context. | Read. |
 | `searchPatients(array $filters): array` | Patient search by implemented identifiers/names/phone. | Read; leading-wildcard searches may limit index use. |
-| `updatePatient(int $patientId, array $data): array` | Updates demographics; returns structured result. | Transaction; actor is inferred from session/global context rather than explicit parameter; `PATIENT_UPDATED` is service-owned and atomic. Controllers do not duplicate it. |
+| `updatePatient(int $patientId, array $data): array` | Updates demographics; returns structured result. | Transaction; same next-of-kin required-field validation as registration; actor is inferred from session/global context rather than explicit parameter; `PATIENT_UPDATED` is service-owned and atomic. Controllers do not duplicate it. |
 
 ### `EncounterStateService`
 
