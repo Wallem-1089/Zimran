@@ -30,6 +30,7 @@ $billingSummary = $billingTablesReady ? $billingService->getEncounterBalance($vi
 $billingCharges = $billingTablesReady ? $billingService->listChargesByVisit($visitId, $currentUser) : [];
 $billingPayments = $billingTablesReady ? $billingService->listPayments($visitId, $currentUser) : [];
 $billingRequests = $billingRequestsReady && $billingTablesReady ? $billingService->listBillingRequests(['visit_id' => $visitId], $currentUser) : [];
+$billingDiscounts = $billingDiscountsReady && $billingTablesReady ? $billingService->listDiscountsByVisit($visitId, $currentUser) : [];
 $billingInvoice = $billingSummary['invoice'] ?? null;
 $canCreatePatientCharge = $permissionService->canCreatePatientCharge($currentUser);
 $canCancelPatientCharge = $permissionService->canCancelPatientCharge($currentUser);
@@ -40,6 +41,9 @@ $canCancelBillingRequest = $permissionService->canCancelBillingRequest($currentU
 $canCreateInvoice = $permissionService->canCreateInvoice($currentUser);
 $canRecordPayment = $permissionService->canRecordPayment($currentUser);
 $canViewReceipts = $permissionService->canViewReceipts($currentUser);
+$canViewBillingDiscounts = $permissionService->canViewBillingDiscounts($currentUser);
+$canApplyBillingDiscount = $permissionService->canApplyBillingDiscount($currentUser);
+$canCancelBillingDiscount = $permissionService->canCancelBillingDiscount($currentUser);
 $billingShowFullHistory = (string)($_GET['history'] ?? '') === 'full';
 $patient = [
     'id' => (int)($visit['patient_id'] ?? 0),
@@ -105,6 +109,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
             <?php if ($canRecordPayment): ?>
                 <a class="btn-primary" href="payment_create.php?visit=<?= (int)$visit['id'] ?>">Record Payment</a>
+            <?php endif; ?>
+            <?php if ($canApplyBillingDiscount && $billingInvoice): ?>
+                <a class="btn-secondary" href="discount_create.php?visit=<?= (int)$visit['id'] ?>">Apply Discount</a>
             <?php endif; ?>
         </div>
     </div>

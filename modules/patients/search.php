@@ -100,6 +100,17 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         <div class="form-group">
 
+            <label>Middle Name / Other Names</label>
+
+            <input
+                type="text"
+                name="middle_name"
+                value="<?= e($_GET['middle_name'] ?? '') ?>">
+
+        </div>
+
+        <div class="form-group">
+
             <label>Last Name</label>
 
             <input
@@ -264,6 +275,8 @@ No patients found.
 <td>
 
 <?= e($patient['first_name']) ?>
+
+<?= e((string)($patient['middle_name'] ?? '')) ?>
 
 <?= e($patient['last_name']) ?>
 

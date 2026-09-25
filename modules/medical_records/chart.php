@@ -19,6 +19,8 @@ require_once __DIR__ . '/../../services/MedicalDocumentService.php';
 require_once __DIR__ . '/../../services/ClinicalNoteService.php';
 require_once __DIR__ . '/../../services/LaboratoryService.php';
 require_once __DIR__ . '/../../services/RadiologyService.php';
+require_once __DIR__ . '/../../services/ECGService.php';
+require_once __DIR__ . '/../../services/PopService.php';
 require_once __DIR__ . '/../../services/PhysiotherapyService.php';
 require_once __DIR__ . '/../../services/TheatreService.php';
 require_once __DIR__ . '/../../services/VisitService.php';
@@ -65,6 +67,7 @@ if ((int)($patient['is_deleted'] ?? 0) === 1) {
 }
 
 $visitId = filter_input(INPUT_GET, 'visit', FILTER_VALIDATE_INT) ?: null;
+$visit = null;
 if ($visitId !== null) {
     $contextVisit = (new VisitService($pdo))->getVisitById((int)$visitId);
     if (!$contextVisit
@@ -80,6 +83,8 @@ if ($visitId !== null) {
         http_response_code(403);
         exit('The encounter context is not available for this patient chart.');
     }
+
+    $visit = $contextVisit;
 }
 $chartContextQuery = $visitId === null ? '' : '&visit=' . (int)$visitId;
 
@@ -104,6 +109,8 @@ $allowedTabs = [
     'vitals',
     'laboratory',
     'radiology',
+    'ecg',
+    'pop',
     'physiotherapy',
     'problems',
     'medical_history',
@@ -183,6 +190,18 @@ $canViewRadiology = $radiologyTablesReady && $permissionService->canViewRadiolog
 $radiologyService = $radiologyTablesReady ? new RadiologyService($pdo, null, null, $permissionService) : null;
 $radiologyHistory = [];
 $latestRadiologyRequest = null;
+$ecgTablesReady = chartTableExists($pdo, 'ecg_requests')
+    && chartTableExists($pdo, 'ecg_reports');
+$canViewEcg = $ecgTablesReady && $permissionService->canViewEcg($patientId, $currentUser);
+$ecgService = $ecgTablesReady ? new ECGService($pdo, null, null, $permissionService) : null;
+$ecgHistory = [];
+$latestEcgRequest = null;
+$popTablesReady = chartTableExists($pdo, 'pop_requests')
+    && chartTableExists($pdo, 'pop_records');
+$canViewPop = $popTablesReady && $permissionService->canViewPop($patientId, $currentUser);
+$popService = $popTablesReady ? new PopService($pdo, null, null, $permissionService) : null;
+$popHistory = [];
+$latestPopRequest = null;
 $physiotherapyTablesReady = chartTableExists($pdo, 'physiotherapy_records')
     && chartTableExists($pdo, 'physiotherapy_sessions');
 $canViewPhysiotherapy = $physiotherapyTablesReady && $permissionService->canViewPhysiotherapy($patientId, $currentUser);
@@ -290,6 +309,16 @@ if ($activeTab === 'physiotherapy' && !$canViewPhysiotherapy) {
     http_response_code(403);
     exit('You do not have permission to view Physiotherapy.');
 }
+if ($activeTab === 'ecg' && !$canViewEcg) {
+    $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'ECG_ACCESS_DENIED', 'ECG access denied.');
+    http_response_code(403);
+    exit('You do not have permission to view ECG.');
+}
+if ($activeTab === 'pop' && !$canViewPop) {
+    $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'POP_ACCESS_DENIED', 'POP access denied.');
+    http_response_code(403);
+    exit('You do not have permission to view POP.');
+}
 if ($activeTab === 'theatre' && !$canViewTheatre) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'THEATRE_ACCESS_DENIED', 'Theatre access denied.');
     http_response_code(403);
@@ -371,6 +400,16 @@ $bloodCardDocuments = array_values(array_filter(
 if ($canViewRadiology) {
     $radiologyHistory = $radiologyService->listByPatient($patientId, $currentUser);
     $latestRadiologyRequest = $radiologyHistory[0] ?? null;
+}
+
+if ($canViewEcg) {
+    $ecgHistory = $ecgService->listByPatient($patientId, $currentUser);
+    $latestEcgRequest = $ecgHistory[0] ?? null;
+}
+
+if ($canViewPop) {
+    $popHistory = $popService->listByPatient($patientId, $currentUser);
+    $latestPopRequest = $popHistory[0] ?? null;
 }
 
 if ($canViewPhysiotherapy) {
@@ -549,6 +588,14 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         case 'radiology':
             require __DIR__ . '/partials/radiology.php';
+            break;
+
+        case 'ecg':
+            require __DIR__ . '/partials/ecg.php';
+            break;
+
+        case 'pop':
+            require __DIR__ . '/partials/pop.php';
             break;
 
         case 'physiotherapy':

@@ -1304,6 +1304,17 @@ record, optional suggested `billable_item`, quantity, review status, and the
 resulting `patient_charge_id` once Accounts converts the request. Pending
 requests do not alter invoices or balances.
 
+Migration 072 adds `billing_discounts`. Discounts are posted as separate
+financial adjustment records rather than editing `patient_charges` or
+`billable_items`. The current implementation allows preset percentage
+discounts only: 5%, 10%, and 15%. Discounts may target a specific
+`patient_charge_id` as a line discount, or the whole invoice when
+`patient_charge_id` is NULL. Invoice totals are calculated as gross active
+charges minus active charge-specific discounts, then minus active invoice-level
+discounts. The outstanding balance is derived from that discounted invoice
+total minus posted payments. Discounts may be cancelled with a reason, but
+posted discount rows are not physically deleted.
+
 ## Phase 4.5 Basic Dashboards / Reports
 
 Phase 4.5 does not add reporting tables. The Reports module uses indexed
@@ -1373,6 +1384,16 @@ Migration 068 does not add tables. It adds the
 can distinguish authorized browser viewing from attachment-style file
 downloads across department boundaries.
 
+Migration 069 adds Patient Communications tracking and a patient WhatsApp
+contact field. `patients.whatsapp_number` stores the preferred WhatsApp
+number, while `patient_communications` records manual WhatsApp handoffs for
+Radiology reports and Medical Documents. The table stores the patient, optional
+visit, source module/type/record, optional document, channel, recipient phone,
+safe message text, consent flag, initiating user, status, timestamps, and
+optional provider reference/error metadata. The current workflow opens
+WhatsApp for staff handoff and manual attachment; it does not expose secure
+documents through public URLs and it does not use the WhatsApp Cloud API.
+
 Migration 070 adds the configurable extra-form foundation:
 `form_definitions`, `form_fields`, `form_responses`, and
 `form_response_values`. It seeds `nursing_assessment` and three inactive
@@ -1384,6 +1405,20 @@ Migration 071 seeds additional configurable form targets for Theatre,
 Admission, Dressing Book, DM Sheet, ECG, POP, and Physiotherapy. These seeds
 add inactive optional extra fields only; they do not modify the clinical module
 tables or their required workflow columns.
+
+## Version 1.2 database/migration status
+
+Version 1.2 does not require a new database migration. The latest documented
+schema baseline remains Migration 072 for Billing discounts plus the existing
+permission/configurable-form tables. The Version 1.2 permission fixes are
+service/controller behavior changes that make existing `permissions`,
+`role_permissions`, and `user_permissions` rows authoritative for ordinary
+users.
+
+Accounts Price Catalogue still keeps the nullable `billable_items.unit`
+column for backward compatibility and existing records, but the Accounts
+create/edit UI no longer collects it. Store/Inventory remains the owner of
+stock units and balances.
 
 ## POP / Casting tables
 

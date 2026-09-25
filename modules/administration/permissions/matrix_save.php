@@ -10,6 +10,11 @@ $mode = (string)($_POST['mode'] ?? 'role');
 if ($mode === 'user') {
     $userId = (int)($_POST['user_id'] ?? 0);
     $targetUser = $userService->getUserById($userId);
+    if (!$targetUser) {
+        http_response_code(404);
+        exit('User not found.');
+    }
+    administrationGuardSuperAdministratorUser($targetUser, $currentUser, $permissionService);
     if (strtolower((string)($targetUser['username'] ?? '')) === 'walter') {
         $_SESSION['administration_errors'] = ['The protected Walter administrator account cannot be modified from user permission overrides.'];
         header('Location: matrix.php?mode=user');
@@ -28,6 +33,20 @@ if ($mode === 'user') {
 }
 
 $roleId = (int)($_POST['role_id'] ?? 0);
+$targetRole = $roleService->getRole($roleId);
+if (!$targetRole) {
+    http_response_code(404);
+    exit('Role not found.');
+}
+if (($targetRole['role_name'] ?? '') === 'Super Administrator'
+    && !$permissionService->isAdministrator($currentUser)
+) {
+    securityFailure(
+        'Unauthorized Super Administrator role permission update attempt.',
+        null,
+        'SUPER_ADMIN_ROLE_PERMISSION_UPDATE_DENIED'
+    );
+}
 $result = $permissionService->assignPermissions(
     $roleId,
     $_POST['permission_ids'] ?? [],

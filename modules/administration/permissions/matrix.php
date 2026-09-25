@@ -5,10 +5,23 @@ declare(strict_types=1);
 require_once __DIR__ . '/../partials/bootstrap.php';
 $pageTitle = 'Permission Matrix';
 $roles = $roleService->listRoles(false);
+if (!$permissionService->isAdministrator($currentUser)) {
+    $roles = array_values(array_filter(
+        $roles,
+        static fn (array $role): bool => ($role['role_name'] ?? '') !== 'Super Administrator'
+    ));
+}
 $users = array_values(array_filter(
     $userService->getUsers(['status' => 'Active']),
     static fn (array $user): bool => strtolower((string)($user['username'] ?? '')) !== 'walter'
 ));
+if (!$permissionService->isAdministrator($currentUser)) {
+    $users = array_values(array_filter(
+        $users,
+        static fn (array $user): bool => ($user['role_name'] ?? '') !== 'Super Administrator'
+            && ($user['department_name'] ?? '') !== 'Super Administrator'
+    ));
+}
 $permissions = $permissionService->listPermissions(false);
 $mode = (string)($_GET['mode'] ?? 'role');
 if (!in_array($mode, ['role', 'user'], true)) {

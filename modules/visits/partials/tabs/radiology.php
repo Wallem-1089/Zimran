@@ -69,7 +69,7 @@ $requestSource = $radiologyRequestSource ?? 'Clinical';
             <?php if (!$isClosedEncounter && $canCreateRadiologyRequest): ?>
                 <p>
                     <a href="../radiology/request.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
-                        Request Radiology Study
+                        <?= $requestSource === 'Direct' ? 'Create Direct Request' : 'Request Radiology Study' ?>
                     </a>
                 </p>
             <?php endif; ?>

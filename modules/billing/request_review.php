@@ -20,6 +20,7 @@ if (!$request) {
     http_response_code(404);
     exit('Billing request not found.');
 }
+$canCancelThisRequest = $billingService->canCancelBillingRequestRow($request, $currentUser);
 
 $items = $accountsService->searchItems(['status' => 'active'], $currentUser);
 $items = array_values(array_filter($items, static fn (array $item): bool => !empty($item['is_active'])));
@@ -93,7 +94,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 </div>
             </form>
 
-            <?php if ($permissionService->canCancelBillingRequest($currentUser)): ?>
+            <?php if ($canCancelThisRequest): ?>
                 <form method="post" action="request_cancel.php" class="form-grid" style="margin-top:1rem;">
                     <?= csrfField() ?>
                     <input type="hidden" name="billing_request_id" value="<?= (int)$request['id'] ?>">

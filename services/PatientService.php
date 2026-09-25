@@ -652,6 +652,15 @@ public function searchPatients(array $filters): array
 
     }
 
+    if (!empty($filters['middle_name'])) {
+
+        $conditions[] = "middle_name LIKE :middle_name";
+
+        $params['middle_name'] =
+            '%' . trim($filters['middle_name']) . '%';
+
+    }
+
     if (!empty($filters['last_name'])) {
 
         $conditions[] = "last_name LIKE :last_name";
@@ -694,7 +703,7 @@ public function searchPatients(array $filters): array
         $sql .= " WHERE " . implode(" AND ", $conditions);
     }
 
-    $sql .= " ORDER BY last_name, first_name";
+    $sql .= " ORDER BY created_at DESC, id DESC";
 
     $stmt = $this->pdo->prepare($sql);
 

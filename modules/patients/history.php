@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 $pageTitle = 'Patient Encounter History';
-$moduleStylesheet = '../../modules/patients/assets/patients.css';
+$moduleStylesheet = '/modules/patients/assets/patients.css';
 
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/database.php';

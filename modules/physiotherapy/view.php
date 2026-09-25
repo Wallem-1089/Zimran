@@ -34,6 +34,15 @@ $canEdit = $permissionService->canEditPhysiotherapy($visit, $currentUser);
 $canManageSessions = $permissionService->canManagePhysiotherapySessions($visit, $currentUser);
 $canComplete = $permissionService->canCompletePhysiotherapy($visit, $currentUser);
 $isClosed = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
+$recordIsClosed = in_array((string)($record['status'] ?? ''), ['Completed', 'Cancelled'], true);
+$addSessionBlockedReason = null;
+if ($isClosed) {
+    $addSessionBlockedReason = 'Add Session is unavailable because this encounter is completed or cancelled.';
+} elseif ($recordIsClosed) {
+    $addSessionBlockedReason = 'Add Session is unavailable because this physiotherapy record is completed or cancelled.';
+} elseif (!$canManageSessions) {
+    $addSessionBlockedReason = 'Add Session is available to authorized Physiotherapy users when the encounter is currently in the Physiotherapy department. If the patient is ready for physiotherapy treatment, transfer and receive the encounter in Physiotherapy first.';
+}
 $physiotherapyConfiguredDisplayValues = $configurableFormService->getResponseValues('physiotherapy_record', 'Physiotherapy Record', (int)$record['id']);
 
 $pageTitle = 'Physiotherapy Record';
@@ -72,6 +81,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
             <a class="btn-secondary" href="<?= e(physiotherapyBackToWorkspace((int)$record['visit_id'])) ?>">Workspace</a>
             <a class="btn-secondary" href="history.php?visit=<?= (int)$record['visit_id'] ?>">History</a>
+            <a class="btn-secondary" href="#sessions">Sessions</a>
+            <?php if (!$isClosed && !$recordIsClosed && $canManageSessions): ?>
+                <a class="btn-primary" href="report.php?record=<?= (int)$record['id'] ?>">Add New Session</a>
+            <?php endif; ?>
             <?php if (!$isClosed && $permissionService->canCreateBillingRequest($currentUser)): ?>
                 <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$record['visit_id'] ?>&source_module=Physiotherapy&source_record_id=<?= (int)$record['id'] ?>&description=<?= urlencode('Physiotherapy: ' . (string)($record['presenting_problem'] ?? '')) ?>">Request Billing</a>
             <?php endif; ?>
@@ -133,15 +146,21 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <?php endif; ?>
     <?php hmsRenderConfiguredValues($physiotherapyConfiguredDisplayValues); ?>
 
-    <div class="card">
+    <div class="card" id="sessions">
         <div class="section-heading">
             <h3>Sessions</h3>
             <div class="form-actions">
-                <?php if (!$isClosed && $canManageSessions && (string)$record['status'] === 'Active'): ?>
-                    <a class="btn-primary" href="report.php?record=<?= (int)$record['id'] ?>">Add Session</a>
+                <?php if (!$isClosed && !$recordIsClosed && $canManageSessions): ?>
+                    <a class="btn-primary" href="report.php?record=<?= (int)$record['id'] ?>">Add New Session</a>
                 <?php endif; ?>
             </div>
         </div>
+
+        <?php if ($addSessionBlockedReason !== null): ?>
+            <div class="alert-warning">
+                <?= e($addSessionBlockedReason) ?>
+            </div>
+        <?php endif; ?>
 
         <?php if ($sessions === []): ?>
             <p class="text-muted">No physiotherapy sessions recorded.</p>
@@ -169,7 +188,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                                 <td><?php hmsRenderNarrative((string)($session['next_plan'] ?? '-')); ?></td>
                                 <td><?= e((string)($session['recorded_by_name'] ?? '-')) ?></td>
                                 <td>
-                                    <?php if (!$isClosed && $canManageSessions && (string)$record['status'] === 'Active'): ?>
+                                    <?php if (!$isClosed && !$recordIsClosed && $canManageSessions): ?>
                                         <a class="btn-secondary btn-sm" href="report.php?session=<?= (int)$session['id'] ?>">Edit</a>
                                     <?php endif; ?>
                                 </td>

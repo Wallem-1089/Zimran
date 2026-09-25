@@ -46,7 +46,7 @@ $radiologyRequest['request_source'] = $requestSource;
 unset($_SESSION['old_radiology_request']);
 
 $existingRequests = $radiologyService->listByVisit($visitId, $currentUser);
-$pageTitle = 'Create Radiology Request';
+$pageTitle = $requestSource === 'Direct' ? 'Create Direct Radiology/X-Ray Request' : 'Create Radiology Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 
 require __DIR__ . '/../../layouts/header.php';
@@ -68,7 +68,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <?php endif; ?>
     <div class="page-header">
         <div>
-            <h1>Create Radiology Request</h1>
+            <h1><?= e($pageTitle) ?></h1>
             <p><?= e((string)($visit['visit_number'] ?? ('Encounter #' . $visitId))) ?></p>
         </div>
         <div class="form-actions">
@@ -86,7 +86,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="summary-item"><span class="summary-label">Encounter Status</span> <span class="summary-value"><?= e((string)($visit['visit_status'] ?? '-')) ?></span></div>
     </div>
 
-    <?php require __DIR__ . '/_form.php'; ?>
+    <?php $buttonLabel = $requestSource === 'Direct' ? 'Save Direct Radiology/X-Ray Request' : 'Save Radiology Request'; require __DIR__ . '/_form.php'; ?>
 
     <div class="card">
         <h3>Existing Requests for This Encounter</h3>

@@ -11,14 +11,33 @@ $billingChargesTotal = (float)($billingSummary['total_charges'] ?? 0);
 $billingPaymentsTotal = (float)($billingSummary['amount_paid'] ?? 0);
 $billingBalanceDue = (float)($billingSummary['balance_due'] ?? 0);
 $billingStatus = (string)($billingSummary['status'] ?? 'Unbilled');
+$billingDiscounts = $billingDiscounts ?? [];
+$billingDiscountsReady = $billingDiscountsReady ?? false;
+$billingDiscountsTotal = (float)($billingSummary['total_discounts'] ?? 0);
+$billingChargeDiscountsTotal = (float)($billingSummary['charge_discounts'] ?? 0);
+$billingDiscountedSubtotal = (float)($billingSummary['discounted_subtotal'] ?? max(0, $billingChargesTotal - $billingChargeDiscountsTotal));
+$billingInvoiceDiscountsTotal = (float)($billingSummary['invoice_discounts'] ?? max(0, $billingDiscountsTotal - $billingChargeDiscountsTotal));
+$billingInvoiceTotal = (float)($billingSummary['invoice_total'] ?? max(0, $billingChargesTotal - $billingDiscountsTotal));
 $billingRequests = $billingRequests ?? [];
 $billingRequestsReady = $billingRequestsReady ?? false;
 $billingShowFullHistory = !empty($billingShowFullHistory) || (string)($_GET['history'] ?? '') === 'full';
 $billingRequestRows = $billingShowFullHistory ? $billingRequests : array_slice($billingRequests, 0, 10);
 $billingChargeRows = $billingShowFullHistory ? $billingCharges : array_slice($billingCharges, 0, 15);
 $billingPaymentRows = $billingShowFullHistory ? $billingPayments : array_slice($billingPayments, 0, 10);
+$billingDiscountRows = $billingShowFullHistory ? $billingDiscounts : array_slice($billingDiscounts, 0, 10);
 $billingFullHistoryUrl = '../billing/view.php?visit=' . (int)$visit['id'] . '&history=full';
 $billingRecentUrl = '../billing/view.php?visit=' . (int)$visit['id'];
+$billingDiscountsByCharge = [];
+foreach ($billingDiscounts as $discount) {
+    if ((string)($discount['status'] ?? '') !== 'Active') {
+        continue;
+    }
+    $chargeId = (int)($discount['patient_charge_id'] ?? 0);
+    if ($chargeId <= 0) {
+        continue;
+    }
+    $billingDiscountsByCharge[$chargeId] = ($billingDiscountsByCharge[$chargeId] ?? 0.0) + (float)($discount['discount_amount'] ?? 0);
+}
 ?>
 
 <div class="card">
@@ -40,6 +59,9 @@ $billingRecentUrl = '../billing/view.php?visit=' . (int)$visit['id'];
             <?php endif; ?>
             <?php if (!empty($canRecordPayment)): ?>
                 <a class="btn-primary" href="../billing/payment_create.php?visit=<?= (int)$visit['id'] ?>">Record Payment</a>
+            <?php endif; ?>
+            <?php if (!empty($canApplyBillingDiscount) && $billingInvoice): ?>
+                <a class="btn-secondary" href="../billing/discount_create.php?visit=<?= (int)$visit['id'] ?>">Apply Discount</a>
             <?php endif; ?>
             <?php if ($billingShowFullHistory): ?>
                 <a class="btn-secondary" href="<?= e($billingRecentUrl) ?>">Show Recent</a>
@@ -65,6 +87,26 @@ $billingRecentUrl = '../billing/view.php?visit=' . (int)$visit['id'];
         <div class="summary-item">
             <span class="summary-label">Total Charges</span>
             <span class="summary-value">&#8358;<?= e(number_format($billingChargesTotal, 2)) ?></span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">Charge Discounts</span>
+            <span class="summary-value">&#8358;<?= e(number_format($billingChargeDiscountsTotal, 2)) ?></span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">Subtotal</span>
+            <span class="summary-value">&#8358;<?= e(number_format($billingDiscountedSubtotal, 2)) ?></span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">Invoice Discount</span>
+            <span class="summary-value">&#8358;<?= e(number_format($billingInvoiceDiscountsTotal, 2)) ?></span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">Total Discount</span>
+            <span class="summary-value">&#8358;<?= e(number_format($billingDiscountsTotal, 2)) ?></span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">Invoice Total</span>
+            <span class="summary-value">&#8358;<?= e(number_format($billingInvoiceTotal, 2)) ?></span>
         </div>
         <div class="summary-item">
             <span class="summary-label">Total Payments</span>
@@ -114,6 +156,7 @@ $billingRecentUrl = '../billing/view.php?visit=' . (int)$visit['id'];
                 </thead>
                 <tbody>
                     <?php foreach ($billingRequestRows as $request): ?>
+                        <?php $canCancelThisRequest = isset($billingService, $currentUser) && $billingService->canCancelBillingRequestRow($request, $currentUser); ?>
                         <tr>
                             <td><?= e((string)($request['description'] ?? '-')) ?></td>
                             <td><?= e((string)($request['department_name'] ?? '-')) ?></td>
@@ -125,14 +168,17 @@ $billingRecentUrl = '../billing/view.php?visit=' . (int)$visit['id'];
                                 <?php if (!empty($canReviewBillingRequest) && (string)($request['status'] ?? '') === 'Pending'): ?>
                                     <a class="btn-primary btn-sm" href="../billing/request_review.php?id=<?= (int)$request['id'] ?>">Create Charge</a>
                                 <?php endif; ?>
-                                <?php if (!empty($canCancelBillingRequest) && (string)($request['status'] ?? '') === 'Pending'): ?>
-                                    <form method="post" action="../billing/request_cancel.php" style="display:inline">
-                                        <?= csrfField() ?>
-                                        <input type="hidden" name="billing_request_id" value="<?= (int)$request['id'] ?>">
-                                        <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
-                                        <input type="hidden" name="reason" value="Cancelled from billing workspace.">
-                                        <button class="btn-secondary btn-sm" type="submit">Cancel</button>
-                                    </form>
+                                <?php if ($canCancelThisRequest): ?>
+                                    <details class="inline-details">
+                                        <summary class="btn-secondary btn-sm">Cancel</summary>
+                                        <form method="post" action="../billing/request_cancel.php" class="inline-cancel-form">
+                                            <?= csrfField() ?>
+                                            <input type="hidden" name="billing_request_id" value="<?= (int)$request['id'] ?>">
+                                            <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
+                                            <textarea name="reason" rows="2" required placeholder="Cancellation reason"></textarea>
+                                            <button class="btn-danger btn-sm" type="submit">Confirm Cancel</button>
+                                        </form>
+                                    </details>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -155,6 +201,11 @@ $billingRecentUrl = '../billing/view.php?visit=' . (int)$visit['id'];
             <tbody>
                 <tr><th>Invoice Number</th><td><?= e((string)$billingInvoice['invoice_number']) ?></td></tr>
                 <tr><th>Status</th><td><?= e((string)$billingInvoice['status']) ?></td></tr>
+                <tr><th>Gross Charges</th><td>&#8358;<?= e(number_format($billingChargesTotal, 2)) ?></td></tr>
+                <tr><th>Charge Discounts</th><td>&#8358;<?= e(number_format($billingChargeDiscountsTotal, 2)) ?></td></tr>
+                <tr><th>Subtotal</th><td>&#8358;<?= e(number_format($billingDiscountedSubtotal, 2)) ?></td></tr>
+                <tr><th>Invoice Discount</th><td>&#8358;<?= e(number_format($billingInvoiceDiscountsTotal, 2)) ?></td></tr>
+                <tr><th>Total Discount</th><td>&#8358;<?= e(number_format($billingDiscountsTotal, 2)) ?></td></tr>
                 <tr><th>Total</th><td>&#8358;<?= e(number_format((float)$billingInvoice['total_amount'], 2)) ?></td></tr>
                 <tr><th>Paid</th><td>&#8358;<?= e(number_format((float)$billingInvoice['amount_paid'], 2)) ?></td></tr>
                 <tr><th>Balance</th><td>&#8358;<?= e(number_format((float)$billingInvoice['balance_due'], 2)) ?></td></tr>
@@ -174,6 +225,79 @@ $billingRecentUrl = '../billing/view.php?visit=' . (int)$visit['id'];
         <?php endif; ?>
     </div>
 </div>
+
+<?php if (!empty($canViewBillingDiscounts) || !empty($canApplyBillingDiscount)): ?>
+<div class="card">
+    <div class="section-header">
+        <div>
+            <h3>Discounts</h3>
+            <p class="text-muted">Only approved preset discounts of 5%, 10%, or 15% are allowed.</p>
+            <?php if (count($billingDiscounts) > count($billingDiscountRows)): ?>
+                <p class="text-muted">Showing latest <?= count($billingDiscountRows) ?> of <?= count($billingDiscounts) ?> discounts.</p>
+            <?php endif; ?>
+        </div>
+        <div class="form-actions">
+            <?php if (!empty($canApplyBillingDiscount) && $billingInvoice): ?>
+                <a class="btn-secondary" href="../billing/discount_create.php?visit=<?= (int)$visit['id'] ?>">Apply Discount</a>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <?php if (!$billingDiscountsReady): ?>
+        <div class="empty-state">Billing discount tables are not available yet. Apply Migration 072 to enable discounts.</div>
+    <?php elseif (empty($billingDiscounts)): ?>
+        <div class="empty-state">No discounts have been applied.</div>
+    <?php else: ?>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Discount</th>
+                        <th>Applies To</th>
+                        <th>Amount</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                        <th>Applied By</th>
+                        <th>Applied At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($billingDiscountRows as $discount): ?>
+                        <tr>
+                            <td><?= e((string)($discount['display_discount_value'] ?? $discount['discount_value'] ?? '0')) ?>%</td>
+                            <td>
+                                <?= e((string)($discount['discount_scope_label'] ?? (!empty($discount['patient_charge_id']) ? 'Charge #' . (int)$discount['patient_charge_id'] : 'Whole Invoice'))) ?>
+                            </td>
+                            <td>&#8358;<?= e((string)($discount['display_discount_amount'] ?? '0.00')) ?></td>
+                            <td><?= e((string)($discount['reason'] ?? '-')) ?></td>
+                            <td><?= e((string)($discount['status'] ?? 'Active')) ?></td>
+                            <td><?= e((string)($discount['applied_by_name'] ?? '-')) ?></td>
+                            <td><?= e((string)($discount['applied_at'] ?? '-')) ?></td>
+                            <td>
+                                <?php if (!empty($canCancelBillingDiscount) && (string)($discount['status'] ?? '') === 'Active'): ?>
+                                    <form method="post" action="../billing/discount_cancel.php" style="display:inline">
+                                        <?= csrfField() ?>
+                                        <input type="hidden" name="discount_id" value="<?= (int)$discount['id'] ?>">
+                                        <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
+                                        <input type="hidden" name="reason" value="Cancelled from billing workspace.">
+                                        <button class="btn-secondary btn-sm" type="submit">Cancel</button>
+                                    </form>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php if (count($billingDiscounts) > count($billingDiscountRows)): ?>
+            <div class="form-actions">
+                <a class="btn-secondary" href="<?= e($billingFullHistoryUrl) ?>">View Full Discount History</a>
+            </div>
+        <?php endif; ?>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
 
 <div class="card">
     <div class="section-header">
@@ -195,6 +319,8 @@ $billingRecentUrl = '../billing/view.php?visit=' . (int)$visit['id'];
                         <th>Qty</th>
                         <th>Unit Price</th>
                         <th>Amount</th>
+                        <th>Line Discount</th>
+                        <th>Net Amount</th>
                         <th>Source</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -202,11 +328,18 @@ $billingRecentUrl = '../billing/view.php?visit=' . (int)$visit['id'];
                 </thead>
                 <tbody>
                     <?php foreach ($billingChargeRows as $charge): ?>
+                        <?php
+                            $chargeAmount = (float)($charge['amount'] ?? 0);
+                            $chargeDiscount = (float)($billingDiscountsByCharge[(int)$charge['id']] ?? 0);
+                            $chargeNetAmount = max(0, $chargeAmount - $chargeDiscount);
+                        ?>
                         <tr>
                             <td><?= e((string)($charge['item_name'] ?? '-')) ?></td>
                             <td><?= e((string)($charge['display_quantity'] ?? '0')) ?></td>
                             <td>&#8358;<?= e((string)($charge['display_unit_price'] ?? '0.00')) ?></td>
                             <td>&#8358;<?= e((string)($charge['display_amount'] ?? '0.00')) ?></td>
+                            <td>&#8358;<?= e(number_format($chargeDiscount, 2)) ?></td>
+                            <td>&#8358;<?= e(number_format($chargeNetAmount, 2)) ?></td>
                             <td><?= e((string)($charge['source_module'] ?? 'Billing')) ?></td>
                             <td><?= e((string)($charge['status'] ?? 'Active')) ?></td>
                             <td>

@@ -46,7 +46,7 @@ $laboratoryRequest['request_source'] = $requestSource;
 unset($_SESSION['old_laboratory_request']);
 
 $existingRequests = $laboratoryService->listByVisit($visitId, $currentUser);
-$pageTitle = 'Create Laboratory Request';
+$pageTitle = $requestSource === 'Direct' ? 'Create Direct Laboratory Request' : 'Create Laboratory Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 
 require __DIR__ . '/../../layouts/header.php';
@@ -68,7 +68,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <?php endif; ?>
     <div class="page-header">
         <div>
-            <h1>Create Laboratory Request</h1>
+            <h1><?= e($pageTitle) ?></h1>
             <p><?= e((string)($visit['visit_number'] ?? ('Encounter #' . $visitId))) ?></p>
         </div>
         <div class="form-actions">
@@ -86,7 +86,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="summary-item"><span class="summary-label">Encounter Status</span> <span class="summary-value"><?= e((string)($visit['visit_status'] ?? '-')) ?></span></div>
     </div>
 
-    <?php require __DIR__ . '/_form.php'; ?>
+    <?php $buttonLabel = $requestSource === 'Direct' ? 'Save Direct Laboratory Request' : 'Save Laboratory Request'; require __DIR__ . '/_form.php'; ?>
 
     <div class="card">
         <h3>Existing Requests for This Encounter</h3>

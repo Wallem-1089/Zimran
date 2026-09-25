@@ -195,6 +195,12 @@ rejection; CSRF-aware controller wiring; audit generation; and the integration
 hooks used by the Workspace, Consultation page and Patient Chart. Existing
 major workflows remain covered by the previous regression suites.
 
+Manual browser verification for Vital Signs should also confirm that the BMI
+field calculates to the same two-decimal value before and after save when
+weight and height are entered. The field should be read-only while both weight
+and height are present, and manually editable only when one of those inputs is
+missing.
+
 ## Phase 3.3 Nursing
 
 ```powershell
@@ -399,7 +405,8 @@ php test\phase4_billing_test.php
 The focused suite verifies manual charges from active billable items, price
 snapshot behavior, multiple charges, invoice creation/refresh, partial and full
 payments, invoice status transitions, receipt data, duplicate source-charge
-prevention, over-balance payment rejection, authorization, CSRF-aware
+prevention, over-balance payment rejection, controlled 5%/10%/15% billing
+discounts, discount cancellation, authorization, CSRF-aware
 controller wiring, audit, and directly affected Accounts/Store/Pharmacy and
 Workspace regressions.
 
@@ -516,6 +523,28 @@ Medical Document regression should verify both access modes:
 - Super Administrator can download cross-department documents;
 - confidential document masking and audit logging still apply.
 
+Patient Communications regression should verify:
+
+- Radiology report view exposes WhatsApp handoff only to authorized users.
+- Medical Document view exposes WhatsApp handoff only when the document is
+  otherwise viewable.
+- patient WhatsApp number is available from the patient profile, with phone
+  number fallback.
+- consent confirmation is required.
+- the generated WhatsApp text contains only patient name and patient/hospital
+  number, not report/result/document narrative.
+- a `patient_communications` row is written for the handoff.
+- Patient Chart communications history is visible only with
+  `view_patient_communications`.
+
+Billing discount regression should verify that only 5%, 10%, and 15% discount
+options are accepted; Super Administrator can apply/cancel discounts; ordinary
+users need explicit permission; charge-specific discounts reduce only their
+target line; invoice-level discounts apply after line discounts; invoice totals
+are calculated from active charges minus line discounts minus invoice discounts
+minus posted payments; and original charge prices/payment records remain
+unchanged.
+
 UI regression should include Encounter Workspace Notes and Patient Chart
 Clinical Notes on desktop, tablet, and phone widths. Author, Updated, and
 action columns should remain visually separated, with table overflow handled
@@ -526,6 +555,15 @@ not the live application database. The 2026-08-26 drill restored
 `before_053_patient_stock_usage_20260825_115230.sql` into `hms_restore_test`,
 verified core tables and counts, and confirmed live Migration 053 remained
 separate from the restored pre-053 backup state.
+
+Deployment smoke tests should verify that the same codebase works with:
+
+- `HMS_BASE_URL=/hospital_management_system` under the normal XAMPP folder;
+- `HMS_BASE_URL=/zimran` through an Apache alias;
+- `HMS_BASE_URL=/` when the project contents are deployed at web-root;
+- environment database credentials on Virtualmin-style hosting; and
+- secure document storage outside the public web root.
+
 ## POP / Casting regression
 
 `test/phase_pop_test.php` verifies Doctor clinical POP request creation, POP
@@ -548,11 +586,50 @@ Migration 070 regression should verify:
 
 - `form_definitions`, `form_fields`, `form_responses`, and
   `form_response_values` exist.
-- Administration -> Form Settings loads for Super Administrator/System
-  Administrator.
+- Administration -> Form Settings loads for Super Administrator only.
+- Ordinary System Administrator does not see the Form Settings sidebar link or
+  administration dashboard shortcut, and direct route access is denied.
 - Activating Nursing, Theatre, Admission, Dressing, DM Sheet, ECG, POP, or
   Physiotherapy fields shows them under `Additional Configured Fields`.
 - Inactive fields remain hidden.
 - Create/update saves configured field responses for the source record.
 - View pages display saved configured field responses.
 - CSRF and parent-record permissions still apply.
+
+## Version 1.2 permission and route regression
+
+Version 1.2 permission fixes should be verified with:
+
+```powershell
+$env:HMS_APP_ENV='testing'
+$env:HMS_TEST_DB_NAME='hms_test_hospital_management_system'
+$env:HMS_DEV_FIXTURE_PASSWORD='Development#123'
+
+php test\user_permission_overrides_test.php --confirm-destructive-test-db --ack-no-test-backup
+php test\sidebar_visibility_test.php --confirm-destructive-test-db --ack-no-test-backup
+php test\clinical_cross_view_permission_test.php --confirm-destructive-test-db --ack-no-test-backup
+php test\phase1_regression_test.php --confirm-destructive-test-db --ack-no-test-backup
+php test\phase3_laboratory_test.php --confirm-destructive-test-db --ack-no-test-backup
+php test\phase3_radiology_test.php --confirm-destructive-test-db --ack-no-test-backup
+php test\phase3_physiotherapy_test.php --confirm-destructive-test-db --ack-no-test-backup
+php test\phase4_pharmacy_test.php --confirm-destructive-test-db --ack-no-test-backup
+php test\phase_ecg_test.php --confirm-destructive-test-db --ack-no-test-backup
+php test\phase_pop_test.php --confirm-destructive-test-db --ack-no-test-backup
+```
+
+Manual browser checks:
+
+- System Administrator without `register_patient` cannot see/use patient
+  registration.
+- Receptionist/Records Officer with `register_patient` can still register
+  patients.
+- Department worklist buttons disappear when the matching view permission is
+  removed, even if the user belongs to that department.
+- User-specific Deny overrides beat role permissions for ordinary users.
+- Physiotherapy edit posts to update and no longer shows the duplicate-record
+  message while updating an existing record.
+- Physiotherapy sessions can be added from the existing record when the
+  encounter is active, in Physiotherapy, and the user has
+  `manage_physiotherapy_sessions`.
+- Accounts Price Catalogue create/edit does not show `unit`; Store inventory
+  forms still manage item units.

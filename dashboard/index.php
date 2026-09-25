@@ -84,7 +84,7 @@ if ($stockRequestsReady && $isStockWorkflowDashboardUser) {
         WHERE status = 'Pending'
     ";
     $pendingStockParams = [];
-    if (strcasecmp($activeDepartmentName, 'Store') !== 0 && !$permissionService->canIssueStockRequests($currentUser)) {
+    if (strcasecmp($activeDepartmentName, 'Store') !== 0 && !$permissionService->canIssueStockRequest($currentUser)) {
         $pendingStockSql .= ' AND requesting_department_id = :department_id';
         $pendingStockParams[':department_id'] = $activeDepartmentId;
     }

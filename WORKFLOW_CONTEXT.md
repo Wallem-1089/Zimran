@@ -1099,6 +1099,16 @@ A Billing Request is only a recommendation. It does not affect invoice totals,
 patient balance, payments, or receipts until Accounts/Admin converts it into an
 official patient charge using the Accounts price catalogue.
 
+Billing discounts are controlled Billing adjustments. A Super Administrator,
+or a user explicitly granted discount permission, may apply only one of the
+approved preset discount percentages: 5%, 10%, or 15%. The discount is stored
+separately from charges and prices, requires a reason, and reduces the invoice
+total without changing original charge rows. A discount may apply to one charge
+line or to the whole invoice. Billing calculates gross charges, subtracts
+charge-specific discounts to get the subtotal, subtracts invoice-level
+discounts, then subtracts posted payments to get the balance. Cancelling a
+discount requires a reason and refreshes the invoice totals.
+
 Advanced insurance and financial approval chains are postponed.
 
 ### Later / Optional
@@ -1222,6 +1232,29 @@ replace the structured modules where those modules already exist.
 Structured blood requests, crossmatch records, transfusion records, and
 Blood Bank workflow remain later Laboratory-owned work.
 
+## Patient Communications / WhatsApp handoff
+
+The current Patient Communications workflow tracks manual WhatsApp handoffs
+without sending files through an API:
+
+```text
+Radiology report or Medical Document view
+-> confirm patient phone/WhatsApp number
+-> confirm patient consent
+-> open WhatsApp with a safe message
+-> staff manually attaches the protected report/document
+-> communication handoff is logged
+```
+
+Only Radiology report view and Medical Document view currently expose this
+handoff. The generated message contains only patient identity context, such as
+patient name and hospital number. The system does not put protected files at a
+public URL for WhatsApp. Protected files still open/download only through
+permission-checked PHP controllers.
+
+The Patient Chart includes a Patient Communications history tab for users with
+`view_patient_communications`.
+
 Accounts owns the reusable price catalogue. It is a sidebar-only master-data
 module and does not live inside the Encounter Workspace. Billing consumes
 `billable_items` by copying the current catalogue price into each posted
@@ -1266,9 +1299,12 @@ The data is stored on `visits` for the current simple encounter model:
 or inpatient-discharge module.
 
 Cancelled encounters are terminal for normal clinical CRUD. Cancellation is a
-workspace status action for Receptionist, Records Officer, Doctor, and System
-Administrator. Cancellation is not a transfer type and does not represent a
-department handoff.
+workspace status action for Receptionist, Records Officer, and Doctor only
+when the user also has the lifecycle permission used for status changes.
+Super Administrator retains override access. Ordinary System Administrator
+does not receive encounter cancellation merely because it is an administrator.
+Cancellation is not a transfer type and does not represent a department
+handoff.
 
 ## Current ownership boundaries
 
@@ -1351,6 +1387,14 @@ the uploading department, have
 This lets staff view patient-context documents without broadly exporting files
 from departments they do not belong to.
 
+## Vital Signs BMI behavior
+
+BMI is calculated from weight and height when both values are supplied. The
+server remains authoritative and stores BMI rounded to two decimals. The form
+uses the same calculation for immediate feedback and makes BMI read-only while
+weight and height are present. Manual BMI entry is only relevant when weight or
+height is missing.
+
 ## Super Administrator / Administrator workflow
 
 Super Administrator is the only role with full override access across clinical,
@@ -1360,13 +1404,23 @@ permissions, settings/security, and viewing department worklists. Ordinary
 administrators do not automatically gain department clinical mutation rights or
 financial/stock mutation rights.
 
+Version 1.2 makes the Permission Matrix authoritative for ordinary users and
+ordinary System Administrators. Role permissions and user-specific Allow/Deny
+overrides control module access, sidebar visibility, worklists, registration,
+and most workflow actions. Hardcoded role/department fallbacks exist only as
+compatibility defaults when a permission row is not present; when a permission
+exists in the database, the matrix result is used. Department worklists now
+also require the matching department view permission, not only the department
+name or role label.
+
 ## Configurable Extra Form Fields
 
-Administrators can use Administration -> Form Settings to activate optional
-extra fields for selected clinical forms. Supported targets are Nursing
-Assessment, Theatre Record, Admission Record, Dressing Record, DM Sheet, ECG
-Report, POP Procedure Record, and Physiotherapy Record. Enabled fields appear
-below the coded form fields as `Additional Configured Fields`; inactive fields
-remain hidden. These responses are linked to the patient, encounter, and source
-record and do not change core Nursing, billing, stock, patient identity, or
-encounter lifecycle fields.
+Super Administrators can use Administration -> Form Settings to activate
+optional extra fields for selected clinical forms. Ordinary System
+Administrator accounts do not manage Form Settings. Supported targets are
+Nursing Assessment, Theatre Record, Admission Record, Dressing Record, DM
+Sheet, ECG Report, POP Procedure Record, and Physiotherapy Record. Enabled
+fields appear below the coded form fields as `Additional Configured Fields`;
+inactive fields remain hidden. These responses are linked to the patient,
+encounter, and source record and do not change core Nursing, billing, stock,
+patient identity, or encounter lifecycle fields.

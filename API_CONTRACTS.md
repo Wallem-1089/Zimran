@@ -89,6 +89,26 @@ practical version: `createWard()`, `addBed()`, `admit()`, `transfer()`,
 non-financial until Accounts/Admin converts them into `patient_charges` through
 the existing price-snapshot charge path.
 
+`BillingService` also owns billing discounts through `applyBillingDiscount()`,
+`cancelBillingDiscount()`, and `listDiscountsByVisit()`. Discounts are
+separate records in `billing_discounts`; original charge prices and Accounts
+catalogue prices are never edited. Only preset percentage discounts of 5%, 10%,
+or 15% are accepted. `patient_charge_id` distinguishes charge-specific line
+discounts from invoice-level discounts. Balance calculations subtract line
+discounts first, then invoice-level discounts, then posted payments.
+
+`PatientCommunicationService` owns the current Patient Communications
+tracking workflow. It records manual WhatsApp handoffs for Radiology reports
+and Medical Documents, including consent confirmation, recipient phone, safe
+message text, source module/type/record, optional document linkage, initiating
+user, status, and timestamps. It does not send files through an API and does
+not generate public document links.
+
+`ConfigurableFormService` owns optional extra fields on selected clinical
+forms. Core coded fields remain in their module tables; configurable values
+are stored separately in `form_responses` and `form_response_values` after the
+parent source record exists.
+
 ## Public Method Contracts
 
 The method tables are normative summaries. Unless a row says otherwise, write failures use `['success' => false, 'errors' => [...]]`; administration authorization and CSRF are expected at the controller boundary; PDO read failures may propagate.
@@ -964,12 +984,12 @@ Constructor: `__construct(PDO $pdo, ?AuditService $auditService = null, ?Permiss
 
 | Signature | Purpose/return | Contract |
 |---|---|---|
-| `create(array $data, array $user): array` | Inserts a new vital-signs row for an active encounter. Returns `success`, `vital_signs_id`, `visit_id`, `patient_id`, `errors`. | Validates patient/visit consistency, encounter status, permission, range checks and BMI calculation. Writes `VITAL_SIGNS_CREATED` audit in the same transaction. No encounter event is created for routine measurements. |
+| `create(array $data, array $user): array` | Inserts a new vital-signs row for an active encounter. Returns `success`, `vital_signs_id`, `visit_id`, `patient_id`, `errors`. | Validates patient/visit consistency, encounter status, permission, range checks and BMI calculation. When weight and height are supplied, BMI is calculated server-side from kg/cm and rounded to two decimals. Writes `VITAL_SIGNS_CREATED` audit in the same transaction. No encounter event is created for routine measurements. |
 | `getById(int $vitalSignsId, ?array $user = null): ?array` | Read one record. | Returns `null` when a user is supplied and they lack view permission. |
 | `getLatestByVisit(int $visitId, ?array $user = null): ?array` | Read most recent record for a visit. | Convenience read used by Workspace, Consultation and Patient Chart. |
 | `listByVisit(int $visitId, ?array $user = null, int $limit = 0): array` | Chronological visit history. | Returns ordered rows; optional limit is used by consumers. |
 | `listByPatient(int $patientId, ?array $user = null): array` | Patient history across visits. | Read-only summary source. |
-| `update(int $vitalSignsId, array $data, array $user): array` | Updates an existing record. Returns the same structured write envelope. | Revalidates encounter status and permissions, recalculates BMI when applicable, and writes `VITAL_SIGNS_UPDATED` in the same transaction. |
+| `update(int $vitalSignsId, array $data, array $user): array` | Updates an existing record. Returns the same structured write envelope. | Revalidates encounter status and permissions, recalculates BMI when weight and height are present, preserves/manual-accepts BMI only when weight/height are not both supplied, and writes `VITAL_SIGNS_UPDATED` in the same transaction. |
 | `canViewVitalSigns(array $encounter, ?array $user = null): bool` | Permission helper for chart/workspace consumers. | Uses `PermissionService` and the active encounter/patient context. |
 | `canCreateVitalSigns(array $encounter, ?array $user = null): bool` / `canEditVitalSigns(...)` | Mutation guards for forms and controllers. | Refuse completed/cancelled encounters and require doctor/nurse/admin-scoped access. |
 
@@ -1255,3 +1275,37 @@ Write methods return the standard structured response:
 `['success' => bool, 'errors' => []]`. POP writes validate patient/visit
 consistency, encounter status, permissions, request source, procedure text, and
 CSRF in controllers.
+
+## Version 1.2 route and permission contract notes
+
+Permission checks:
+
+- `PermissionService::hasPermission()` is the authoritative check for ordinary
+  users and ordinary System Administrators when a permission exists in the
+  database.
+- User-specific `user_permissions` Allow/Deny overrides are evaluated before
+  role permissions.
+- If a session lacks `role_id`, the service resolves the role from `users`
+  before considering fallback rules.
+- Super Administrator remains the only full override.
+- `canRegisterPatient()` now delegates to `register_patient`; no ordinary
+  System Administrator shortcut exists.
+- Department worklist checks require both department/role ownership and the
+  relevant view permission.
+
+Physiotherapy:
+
+- `modules/physiotherapy/edit.php?id=<record_id>` renders the existing record
+  form.
+- The edit form posts to `modules/physiotherapy/update.php` with hidden `id`.
+- `update.php` calls `PhysiotherapyService::updateRecord()`.
+- Repeated treatments use `modules/physiotherapy/report.php?record=<id>` to
+  add sessions under the existing record rather than creating another
+  physiotherapy record for the same encounter.
+
+Accounts:
+
+- `modules/accounts/_form.php` no longer presents a visible `unit` field.
+- `billable_items.unit` remains nullable/backward-compatible in the service
+  and database.
+- Store/Inventory remains the authoritative owner of stock units.

@@ -45,6 +45,8 @@ if (isset($_SESSION['old_configured_fields']) && is_array($_SESSION['old_configu
     $physiotherapyConfiguredValues = $_SESSION['old_configured_fields'];
     unset($_SESSION['old_configured_fields']);
 }
+$action = 'update.php';
+$buttonLabel = 'Update Physiotherapy Record';
 
 $pageTitle = 'Edit Physiotherapy Record';
 $moduleStylesheet = '/modules/visits/assets/visits.css';

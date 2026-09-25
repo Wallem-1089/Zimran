@@ -102,6 +102,7 @@ try {
         'next_of_kin' => 'Safety Test Kin',
         'next_of_kin_relationship' => 'Sibling',
         'next_of_kin_phone' => '08000000000',
+        'next_of_kin_address' => 'Safety test next of kin address.',
         'duplicate_review_ack' => '1'
     ];
     $createdPatient = clinicalSafetySuccess(

@@ -18,10 +18,27 @@ $downPath = __DIR__ . '/../database/migrations/020_phase2_medical_documents_down
 $up = (string)file_get_contents($upPath); $down = (string)file_get_contents($downPath);
 DatabaseSafety::assertSafeSchema($up, $resolved['live']); DatabaseSafety::assertSafeSchema($down, $resolved['live']);
 DatabaseSafety::logOperation($resolved['test'], 'Explicit Migration 020 down/up verification on empty dedicated test tables', getenv('HMS_VERIFIED_BACKUP_PATH') !== false ? 'verified-backup' : 'explicit-test-acknowledgement');
+$pdo->exec("DELETE up FROM user_permissions up INNER JOIN permissions p ON p.id=up.permission_id WHERE p.permission_key IN ('view_medical_documents','upload_medical_documents','replace_medical_documents','archive_medical_documents','download_medical_documents','view_confidential_documents','view_document_history')");
+$communicationsFk = $pdo->prepare("
+    SELECT CONSTRAINT_NAME
+    FROM information_schema.KEY_COLUMN_USAGE
+    WHERE TABLE_SCHEMA = :schema
+      AND TABLE_NAME = 'patient_communications'
+      AND REFERENCED_TABLE_NAME = 'medical_documents'
+    LIMIT 1
+");
+$communicationsFk->execute([':schema' => $resolved['test']]);
+$communicationsDocumentConstraint = (string)($communicationsFk->fetchColumn() ?: '');
+if ($communicationsDocumentConstraint !== '') {
+    $pdo->exec('ALTER TABLE patient_communications DROP FOREIGN KEY `' . str_replace('`', '``', $communicationsDocumentConstraint) . '`');
+}
 $pdo->exec($down);
 foreach (['medical_document_versions','medical_documents'] as $table) { $s=$pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=:s AND table_name=:t'); $s->execute([':s'=>$resolved['test'],':t'=>$table]); if ((int)$s->fetchColumn() !== 0) { throw new RuntimeException('Down migration did not remove '.$table); } }
 $pdo->exec($up);
 foreach (['medical_document_versions','medical_documents'] as $table) { $s=$pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=:s AND table_name=:t'); $s->execute([':s'=>$resolved['test'],':t'=>$table]); if ((int)$s->fetchColumn() !== 1) { throw new RuntimeException('Up migration did not restore '.$table); } }
+if ($communicationsDocumentConstraint !== '') {
+    $pdo->exec('ALTER TABLE patient_communications ADD CONSTRAINT `' . str_replace('`', '``', $communicationsDocumentConstraint) . '` FOREIGN KEY (document_id) REFERENCES medical_documents(id)');
+}
 $ledger=$pdo->prepare("SELECT checksum FROM schema_migrations WHERE migration_name='020_phase2_medical_documents_up.sql'"); $ledger->execute();
 if (!hash_equals((string)$ledger->fetchColumn(), (string)hash_file('sha256',$upPath))) { throw new RuntimeException('Migration 020 checksum does not match ledger.'); }
 fwrite(STDOUT, "Migration 020 isolated down/up verification passed.\n");

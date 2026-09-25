@@ -479,10 +479,14 @@ $canCancelBillingRequest = $permissionService->canCancelBillingRequest($currentU
 $canCreateInvoice = $permissionService->canCreateInvoice($currentUser);
 $canRecordPayment = $permissionService->canRecordPayment($currentUser);
 $canViewReceipts = $permissionService->canViewReceipts($currentUser);
+$canViewBillingDiscounts = $permissionService->canViewBillingDiscounts($currentUser);
+$canApplyBillingDiscount = $permissionService->canApplyBillingDiscount($currentUser);
+$canCancelBillingDiscount = $permissionService->canCancelBillingDiscount($currentUser);
 $billingTablesReady = workspaceTableExists($pdo, 'patient_charges')
     && workspaceTableExists($pdo, 'invoices')
     && workspaceTableExists($pdo, 'payments');
 $billingRequestsReady = workspaceTableExists($pdo, 'billing_requests');
+$billingDiscountsReady = workspaceTableExists($pdo, 'billing_discounts');
 $billingService = $billingTablesReady ? new BillingService($pdo) : null;
 $billingSummary = $canViewBilling && $billingService
     ? $billingService->getEncounterBalance($visitId, $currentUser)
@@ -492,6 +496,9 @@ $billingPayments = $canViewBilling && $billingService ? $billingService->listPay
 $billingInvoice = $billingSummary['invoice'] ?? null;
 $billingRequests = $billingRequestsReady && $billingService
     ? $billingService->listBillingRequests(['visit_id' => $visitId], $currentUser)
+    : [];
+$billingDiscounts = $billingDiscountsReady && $billingService
+    ? $billingService->listDiscountsByVisit($visitId, $currentUser)
     : [];
 $patientStockUsageTablesReady = workspaceTableExists($pdo, 'patient_stock_usage');
 $patientStockUsageService = $patientStockUsageTablesReady

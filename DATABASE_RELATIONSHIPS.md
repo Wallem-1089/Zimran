@@ -1,9 +1,12 @@
 # Database Relationships
 
-> Current implementation coverage: migrations **002 through 024** and the live
-> schema through **Phase 3.2**.
+> Current implementation coverage: migrations **002 through 072** and the live
+> schema through the current Phase 5 hardening/features checkpoint.
 
-> Official relational reference generated from `database/hospital.sql`, migrations `002` through `024`, service SQL, and the live schema through Phase 3.3. Broader policies are described in [DATABASE_CONTEXT.md](DATABASE_CONTEXT.md) and [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md).
+> Official relational reference generated from `database/hospital.sql`, numbered
+> migrations, service SQL, and the live schema through the current checkpoint.
+> Broader policies are described in [DATABASE_CONTEXT.md](DATABASE_CONTEXT.md)
+> and [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md).
 
 ## Database Overview
 
@@ -14,7 +17,7 @@
 | Character set/collation | `utf8mb4` / `utf8mb4_unicode_ci`. |
 | Baseline | `database/hospital.sql` is the destructive fresh-install baseline and contains the completed Phase 0 schema. |
 | Evolution | Numbered paired `*_up.sql` / `*_down.sql` migrations. The historical missing `001` is intentionally not reused. |
-| Tracking | No `schema_migrations` table or migration runner is implemented; deployment must externally record filenames and preflight the schema. |
+| Tracking | Migrations are tracked through the project migration ledger/process. Deployment must preflight schema state and avoid modifying already-applied migration files. |
 | Preservation | Patient, encounter, transfer, event, audit and security history should be retained. Additive changes and restrictive/nullable foreign-key behavior protect historical links. |
 
 The fresh-install baseline includes the remediated patient gender enum but is not a complete Phase 1 snapshot by itself. A new deployment must apply the applicable Phase 1 migrations `005`–`012` after the baseline (and follow the migration README's target-schema checks). Historical migrations are preserved and must not be edited to disguise later changes.
@@ -1060,3 +1063,18 @@ erDiagram
   this first simple version.
 - `pop_records.visit_id` and `pop_records.patient_id` mirror the request for
   safe encounter/patient filtering.
+
+## Version 1.2 relationship notes
+
+No new Version 1.2 tables or foreign keys were added. The important
+relationship change is behavioral: role permissions and user permission
+overrides are now consistently consulted before role/department fallback rules
+for ordinary users. The existing `users -> roles -> role_permissions ->
+permissions` and `users -> user_permissions -> permissions` relationships are
+therefore the source of truth for registration, department worklist visibility,
+sidebar visibility, and ordinary module access.
+
+Physiotherapy remains one `physiotherapy_records` row per encounter with many
+`physiotherapy_sessions` rows under that record. Updating the record uses the
+record ID and update route; additional treatment visits should be entered as
+sessions, not duplicate records.

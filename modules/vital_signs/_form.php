@@ -27,7 +27,11 @@ $enableWritingMode ??= isset($permissionService)
         <div class="form-group"><label for="oxygen_saturation">Oxygen Saturation (%)</label><input type="number" step="0.1" min="0" max="100" id="oxygen_saturation" name="oxygen_saturation" value="<?= e((string)($vitalSigns['oxygen_saturation'] ?? '')) ?>"></div>
         <div class="form-group"><label for="weight">Weight (kg)</label><input type="number" step="0.1" min="0.1" id="weight" name="weight" value="<?= e((string)($vitalSigns['weight'] ?? '')) ?>"></div>
         <div class="form-group"><label for="height">Height (cm)</label><input type="number" step="0.1" min="0.1" id="height" name="height" value="<?= e((string)($vitalSigns['height'] ?? '')) ?>"></div>
-        <div class="form-group"><label for="bmi">BMI</label><input type="number" step="0.1" min="0" id="bmi" name="bmi" value="<?= e((string)($vitalSigns['bmi'] ?? '')) ?>"></div>
+        <div class="form-group">
+            <label for="bmi">BMI</label>
+            <input type="number" step="0.01" min="0" id="bmi" name="bmi" value="<?= e((string)($vitalSigns['bmi'] ?? '')) ?>">
+            <small class="text-muted">Calculated from weight and height when both are entered.</small>
+        </div>
         <div class="form-group"><label for="blood_glucose">Blood Glucose</label><input type="number" step="0.1" min="0" id="blood_glucose" name="blood_glucose" value="<?= e((string)($vitalSigns['blood_glucose'] ?? '')) ?>"></div>
         <div class="form-group"><label for="pain_score">Pain Score (0-10)</label><input type="number" step="1" min="0" max="10" id="pain_score" name="pain_score" value="<?= e((string)($vitalSigns['pain_score'] ?? '')) ?>"></div>
     </div>
@@ -42,3 +46,36 @@ $enableWritingMode ??= isset($permissionService)
 </form>
 
 <?php hmsRenderHandwritingScript($enableWritingMode); ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const weightInput = document.getElementById('weight');
+    const heightInput = document.getElementById('height');
+    const bmiInput = document.getElementById('bmi');
+
+    if (!weightInput || !heightInput || !bmiInput) {
+        return;
+    }
+
+    const calculateBmi = function () {
+        const weight = parseFloat(weightInput.value);
+        const height = parseFloat(heightInput.value);
+
+        if (Number.isFinite(weight) && weight > 0 && Number.isFinite(height) && height > 0) {
+            const heightInMeters = height / 100;
+            const bmi = weight / (heightInMeters * heightInMeters);
+            bmiInput.value = bmi.toFixed(2);
+            bmiInput.readOnly = true;
+            bmiInput.classList.add('readonly-calculated');
+            return;
+        }
+
+        bmiInput.readOnly = false;
+        bmiInput.classList.remove('readonly-calculated');
+    };
+
+    weightInput.addEventListener('input', calculateBmi);
+    heightInput.addEventListener('input', calculateBmi);
+    calculateBmi();
+});
+</script>

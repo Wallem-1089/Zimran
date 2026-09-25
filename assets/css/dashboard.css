@@ -302,6 +302,40 @@ textarea{
     justify-content:flex-end;
 }
 
+.inline-details{
+    display:inline-block;
+    margin:2px 4px 2px 0;
+    vertical-align:top;
+}
+
+.inline-details summary{
+    cursor:pointer;
+    list-style:none;
+}
+
+.inline-details summary::-webkit-details-marker{
+    display:none;
+}
+
+.inline-cancel-form{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    box-shadow:0 10px 25px rgba(15,23,42,.12);
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-top:8px;
+    min-width:220px;
+    padding:10px;
+    position:relative;
+    z-index:5;
+}
+
+.inline-cancel-form textarea{
+    min-height:70px;
+}
+
 .actions a,
 .quick-actions a,
 .form-actions a,
@@ -650,6 +684,22 @@ td{
 
 }
 
+.consultation-handwriting-pad{
+
+    touch-action:none;
+
+    -ms-touch-action:none;
+
+    overscroll-behavior:contain;
+
+    user-select:none;
+
+    -webkit-user-select:none;
+
+    -webkit-touch-callout:none;
+
+}
+
 .handwriting-canvas{
 
     display:block;
@@ -671,6 +721,7 @@ td{
     cursor:crosshair;
 
     touch-action:none;
+    -ms-touch-action:none;
 
     user-select:none;
 
@@ -680,11 +731,16 @@ td{
 
 }
 
+html.consultation-writing-in-progress,
 body.consultation-writing-in-progress{
 
     overflow:hidden;
 
     overscroll-behavior:none;
+
+    touch-action:none;
+
+    -ms-touch-action:none;
 
 }
 

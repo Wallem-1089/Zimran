@@ -133,7 +133,7 @@ class ECGService
             $where = ' WHERE er.status = :status';
             $params[':status'] = $status;
         }
-        $stmt = $this->pdo->prepare($this->baseSelect() . $where . " ORDER BY CASE WHEN er.priority = 'Urgent' THEN 0 ELSE 1 END, er.created_at ASC, er.id ASC");
+        $stmt = $this->pdo->prepare($this->baseSelect() . $where . " ORDER BY CASE WHEN er.priority = 'Urgent' THEN 0 ELSE 1 END, er.created_at DESC, er.id DESC");
         $stmt->execute($params);
         return $this->filterRows($stmt->fetchAll(PDO::FETCH_ASSOC), $user);
     }

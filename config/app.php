@@ -52,14 +52,40 @@ $documentStorageRoot = $configuredDocumentStorageRoot !== ''
     ? $configuredDocumentStorageRoot
     : dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'hms_secure_documents';
 
-$configuredBaseUrl = '/' . trim(
-    (string)getenv('HMS_BASE_URL'),
-    "/ \t\n\r\0\x0B"
-);
+$configuredBaseUrl = trim((string)getenv('HMS_BASE_URL'));
 
-$baseUrl = $configuredBaseUrl !== '/'
-    ? $configuredBaseUrl
-    : '/hospital_management_system';
+$detectBaseUrl = static function (): string {
+    $scriptName = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
+    foreach (['/authentication/', '/modules/', '/dashboard/', '/admin/'] as $knownPath) {
+        $position = strpos($scriptName, $knownPath);
+        if ($position !== false) {
+            $basePath = substr($scriptName, 0, $position);
+            return $basePath === '' ? '/' : '/' . trim($basePath, '/');
+        }
+    }
+
+    $documentRoot = realpath((string)($_SERVER['DOCUMENT_ROOT'] ?? ''));
+    $projectRoot = realpath(dirname(__DIR__));
+
+    if ($documentRoot !== false && $projectRoot !== false) {
+        $normalizedDocumentRoot = rtrim(str_replace('\\', '/', $documentRoot), '/');
+        $normalizedProjectRoot = rtrim(str_replace('\\', '/', $projectRoot), '/');
+
+        if ($normalizedDocumentRoot !== '' && str_starts_with($normalizedProjectRoot, $normalizedDocumentRoot)) {
+            $relativePath = trim(substr($normalizedProjectRoot, strlen($normalizedDocumentRoot)), '/');
+            return $relativePath === '' ? '/' : '/' . $relativePath;
+        }
+    }
+
+    return '/hospital_management_system';
+};
+
+if ($configuredBaseUrl !== '') {
+    $trimmedBaseUrl = trim($configuredBaseUrl, "/ \t\n\r\0\x0B");
+    $baseUrl = $trimmedBaseUrl === '' ? '/' : '/' . $trimmedBaseUrl;
+} else {
+    $baseUrl = $detectBaseUrl();
+}
 
 return [
 
@@ -73,7 +99,7 @@ return [
 
         'name' => 'E-HMIS',
 
-        'version' => '1.0.0',
+        'version' => '1.2',
 
         'timezone' => 'Africa/Lagos',
 

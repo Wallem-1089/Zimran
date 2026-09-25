@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 $ecgRequest = $ecgRequest ?? [];
 $requestSource = ecgRequestSourceLabel((string)($ecgRequest['request_source'] ?? $requestSource ?? 'Clinical'));
+$buttonLabel ??= 'Save ECG Request';
 $requestSourceNote ??= $requestSource === 'Direct'
     ? 'Direct ECG is for patients whose active encounter is currently in ECG.'
     : 'Clinical requests are linked to this encounter without transferring ownership.';
@@ -44,7 +45,7 @@ $enableWritingMode ??= isset($permissionService)
     </div>
 
     <div class="form-actions">
-        <button type="submit" class="btn-primary">Save ECG Request</button>
+        <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>
         <a class="btn-secondary" href="<?= e(ecgBackToWorkspace((int)$visit['id'])) ?>">Cancel</a>
     </div>
 </form>

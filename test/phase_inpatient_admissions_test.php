@@ -64,6 +64,10 @@ $doctor = $users['dev_doctor'];
 $nurse = $users['dev_nurse'];
 $records = $users['dev_records'];
 $reception = $users['dev_reception'];
+$systemAdministrator = [
+    'role_name' => 'System Administrator',
+    'department_name' => 'Administrator',
+];
 $nursingDepartmentId = (int)$pdo->query("SELECT id FROM departments WHERE department_name = 'Nursing' LIMIT 1")->fetchColumn();
 assertAdmission($nursingDepartmentId > 0, 'Nursing department is missing.');
 
@@ -89,16 +93,8 @@ try {
     assertAdmission($permissionService->canTransferAdmission(['visit_status' => 'Nursing'], $nurse), 'Nurse should transfer admission.');
     assertAdmission($permissionService->canTransferAdmission(['visit_status' => 'Nursing'], $doctor), 'Doctor should transfer/change admission bed.');
     assertAdmission($permissionService->canTransferAdmission(['visit_status' => 'Nursing'], $reception), 'Receptionist should transfer/change admission bed.');
-    assertAdmission($permissionService->canCreateAdmission(['visit_status' => 'Nursing'], [
-        'id' => (int)$admin['id'],
-        'role_name' => 'System Administrator',
-        'department_name' => 'Administrator',
-    ]), 'System Administrator should create admissions.');
-    assertAdmission($permissionService->canTransferAdmission(['visit_status' => 'Nursing'], [
-        'id' => (int)$admin['id'],
-        'role_name' => 'System Administrator',
-        'department_name' => 'Administrator',
-    ]), 'System Administrator should transfer/change admission bed.');
+    assertAdmission($permissionService->canCreateAdmission(['visit_status' => 'Nursing'], $systemAdministrator), 'System Administrator should create admissions.');
+    assertAdmission($permissionService->canTransferAdmission(['visit_status' => 'Nursing'], $systemAdministrator), 'System Administrator should transfer/change admission bed.');
     assertAdmission(!$permissionService->canTransferAdmission(['visit_status' => 'Completed'], $nurse), 'Completed encounter should block admission transfer.');
 
     $ward = requireAdmissionSuccess($service->createWard([

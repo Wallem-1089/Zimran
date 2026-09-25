@@ -5,16 +5,37 @@ declare(strict_types=1);
 $chartTabs = [
     'overview' => 'Overview',
     'demographics' => 'Demographics',
-    'identifiers' => 'Identifiers',
-    'safety' => 'Clinical Safety',
-    'problems' => 'Problem List',
-    'medical_history' => 'Medical History',
-    'nursing' => 'Nursing',
-    'documents' => 'Medical Documents',
-    'notes' => 'Clinical Notes',
     'encounters' => 'Encounter History',
     'history' => 'Demographic History'
 ];
+
+if (!empty($canViewIdentifiers)) {
+    $chartTabs['identifiers'] = 'Identifiers';
+}
+
+if (!empty($canViewClinicalSafety)) {
+    $chartTabs['safety'] = 'Clinical Safety';
+}
+
+if (!empty($canViewProblemList)) {
+    $chartTabs['problems'] = 'Problem List';
+}
+
+if (!empty($canViewMedicalHistory)) {
+    $chartTabs['medical_history'] = 'Medical History';
+}
+
+if (!empty($canViewNursing)) {
+    $chartTabs['nursing'] = 'Nursing';
+}
+
+if (!empty($canViewMedicalDocuments)) {
+    $chartTabs['documents'] = 'Medical Documents';
+}
+
+if (!empty($canViewClinicalNotes)) {
+    $chartTabs['notes'] = 'Clinical Notes';
+}
 
 if (!empty($canViewVitalSigns)) {
     $chartTabs['vitals'] = 'Vital Signs';
@@ -30,6 +51,14 @@ if (!empty($canViewLaboratory)) {
 
 if (!empty($canViewRadiology)) {
     $chartTabs['radiology'] = 'Radiology';
+}
+
+if (!empty($canViewEcg)) {
+    $chartTabs['ecg'] = 'ECG';
+}
+
+if (!empty($canViewPop)) {
+    $chartTabs['pop'] = 'POP';
 }
 
 if (!empty($canViewPhysiotherapy)) {

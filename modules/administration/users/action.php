@@ -14,6 +14,12 @@ requireCsrfToken();
 $userId = (int)($_POST['user_id'] ?? 0);
 $action = trim((string)($_POST['action'] ?? ''));
 $actorId = (int)$currentUser['id'];
+$targetUser = $userService->getUserById($userId);
+if (!$targetUser) {
+    http_response_code(404);
+    exit('User not found.');
+}
+administrationGuardSuperAdministratorUser($targetUser, $currentUser, $permissionService);
 
 $result = match ($action) {
     'activate' => $userService->activateUser($userId, $actorId),

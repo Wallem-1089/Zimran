@@ -71,7 +71,7 @@ $alerts = $canViewClinicalSafety
 
 $existingPrescriptions = $pharmacyService->listByVisit($visitId, $currentUser);
 
-$pageTitle = 'Create Prescription';
+$pageTitle = $requestSource === 'Direct' ? 'Create Direct Prescription' : 'Create Prescription';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 require __DIR__ . '/../../layouts/header.php';
 require __DIR__ . '/../../layouts/sidebar.php';
@@ -92,7 +92,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <?php endif; ?>
     <div class="page-header">
         <div>
-            <h1>Create Prescription</h1>
+            <h1><?= e($pageTitle) ?></h1>
             <p><?= e((string)($visit['visit_number'] ?? ('Encounter #' . $visitId))) ?></p>
         </div>
         <div class="form-actions">
@@ -126,7 +126,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
     <?php endif; ?>
 
-    <?php $pharmacyPrescription = $pharmacyPrescription; $formAction = 'save.php'; $buttonLabel = 'Save Prescription'; require __DIR__ . '/_form.php'; ?>
+    <?php $pharmacyPrescription = $pharmacyPrescription; $formAction = 'save.php'; $buttonLabel = $requestSource === 'Direct' ? 'Save Direct Prescription' : 'Save Prescription'; require __DIR__ . '/_form.php'; ?>
 
     <div class="card">
         <h3>Existing Prescriptions for This Encounter</h3>

@@ -167,7 +167,7 @@ class LaboratoryService
             $params[':status'] = $status;
         }
 
-        $stmt = $this->pdo->prepare($this->baseSelect() . $where . ' ORDER BY CASE WHEN lr.priority = \'Urgent\' THEN 0 ELSE 1 END, lr.created_at ASC, lr.id ASC');
+        $stmt = $this->pdo->prepare($this->baseSelect() . $where . ' ORDER BY CASE WHEN lr.priority = \'Urgent\' THEN 0 ELSE 1 END, lr.created_at DESC, lr.id DESC');
         $stmt->execute($params);
         return $this->filterRows($stmt->fetchAll(PDO::FETCH_ASSOC), $user);
     }

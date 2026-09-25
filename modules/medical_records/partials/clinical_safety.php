@@ -25,7 +25,7 @@ declare(strict_types=1);
         <?php foreach ($safetyAllergies as $allergy): ?>
             <p>
                 <strong><?= e($allergy['substance']) ?></strong>
-                — <?= e($allergy['severity']) ?>,
+                &mdash; <?= e($allergy['severity']) ?>,
                 <?= e($allergy['clinical_status']) ?>,
                 <?= e($allergy['verification_status']) ?>
             </p>
@@ -39,7 +39,7 @@ declare(strict_types=1);
         <?php foreach ($safetyAlerts as $alert): ?>
             <p>
                 <strong><?= e($alert['title']) ?></strong>
-                — <?= e($alert['priority']) ?>,
+                &mdash; <?= e($alert['priority']) ?>,
                 <?= e((string)($alert['effective_status'] ?? (!empty($alert['is_active']) ? 'Active' : 'Closed'))) ?>
             </p>
         <?php endforeach; ?>

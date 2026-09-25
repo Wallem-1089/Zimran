@@ -23,6 +23,13 @@ if (!$physiotherapyTablesReady) {
     exit('Physiotherapy tables are not available yet. Apply Migration 028 to enable this section.');
 }
 
+$existingRecord = $physiotherapyService->getByVisit($visitId, $currentUser);
+if ($existingRecord !== null) {
+    $_SESSION['success_message'] = 'This encounter already has a Physiotherapy record. Continue from the existing record.';
+    header('Location: view.php?id=' . (int)$existingRecord['id']);
+    exit;
+}
+
 $result = $physiotherapyService->createRecord($_POST, $currentUser);
 if (($result['success'] ?? false) !== true) {
     $_SESSION['validation_errors'] = $result['errors'] ?? ['Unable to save physiotherapy record.'];

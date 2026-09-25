@@ -10,6 +10,14 @@ $users = $userService->getUsers([
     'status' => trim((string)($_GET['status'] ?? ''))
 ]);
 
+if (!$permissionService->isAdministrator($currentUser)) {
+    $users = array_values(array_filter(
+        $users,
+        static fn (array $user): bool => ($user['role_name'] ?? '') !== 'Super Administrator'
+            && ($user['department_name'] ?? '') !== 'Super Administrator'
+    ));
+}
+
 require_once __DIR__ . '/../../../layouts/header.php';
 require_once __DIR__ . '/../../../layouts/sidebar.php';
 

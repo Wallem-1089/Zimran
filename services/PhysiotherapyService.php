@@ -702,13 +702,6 @@ class PhysiotherapyService
         if ($presentingProblem === '') {
             $errors[] = 'Presenting problem is required.';
         }
-        if ($assessment === '') {
-            $errors[] = 'Assessment is required.';
-        }
-        if ($treatmentPlan === '') {
-            $errors[] = 'Treatment plan is required.';
-        }
-
         if ($this->textLength($presentingProblem) > 10000) {
             $errors[] = 'Presenting problem is too long.';
         }

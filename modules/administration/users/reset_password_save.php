@@ -14,6 +14,12 @@ requireCsrfToken();
 $userId = (int)($_POST['user_id'] ?? 0);
 $password = (string)($_POST['password'] ?? '');
 $confirmation = (string)($_POST['password_confirmation'] ?? '');
+$targetUser = $userService->getUserById($userId);
+if (!$targetUser) {
+    http_response_code(404);
+    exit('User not found.');
+}
+administrationGuardSuperAdministratorUser($targetUser, $currentUser, $permissionService);
 
 if ($password !== $confirmation) {
     $_SESSION['administration_errors'] = ['Passwords do not match.'];

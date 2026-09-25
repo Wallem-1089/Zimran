@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/../../services/BillingService.php';
 
 $prescriptionId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: 0;
 if (!$prescriptionId) {
@@ -29,6 +30,21 @@ if (!$patient) {
 }
 
 $dispensing = $pharmacyService->getDispensingByPrescription($prescriptionId, $currentUser);
+$billingService = new BillingService($pdo);
+$billingRequests = [];
+if (pharmacyTableExists($pdo, 'billing_requests')) {
+    $billingRequests = $billingService->listBillingRequests([
+        'visit_id' => (int)$prescription['visit_id'],
+        'source_module' => 'Pharmacy',
+        'source_record_id' => $prescriptionId,
+        'limit' => 10,
+    ], $currentUser);
+}
+$latestBillingRequest = $billingRequests[0] ?? null;
+$hasActiveBillingRequest = $latestBillingRequest !== null
+    && (string)($latestBillingRequest['status'] ?? '') !== 'Cancelled';
+$canCancelLatestBillingRequest = $latestBillingRequest !== null
+    && $billingService->canCancelBillingRequestRow($latestBillingRequest, $currentUser);
 $canEdit = (string)$prescription['status'] === 'Prescribed'
     && $permissionService->canEditPrescription($visit, $currentUser, (string)$prescription['prescription_source']);
 $canDispense = (string)$prescription['status'] === 'Prescribed'
@@ -74,7 +90,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
             <a class="btn-secondary" href="<?= e(pharmacyBackToWorkspace((int)$prescription['visit_id'])) ?>">Workspace</a>
             <a class="btn-secondary" href="<?= e(pharmacyBackToConsultation((int)$prescription['visit_id'])) ?>">Consultation</a>
-            <?php if (!in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true) && $permissionService->canCreateBillingRequest($currentUser)): ?>
+            <?php if (!$hasActiveBillingRequest && !in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true) && $permissionService->canCreateBillingRequest($currentUser)): ?>
                 <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$prescription['visit_id'] ?>&source_module=Pharmacy&source_record_id=<?= (int)$prescription['id'] ?>&description=<?= urlencode('Pharmacy: ' . (string)($prescription['medication_name'] ?? '') . ' x ' . (string)($prescription['quantity'] ?? '')) ?>">Request Billing</a>
             <?php endif; ?>
             <?php if ($canRecordDrugChart): ?>
@@ -110,6 +126,65 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <tr><th>Instructions</th><td><?= nl2br(e((string)($prescription['instructions'] ?? '-'))) ?></td></tr>
             </tbody>
         </table>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3>Billing Request</h3>
+                <p>Dispensing reduces Pharmacy stock only. Accounts/Billing must convert a billing request into the official patient charge.</p>
+            </div>
+            <?php if (!$hasActiveBillingRequest && !in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true) && $permissionService->canCreateBillingRequest($currentUser)): ?>
+                <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$prescription['visit_id'] ?>&source_module=Pharmacy&source_record_id=<?= (int)$prescription['id'] ?>&description=<?= urlencode('Pharmacy: ' . (string)($prescription['medication_name'] ?? '') . ' x ' . (string)($prescription['quantity'] ?? '')) ?>">Request Billing</a>
+            <?php endif; ?>
+        </div>
+
+        <?php if ($latestBillingRequest === null): ?>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <span class="summary-label">Billing Status</span>
+                    <span class="summary-value">Not requested</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Charge Status</span>
+                    <span class="summary-value">No patient charge linked</span>
+                </div>
+            </div>
+            <p class="text-muted">No billing request has been recorded for this prescription.</p>
+        <?php else: ?>
+            <div class="summary-grid">
+                <div class="summary-item"><span class="summary-label">Billing Status</span> <span class="summary-value"><?= e((string)$latestBillingRequest['status']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Request ID</span> <span class="summary-value">#<?= (int)$latestBillingRequest['id'] ?></span></div>
+                <div class="summary-item"><span class="summary-label">Quantity</span> <span class="summary-value"><?= e((string)$latestBillingRequest['quantity']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Requested By</span> <span class="summary-value"><?= e((string)($latestBillingRequest['requested_by_name'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Requested At</span> <span class="summary-value"><?= e((string)($latestBillingRequest['created_at'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Patient Charge</span> <span class="summary-value"><?= !empty($latestBillingRequest['patient_charge_id']) ? '#' . (int)$latestBillingRequest['patient_charge_id'] : 'Not charged yet' ?></span></div>
+            </div>
+            <?php if (trim((string)($latestBillingRequest['description'] ?? '')) !== ''): ?>
+                <p><?= nl2br(e((string)$latestBillingRequest['description'])) ?></p>
+            <?php endif; ?>
+            <div class="form-actions">
+                <?php if ($canCancelLatestBillingRequest): ?>
+                    <details class="inline-details">
+                        <summary class="btn-secondary">Cancel Billing Request</summary>
+                        <form method="post" action="../billing/request_cancel.php" class="inline-cancel-form">
+                            <?= csrfField() ?>
+                            <input type="hidden" name="billing_request_id" value="<?= (int)$latestBillingRequest['id'] ?>">
+                            <input type="hidden" name="visit_id" value="<?= (int)$prescription['visit_id'] ?>">
+                            <input type="hidden" name="return_to" value="../pharmacy/view.php?id=<?= (int)$prescription['id'] ?>">
+                            <textarea name="reason" rows="2" required placeholder="Cancellation reason"></textarea>
+                            <button class="btn-danger btn-sm" type="submit">Confirm Cancel</button>
+                        </form>
+                    </details>
+                <?php endif; ?>
+                <?php if ($permissionService->canViewBillingRequests($currentUser) || $permissionService->canCreateBillingRequest($currentUser) || $permissionService->canReviewBillingRequest($currentUser)): ?>
+                    <a class="btn-secondary" href="../billing/billing_requests.php?encounter_id=<?= (int)$prescription['visit_id'] ?>&source_module=Pharmacy">Open Billing Requests</a>
+                <?php endif; ?>
+                <?php if (!empty($latestBillingRequest['patient_charge_id']) && $permissionService->canViewBilling($currentUser)): ?>
+                    <a class="btn-secondary" href="../billing/view.php?visit=<?= (int)$prescription['visit_id'] ?>">Open Patient Billing</a>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     </div>
 
     <div class="card">

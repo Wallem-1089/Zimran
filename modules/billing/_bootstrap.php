@@ -31,6 +31,7 @@ $billingTablesReady = billingTableExists($pdo, 'patient_charges')
     && billingTableExists($pdo, 'invoices')
     && billingTableExists($pdo, 'payments');
 $billingRequestsReady = billingTableExists($pdo, 'billing_requests');
+$billingDiscountsReady = billingTableExists($pdo, 'billing_discounts');
 
 $permissionService = new PermissionService($pdo);
 $billingService = new BillingService($pdo);
@@ -47,7 +48,9 @@ function billingRequireAccess(PermissionService $permissionService, ?array $user
 
 function billingRequireRequestAccess(PermissionService $permissionService, ?array $user): void
 {
-    if (!$permissionService->canViewBillingRequests($user)) {
+    if (!$permissionService->canViewBillingRequests($user)
+        && !$permissionService->canCreateBillingRequest($user)
+    ) {
         http_response_code(403);
         exit('You are not allowed to view billing requests.');
     }

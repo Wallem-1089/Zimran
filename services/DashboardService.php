@@ -161,7 +161,7 @@ class DashboardService
              LEFT JOIN users doc ON doc.id = v.attending_doctor_id
              LEFT JOIN consultations c ON c.visit_id = v.id
              WHERE {$where}
-             ORDER BY v.visit_date ASC, v.id ASC
+             ORDER BY v.visit_date DESC, v.id DESC
              LIMIT 500",
             $params
         );
@@ -222,7 +222,7 @@ class DashboardService
              LEFT JOIN users surgeon ON surgeon.id = tr.surgeon_id
              LEFT JOIN users completed ON completed.id = tr.completed_by
              WHERE {$where}
-             ORDER BY tr.created_at ASC, tr.id ASC
+             ORDER BY tr.created_at DESC, tr.id DESC
              LIMIT 500",
             $params
         );
@@ -291,7 +291,7 @@ class DashboardService
                  LEFT JOIN laboratory_results lres ON lres.laboratory_request_id = lr.id
                  LEFT JOIN users performed ON performed.id = lres.performed_by
                  WHERE {$where}
-                 ORDER BY lr.created_at ASC, lr.id ASC
+                 ORDER BY lr.created_at DESC, lr.id DESC
                  LIMIT 500",
                 $params
             ),
@@ -354,7 +354,7 @@ class DashboardService
                  LEFT JOIN radiology_reports rep ON rep.radiology_request_id = rr.id
                  LEFT JOIN users performed ON performed.id = rep.performed_by
                  WHERE {$where}
-                 ORDER BY rr.created_at ASC, rr.id ASC
+                 ORDER BY rr.created_at DESC, rr.id DESC
                  LIMIT 500",
                 $params
             ),

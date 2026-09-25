@@ -94,7 +94,7 @@ $requestSource = $physiotherapyRequestSource ?? 'Clinical';
                 <?php endif; ?>
                 <?php if (!$isClosedEncounter && $canManagePhysiotherapySessions && (string)$record['status'] === 'Active'): ?>
                     <a class="btn-primary" href="../physiotherapy/report.php?record=<?= (int)$record['id'] ?>">
-                        <?= $session ? 'Edit Latest Session' : 'Add Session' ?>
+                        Add Session
                     </a>
                 <?php endif; ?>
                 <?php if (!$isClosedEncounter && $canCompletePhysiotherapyRequest && (string)$record['status'] === 'Active'): ?>
@@ -119,10 +119,21 @@ $requestSource = $physiotherapyRequestSource ?? 'Clinical';
                     <div class="summary-item"><span class="summary-label">Patient Response</span> <span class="summary-value"><?= e((string)($session['patient_response'] ?? '-')) ?></span></div>
                     <div class="summary-item"><span class="summary-label">Recorded By</span> <span class="summary-value"><?= e((string)($session['recorded_by_name'] ?? '-')) ?></span></div>
                 </div>
+                <div class="form-actions">
+                    <a class="btn-secondary" href="../physiotherapy/view.php?id=<?= (int)$record['id'] ?>#sessions">View All Sessions</a>
+                    <?php if (!$isClosedEncounter && $canManagePhysiotherapySessions && (string)$record['status'] === 'Active'): ?>
+                        <a class="btn-primary" href="../physiotherapy/report.php?record=<?= (int)$record['id'] ?>">Add Another Session</a>
+                    <?php endif; ?>
+                </div>
             </div>
         <?php else: ?>
             <div class="card">
                 <p class="text-muted">No physiotherapy session recorded.</p>
+                <?php if (!$isClosedEncounter && $canManagePhysiotherapySessions && (string)$record['status'] === 'Active'): ?>
+                    <div class="form-actions">
+                        <a class="btn-primary" href="../physiotherapy/report.php?record=<?= (int)$record['id'] ?>">Add Session</a>
+                    </div>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
     <?php endif; ?>

@@ -28,7 +28,7 @@ $branding = appBranding($GLOBALS['pdo'] ?? null);
 
     <div class="footer-right">
 
-        Version 1.0.0
+        Version <?= e((string)($config['app']['version'] ?? '1.2')) ?>
 
     </div>
 

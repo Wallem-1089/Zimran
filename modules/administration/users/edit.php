@@ -12,6 +12,8 @@ if (!$user) {
     exit('User not found.');
 }
 
+administrationGuardSuperAdministratorUser($user, $currentUser, $permissionService);
+
 $pageTitle = 'Edit User';
 $roles = $userService->getRoles();
 $departments = $userService->getDepartments();

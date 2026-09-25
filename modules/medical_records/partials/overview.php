@@ -36,8 +36,9 @@ declare(strict_types=1);
     <h2>Clinical Chart Sections</h2>
     <p>
         Patient identifiers, allergies and alerts, problems, medical history,
-        longitudinal clinical information is managed in the dedicated chart
-        sections. Consultation and module-specific documentation remain
-        <strong>not yet implemented</strong>.
+        clinical notes, documents, and available department histories are managed
+        in the dedicated chart sections. Encounter-specific clinical work remains
+        linked to its original visit and can be opened from the relevant history
+        section.
     </p>
 </div>

@@ -69,8 +69,10 @@ $manager->apply(__DIR__ . '/../database/migrations/031_phase4_store_inventory_up
 $manager->apply(__DIR__ . '/../database/migrations/032_phase4_pharmacy_up.sql', 32);
 $manager->apply(__DIR__ . '/../database/migrations/033_phase4_billing_up.sql', 33);
 $manager->apply(__DIR__ . '/../database/migrations/044_billing_requests_up.sql', 44);
+$manager->apply(__DIR__ . '/../database/migrations/072_billing_discounts_up.sql', 72);
 
 $pdo->exec("DELETE FROM billing_requests WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
+$pdo->exec("DELETE FROM billing_discounts WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
 $pdo->exec("DELETE FROM payments WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
 $pdo->exec("DELETE FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
 $pdo->exec("DELETE FROM patient_charges WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
@@ -123,6 +125,9 @@ try {
     assertBilling(!$permissionService->canReviewBillingRequest($doctor), 'Doctor should not review billing requests.');
     assertBilling(!$permissionService->canRecordPayment($nurse), 'Nurse should not record payments.');
     assertBilling($permissionService->canViewReceipts($accounts), 'Accounts should view receipts.');
+    assertBilling($permissionService->canApplyBillingDiscount($admin), 'Super Administrator should apply discounts.');
+    assertBilling($permissionService->canCancelBillingDiscount($admin), 'Super Administrator should cancel discounts.');
+    assertBilling(!$permissionService->canApplyBillingDiscount($accounts), 'Accounts should not apply discounts by default.');
 
     assertBilling(str_contains(file_get_contents(__DIR__ . '/../layouts/sidebar.php'), '/modules/billing/index.php'), 'Sidebar missing Billing destination.');
     assertBilling(str_contains(file_get_contents(__DIR__ . '/../modules/visits/workspace.php'), 'BillingService.php'), 'Workspace missing billing integration.');
@@ -282,8 +287,62 @@ try {
     $invoiceAfterCancel = $billingService->getInvoiceByVisit($visitId, $accounts);
     assertBilling(abs((float)$invoiceAfterCancel['total_amount'] - 4000.0) < 0.01, 'Invoice total did not refresh after charge cancellation.');
 
-    $paymentOne = requireBillingSuccess($billingService->recordPayment([
+    $invalidDiscount = $billingService->applyBillingDiscount([
+        'visit_id' => $visitId,
         'invoice_id' => (int)$invoiceAfterCancel['id'],
+        'discount_percent' => 20,
+        'reason' => 'Invalid discount should fail.',
+    ], $admin);
+    assertBilling(($invalidDiscount['success'] ?? false) === false, 'Unsupported discount percentage was accepted.');
+
+    $accountsDiscount = $billingService->applyBillingDiscount([
+        'visit_id' => $visitId,
+        'invoice_id' => (int)$invoiceAfterCancel['id'],
+        'discount_percent' => 5,
+        'reason' => 'Accounts should not apply discount by default.',
+    ], $accounts);
+    assertBilling(($accountsDiscount['success'] ?? false) === false, 'Accounts applied a discount without permission.');
+
+    $discount = requireBillingSuccess($billingService->applyBillingDiscount([
+        'visit_id' => $visitId,
+        'invoice_id' => (int)$invoiceAfterCancel['id'],
+        'patient_charge_id' => $manualChargeId,
+        'discount_percent' => 10,
+        'reason' => 'Management-approved line regression discount.',
+    ], $admin), 'Apply charge-specific billing discount');
+    assertBilling(abs((float)$discount['discount_amount'] - 200.0) < 0.01, 'Charge-specific discount amount is incorrect.');
+    $invoiceAfterDiscount = $billingService->getInvoiceByVisit($visitId, $accounts);
+    assertBilling(abs((float)$invoiceAfterDiscount['total_amount'] - 3800.0) < 0.01, 'Invoice total did not include charge-specific discount.');
+    assertBilling(abs((float)$invoiceAfterDiscount['balance_due'] - 3800.0) < 0.01, 'Invoice balance did not include charge-specific discount.');
+    $balanceAfterLineDiscount = $billingService->getEncounterBalance($visitId, $accounts);
+    assertBilling(abs((float)$balanceAfterLineDiscount['charge_discounts'] - 200.0) < 0.01, 'Charge discount total is incorrect.');
+    assertBilling(abs((float)$balanceAfterLineDiscount['invoice_discounts']) < 0.01, 'Invoice discount total should be zero after line discount only.');
+    assertBilling(abs((float)$balanceAfterLineDiscount['discounted_subtotal'] - 3800.0) < 0.01, 'Discounted subtotal is incorrect.');
+    $discountRows = $billingService->listDiscountsByVisit($visitId, $admin);
+    assertBilling(count($discountRows) === 1, 'Discount history did not include applied discount.');
+    assertBilling((string)$discountRows[0]['discount_scope'] === 'Charge', 'Discount history did not mark charge-specific discount.');
+
+    requireBillingSuccess(
+        $billingService->cancelBillingDiscount((int)$discount['billing_discount_id'], 'Regression cancel verification.', $admin),
+        'Cancel billing discount'
+    );
+    $invoiceAfterDiscountCancel = $billingService->getInvoiceByVisit($visitId, $accounts);
+    assertBilling(abs((float)$invoiceAfterDiscountCancel['total_amount'] - 4000.0) < 0.01, 'Invoice total did not restore after discount cancellation.');
+
+    $discount = requireBillingSuccess($billingService->applyBillingDiscount([
+        'visit_id' => $visitId,
+        'invoice_id' => (int)$invoiceAfterDiscountCancel['id'],
+        'discount_percent' => 10,
+        'reason' => 'Management-approved final invoice regression discount.',
+    ], $admin), 'Apply invoice-level billing discount');
+    $invoiceAfterDiscount = $billingService->getInvoiceByVisit($visitId, $accounts);
+    assertBilling(abs((float)$invoiceAfterDiscount['total_amount'] - 3600.0) < 0.01, 'Invoice total did not include reapplied discount.');
+    $balanceAfterInvoiceDiscount = $billingService->getEncounterBalance($visitId, $accounts);
+    assertBilling(abs((float)$balanceAfterInvoiceDiscount['charge_discounts']) < 0.01, 'Charge discount total should be zero after cancelled line discount.');
+    assertBilling(abs((float)$balanceAfterInvoiceDiscount['invoice_discounts'] - 400.0) < 0.01, 'Invoice discount total is incorrect.');
+
+    $paymentOne = requireBillingSuccess($billingService->recordPayment([
+        'invoice_id' => (int)$invoiceAfterDiscount['id'],
         'amount' => 1000,
         'payment_method' => 'Cash',
         'reference' => 'RCPT-001',
@@ -303,11 +362,11 @@ try {
     $paymentId = (int)$paymentTwo['payment_id'];
     $invoiceAfterFull = $billingService->getInvoiceByVisit($visitId, $accounts);
     assertBilling((string)$invoiceAfterFull['status'] === 'Partially Paid', 'Invoice status should remain Partially Paid.');
-    assertBilling(abs((float)$invoiceAfterFull['balance_due'] - 2000.0) < 0.01, 'Invoice should have remaining balance.');
+    assertBilling(abs((float)$invoiceAfterFull['balance_due'] - 1600.0) < 0.01, 'Invoice should have remaining balance.');
 
     $paymentThree = requireBillingSuccess($billingService->recordPayment([
         'invoice_id' => (int)$invoiceAfterFull['id'],
-        'amount' => 2000,
+        'amount' => 1600,
         'payment_method' => 'Transfer',
         'reference' => 'RCPT-003',
         'notes' => 'Final settlement.',
@@ -406,6 +465,7 @@ try {
     assertBilling(($cancelledPayment['success'] ?? false) === false, 'Cancelled encounter accepted a payment.');
 
     $pdo->exec("DELETE FROM billing_requests WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
+$pdo->exec("DELETE FROM billing_discounts WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
     $pdo->exec("DELETE FROM payments WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
     $pdo->exec("DELETE FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
     $pdo->exec("DELETE FROM patient_charges WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");

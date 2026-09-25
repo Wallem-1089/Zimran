@@ -60,8 +60,9 @@ function patientFixture(string $unique, string $gender): array
         'blood_group' => '',
         'genotype' => '',
         'allergies' => '',
-        'next_of_kin' => '',
-        'next_of_kin_phone' => ''
+        'next_of_kin' => 'Phase One Kin',
+        'next_of_kin_phone' => '08000000000',
+        'next_of_kin_address' => 'Phase 1.8 next of kin address.'
     ];
 }
 

@@ -45,7 +45,7 @@ $ecgRequest = $_SESSION['old_ecg_request'] ?? [
 $ecgRequest['request_source'] = $requestSource;
 unset($_SESSION['old_ecg_request']);
 
-$pageTitle = 'Create ECG Request';
+$pageTitle = $requestSource === 'Direct' ? 'Create Direct ECG Request' : 'Create ECG Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 
 require __DIR__ . '/../../layouts/header.php';
@@ -68,7 +68,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="page-header">
         <div>
-            <h1>Create ECG Request</h1>
+            <h1><?= e($pageTitle) ?></h1>
             <p><?= e((string)($visit['visit_number'] ?? ('Encounter #' . $visitId))) ?></p>
         </div>
         <div class="form-actions">
@@ -86,7 +86,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="summary-item"><span class="summary-label">Encounter Status</span> <span class="summary-value"><?= e((string)($visit['visit_status'] ?? '-')) ?></span></div>
     </div>
 
-    <?php require __DIR__ . '/_form.php'; ?>
+    <?php $buttonLabel = $requestSource === 'Direct' ? 'Save Direct ECG Request' : 'Save ECG Request'; require __DIR__ . '/_form.php'; ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

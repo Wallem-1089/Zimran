@@ -29,20 +29,6 @@ class PermissionService
             return true;
         }
 
-        if ($this->isAdministrationUser($user)
-            && in_array($permission, [
-                'view_encounter',
-                'manage_users',
-                'manage_roles',
-                'manage_permissions',
-                'manage_settings',
-                'manage_configurable_forms',
-                'view_configurable_form_responses',
-            ], true)
-        ) {
-            return true;
-        }
-
         $databasePermission = $this->databasePermissionResult(
             $permission,
             $user
@@ -50,6 +36,18 @@ class PermissionService
 
         if ($databasePermission !== null) {
             return $databasePermission;
+        }
+
+        if ($this->isAdministrationUser($user)
+            && in_array($permission, [
+                'view_encounter',
+                'manage_users',
+                'manage_roles',
+                'manage_permissions',
+                'manage_settings',
+            ], true)
+        ) {
+            return true;
         }
 
         $role = (string)($user['role_name'] ?? '');
@@ -837,8 +835,7 @@ class PermissionService
     {
         $user = $user ?? $this->currentUser();
 
-        return $this->isAdministrationUser($user)
-            || $this->hasPermission('register_patient', $user);
+        return $this->hasPermission('register_patient', $user);
     }
 
     public function canDeletePatient(
@@ -1715,6 +1712,7 @@ class PermissionService
     {
         return $this->canViewDepartmentWorklist(
             $user,
+            'view_laboratory',
             ['Laboratory Scientist'],
             ['Laboratory']
         );
@@ -1724,6 +1722,7 @@ class PermissionService
     {
         return $this->canViewDepartmentWorklist(
             $user,
+            'view_radiology',
             ['Radiographer'],
             ['Radiology', 'X-Ray']
         );
@@ -1733,6 +1732,7 @@ class PermissionService
     {
         return $this->canViewDepartmentWorklist(
             $user,
+            'view_ecg',
             ['ECG Technician'],
             ['ECG']
         );
@@ -1742,6 +1742,7 @@ class PermissionService
     {
         return $this->canViewDepartmentWorklist(
             $user,
+            'view_pop',
             ['POP Technician'],
             ['POP']
         );
@@ -1751,6 +1752,7 @@ class PermissionService
     {
         return $this->canViewDepartmentWorklist(
             $user,
+            'view_physiotherapy',
             ['Physiotherapist'],
             ['Physiotherapy', 'Physio', 'Rehabilitation']
         );
@@ -1760,6 +1762,7 @@ class PermissionService
     {
         return $this->canViewDepartmentWorklist(
             $user,
+            'view_pharmacy',
             ['Pharmacist'],
             ['Pharmacy']
         );
@@ -1863,6 +1866,27 @@ class PermissionService
         $user = $user ?? $this->currentUser();
         return $this->isAdministrator($user)
             || $this->hasPermission('view_receipts', $user);
+    }
+
+    public function canViewBillingDiscounts(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('view_billing_discounts', $user);
+    }
+
+    public function canApplyBillingDiscount(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('apply_billing_discount', $user);
+    }
+
+    public function canCancelBillingDiscount(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || $this->hasPermission('cancel_billing_discount', $user);
     }
 
     public function canCreateBillableItems(?array $user = null): bool
@@ -2113,15 +2137,13 @@ class PermissionService
     public function canManageConfigurableForms(?array $user = null): bool
     {
         $user = $user ?? $this->currentUser();
-        return $this->isAdministrator($user)
-            || $this->hasPermission('manage_configurable_forms', $user);
+        return $this->isAdministrator($user);
     }
 
     public function canViewConfigurableFormResponses(?array $user = null): bool
     {
         $user = $user ?? $this->currentUser();
-        return $this->isAdministrator($user)
-            || $this->hasPermission('view_configurable_form_responses', $user);
+        return $this->isAdministrator($user);
     }
 
     public function logPatientDenied(
@@ -2199,7 +2221,8 @@ class PermissionService
             return true;
         }
 
-        return $this->roleMatches($user, ['Receptionist', 'Records Officer', 'Doctor']);
+        return $this->hasPermission('change_encounter_status', $user)
+            && $this->roleMatches($user, ['Receptionist', 'Records Officer', 'Doctor']);
     }
 
     public function canReopenEncounter(
@@ -2480,8 +2503,35 @@ class PermissionService
         );
     }
 
+    private function activeDepartmentIn(array $user, array $departmentNames): bool
+    {
+        return $this->departmentNameMatches($this->activeDepartmentName($user), $departmentNames);
+    }
+
+    private function departmentNameMatches(?string $candidate, array $departmentNames): bool
+    {
+        $candidate = $this->normalizeDepartmentName($candidate);
+        if ($candidate === '') {
+            return false;
+        }
+
+        foreach ($departmentNames as $departmentName) {
+            if ($candidate === $this->normalizeDepartmentName((string)$departmentName)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function normalizeDepartmentName(?string $departmentName): string
+    {
+        return mb_strtolower(trim((string)$departmentName));
+    }
+
     private function canViewDepartmentWorklist(
         ?array $user,
+        string $permission,
         array $ownerRoles,
         array $ownerDepartments
     ): bool {
@@ -2494,8 +2544,11 @@ class PermissionService
             return true;
         }
 
-        return $this->roleMatches($user, $ownerRoles)
-            || in_array($this->activeDepartmentName($user), $ownerDepartments, true);
+        return $this->hasPermission($permission, $user)
+            && (
+                $this->roleMatches($user, $ownerRoles)
+                || $this->activeDepartmentIn($user, $ownerDepartments)
+            );
     }
 
     private function isEditable(array $encounter): bool
@@ -2560,6 +2613,21 @@ class PermissionService
                 }
             } catch (Throwable $exception) {
                 // Older databases may not have user permission overrides yet.
+            }
+        }
+
+        if ($roleId <= 0 && $userId > 0) {
+            try {
+                $roleStmt = $this->pdo->prepare('
+                    SELECT role_id
+                    FROM users
+                    WHERE id = :user_id
+                    LIMIT 1
+                ');
+                $roleStmt->execute([':user_id' => $userId]);
+                $roleId = (int)$roleStmt->fetchColumn();
+            } catch (Throwable $exception) {
+                $roleId = 0;
             }
         }
 
@@ -3031,15 +3099,15 @@ class PermissionService
 
         return match ($permission) {
             'create_physiotherapy' => $source === 'DIRECT'
-                ? ($this->roleMatches($user, ['Physiotherapist']) || in_array($this->activeDepartmentName($user), ['Physiotherapy', 'Physio', 'Rehabilitation'], true))
+                ? ($this->roleMatches($user, ['Physiotherapist']) || $this->activeDepartmentIn($user, ['Physiotherapy', 'Physio', 'Rehabilitation']))
                     && $this->encounterInDepartment($encounter, ['Physiotherapy', 'Physio', 'Rehabilitation'])
                 : $this->roleMatches($user, ['Doctor'])
                     && $this->canViewEncounter($encounter, $user),
             'edit_physiotherapy',
             'manage_physiotherapy_sessions',
-            'complete_physiotherapy' => ($this->roleMatches($user, ['Physiotherapist']) || in_array($this->activeDepartmentName($user), ['Physiotherapy', 'Physio', 'Rehabilitation'], true))
+            'complete_physiotherapy' => ($this->roleMatches($user, ['Physiotherapist']) || $this->activeDepartmentIn($user, ['Physiotherapy', 'Physio', 'Rehabilitation']))
                 && $this->encounterInDepartment($encounter, ['Physiotherapy', 'Physio', 'Rehabilitation'])
-                && $this->canViewPhysiotherapy((int)($encounter['patient_id'] ?? 0), $user),
+                && $this->canViewEncounter($encounter, $user),
             default => false
         };
     }
@@ -3091,9 +3159,17 @@ class PermissionService
 
     private function encounterInDepartment(array $encounter, array $departmentNames): bool
     {
-        $currentName = trim((string)($encounter['department_name'] ?? $encounter['current_department_name'] ?? ''));
-        if ($currentName !== '' && in_array($currentName, $departmentNames, true)) {
-            return true;
+        $currentNames = [
+            $encounter['department_name'] ?? null,
+            $encounter['current_department_name'] ?? null,
+            $encounter['current_department'] ?? null,
+            $encounter['visit_status'] ?? null,
+        ];
+
+        foreach ($currentNames as $currentName) {
+            if ($this->departmentNameMatches((string)$currentName, $departmentNames)) {
+                return true;
+            }
         }
 
         $currentId = (int)($encounter['current_department_id'] ?? 0);
@@ -3102,9 +3178,10 @@ class PermissionService
         }
 
         try {
-            $placeholders = implode(',', array_fill(0, count($departmentNames), '?'));
-            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM departments WHERE id = ? AND department_name IN ($placeholders)");
-            $stmt->execute(array_merge([$currentId], $departmentNames));
+            $normalizedNames = array_map(fn ($name) => $this->normalizeDepartmentName((string)$name), $departmentNames);
+            $placeholders = implode(',', array_fill(0, count($normalizedNames), '?'));
+            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM departments WHERE id = ? AND LOWER(TRIM(department_name)) IN ($placeholders)");
+            $stmt->execute(array_merge([$currentId], $normalizedNames));
             return (int)$stmt->fetchColumn() > 0;
         } catch (Throwable) {
             return false;

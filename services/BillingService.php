@@ -201,7 +201,11 @@ class BillingService
 
             $invoice = $this->getInvoiceByVisit((int)$charge['visit_id']);
             if ($invoice) {
-                $projectedTotal = max(0.00, (float)$invoice['total_amount'] - (float)$charge['amount']);
+                $projectedGross = max(0.00, $this->sumActiveCharges((int)$charge['visit_id']) - (float)$charge['amount']);
+                $projectedTotal = max(
+                    0.00,
+                    $projectedGross - $this->sumActiveDiscounts((int)$charge['visit_id'])
+                );
                 if ((float)$invoice['amount_paid'] > $projectedTotal) {
                     $this->rollback();
                     return $this->failure(['This charge cannot be cancelled because payments already exceed the projected balance.']);
@@ -244,6 +248,234 @@ class BillingService
         }
     }
 
+    public function listDiscountsByVisit(int $visitId, ?array $user = null): array
+    {
+        if (!$this->billingDiscountsAvailable()) {
+            return [];
+        }
+
+        if ($user !== null && !$this->permissionService->canViewBillingDiscounts($user)) {
+            return [];
+        }
+
+        $stmt = $this->pdo->prepare(
+            $this->discountBaseSelect()
+            . ' WHERE bd.visit_id = :visit_id ORDER BY bd.applied_at DESC, bd.id DESC'
+        );
+        $stmt->execute([':visit_id' => $visitId]);
+
+        return array_map([$this, 'decorateDiscount'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    public function applyBillingDiscount(array $data, array $user): array
+    {
+        try {
+            $this->assertCanApplyBillingDiscount($user);
+
+            if (!$this->billingDiscountsAvailable()) {
+                return $this->failure(['Billing discount tables are not available yet.']);
+            }
+
+            $transactionStarted = $this->beginTransactionIfNeeded();
+            $visitId = (int)($data['visit_id'] ?? 0);
+            $invoiceId = (int)($data['invoice_id'] ?? 0);
+            $patientChargeId = isset($data['patient_charge_id']) && $data['patient_charge_id'] !== ''
+                ? (int)$data['patient_charge_id']
+                : null;
+            $discountPercent = (float)($data['discount_percent'] ?? $data['discount_value'] ?? 0);
+            $reason = trim((string)($data['reason'] ?? ''));
+
+            if (!in_array($discountPercent, $this->allowedDiscountPercentages(), true)) {
+                $this->rollback();
+                return $this->failure(['Select an allowed discount percentage: 5%, 10%, or 15%.']);
+            }
+
+            if ($reason === '') {
+                $this->rollback();
+                return $this->failure(['Discount reason is required.']);
+            }
+
+            $visit = $this->loadVisit($visitId);
+            if (!$visit) {
+                $this->rollback();
+                return $this->failure(['Encounter not found.']);
+            }
+
+            if ((string)($visit['visit_status'] ?? '') === 'Cancelled') {
+                $this->rollback();
+                return $this->failure(['Cancelled encounters cannot receive discounts.']);
+            }
+
+            $invoice = $this->lockInvoice($invoiceId);
+            if (!$invoice || (int)$invoice['visit_id'] !== $visitId) {
+                $this->rollback();
+                return $this->failure(['Invoice not found for this encounter.']);
+            }
+
+            if ((string)($invoice['status'] ?? '') === 'Cancelled') {
+                $this->rollback();
+                return $this->failure(['Cancelled invoices cannot receive discounts.']);
+            }
+
+            $chargesTotal = $this->sumActiveCharges($visitId);
+            $discountBreakdown = $this->sumActiveDiscountsByScope($visitId);
+            $chargeDiscounts = (float)$discountBreakdown['charge_discounts'];
+            $invoiceDiscounts = (float)$discountBreakdown['invoice_discounts'];
+            $baseAmount = max(0.00, $chargesTotal - $chargeDiscounts - $invoiceDiscounts);
+            if ($patientChargeId !== null) {
+                $charge = $this->lockCharge($patientChargeId);
+                if (!$charge
+                    || (int)$charge['visit_id'] !== $visitId
+                    || (string)($charge['status'] ?? '') !== 'Active'
+                ) {
+                    $this->rollback();
+                    return $this->failure(['Selected charge is unavailable for discount.']);
+                }
+
+                $existingChargeDiscounts = $this->sumActiveDiscountsForCharge($patientChargeId);
+                $baseAmount = max(0.00, (float)$charge['amount'] - $existingChargeDiscounts);
+            }
+
+            if ($baseAmount <= 0) {
+                $this->rollback();
+                return $this->failure(['There are no active charges to discount.']);
+            }
+
+            $discountAmount = round($baseAmount * ($discountPercent / 100), 2);
+            $paymentsTotal = $this->sumPaymentsByVisit($visitId);
+            $projectedChargeDiscounts = $chargeDiscounts + ($patientChargeId !== null ? $discountAmount : 0.00);
+            $projectedInvoiceDiscounts = $invoiceDiscounts + ($patientChargeId === null ? $discountAmount : 0.00);
+            $projectedSubtotal = max(0.00, $chargesTotal - $projectedChargeDiscounts);
+            $projectedInvoiceTotal = max(0.00, $projectedSubtotal - $projectedInvoiceDiscounts);
+
+            if ($discountAmount <= 0) {
+                $this->rollback();
+                return $this->failure(['Discount amount must be greater than zero.']);
+            }
+
+            if ($paymentsTotal > $projectedInvoiceTotal) {
+                $this->rollback();
+                return $this->failure(['Discount cannot be applied because payments would exceed the discounted invoice total.']);
+            }
+
+            $stmt = $this->pdo->prepare('
+                INSERT INTO billing_discounts (
+                    visit_id, patient_id, invoice_id, patient_charge_id,
+                    discount_type, discount_value, discount_amount, reason,
+                    status, applied_by, applied_at, created_at
+                ) VALUES (
+                    :visit_id, :patient_id, :invoice_id, :patient_charge_id,
+                    \'Percentage\', :discount_value, :discount_amount, :reason,
+                    \'Active\', :applied_by, NOW(), NOW()
+                )
+            ');
+            $stmt->execute([
+                ':visit_id' => $visitId,
+                ':patient_id' => (int)$invoice['patient_id'],
+                ':invoice_id' => $invoiceId,
+                ':patient_charge_id' => $patientChargeId,
+                ':discount_value' => number_format($discountPercent, 2, '.', ''),
+                ':discount_amount' => number_format($discountAmount, 2, '.', ''),
+                ':reason' => $reason,
+                ':applied_by' => (int)$user['id'],
+            ]);
+            $discountId = (int)$this->pdo->lastInsertId();
+
+            $this->refreshInvoiceTotals($visitId, $user);
+
+            if (!$this->audit(
+                (int)$user['id'],
+                (int)$invoice['patient_id'],
+                $visitId,
+                'BILLING_DISCOUNT_APPLIED',
+                'Applied ' . rtrim(rtrim(number_format($discountPercent, 2, '.', ''), '0'), '.') . '% '
+                    . ($patientChargeId !== null ? 'charge-specific' : 'invoice-level')
+                    . ' billing discount #' . $discountId . '.',
+                (int)($visit['current_department_id'] ?? 0) ?: null
+            )) {
+                throw new RuntimeException('Unable to audit billing discount.');
+            }
+
+            if ($transactionStarted) {
+                $this->pdo->commit();
+            }
+
+            return [
+                'success' => true,
+                'billing_discount_id' => $discountId,
+                'discount_amount' => $discountAmount,
+                'errors' => [],
+            ];
+        } catch (Throwable) {
+            $this->rollback();
+            return $this->failure(['Unable to apply billing discount.']);
+        }
+    }
+
+    public function cancelBillingDiscount(int $discountId, string $reason, array $user): array
+    {
+        try {
+            $this->assertCanCancelBillingDiscount($user);
+
+            if (!$this->billingDiscountsAvailable()) {
+                return $this->failure(['Billing discount tables are not available yet.']);
+            }
+
+            $reason = trim($reason);
+            if ($reason === '') {
+                return $this->failure(['Cancellation reason is required.']);
+            }
+
+            $transactionStarted = $this->beginTransactionIfNeeded();
+            $discount = $this->lockDiscount($discountId);
+            if (!$discount) {
+                $this->rollback();
+                return $this->failure(['Billing discount not found.']);
+            }
+
+            if ((string)$discount['status'] === 'Cancelled') {
+                $this->rollback();
+                return $this->failure(['Billing discount is already cancelled.']);
+            }
+
+            $stmt = $this->pdo->prepare('
+                UPDATE billing_discounts
+                SET status = \'Cancelled\',
+                    cancelled_by = :cancelled_by,
+                    cancelled_at = NOW(),
+                    cancel_reason = :cancel_reason
+                WHERE id = :id
+            ');
+            $stmt->execute([
+                ':cancelled_by' => (int)$user['id'],
+                ':cancel_reason' => $reason,
+                ':id' => $discountId,
+            ]);
+
+            $this->refreshInvoiceTotals((int)$discount['visit_id'], $user);
+
+            if (!$this->audit(
+                (int)$user['id'],
+                (int)$discount['patient_id'],
+                (int)$discount['visit_id'],
+                'BILLING_DISCOUNT_CANCELLED',
+                'Cancelled billing discount #' . $discountId . '.',
+                null
+            )) {
+                throw new RuntimeException('Unable to audit billing discount cancellation.');
+            }
+
+            if ($transactionStarted) {
+                $this->pdo->commit();
+            }
+
+            return ['success' => true, 'billing_discount_id' => $discountId, 'errors' => []];
+        } catch (Throwable) {
+            $this->rollback();
+            return $this->failure(['Unable to cancel billing discount.']);
+        }
+    }
+
     public function getEncounterBalance(int $visitId, ?array $user = null): array
     {
         if ($user !== null && !$this->permissionService->canViewBilling($user)) {
@@ -252,15 +484,26 @@ class BillingService
 
         $invoice = $this->getInvoiceByVisit($visitId, $user);
         $chargesTotal = $this->sumActiveCharges($visitId);
+        $discountBreakdown = $this->sumActiveDiscountsByScope($visitId);
+        $chargeDiscounts = (float)$discountBreakdown['charge_discounts'];
+        $invoiceDiscounts = (float)$discountBreakdown['invoice_discounts'];
+        $discountsTotal = $chargeDiscounts + $invoiceDiscounts;
         $paymentsTotal = $this->sumPaymentsByVisit($visitId);
+        $discountedSubtotal = max(0.0, $chargesTotal - $chargeDiscounts);
+        $invoiceTotal = max(0.0, $discountedSubtotal - $invoiceDiscounts);
 
         return [
             'success' => true,
             'invoice' => $invoice,
             'total_charges' => $chargesTotal,
+            'charge_discounts' => $chargeDiscounts,
+            'discounted_subtotal' => $discountedSubtotal,
+            'invoice_discounts' => $invoiceDiscounts,
+            'total_discounts' => $discountsTotal,
+            'invoice_total' => $invoiceTotal,
             'amount_paid' => $paymentsTotal,
-            'balance_due' => max(0.0, $chargesTotal - $paymentsTotal),
-            'status' => $invoice['status'] ?? ($chargesTotal > 0 ? 'Unpaid' : 'Unbilled'),
+            'balance_due' => max(0.0, $invoiceTotal - $paymentsTotal),
+            'status' => $invoice['status'] ?? ($invoiceTotal > 0 ? 'Unpaid' : 'Unbilled'),
             'errors' => [],
         ];
     }
@@ -402,9 +645,15 @@ class BillingService
             }
 
             $chargesTotal = $this->sumActiveCharges($visitId);
+            $discountBreakdown = $this->sumActiveDiscountsByScope($visitId);
+            $chargeDiscounts = (float)$discountBreakdown['charge_discounts'];
+            $invoiceDiscounts = (float)$discountBreakdown['invoice_discounts'];
+            $discountsTotal = $chargeDiscounts + $invoiceDiscounts;
+            $discountedSubtotal = max(0.00, $chargesTotal - $chargeDiscounts);
+            $invoiceTotal = max(0.00, $discountedSubtotal - $invoiceDiscounts);
             $paymentsTotal = $this->sumPaymentsByVisit($visitId);
-            $balanceDue = max(0.00, $chargesTotal - $paymentsTotal);
-            $status = $this->deriveInvoiceStatus($chargesTotal, $paymentsTotal);
+            $balanceDue = max(0.00, $invoiceTotal - $paymentsTotal);
+            $status = $this->deriveInvoiceStatus($invoiceTotal, $paymentsTotal);
 
             $stmt = $this->pdo->prepare('
                 UPDATE invoices
@@ -416,7 +665,7 @@ class BillingService
                 WHERE id = :id
             ');
             $stmt->execute([
-                ':total_amount' => number_format($chargesTotal, 2, '.', ''),
+                ':total_amount' => number_format($invoiceTotal, 2, '.', ''),
                 ':amount_paid' => number_format($paymentsTotal, 2, '.', ''),
                 ':balance_due' => number_format($balanceDue, 2, '.', ''),
                 ':status' => $status,
@@ -431,7 +680,12 @@ class BillingService
                 'success' => true,
                 'invoice_id' => (int)$invoice['id'],
                 'invoice_number' => (string)$invoice['invoice_number'],
-                'total_amount' => $chargesTotal,
+                'total_amount' => $invoiceTotal,
+                'total_charges' => $chargesTotal,
+                'charge_discounts' => $chargeDiscounts,
+                'discounted_subtotal' => $discountedSubtotal,
+                'invoice_discounts' => $invoiceDiscounts,
+                'total_discounts' => $discountsTotal,
                 'amount_paid' => $paymentsTotal,
                 'balance_due' => $balanceDue,
                 'status' => $status,
@@ -767,7 +1021,7 @@ class BillingService
 
     public function listBillingRequests(array $filters = [], ?array $user = null): array
     {
-        $visitId = (int)($filters['visit_id'] ?? 0);
+        $visitId = (int)($filters['visit_id'] ?? $filters['encounter_id'] ?? 0);
         if ($user !== null && !$this->permissionService->canViewBillingRequests($user)) {
             if ($visitId <= 0 || !$this->permissionService->canCreateBillingRequest($user)) {
                 return [];
@@ -884,7 +1138,6 @@ class BillingService
     public function cancelBillingRequest(int $requestId, string $reason, array $user): array
     {
         try {
-            $this->assertCanCancelBillingRequest($user);
             $reason = trim($reason);
             if ($reason === '') {
                 return $this->failure(['Cancellation reason is required.']);
@@ -895,6 +1148,11 @@ class BillingService
             if (!$request) {
                 $this->rollback();
                 return $this->failure(['Billing request not found.']);
+            }
+
+            if (!$this->canCancelBillingRequestRow($request, $user)) {
+                $this->rollback();
+                return $this->failure(['You are not allowed to cancel this billing request.']);
             }
 
             if ((string)$request['status'] !== 'Pending') {
@@ -942,6 +1200,31 @@ class BillingService
             $this->rollback();
             return $this->failure(['Unable to cancel billing request.']);
         }
+    }
+
+    public function canCancelBillingRequestRow(array $request, array $user): bool
+    {
+        if ((string)($request['status'] ?? '') !== 'Pending') {
+            return false;
+        }
+
+        if ($this->permissionService->canCancelBillingRequest($user)) {
+            return true;
+        }
+
+        if (!$this->permissionService->canCreateBillingRequest($user)) {
+            return false;
+        }
+
+        $userDepartmentId = (int)(
+            $user['active_department_id']
+            ?? $_SESSION['active_department_id']
+            ?? $user['department_id']
+            ?? 0
+        );
+
+        return (int)($request['requested_by'] ?? 0) === (int)($user['id'] ?? 0)
+            || ($userDepartmentId > 0 && (int)($request['department_id'] ?? 0) === $userDepartmentId);
     }
 
     private function canMutateBilling(array $visit): bool
@@ -1000,6 +1283,20 @@ class BillingService
     {
         if (!$this->permissionService->canRecordPayment($user)) {
             throw new RuntimeException('You are not allowed to record payments.');
+        }
+    }
+
+    private function assertCanApplyBillingDiscount(array $user): void
+    {
+        if (!$this->permissionService->canApplyBillingDiscount($user)) {
+            throw new RuntimeException('You are not allowed to apply billing discounts.');
+        }
+    }
+
+    private function assertCanCancelBillingDiscount(array $user): void
+    {
+        if (!$this->permissionService->canCancelBillingDiscount($user)) {
+            throw new RuntimeException('You are not allowed to cancel billing discounts.');
         }
     }
 
@@ -1093,6 +1390,18 @@ class BillingService
         return $row ? $this->decorateCharge($row) : null;
     }
 
+    private function lockDiscount(int $discountId): ?array
+    {
+        if ($discountId <= 0 || !$this->billingDiscountsAvailable()) {
+            return null;
+        }
+
+        $stmt = $this->pdo->prepare($this->discountBaseSelect() . ' WHERE bd.id = :id LIMIT 1 FOR UPDATE');
+        $stmt->execute([':id' => $discountId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $this->decorateDiscount($row) : null;
+    }
+
     private function findChargeBySource(string $sourceModule, int $sourceRecordId): ?array
     {
         $stmt = $this->pdo->prepare($this->chargeBaseSelect() . ' WHERE pc.source_module = :source_module AND pc.source_record_id = :source_record_id LIMIT 1');
@@ -1148,6 +1457,64 @@ class BillingService
         return (float)$stmt->fetchColumn();
     }
 
+    private function sumActiveDiscounts(int $visitId): float
+    {
+        if (!$this->billingDiscountsAvailable()) {
+            return 0.0;
+        }
+
+        $stmt = $this->pdo->prepare('
+            SELECT COALESCE(SUM(discount_amount), 0)
+            FROM billing_discounts
+            WHERE visit_id = :visit_id
+              AND status = \'Active\'
+        ');
+        $stmt->execute([':visit_id' => $visitId]);
+        return (float)$stmt->fetchColumn();
+    }
+
+    private function sumActiveDiscountsByScope(int $visitId): array
+    {
+        if (!$this->billingDiscountsAvailable()) {
+            return [
+                'charge_discounts' => 0.0,
+                'invoice_discounts' => 0.0,
+            ];
+        }
+
+        $stmt = $this->pdo->prepare('
+            SELECT
+                COALESCE(SUM(CASE WHEN patient_charge_id IS NOT NULL THEN discount_amount ELSE 0 END), 0) AS charge_discounts,
+                COALESCE(SUM(CASE WHEN patient_charge_id IS NULL THEN discount_amount ELSE 0 END), 0) AS invoice_discounts
+            FROM billing_discounts
+            WHERE visit_id = :visit_id
+              AND status = \'Active\'
+        ');
+        $stmt->execute([':visit_id' => $visitId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+        return [
+            'charge_discounts' => (float)($row['charge_discounts'] ?? 0),
+            'invoice_discounts' => (float)($row['invoice_discounts'] ?? 0),
+        ];
+    }
+
+    private function sumActiveDiscountsForCharge(int $patientChargeId): float
+    {
+        if ($patientChargeId <= 0 || !$this->billingDiscountsAvailable()) {
+            return 0.0;
+        }
+
+        $stmt = $this->pdo->prepare('
+            SELECT COALESCE(SUM(discount_amount), 0)
+            FROM billing_discounts
+            WHERE patient_charge_id = :patient_charge_id
+              AND status = \'Active\'
+        ');
+        $stmt->execute([':patient_charge_id' => $patientChargeId]);
+        return (float)$stmt->fetchColumn();
+    }
+
     private function sumPaymentsByVisit(int $visitId): float
     {
         $stmt = $this->pdo->prepare('
@@ -1174,6 +1541,35 @@ class BillingService
         }
 
         return 'Partially Paid';
+    }
+
+    private function allowedDiscountPercentages(): array
+    {
+        return [5.0, 10.0, 15.0];
+    }
+
+    private function billingDiscountsAvailable(): bool
+    {
+        static $available = null;
+
+        if ($available !== null) {
+            return $available;
+        }
+
+        try {
+            $stmt = $this->pdo->prepare(
+                'SELECT COUNT(*)
+                 FROM information_schema.tables
+                 WHERE table_schema = DATABASE()
+                   AND table_name = \'billing_discounts\''
+            );
+            $stmt->execute();
+            $available = (int)$stmt->fetchColumn() > 0;
+        } catch (Throwable) {
+            $available = false;
+        }
+
+        return $available;
     }
 
     private function buildInvoiceFilters(array $filters): array
@@ -1312,6 +1708,12 @@ class BillingService
             $params[':source_module'] = $sourceModule;
         }
 
+        $sourceRecordId = (int)($filters['source_record_id'] ?? 0);
+        if ($sourceRecordId > 0) {
+            $where[] = 'br.source_record_id = :source_record_id';
+            $params[':source_record_id'] = $sourceRecordId;
+        }
+
         if (!empty($filters['patient_name'])) {
             $where[] = '(CONCAT(p.first_name, " ", p.last_name) LIKE :patient_name OR p.first_name LIKE :patient_name OR p.last_name LIKE :patient_name)';
             $params[':patient_name'] = '%' . trim((string)$filters['patient_name']) . '%';
@@ -1448,6 +1850,23 @@ class BillingService
         ';
     }
 
+    private function discountBaseSelect(): string
+    {
+        return '
+            SELECT
+                bd.*,
+                pc.description AS charge_description,
+                bi.item_name AS charge_item_name,
+                CONCAT(applied_by.first_name, " ", applied_by.last_name) AS applied_by_name,
+                CONCAT(cancelled_by.first_name, " ", cancelled_by.last_name) AS cancelled_by_name
+            FROM billing_discounts bd
+            LEFT JOIN patient_charges pc ON pc.id = bd.patient_charge_id
+            LEFT JOIN billable_items bi ON bi.id = pc.billable_item_id
+            LEFT JOIN users applied_by ON applied_by.id = bd.applied_by
+            LEFT JOIN users cancelled_by ON cancelled_by.id = bd.cancelled_by
+        ';
+    }
+
     private function billingRequestBaseSelect(): string
     {
         return '
@@ -1495,6 +1914,21 @@ class BillingService
     private function decoratePayment(array $row): array
     {
         $row['display_amount'] = number_format((float)($row['amount'] ?? 0), 2);
+        return $row;
+    }
+
+    private function decorateDiscount(array $row): array
+    {
+        $row['display_discount_value'] = rtrim(
+            rtrim(number_format((float)($row['discount_value'] ?? 0), 2, '.', ''), '0'),
+            '.'
+        );
+        $row['display_discount_amount'] = number_format((float)($row['discount_amount'] ?? 0), 2);
+        $row['discount_scope'] = !empty($row['patient_charge_id']) ? 'Charge' : 'Invoice';
+        $chargeLabel = trim((string)($row['charge_item_name'] ?? $row['charge_description'] ?? ''));
+        $row['discount_scope_label'] = !empty($row['patient_charge_id'])
+            ? ('Charge #' . (int)$row['patient_charge_id'] . ($chargeLabel !== '' ? ' - ' . $chargeLabel : ''))
+            : 'Whole Invoice';
         return $row;
     }
 

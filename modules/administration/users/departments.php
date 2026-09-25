@@ -6,6 +6,7 @@ require_once __DIR__ . '/../partials/bootstrap.php';
 $userId = (int)($_GET['id'] ?? 0);
 $user = $userService->getUserById($userId);
 if (!$user) { http_response_code(404); exit('User not found.'); }
+administrationGuardSuperAdministratorUser($user, $currentUser, $permissionService);
 $memberships = $userDepartmentService->listUserDepartments($userId);
 $departments = $departmentService->listDepartments(false);
 $assignedIds = array_map('intval', array_column($memberships, 'department_id'));

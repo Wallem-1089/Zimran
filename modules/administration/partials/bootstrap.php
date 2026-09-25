@@ -25,3 +25,20 @@ $userService = new UserService($pdo);
 $roleService = new RoleService($pdo);
 $departmentService = new DepartmentService($pdo);
 $userDepartmentService = new UserDepartmentService($pdo);
+
+function administrationGuardSuperAdministratorUser(
+    array $targetUser,
+    array $currentUser,
+    PermissionService $permissionService
+): void {
+    $targetIsSuperAdministrator = ($targetUser['role_name'] ?? '') === 'Super Administrator'
+        || ($targetUser['department_name'] ?? '') === 'Super Administrator';
+
+    if ($targetIsSuperAdministrator && !$permissionService->isAdministrator($currentUser)) {
+        securityFailure(
+            'Unauthorized Super Administrator account access attempt.',
+            null,
+            'SUPER_ADMIN_USER_ACCESS_DENIED'
+        );
+    }
+}

@@ -12,6 +12,8 @@ if (!$user) {
     exit('User not found.');
 }
 
+administrationGuardSuperAdministratorUser($user, $currentUser, $permissionService);
+
 $pageTitle = 'Reset User Password';
 
 require_once __DIR__ . '/../../../layouts/header.php';

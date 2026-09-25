@@ -340,6 +340,15 @@
     margin-bottom: 10px;
 }
 
+.consultation-handwriting-pad {
+    touch-action: none;
+    -ms-touch-action: none;
+    overscroll-behavior: contain;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
 .handwriting-canvas {
     background:
         repeating-linear-gradient(
@@ -354,7 +363,19 @@
     display: block;
     min-height: 320px;
     touch-action: none;
+    -ms-touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
     width: 100%;
+}
+
+html.consultation-writing-in-progress,
+body.consultation-writing-in-progress {
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: none;
+    -ms-touch-action: none;
 }
 
 .handwriting-pad-actions {

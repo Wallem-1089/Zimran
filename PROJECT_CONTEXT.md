@@ -809,7 +809,12 @@ protect stock quantities with transactions and audit.
 
 ## Phase 6 - Billing
 
-Billing starts with charges, invoices, and payments.
+Billing starts with charges, invoices, controlled discounts, and payments.
+
+Discounts are Billing-owned financial adjustments. The current implementation
+allows only preset 5%, 10%, and 15% discounts, available to Super
+Administrator by default and to other users only through explicit permission.
+Discounts do not edit Accounts prices or original patient charge rows.
 
 Basic workflow:
 
@@ -1203,6 +1208,19 @@ handwriting pad. The handwriting feature stores compact stroke data in the
 existing narrative fields and renders it back on review/view; it does not
 perform OCR or convert handwriting into typed text.
 
+Vital Signs BMI is server-authoritative. When weight and height are entered,
+BMI is calculated from kg/cm as `weight / (height_m * height_m)` and rounded to
+two decimals. The form mirrors the same calculation as a read-only preview
+while both weight and height are present; manual BMI entry is only used when
+weight/height are not both supplied.
+
+Patient Communications Stage 2 is implemented for the current WhatsApp handoff
+locations: Radiology report view and Medical Document view. Staff must confirm
+patient consent, the app opens WhatsApp with a safe message containing only the
+patient name and patient/hospital number, and the handoff is recorded in
+`patient_communications`. Files are still downloaded/opened through protected
+controllers and manually attached by staff; no public document URL is shared.
+
 ## Phase 5.0 Final Integration / Regression / Production Hardening
 
 Phase 5.0 is a bug-fix, regression, and production-readiness pass rather than a
@@ -1279,11 +1297,52 @@ Administrator.
 
 ## Configurable Extra Form Fields
 
-Administration includes `Form Settings` for controlled optional form
-extensions. Core workflow fields remain coded normally. Configurable fields
-are for extra/custom narrative or checklist content only. Current configurable
-targets are Nursing Assessment, Theatre Record, Admission Record, Dressing
-Record, DM Sheet, ECG Report, POP Procedure Record, and Physiotherapy Record.
-Active fields appear under `Additional Configured Fields` and are stored in
-flexible response tables linked to the source record, patient, and encounter
-where applicable.
+Super Administrator-only Administration includes `Form Settings` for
+controlled optional form extensions. Core workflow fields remain coded
+normally. Configurable fields are for extra/custom narrative or checklist
+content only. Current configurable targets are Nursing Assessment, Theatre
+Record, Admission Record, Dressing Record, DM Sheet, ECG Report, POP Procedure
+Record, and Physiotherapy Record. Active fields appear under `Additional
+Configured Fields` and are stored in flexible response tables linked to the
+source record, patient, and encounter where applicable.
+
+## Version 1.2 current baseline
+
+Version 1.2 keeps the same CRUD-first, encounter-centered architecture and
+focuses on stability, permission consistency, department workflow clarity, and
+UI/documentation alignment. No new major workflow module is introduced by this
+version bump.
+
+Key Version 1.2 behavior:
+
+- Permission Matrix role permissions and user-specific Allow/Deny overrides
+  are now the authoritative source for ordinary users and ordinary System
+  Administrators.
+- Super Administrator remains the only full-system override role.
+- Ordinary System Administrator no longer inherits patient-registration,
+  clinical mutation, stock, billing, configurable-form, or department-module
+  actions unless the permission matrix explicitly grants them.
+- Patient registration obeys `register_patient`; System Administrator accounts
+  cannot register patients unless that permission is explicitly assigned.
+- Department worklists require the matching department view permission in
+  addition to belonging to that department/role.
+- Encounter cancellation now requires the appropriate lifecycle permission
+  (`change_encounter_status`) plus the allowed role rule.
+- Physiotherapy edit/update now posts to the update controller instead of the
+  create controller, preventing duplicate-record warnings during edits.
+- Physiotherapy sessions remain part of one Physiotherapy record per encounter;
+  active authorized Physio users add repeated sessions from the existing
+  record.
+- Accounts Price Catalogue no longer asks for item `unit` on create/edit.
+  Accounts owns price; Store owns stock units and balances.
+
+## Branding and deployment configuration
+
+The application version displayed in the UI is Version 1.2. Application
+branding is read from settings where available, while deployment path behavior
+is controlled by `config/app.php`. The base URL can be supplied through
+`HMS_BASE_URL`, or auto-detected for common XAMPP/alias/root deployments such
+as `/hospital_management_system`, `/zimran`, or `/`. Database credentials,
+document storage root, application environment, and PHP error log can be
+overridden through environment variables so the same codebase can run locally
+on XAMPP and on Virtualmin-style hosting.

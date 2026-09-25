@@ -69,7 +69,7 @@ $requestSource = $laboratoryRequestSource ?? 'Clinical';
             <?php if (!$isClosedEncounter && $canCreateLaboratoryRequest): ?>
                 <p>
                     <a href="../laboratory/create.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
-                        Request Laboratory Test
+                        <?= $requestSource === 'Direct' ? 'Create Direct Request' : 'Request Laboratory Test' ?>
                     </a>
                 </p>
             <?php endif; ?>

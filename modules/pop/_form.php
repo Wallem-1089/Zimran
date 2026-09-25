@@ -6,6 +6,7 @@ $popRequest = $popRequest ?? [];
 $visitId = (int)($visit['id'] ?? $popRequest['visit_id'] ?? 0);
 $patientId = (int)($visit['patient_id'] ?? $popRequest['patient_id'] ?? 0);
 $requestSource = (string)($popRequest['request_source'] ?? $requestSource ?? 'Clinical');
+$buttonLabel ??= 'Save POP Request';
 $requestSourceNote ??= $requestSource === 'Direct'
     ? 'Direct POP is for patients whose active encounter is currently in POP.'
     : 'Clinical requests are linked to this encounter without transferring ownership.';
@@ -45,7 +46,7 @@ $enableWritingMode ??= isset($permissionService)
     <?php hmsRenderHandwritingTextarea('clinical_indication', 'Clinical Indication / Reason', (string)($popRequest['clinical_indication'] ?? ''), 5, false, $enableWritingMode); ?>
 
     <div class="form-actions">
-        <button type="submit" class="btn-primary">Save POP Request</button>
+        <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>
         <a class="btn-secondary" href="<?= e(popBackToWorkspace($visitId)) ?>">Cancel</a>
     </div>
 </form>

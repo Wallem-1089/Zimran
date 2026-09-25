@@ -12,6 +12,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 requireCsrfToken();
 
 $userId = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
+$targetUser = $userService->getUserById($userId);
+if (!$targetUser) {
+    http_response_code(404);
+    exit('User not found.');
+}
+administrationGuardSuperAdministratorUser($targetUser, $currentUser, $permissionService);
+
 $result = $userService->updateUser(
     $userId,
     $_POST,

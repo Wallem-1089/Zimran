@@ -12,6 +12,8 @@ if (!$user) {
     exit('User not found.');
 }
 
+administrationGuardSuperAdministratorUser($user, $currentUser, $permissionService);
+
 $pageTitle = 'View User';
 $success = $_SESSION['success_message'] ?? null;
 unset($_SESSION['success_message']);

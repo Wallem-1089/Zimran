@@ -9,6 +9,9 @@ $userId = (int)($_POST['user_id'] ?? 0);
 $departmentId = (int)($_POST['department_id'] ?? 0);
 $actorId = (int)$currentUser['id'];
 $action = (string)($_POST['action'] ?? '');
+$targetUser = $userService->getUserById($userId);
+if (!$targetUser) { http_response_code(404); exit('User not found.'); }
+administrationGuardSuperAdministratorUser($targetUser, $currentUser, $permissionService);
 $result = match ($action) {
     'assign' => $userDepartmentService->assignDepartment($userId, $departmentId, $actorId, !empty($_POST['primary'])),
     'remove' => $userDepartmentService->removeDepartment($userId, $departmentId, $actorId),

@@ -127,7 +127,7 @@ class POPService
             $where = ' WHERE pr.status = :status';
             $params[':status'] = $status;
         }
-        $stmt = $this->pdo->prepare($this->baseSelect() . $where . " ORDER BY CASE WHEN pr.priority = 'Urgent' THEN 0 ELSE 1 END, pr.created_at ASC, pr.id ASC");
+        $stmt = $this->pdo->prepare($this->baseSelect() . $where . " ORDER BY CASE WHEN pr.priority = 'Urgent' THEN 0 ELSE 1 END, pr.created_at DESC, pr.id DESC");
         $stmt->execute($params);
         return $this->filterRows($stmt->fetchAll(PDO::FETCH_ASSOC), $user);
     }

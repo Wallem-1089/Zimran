@@ -620,16 +620,81 @@ document.addEventListener('DOMContentLoaded', function () {
             let drawing = false;
             let currentStroke = null;
             let lastPoint = null;
+            let activePointerId = null;
+            let pageGesturesLocked = false;
 
             canvas.style.touchAction = 'none';
             canvas.style.userSelect = 'none';
             canvas.style.webkitUserSelect = 'none';
+            canvas.style.webkitTouchCallout = 'none';
+
+            function lockPageGestures() {
+                pageGesturesLocked = true;
+                if (!document.body.classList.contains('consultation-writing-in-progress')) {
+                    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+                    document.body.dataset.handwritingScrollY = String(scrollY);
+                    document.body.dataset.handwritingPreviousPosition = document.body.style.position || '';
+                    document.body.dataset.handwritingPreviousTop = document.body.style.top || '';
+                    document.body.dataset.handwritingPreviousLeft = document.body.style.left || '';
+                    document.body.dataset.handwritingPreviousRight = document.body.style.right || '';
+                    document.body.dataset.handwritingPreviousWidth = document.body.style.width || '';
+                    document.body.style.position = 'fixed';
+                    document.body.style.top = '-' + scrollY + 'px';
+                    document.body.style.left = '0';
+                    document.body.style.right = '0';
+                    document.body.style.width = '100%';
+                }
+                document.documentElement.classList.add('consultation-writing-in-progress');
+                document.body.classList.add('consultation-writing-in-progress');
+            }
+
+            function unlockPageGestures() {
+                if (!pageGesturesLocked && !document.body.classList.contains('consultation-writing-in-progress')) return;
+                pageGesturesLocked = false;
+                const scrollY = Number(document.body.dataset.handwritingScrollY || '0');
+                document.documentElement.classList.remove('consultation-writing-in-progress');
+                document.body.classList.remove('consultation-writing-in-progress');
+                document.body.style.position = document.body.dataset.handwritingPreviousPosition || '';
+                document.body.style.top = document.body.dataset.handwritingPreviousTop || '';
+                document.body.style.left = document.body.dataset.handwritingPreviousLeft || '';
+                document.body.style.right = document.body.dataset.handwritingPreviousRight || '';
+                document.body.style.width = document.body.dataset.handwritingPreviousWidth || '';
+                delete document.body.dataset.handwritingScrollY;
+                delete document.body.dataset.handwritingPreviousPosition;
+                delete document.body.dataset.handwritingPreviousTop;
+                delete document.body.dataset.handwritingPreviousLeft;
+                delete document.body.dataset.handwritingPreviousRight;
+                delete document.body.dataset.handwritingPreviousWidth;
+                if (scrollY > 0) window.scrollTo(0, scrollY);
+            }
+
+            function blockGesture(event) {
+                if (activeMode !== 'write') return;
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            function clientPointFromEvent(event) {
+                if (event.touches && event.touches.length > 0) {
+                    return {clientX: event.touches[0].clientX, clientY: event.touches[0].clientY};
+                }
+                if (event.changedTouches && event.changedTouches.length > 0) {
+                    return {clientX: event.changedTouches[0].clientX, clientY: event.changedTouches[0].clientY};
+                }
+                return {clientX: event.clientX, clientY: event.clientY};
+            }
 
             function pointFromEvent(event) {
                 const rect = canvas.getBoundingClientRect();
-                const x = Math.max(0, Math.min(Number(canvas.dataset.logicalWidth || rect.width), event.clientX - rect.left));
-                const y = Math.max(0, Math.min(Number(canvas.dataset.logicalHeight || rect.height), event.clientY - rect.top));
+                const clientPoint = clientPointFromEvent(event);
+                const x = Math.max(0, Math.min(Number(canvas.dataset.logicalWidth || rect.width), clientPoint.clientX - rect.left));
+                const y = Math.max(0, Math.min(Number(canvas.dataset.logicalHeight || rect.height), clientPoint.clientY - rect.top));
                 return [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
+            }
+
+            function shouldLockForEvent(event) {
+                if (event.pointerType) return event.pointerType !== 'mouse';
+                return Boolean(event.touches || event.changedTouches);
             }
 
             function drawSegment(from, to) {
@@ -649,14 +714,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
             function beginStroke(event) {
                 if (activeMode !== 'write') return;
+                if (event.touches && event.touches.length > 1) {
+                    blockGesture(event);
+                    return;
+                }
                 event.preventDefault();
                 event.stopPropagation();
                 if (typeof canvas.setPointerCapture === 'function' && event.pointerId !== undefined) {
                     canvas.setPointerCapture(event.pointerId);
+                    activePointerId = event.pointerId;
                 }
-                document.body.classList.add('consultation-writing-in-progress');
-                drawing = true;
                 lastPoint = pointFromEvent(event);
+                if (shouldLockForEvent(event)) lockPageGestures();
+                drawing = true;
                 currentStroke = [lastPoint];
                 canvas._handwritingPayload.strokes.push(currentStroke);
                 drawSegment([lastPoint[0] - 0.1, lastPoint[1] - 0.1], lastPoint);
@@ -665,6 +735,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             function continueStroke(event) {
                 if (!drawing || !currentStroke) return;
+                if (activePointerId !== null && event.pointerId !== undefined && event.pointerId !== activePointerId) return;
                 event.preventDefault();
                 event.stopPropagation();
                 const point = pointFromEvent(event);
@@ -679,6 +750,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             function endStroke(event) {
+                if (!drawing && !currentStroke) return;
                 if (event) {
                     event.preventDefault();
                     event.stopPropagation();
@@ -689,18 +761,77 @@ document.addEventListener('DOMContentLoaded', function () {
                 drawing = false;
                 currentStroke = null;
                 lastPoint = null;
-                document.body.classList.remove('consultation-writing-in-progress');
+                activePointerId = null;
+                unlockPageGestures();
                 redrawCanvas(canvas, canvas._handwritingPayload);
                 syncTextarea(field);
             }
 
+            const supportsPointerEvents = 'PointerEvent' in window;
             canvas.addEventListener('pointerdown', beginStroke, {passive: false});
-            canvas.addEventListener('pointermove', continueStroke, {passive: false});
+            document.addEventListener('pointermove', continueStroke, {passive: false});
             ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (eventName) {
-                canvas.addEventListener(eventName, endStroke, {passive: false});
+                document.addEventListener(eventName, endStroke, {passive: false});
             });
-            canvas.addEventListener('touchstart', function (event) { if (activeMode === 'write') event.preventDefault(); }, {passive: false});
-            canvas.addEventListener('touchmove', function (event) { if (activeMode === 'write') event.preventDefault(); }, {passive: false});
+            canvas.addEventListener('touchstart', function (event) {
+                if (supportsPointerEvents) {
+                    blockGesture(event);
+                    return;
+                }
+                beginStroke(event);
+            }, {passive: false});
+            canvas.addEventListener('touchmove', function (event) {
+                if (supportsPointerEvents) {
+                    blockGesture(event);
+                    return;
+                }
+                continueStroke(event);
+            }, {passive: false});
+            canvas.addEventListener('touchend', function (event) {
+                if (supportsPointerEvents) {
+                    blockGesture(event);
+                    return;
+                }
+                endStroke(event);
+            }, {passive: false});
+            canvas.addEventListener('touchcancel', function (event) {
+                if (supportsPointerEvents) {
+                    blockGesture(event);
+                    return;
+                }
+                endStroke(event);
+            }, {passive: false});
+            document.addEventListener('touchmove', function (event) {
+                if (document.body.classList.contains('consultation-writing-in-progress')) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+            }, {passive: false});
+            document.addEventListener('touchend', function (event) {
+                if (document.body.classList.contains('consultation-writing-in-progress')) {
+                    if (drawing) {
+                        endStroke(event);
+                    } else {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        unlockPageGestures();
+                    }
+                }
+            }, {passive: false});
+            document.addEventListener('touchcancel', function (event) {
+                if (document.body.classList.contains('consultation-writing-in-progress')) {
+                    if (drawing) {
+                        endStroke(event);
+                    } else {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        unlockPageGestures();
+                    }
+                }
+            }, {passive: false});
+            canvas.addEventListener('gesturestart', blockGesture, {passive: false});
+            canvas.addEventListener('gesturechange', blockGesture, {passive: false});
+            canvas.addEventListener('gestureend', blockGesture, {passive: false});
             field.querySelector('[data-handwriting-undo]')?.addEventListener('click', function () {
                 canvas._handwritingPayload.strokes.pop();
                 redrawCanvas(canvas, canvas._handwritingPayload);
@@ -751,6 +882,7 @@ document.addEventListener('DOMContentLoaded', function () {
             button.addEventListener('click', function () { setMode(button.dataset.consultationMode || 'type'); });
         });
         window.addEventListener('resize', function () {
+            if (document.body.classList.contains('consultation-writing-in-progress')) return;
             if (activeMode === 'write') fields.forEach(function (field) {
                 const canvas = field.querySelector('.handwriting-canvas');
                 if (canvas) resizeCanvas(canvas);

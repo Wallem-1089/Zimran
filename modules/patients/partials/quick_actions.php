@@ -6,7 +6,7 @@ declare(strict_types=1);
 $isDeletedPatient = (int)($patient['is_deleted'] ?? 0) === 1;
 ?>
 
-<div class="card">
+<div class="card patient-quick-actions-card">
     <h2>Quick Actions</h2>
 
     <div class="patient-actions-grid">
@@ -21,7 +21,7 @@ $isDeletedPatient = (int)($patient['is_deleted'] ?? 0) === 1;
 
         <?php if (!$isDeletedPatient): ?>
             <a href="../visits/create.php?patient=<?= (int)$patient['id'] ?>" class="action-card action-primary">
-                <div class="action-icon">+</div>
+                <span class="action-icon" aria-hidden="true">+</span>
                 <div class="action-content">
                     <strong>New Encounter</strong>
                     <span>Register a new patient visit</span>
@@ -31,7 +31,7 @@ $isDeletedPatient = (int)($patient['is_deleted'] ?? 0) === 1;
 
         <?php if (!$isDeletedPatient): ?>
             <a href="edit.php?id=<?= (int)$patient['id'] ?>" class="action-card">
-                <div class="action-icon">Edit</div>
+                <span class="action-icon" aria-hidden="true">ED</span>
                 <div class="action-content">
                     <strong>Edit Patient</strong>
                     <span>Update patient information</span>
@@ -40,7 +40,7 @@ $isDeletedPatient = (int)($patient['is_deleted'] ?? 0) === 1;
         <?php endif; ?>
 
         <a href="history.php?id=<?= (int)$patient['id'] ?>" class="action-card">
-            <div class="action-icon">Log</div>
+            <span class="action-icon" aria-hidden="true">H</span>
             <div class="action-content">
                 <strong>View History</strong>
                 <span>Registration and activity history</span>
@@ -48,7 +48,7 @@ $isDeletedPatient = (int)($patient['is_deleted'] ?? 0) === 1;
         </a>
 
         <a href="search.php" class="action-card">
-            <div class="action-icon">Find</div>
+            <span class="action-icon" aria-hidden="true">⌕</span>
             <div class="action-content">
                 <strong>Search Patients</strong>
                 <span>Find another patient</span>
@@ -57,7 +57,7 @@ $isDeletedPatient = (int)($patient['is_deleted'] ?? 0) === 1;
 
         <?php if (!empty($canViewBilling)): ?>
             <a href="../billing/index.php?hospital_number=<?= urlencode((string)($patient['hospital_number'] ?? '')) ?>" class="action-card">
-                <div class="action-icon">Bill</div>
+                <span class="action-icon" aria-hidden="true">₦</span>
                 <div class="action-content">
                     <strong>Billing</strong>
                     <span>View patient bills</span>
@@ -67,7 +67,7 @@ $isDeletedPatient = (int)($patient['is_deleted'] ?? 0) === 1;
 
         <?php if (!empty($canViewLaboratory)): ?>
             <a href="../laboratory/history.php?patient=<?= (int)$patient['id'] ?>" class="action-card">
-                <div class="action-icon">Lab</div>
+                <span class="action-icon" aria-hidden="true">LB</span>
                 <div class="action-content">
                     <strong>Laboratory</strong>
                     <span>Laboratory requests and results</span>

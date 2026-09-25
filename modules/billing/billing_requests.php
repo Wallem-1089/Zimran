@@ -17,6 +17,7 @@ $filters = [
     'patient_name' => trim((string)($_GET['patient_name'] ?? '')),
     'hospital_number' => trim((string)($_GET['hospital_number'] ?? '')),
     'visit_number' => trim((string)($_GET['visit_number'] ?? '')),
+    'source_module' => trim((string)($_GET['source_module'] ?? '')),
 ];
 $showFullHistory = (string)($_GET['full'] ?? '') === '1';
 $filters['limit'] = $showFullHistory ? 0 : 50;
@@ -87,6 +88,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <label for="visit_number">Visit Number</label>
                 <input id="visit_number" name="visit_number" value="<?= e($filters['visit_number']) ?>">
             </div>
+            <div class="form-group">
+                <label for="source_module">Source Module</label>
+                <input id="source_module" name="source_module" value="<?= e($filters['source_module']) ?>" placeholder="e.g. Pharmacy">
+            </div>
         </div>
         <div class="form-actions">
             <button class="btn-primary" type="submit">Filter</button>
@@ -122,6 +127,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                     </thead>
                     <tbody>
                         <?php foreach ($requests as $request): ?>
+                            <?php $canCancelThisRequest = $billingService->canCancelBillingRequestRow($request, $currentUser); ?>
                             <tr>
                                 <td><?= e((string)($request['patient_name'] ?? '-')) ?><br><small><?= e((string)($request['hospital_number'] ?? '-')) ?></small></td>
                                 <td><?= e((string)($request['visit_number'] ?? ('#' . (int)$request['visit_id']))) ?></td>
@@ -137,6 +143,18 @@ require __DIR__ . '/../../layouts/sidebar.php';
                                     <a class="btn-secondary btn-sm" href="../visits/workspace.php?id=<?= (int)$request['visit_id'] ?>&tab=billing">Workspace</a>
                                     <?php if ($permissionService->canReviewBillingRequest($currentUser) && (string)($request['status'] ?? '') === 'Pending'): ?>
                                         <a class="btn-primary btn-sm" href="request_review.php?id=<?= (int)$request['id'] ?>">Create Charge</a>
+                                    <?php endif; ?>
+                                    <?php if ($canCancelThisRequest): ?>
+                                        <details class="inline-details">
+                                            <summary class="btn-secondary btn-sm">Cancel</summary>
+                                            <form method="post" action="request_cancel.php" class="inline-cancel-form">
+                                                <?= csrfField() ?>
+                                                <input type="hidden" name="billing_request_id" value="<?= (int)$request['id'] ?>">
+                                                <input type="hidden" name="visit_id" value="<?= (int)$request['visit_id'] ?>">
+                                                <textarea name="reason" rows="2" required placeholder="Cancellation reason"></textarea>
+                                                <button class="btn-danger btn-sm" type="submit">Confirm Cancel</button>
+                                            </form>
+                                        </details>
                                     <?php endif; ?>
                                 </td>
                             </tr>

@@ -400,6 +400,18 @@ authorized document in the browser, but attachment-style file download is
 restricted to the uploading department unless
 `download_cross_department_medical_documents` is granted.
 
+## Patient Communications permissions
+
+| Permission | Super Administrator | Records Officer | Doctor | Nurse | Radiology/X-Ray | Other clinical | Other roles |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `view_patient_communications` | Yes | Yes | Yes where patient-context access exists | Yes where patient-context access exists | Yes where patient-context access exists | Yes where patient-context access exists | No default |
+
+Patient Communications currently tracks manual WhatsApp handoffs from Radiology
+report view and Medical Document view. It is a history/view permission only.
+The handoff still requires the source page's normal view/download/open
+permissions and patient consent confirmation. It does not grant access to
+documents or reports the user could not otherwise view.
+
 ## Clinical Notes permissions — implemented
 
 | Permission | Administrator | Records Officer | Doctor | Nurse | Others |
@@ -548,7 +560,11 @@ charges directly. Accounts remains the price owner.
 
 ## Phase 4.4 Billing permissions
 
-| Permission | Administrator | Accountant | Reception | Clinical roles | Other |
+In this table, `Super Admin` means the `Super Administrator` override role.
+Ordinary `System Administrator` accounts only receive these actions when the
+permission is explicitly granted through role or user permission assignment.
+
+| Permission | Super Admin | Accountant | Reception | Clinical roles | Other |
 |---|---:|---:|---:|---:|---:|
 | `view_billing` | Yes | Yes | Yes | Yes, encounter billing status only | No default |
 | `create_patient_charge` | Yes | Yes | No | No | No |
@@ -560,11 +576,17 @@ charges directly. Accounts remains the price owner.
 | `create_invoice` | Yes | Yes | No | No | No |
 | `record_payment` | Yes | Yes | No | No | No |
 | `view_receipts` | Yes | Yes | Yes | No | Records Officer only outside Accounts/Reception |
+| `view_billing_discounts` | Yes | No default | No | No | No |
+| `apply_billing_discount` | Yes | No default | No | No | No |
+| `cancel_billing_discount` | Yes | No default | No | No | No |
 
-Billing owns patient charges, invoices, payments, and receipt views. Financial
-totals are derived from posted charges and payments and cannot be manually
-edited. Billing can remain mutable after clinical encounter completion for
-settlement purposes.
+Billing owns patient charges, invoice totals, discounts, payments, and receipt
+views. Financial totals are derived from posted charges, active discounts, and
+payments and cannot be manually edited. Discounts are restricted to approved
+5%, 10%, or 15% presets. Super Administrator receives discount permissions by
+default; other users must receive explicit permission overrides or role
+permission assignment before discount controls are visible. Billing can remain
+mutable after clinical encounter completion for settlement purposes.
 
 Migration 055 repairs the Billing permission seed so the core Billing
 permissions exist in the live permission matrix. `view_billing` may be broad
@@ -576,11 +598,52 @@ Billing Requests are recommendations only. Clinical/department roles may create
 requests, but Accounts/Admin must review them and create the official charge
 from `billable_items`.
 
+## Version 1.2 permission authority
+
+The Permission Matrix is authoritative for ordinary users and ordinary System
+Administrators. Role permissions are the default. User-specific overrides can
+Allow or Deny one account without changing the whole role. Super Administrator
+retains full override access.
+
+Important Version 1.2 rules:
+
+- System Administrator does not automatically receive patient registration,
+  clinical mutation, billing, stock, configurable form, or department-module
+  permissions.
+- Patient registration requires `register_patient`.
+- Department worklists require the matching view permission and ownership
+  context:
+  - Laboratory worklist requires `view_laboratory`.
+  - Radiology/X-Ray worklist requires `view_radiology`.
+  - ECG worklist requires `view_ecg`.
+  - POP worklist requires `view_pop`.
+  - Physiotherapy worklist requires `view_physiotherapy`.
+  - Pharmacy worklist requires `view_pharmacy`.
+- User-specific Deny overrides block access for that user even if the role
+  normally grants the permission, except Super Administrator override.
+- Missing or stale session role data is resolved from the database before
+  fallback rules are considered.
+
+## Patient registration permissions
+
+| Permission | Super Administrator | System Administrator | Receptionist | Records Officer | Doctor | Nurse | Other |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `register_patient` | Yes | No default | Yes | Yes | No default | No default | No default |
+
+Registration pages and save/review controllers call `canRegisterPatient()`,
+which now delegates to `register_patient`. A System Administrator can only
+register patients if `register_patient` is explicitly granted through the role
+matrix or a user-specific Allow override.
+
 ## Encounter cancellation permissions
 
-Only Receptionist, Records Officer, Doctor, and System Administrator may cancel
-an encounter through the exposed workspace action. Cancellation is no longer a
-transfer type; transfer remains department handoff only.
+Only Receptionist, Records Officer, and Doctor may cancel an encounter through
+the exposed workspace action, and only when they also have
+`change_encounter_status`. Super Administrator has override access. Ordinary
+System Administrator does not inherit cancellation unless explicitly granted
+and still remains subject to the allowed-role rule unless promoted to Super
+Administrator. Cancellation is no longer a transfer type; transfer remains
+department handoff only.
 
 ## Encounter reopen permissions
 
@@ -654,8 +717,9 @@ where they have permission, but they do not browse the full POP worklist.
 | Full permission override | Yes | No |
 | Administration dashboard | Yes | Yes |
 | Manage users/roles/permissions/settings | Yes | Yes |
-| Manage configurable form fields | Yes | Yes |
+| Manage configurable form fields | Yes | No |
 | View other department worklists | Yes | Yes |
+| Register patients by default | Yes | No |
 | Clinical module mutation by override | Yes | No |
 | Billing/stock/pharmacy mutation by override | Yes | No |
 | Reports by override | Yes | No |
@@ -667,12 +731,17 @@ The original `admin` account remains a protected ordinary System Administrator.
 
 | Permission | Super Administrator | System Administrator | Other users |
 | --- | ---: | ---: | ---: |
-| `manage_configurable_forms` | Yes | Yes | No by default |
-| `view_configurable_form_responses` | Yes | Yes | No by default |
+| `manage_configurable_forms` | Yes | No | No |
+| `view_configurable_form_responses` | Yes | No | No |
 
 Configured field access does not override parent clinical permissions. For
 example, a user must still be allowed to create/edit Nursing before saving
 Nursing configured field responses.
+
+Form Settings is intentionally Super Administrator-only in the current
+implementation. Ordinary System Administrator accounts do not see the Form
+Settings sidebar link or administration dashboard shortcut, and direct access
+to the Form Settings routes is denied.
 
 Current configurable-form targets are Nursing Assessment, Theatre Record,
 Admission Record, Dressing Record, DM Sheet, ECG Report, POP Procedure Record,

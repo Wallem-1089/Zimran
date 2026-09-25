@@ -53,7 +53,8 @@ $physiotherapyConfiguredValues = $_SESSION['old_configured_fields'] ?? [];
 unset($_SESSION['old_configured_fields']);
 
 $existingRecords = $physiotherapyService->listByVisit($visitId, $currentUser);
-$pageTitle = 'Create Physiotherapy Record';
+$existingRecord = $existingRecords[0] ?? null;
+$pageTitle = $recordSource === 'Direct' ? 'Start Direct Physiotherapy Record' : 'Create Physiotherapy Record';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 
 require __DIR__ . '/../../layouts/header.php';
@@ -75,7 +76,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <?php endif; ?>
     <div class="page-header">
         <div>
-            <h1>Create Physiotherapy Record</h1>
+            <h1><?= e($pageTitle) ?></h1>
             <p><?= e((string)($visit['visit_number'] ?? ('Encounter #' . $visitId))) ?></p>
         </div>
         <div class="form-actions">
@@ -93,7 +94,29 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="summary-item"><span class="summary-label">Encounter Status</span> <span class="summary-value"><?= e((string)($visit['visit_status'] ?? '-')) ?></span></div>
     </div>
 
-    <?php require __DIR__ . '/_form.php'; ?>
+    <?php if ($existingRecord !== null): ?>
+        <div class="card alert-warning">
+            <h2>Physiotherapy record already exists</h2>
+            <p>
+                This encounter already has a Physiotherapy record. Use the
+                existing record to continue assessment, add sessions, request
+                billing, or complete the Physiotherapy workflow.
+            </p>
+            <div class="summary-grid">
+                <div class="summary-item"><span class="summary-label">Record</span> <span class="summary-value">#<?= (int)$existingRecord['id'] ?></span></div>
+                <div class="summary-item"><span class="summary-label">Source</span> <span class="summary-value"><?= e((string)$existingRecord['record_source']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)$existingRecord['status']) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Created</span> <span class="summary-value"><?= e((string)($existingRecord['created_at'] ?? '-')) ?></span></div>
+            </div>
+            <div class="form-actions">
+                <a class="btn-primary" href="view.php?id=<?= (int)$existingRecord['id'] ?>">Open Existing Record</a>
+                <a class="btn-secondary" href="history.php?visit=<?= (int)$visitId ?>">View History</a>
+                <a class="btn-secondary" href="<?= e(physiotherapyBackToWorkspace($visitId)) ?>">Back to Workspace</a>
+            </div>
+        </div>
+    <?php else: ?>
+        <?php $buttonLabel = $recordSource === 'Direct' ? 'Save Direct Physiotherapy Record' : 'Save Physiotherapy Record'; require __DIR__ . '/_form.php'; ?>
+    <?php endif; ?>
 
     <div class="card">
         <h3>Existing Records for This Encounter</h3>
