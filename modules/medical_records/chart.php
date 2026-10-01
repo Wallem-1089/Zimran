@@ -315,9 +315,9 @@ if ($activeTab === 'ecg' && !$canViewEcg) {
     exit('You do not have permission to view ECG.');
 }
 if ($activeTab === 'pop' && !$canViewPop) {
-    $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'POP_ACCESS_DENIED', 'POP access denied.');
+    $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'POP_ACCESS_DENIED', 'Plaster access denied.');
     http_response_code(403);
-    exit('You do not have permission to view POP.');
+    exit('You do not have permission to view Plaster.');
 }
 if ($activeTab === 'theatre' && !$canViewTheatre) {
     $permissionService->logPatientDenied((int)$currentUser['id'], $patientId, 'THEATRE_ACCESS_DENIED', 'Theatre access denied.');

@@ -13,7 +13,9 @@ $dashboardService = new DashboardService($pdo);
 
 function reportsRequireAccess(PermissionService $permissionService, ?array $user): void
 {
-    if (!$permissionService->canViewReports($user)) {
+    if (!$permissionService->canViewReports($user)
+        && !$permissionService->canViewEmergencyReports($user)
+    ) {
         http_response_code(403);
         exit('You are not allowed to view reports.');
     }
@@ -34,7 +36,7 @@ function reportsFilterForm(array $filters, array $departments, array $options = 
 {
     $showStatus = !empty($options['status']);
     $statusValues = $options['status_values']
-        ?? ['Waiting','Reception','Records','Nursing','Doctor','Laboratory','Radiology','X-Ray','ECG','POP','Pharmacy','Physiotherapy','Theatre','Accounts','Store','Orderly','Completed','Cancelled'];
+        ?? ['Waiting','Reception','Records','Nursing','Doctor','Emergency','Laboratory','Radiology','X-Ray','ECG','Plaster','POP','Pharmacy','Physiotherapy','Theatre','Accounts','Store','Orderly','Completed','Cancelled'];
     $showItems = !empty($options['items']);
     $items = $options['items'] ?? [];
     ?>

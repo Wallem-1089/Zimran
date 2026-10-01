@@ -40,6 +40,7 @@ $manager = new MigrationManager($pdo, $databaseName);
 $manager->ensureLedger();
 $manager->apply(__DIR__ . '/../database/migrations/030_phase4_accounts_price_catalogue_up.sql', 30);
 $manager->apply(__DIR__ . '/../database/migrations/031_phase4_store_inventory_up.sql', 31);
+$manager->apply(__DIR__ . '/../database/migrations/075_store_inventory_barcodes_up.sql', 75);
 
 $pdo->exec("DELETE FROM audit_logs WHERE module = 'Store' AND (action LIKE 'INVENTORY_ITEM_%' OR action LIKE 'STOCK_%')");
 $pdo->exec("DELETE FROM stock_transactions WHERE inventory_item_id IN (SELECT id FROM inventory_items WHERE item_code LIKE 'STO-%')");
@@ -134,6 +135,7 @@ try {
     }
 
     assertStore(in_array('inventory_items', $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN), true), 'Inventory items table is missing.');
+    assertStore(in_array('inventory_item_barcodes', $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN), true), 'Inventory item barcode table is missing.');
     assertStore(in_array('stock_transactions', $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN), true), 'Stock transactions table is missing.');
     assertStore(in_array('department_stock_balances', $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN), true), 'Department stock balance table is missing.');
     assertStore(str_contains(file_get_contents(__DIR__ . '/../layouts/sidebar.php'), '/modules/store/index.php'), 'Sidebar missing Store destination.');
@@ -161,7 +163,7 @@ try {
     ')->execute([
         ':item_code' => 'STB-001',
         ':item_name' => 'Test Stock Price',
-        ':item_type' => 'Product',
+        ':item_type' => 'Consumable',
         ':department_id' => null,
         ':description' => 'Linked catalogue item.',
         ':unit_price' => 25.00,
@@ -177,6 +179,7 @@ try {
         'unit' => 'Pack',
         'description' => 'Used by store tests.',
         'billable_item_id' => $billableId,
+        'barcodes' => "STO-BAR-001\nSTO-BAR-002",
         'is_active' => 1,
     ], $store), 'Create inventory item');
     $itemId = (int)$item['inventory_item_id'];
@@ -192,6 +195,15 @@ try {
     $listed = $service->searchItems(['item_code' => 'STO-ITEM'], $store);
     assertStore(count($listed) >= 1, 'Inventory search returned no rows.');
 
+    $listedByBarcode = $service->searchItems(['item_code' => 'STO-BAR-001'], $store);
+    assertStore(count($listedByBarcode) >= 1, 'Inventory barcode search returned no rows.');
+
+    $barcodeItem = $service->getItemByBarcode('STO-BAR-001', $store);
+    assertStore($barcodeItem !== null && (int)$barcodeItem['id'] === $itemId, 'Barcode lookup did not resolve the inventory item.');
+
+    $itemCodeScan = $service->getItemByBarcode('STO-ITEM-001', $store);
+    assertStore($itemCodeScan !== null && (int)$itemCodeScan['id'] === $itemId, 'Item code scan did not resolve the inventory item.');
+
     $viewItem = $service->getItemById($itemId, $doctor);
     assertStore($viewItem !== null && (string)$viewItem['item_code'] === 'STO-ITEM-001', 'Created inventory item could not be viewed.');
     assertStore((int)($viewItem['billable_item_id'] ?? 0) === $billableId, 'Billable item linkage was not preserved.');
@@ -203,9 +215,25 @@ try {
         'unit' => 'Pack',
         'description' => 'Updated description.',
         'billable_item_id' => $billableId,
+        'barcodes' => "STO-BAR-001\nSTO-BAR-003",
         'is_active' => 1,
     ], $store), 'Update inventory item');
     assertStore(($updated['success'] ?? false) === true, 'Inventory item update failed.');
+
+    $updatedBarcodeItem = $service->getItemByBarcode('STO-BAR-003', $store);
+    assertStore($updatedBarcodeItem !== null && (int)$updatedBarcodeItem['id'] === $itemId, 'Updated barcode was not searchable.');
+
+    $removedBarcodeItem = $service->getItemByBarcode('STO-BAR-002', $store);
+    assertStore($removedBarcodeItem === null, 'Removed barcode was still searchable.');
+
+    $duplicateBarcode = $service->createItem([
+        'item_code' => 'STO-ITEM-002',
+        'item_name' => 'Duplicate Barcode Item',
+        'category' => 'Consumable',
+        'unit' => 'Pack',
+        'barcodes' => 'STO-BAR-001',
+    ], $store);
+    assertStore(($duplicateBarcode['success'] ?? true) === false, 'Duplicate barcode was accepted.');
 
     $deactivated = requireStoreSuccess($service->deactivateItem($itemId, $admin), 'Deactivate inventory item');
     assertStore(($deactivated['success'] ?? false) === true, 'Deactivate inventory item failed.');
@@ -221,21 +249,36 @@ try {
     ], $store), 'Receive stock');
     assertStore(($receive['success'] ?? false) === true, 'Receive stock failed.');
 
-    $issuePharmacy = requireStoreSuccess($service->issueStock([
-        'inventory_item_id' => $itemId,
-        'department_id' => $pharmacyDepartmentId,
-        'quantity' => 30,
+$issuePharmacy = requireStoreSuccess($service->issueStock([
+    'inventory_item_id' => $itemId,
+    'department_id' => $pharmacyDepartmentId,
+    'quantity' => 30,
         'reference' => 'ISS-001',
-        'remarks' => 'Issued to Pharmacy.',
-    ], $store), 'Issue stock to Pharmacy');
+    'remarks' => 'Issued to Pharmacy.',
+], $store), 'Issue stock to Pharmacy');
 
-    $issueTheatre = requireStoreSuccess($service->issueStock([
-        'inventory_item_id' => $itemId,
-        'department_id' => $theatreDepartmentId,
-        'quantity' => 20,
-        'reference' => 'ISS-002',
-        'remarks' => 'Issued to Theatre.',
-    ], $store), 'Issue stock to Theatre');
+$storeDirectToTheatreDenied = $service->issueStock([
+    'inventory_item_id' => $itemId,
+    'department_id' => $theatreDepartmentId,
+    'quantity' => 1,
+    'reference' => 'ISS-BLOCKED',
+    'remarks' => 'Store should not issue directly to Theatre.',
+], $store);
+assertStore(($storeDirectToTheatreDenied['success'] ?? true) === false, 'Store issued stock directly to Theatre unexpectedly.');
+
+$pharmacyStockUser = $admin;
+$pharmacyStockUser['department_id'] = $pharmacyDepartmentId;
+$pharmacyStockUser['active_department_id'] = $pharmacyDepartmentId;
+$pharmacyStockUser['department_name'] = 'Pharmacy';
+$pharmacyStockUser['role_name'] = 'Pharmacist';
+
+$issueTheatre = requireStoreSuccess($service->issueStock([
+    'inventory_item_id' => $itemId,
+    'department_id' => $theatreDepartmentId,
+    'quantity' => 20,
+    'reference' => 'ISS-002',
+    'remarks' => 'Pharmacy issued to Theatre.',
+], $pharmacyStockUser), 'Pharmacy issue stock to Theatre');
 
     $returnStock = requireStoreSuccess($service->returnStock([
         'inventory_item_id' => $itemId,
@@ -268,8 +311,8 @@ try {
     $theatreBalance = $service->getDepartmentBalance($itemId, $theatreDepartmentId, $admin);
     $labBalance = $service->getDepartmentBalance($itemId, $laboratoryDepartmentId, $admin);
 
-    assertStore((float)($storeBalance['quantity'] ?? 0) === 50.00, 'Store balance is incorrect.');
-    assertStore((float)($pharmacyBalance['quantity'] ?? 0) === 25.00, 'Pharmacy balance is incorrect.');
+    assertStore((float)($storeBalance['quantity'] ?? 0) === 70.00, 'Store balance is incorrect.');
+    assertStore((float)($pharmacyBalance['quantity'] ?? 0) === 5.00, 'Pharmacy balance is incorrect.');
     assertStore((float)($theatreBalance['quantity'] ?? 0) === 20.00, 'Theatre balance is incorrect.');
     assertStore((float)($labBalance['quantity'] ?? 0) === 4.00, 'Laboratory balance is incorrect.');
 

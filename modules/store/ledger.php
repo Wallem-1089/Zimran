@@ -9,13 +9,19 @@ if (!$storeTablesReady) {
     exit('Store tables are not available yet. Apply Migration 031 to enable this section.');
 }
 
-storeRequireAccess($permissionService, $currentUser);
+if (!$permissionService->canViewStockLedger($currentUser)) {
+    http_response_code(403);
+    exit('Stock ledger access denied.');
+}
 
 $itemId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: 0;
 $item = $itemId > 0 ? storeRequireItem($storeService, $itemId, $currentUser) : null;
+$isPharmacyLedgerUser = strcasecmp(storeCurrentDepartmentName($pdo, $currentUser), 'Pharmacy') === 0
+    && !$permissionService->isAdministrator($currentUser);
+$pharmacyDepartmentId = $isPharmacyLedgerUser ? storeDepartmentIdByName($pdo, 'Pharmacy') : null;
 $filters = [
     'item_id' => $itemId > 0 ? $itemId : (filter_input(INPUT_GET, 'item_id', FILTER_VALIDATE_INT) ?: null),
-    'department_id' => filter_input(INPUT_GET, 'department_id', FILTER_VALIDATE_INT) ?: null,
+    'department_id' => $isPharmacyLedgerUser ? $pharmacyDepartmentId : (filter_input(INPUT_GET, 'department_id', FILTER_VALIDATE_INT) ?: null),
     'transaction_type' => $_GET['transaction_type'] ?? '',
     'date_from' => $_GET['date_from'] ?? '',
     'date_to' => $_GET['date_to'] ?? '',
@@ -64,14 +70,19 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
             <div class="form-group">
                 <label for="department_id">Department</label>
-                <select id="department_id" name="department_id">
-                    <option value="">All departments</option>
-                    <?php foreach ($storeDepartmentOptions as $department): ?>
-                        <option value="<?= (int)$department['id'] ?>" <?= (int)($filters['department_id'] ?? 0) === (int)$department['id'] ? 'selected' : '' ?>>
-                            <?= e((string)$department['department_name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+                <?php if ($isPharmacyLedgerUser): ?>
+                    <input type="hidden" name="department_id" value="<?= (int)($pharmacyDepartmentId ?? 0) ?>">
+                    <input id="department_id" value="Pharmacy" readonly>
+                <?php else: ?>
+                    <select id="department_id" name="department_id">
+                        <option value="">All departments</option>
+                        <?php foreach ($storeDepartmentOptions as $department): ?>
+                            <option value="<?= (int)$department['id'] ?>" <?= (int)($filters['department_id'] ?? 0) === (int)$department['id'] ? 'selected' : '' ?>>
+                                <?= e((string)$department['department_name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                <?php endif; ?>
             </div>
 
             <div class="form-group">

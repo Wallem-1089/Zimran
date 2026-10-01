@@ -59,7 +59,7 @@ function pharmacyBackToConsultation(int $visitId): string
 
 function pharmacyRequestSourceLabel(string $source): string
 {
-    return strtoupper(trim($source)) === 'DIRECT' ? 'Direct' : 'Clinical';
+    return 'Clinical';
 }
 
 function pharmacyDepartmentId(PDO $pdo): int

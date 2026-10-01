@@ -59,6 +59,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?php if (!$invoice): ?>
             <div class="empty-state">Create an invoice before recording a payment.</div>
         <?php else: ?>
+            <?php if ($permissionService->isAdministrator($currentUser)): ?>
+                <div class="alert-warning">
+                    <strong>Super Admin payment override</strong>
+                    You can record recovery/admin payments and cancel mistaken payments from the billing screen. Payments still cannot exceed the invoice balance.
+                </div>
+            <?php endif; ?>
             <form method="post" action="payment_save.php" class="form-grid">
                 <?= csrfField() ?>
                 <input type="hidden" name="invoice_id" value="<?= (int)$invoice['id'] ?>">

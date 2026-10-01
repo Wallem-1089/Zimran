@@ -390,7 +390,8 @@ class DashboardService
             'filters' => $range,
             'charges' => $this->sumTable('patient_charges', 'created_at', 'amount', $range, "status = 'Active'"),
             'invoices' => $this->sumTable('invoices', 'created_at', 'total_amount', $range, "status <> 'Cancelled'"),
-            'payments' => $this->sumTable('payments', 'created_at', 'amount', $range),
+            'payments' => $this->sumTable('payments', 'created_at', 'amount', $range)
+                + $this->sumRegistrationPaymentClearances($range),
             'open_invoices' => $this->scalar("SELECT COUNT(*) FROM invoices WHERE status IN ('Unpaid','Partially Paid')"),
             'outstanding_balance' => $this->scalar("SELECT COALESCE(SUM(balance_due),0) FROM invoices WHERE status IN ('Unpaid','Partially Paid')"),
         ];
@@ -605,11 +606,19 @@ class DashboardService
             'consultations_today' => $this->countTable('consultations', 'created_at', $today),
             'nursing_today' => $this->countTable('nursing_assessments', 'created_at', $today),
             'laboratory_today' => $this->countTable('laboratory_requests', 'created_at', $today),
+            'laboratory_active' => $this->activeClinicalRequestCount('laboratory_requests'),
             'radiology_today' => $this->countTable('radiology_requests', 'created_at', $today),
+            'radiology_active' => $this->activeClinicalRequestCount('radiology_requests'),
+            'ecg_today' => $this->countTable('ecg_requests', 'created_at', $today),
+            'ecg_active' => $this->activeClinicalRequestCount('ecg_requests'),
+            'plaster_today' => $this->countTable('pop_requests', 'created_at', $today),
+            'plaster_active' => $this->activeClinicalRequestCount('pop_requests'),
             'physiotherapy_records_today' => $this->countTable('physiotherapy_records', 'created_at', $today),
+            'physiotherapy_active' => $this->activeClinicalRequestCount('physiotherapy_records'),
             'physiotherapy_sessions_today' => $this->countTable('physiotherapy_sessions', 'created_at', $today),
             'theatre_today' => $this->countTable('theatre_records', 'created_at', $today),
             'prescriptions_today' => $this->countTable('prescriptions', 'created_at', $today),
+            'prescriptions_active' => $this->activeClinicalRequestCount('prescriptions'),
         ];
     }
 
@@ -619,7 +628,8 @@ class DashboardService
 
         return [
             'charges_today' => $this->sumTable('patient_charges', 'created_at', 'amount', $today, "status = 'Active'"),
-            'payments_today' => $this->sumTable('payments', 'created_at', 'amount', $today),
+            'payments_today' => $this->sumTable('payments', 'created_at', 'amount', $today)
+                + $this->sumRegistrationPaymentClearances($today),
             'outstanding_balance' => $this->scalar("SELECT COALESCE(SUM(balance_due),0) FROM invoices WHERE status IN ('Unpaid','Partially Paid')"),
             'open_invoices' => $this->scalar("SELECT COUNT(*) FROM invoices WHERE status IN ('Unpaid','Partially Paid')"),
         ];
@@ -800,6 +810,15 @@ class DashboardService
         return (int)$this->scalar("SELECT COUNT(*) FROM {$table} WHERE {$where}", $params);
     }
 
+    private function activeClinicalRequestCount(string $table): int
+    {
+        if (!$this->tableExists($table)) {
+            return 0;
+        }
+
+        return (int)$this->scalar("SELECT COUNT(*) FROM {$table} WHERE status NOT IN ('Completed', 'Cancelled', 'Dispensed')");
+    }
+
     private function sumTable(
         string $table,
         string $dateColumn,
@@ -815,6 +834,17 @@ class DashboardService
             "SELECT COALESCE(SUM({$sumColumn}),0) FROM {$table}
              WHERE {$dateColumn} BETWEEN :from AND :to AND {$extraWhere}",
             [':from' => $range['from'], ':to' => $range['to']]
+        );
+    }
+
+    private function sumRegistrationPaymentClearances(array $range): float
+    {
+        return $this->sumTable(
+            'patient_registration_billing_requests',
+            'cleared_at',
+            'amount',
+            $range,
+            "status = 'Paid'"
         );
     }
 

@@ -29,7 +29,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="page-header">
         <div>
             <h1>ECG Worklist</h1>
-            <p>Clinical and direct ECG requests awaiting ECG department action.</p>
+            <p>Clinical ECG requests awaiting ECG department action.</p>
         </div>
     </div>
 

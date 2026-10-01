@@ -84,9 +84,9 @@ try {
     assertAccounts(!str_contains(file_get_contents(__DIR__ . '/../modules/visits/partials/workspace_navigation.php'), '/modules/accounts/index.php'), 'Encounter Workspace gained an Accounts tab unexpectedly.');
 
     assertAccounts((new PermissionService($pdo))->canViewBillableItems($accounts), 'Accountant should be able to view billable items.');
-    assertAccounts((new PermissionService($pdo))->canCreateBillableItems($accounts), 'Accountant should be able to create billable items.');
-    assertAccounts((new PermissionService($pdo))->canEditBillableItems($accounts), 'Accountant should be able to edit billable items.');
-    assertAccounts((new PermissionService($pdo))->canManageBillableItemStatus($accounts), 'Accountant should be able to manage billable item status.');
+    assertAccounts(!(new PermissionService($pdo))->canCreateBillableItems($accounts), 'Accountant should not create Pharmacy-owned price catalogue items.');
+    assertAccounts(!(new PermissionService($pdo))->canEditBillableItems($accounts), 'Accountant should not edit Pharmacy-owned price catalogue items.');
+    assertAccounts(!(new PermissionService($pdo))->canManageBillableItemStatus($accounts), 'Accountant should not manage Pharmacy-owned price catalogue item status.');
     assertAccounts((new PermissionService($pdo))->canViewBillableItems($doctor), 'Doctor should be able to view billable items.');
     assertAccounts(!(new PermissionService($pdo))->canCreateBillableItems($doctor), 'Doctor should not be able to create billable items.');
 
@@ -99,20 +99,33 @@ try {
         'unit_price' => 5000,
         'unit' => '',
         'is_active' => 1,
-    ], $accounts), 'Create service item');
+    ], $admin), 'Create service item');
     $serviceItemId = (int)$serviceItem['billable_item_id'];
 
     $productItem = requireAccountsSuccess($service->createItem([
         'item_code' => 'ACC-PRD-001',
         'item_name' => 'Amoxicillin 500 mg',
-        'item_type' => 'Product',
+        'item_type' => 'Consumable',
         'department_id' => null,
         'description' => 'Capsule price catalogue item.',
         'unit_price' => 150,
         'unit' => 'Capsule',
         'is_active' => 1,
-    ], $accounts), 'Create product item');
+    ], $admin), 'Create product item');
     $productItemId = (int)$productItem['billable_item_id'];
+
+    $autoCodeItem = requireAccountsSuccess($service->createItem([
+        'item_name' => 'Auto coded service',
+        'item_type' => 'Service',
+        'department_id' => (int)$pdo->query("SELECT id FROM departments WHERE department_name = 'Doctor' LIMIT 1")->fetchColumn(),
+        'description' => 'Should receive an automatic item code.',
+        'unit_price' => 2500,
+        'unit' => '',
+        'is_active' => 1,
+    ], $admin), 'Create auto-coded service item');
+    $autoCodeRow = $service->getItemById((int)$autoCodeItem['billable_item_id'], $admin);
+    assertAccounts($autoCodeRow !== null && preg_match('/^[A-Z0-9]+-SRV-\d{5}$/', (string)$autoCodeRow['item_code']) === 1, 'Auto-generated service item code is invalid.');
+    assertAccounts($service->getItemByCode((string)$autoCodeRow['item_code'], $admin) !== null, 'Auto-generated item code is not retrievable.');
 
     $duplicate = $service->createItem([
         'item_code' => 'ACC-SRV-001',
@@ -123,7 +136,7 @@ try {
         'unit_price' => 5000,
         'unit' => null,
         'is_active' => 1,
-    ], $accounts);
+    ], $admin);
     assertAccounts(($duplicate['success'] ?? true) === false, 'Duplicate item code was accepted.');
 
     $listed = $service->listItems(['item_code' => 'ACC-', 'status' => 'active'], $accounts);
@@ -140,7 +153,7 @@ try {
         'description' => 'Updated consultation fee.',
         'unit_price' => 5500,
         'unit' => null,
-    ], $accounts), 'Update service item');
+    ], $admin), 'Update service item');
     assertAccounts(($updated['success'] ?? false) === true, 'Price catalogue update failed.');
 
     $doctorDenied = $service->createItem([
@@ -158,7 +171,7 @@ try {
     $nurseDenied = $service->updateItem($productItemId, [
         'item_code' => 'ACC-PRD-001',
         'item_name' => 'Nurse update should fail',
-        'item_type' => 'Product',
+        'item_type' => 'Consumable',
         'department_id' => null,
         'description' => 'Unauthorized.',
         'unit_price' => 150,
@@ -166,7 +179,7 @@ try {
     ], $nurse);
     assertAccounts(($nurseDenied['success'] ?? true) === false, 'Nurse updated a billable item unexpectedly.');
 
-    $deactivated = requireAccountsSuccess($service->deactivateItem($productItemId, $accounts), 'Deactivate product item');
+    $deactivated = requireAccountsSuccess($service->deactivateItem($productItemId, $admin), 'Deactivate product item');
     assertAccounts(($deactivated['success'] ?? false) === true, 'Deactivate failed.');
 
     $reactivated = requireAccountsSuccess($service->activateItem($productItemId, $admin), 'Activate product item as administrator');

@@ -54,7 +54,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <h3>Billing Recommendation</h3>
-        <p class="text-muted">This does not create a charge yet. Accounts will review it and choose the official billable item/price.</p>
+        <p class="text-muted">Submitting this request automatically creates the patient charge when a billable catalogue item is selected.</p>
         <form method="post" action="request_save.php" class="form-grid" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
             <?= csrfField() ?>
             <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
@@ -71,8 +71,8 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
             <div class="form-group">
                 <label for="suggested_billable_item_id">Suggested Billable Item</label>
-                <select id="suggested_billable_item_id" name="suggested_billable_item_id">
-                    <option value="">No suggestion</option>
+                <select id="suggested_billable_item_id" name="suggested_billable_item_id" required>
+                    <option value="">Select item to charge</option>
                     <?php foreach ($items as $item): ?>
                         <option value="<?= (int)$item['id'] ?>">
                             <?= e((string)$item['item_code']) ?> — <?= e((string)$item['item_name']) ?> (&#8358;<?= e(number_format((float)$item['unit_price'], 2)) ?>)
@@ -83,7 +83,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
             <div class="form-group">
                 <label for="quantity">Quantity</label>
-                <input id="quantity" name="quantity" type="number" min="0.01" step="0.01" value="1" required>
+                <input id="quantity" name="quantity" type="number" min="1" step="1" value="1" required>
             </div>
 
             <div class="form-actions">

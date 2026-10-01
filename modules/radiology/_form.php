@@ -6,9 +6,7 @@ $radiologyRequest ??= [];
 $action ??= 'save.php';
 $buttonLabel ??= 'Save Radiology Request';
 $requestSource = (string)($radiologyRequest['request_source'] ?? ($requestSource ?? 'Clinical'));
-$requestSourceNote ??= $requestSource === 'Direct'
-    ? 'Direct Radiology/X-Ray is for patients whose active encounter is currently in Radiology/X-Ray.'
-    : 'Clinical requests are linked to this encounter without transferring ownership.';
+$requestSourceNote ??= 'Clinical requests are linked to this encounter without transferring ownership.';
 $enableWritingMode ??= isset($permissionService)
     && method_exists($permissionService, 'canUseConsultationHandwriting')
     && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
@@ -25,6 +23,8 @@ $enableWritingMode ??= isset($permissionService)
         <div class="readonly-field"><?= e($requestSource) ?></div>
         <p class="text-muted"><?= e($requestSourceNote) ?></p>
     </div>
+
+    <?php hmsRenderBillableItemSelect($billableItemOptions ?? [], $radiologyRequest['suggested_billable_item_ids'] ?? ($radiologyRequest['suggested_billable_item_id'] ?? null)); ?>
 
     <div class="form-group">
         <label for="priority">Priority</label>

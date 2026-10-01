@@ -6,6 +6,9 @@ require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/AuditService.php';
+require_once __DIR__ . '/../../services/DiagnosticAttachmentService.php';
+require_once __DIR__ . '/../../services/ECGService.php';
+require_once __DIR__ . '/../../services/LaboratoryService.php';
 require_once __DIR__ . '/../../services/MedicalDocumentService.php';
 require_once __DIR__ . '/../../services/PatientCommunicationService.php';
 require_once __DIR__ . '/../../services/PatientService.php';
@@ -32,9 +35,26 @@ try {
     $visitService = new VisitService($pdo);
     $auditService = new AuditService($pdo);
     $patientCommunicationService = new PatientCommunicationService($pdo);
+    $diagnosticAttachmentService = new DiagnosticAttachmentService($pdo, $permissionService);
 
     $payload = match ($sourceType) {
+        'laboratory_result' => laboratoryHandoffPayload(
+            $pdo,
+            $sourceId,
+            $currentUser,
+            $patientService,
+            $visitService,
+            $permissionService
+        ),
         'radiology_report' => radiologyHandoffPayload(
+            $pdo,
+            $sourceId,
+            $currentUser,
+            $patientService,
+            $visitService,
+            $permissionService
+        ),
+        'ecg_report' => ecgHandoffPayload(
             $pdo,
             $sourceId,
             $currentUser,
@@ -60,6 +80,14 @@ try {
         header('Location: ' . safeReturnUrl($returnUrl));
         exit;
     }
+
+    $selectedAttachments = $diagnosticAttachmentService->selectedForMessage(
+        (array)($_POST['attachment_ids'] ?? []),
+        (string)$payload['source_module'],
+        (int)$payload['source_record_id'],
+        $currentUser
+    );
+    $payload['attachments'] = $selectedAttachments;
 
     $message = whatsappMessage($payload);
     $logged = $auditService->logPatient(
@@ -108,6 +136,53 @@ try {
     exit;
 }
 
+function laboratoryHandoffPayload(
+    PDO $pdo,
+    int $requestId,
+    array $user,
+    PatientService $patientService,
+    VisitService $visitService,
+    PermissionService $permissionService
+): array {
+    if ($requestId <= 0) {
+        throw new RuntimeException('Laboratory request is required.');
+    }
+
+    $laboratoryService = new LaboratoryService($pdo, null, null, $permissionService);
+    $request = $laboratoryService->getRequestById($requestId, $user);
+    if (!$request) {
+        throw new RuntimeException('Laboratory request not found or access denied.');
+    }
+
+    $visit = $visitService->getVisitById((int)$request['visit_id']);
+    if (!$visit || !$permissionService->canViewLaboratory((int)$request['patient_id'], $user)) {
+        throw new RuntimeException('Laboratory WhatsApp handoff denied.');
+    }
+
+    $result = $laboratoryService->getResult($requestId, $user);
+    if (!$result || trim((string)($result['result'] ?? '')) === '') {
+        throw new RuntimeException('Laboratory result is not available yet.');
+    }
+
+    $patient = $patientService->getPatientById((int)$request['patient_id']);
+    if (!$patient) {
+        throw new RuntimeException('Patient not found.');
+    }
+
+    return [
+        'type' => 'laboratory_result',
+        'source_module' => 'Laboratory',
+        'source_record_id' => $requestId,
+        'document_id' => null,
+        'patient' => $patient,
+        'visit_id' => (int)$request['visit_id'],
+        'visit_number' => (string)($request['visit_number'] ?? ''),
+        'title' => 'Laboratory result',
+        'item' => (string)($request['tests_requested'] ?? 'Laboratory tests'),
+        'audit_description' => 'Opened WhatsApp handoff for laboratory request #' . $requestId . '. Patient consent confirmed by staff.',
+    ];
+}
+
 function radiologyHandoffPayload(
     PDO $pdo,
     int $requestId,
@@ -152,6 +227,53 @@ function radiologyHandoffPayload(
         'title' => 'Radiology report',
         'item' => (string)($request['study_requested'] ?? 'Radiology study'),
         'audit_description' => 'Opened WhatsApp handoff for radiology request #' . $requestId . '. Patient consent confirmed by staff.',
+    ];
+}
+
+function ecgHandoffPayload(
+    PDO $pdo,
+    int $requestId,
+    array $user,
+    PatientService $patientService,
+    VisitService $visitService,
+    PermissionService $permissionService
+): array {
+    if ($requestId <= 0) {
+        throw new RuntimeException('ECG request is required.');
+    }
+
+    $ecgService = new ECGService($pdo, null, null, $permissionService);
+    $request = $ecgService->getRequestById($requestId, $user);
+    if (!$request) {
+        throw new RuntimeException('ECG request not found or access denied.');
+    }
+
+    $visit = $visitService->getVisitById((int)$request['visit_id']);
+    if (!$visit || !$permissionService->canViewEcg((int)$request['patient_id'], $user)) {
+        throw new RuntimeException('ECG WhatsApp handoff denied.');
+    }
+
+    $report = $ecgService->getReport($requestId, $user);
+    if (!$report || empty($report['report_id'])) {
+        throw new RuntimeException('ECG report is not available yet.');
+    }
+
+    $patient = $patientService->getPatientById((int)$request['patient_id']);
+    if (!$patient) {
+        throw new RuntimeException('Patient not found.');
+    }
+
+    return [
+        'type' => 'ecg_report',
+        'source_module' => 'ECG',
+        'source_record_id' => $requestId,
+        'document_id' => null,
+        'patient' => $patient,
+        'visit_id' => (int)$request['visit_id'],
+        'visit_number' => (string)($request['visit_number'] ?? ''),
+        'title' => 'ECG report',
+        'item' => (string)($request['study_requested'] ?? 'ECG'),
+        'audit_description' => 'Opened WhatsApp handoff for ECG request #' . $requestId . '. Patient consent confirmed by staff.',
     ];
 }
 
@@ -216,8 +338,20 @@ function whatsappMessage(array $payload): string
     $name = trim((string)($patient['first_name'] ?? '') . ' ' . (string)($patient['last_name'] ?? ''));
     $hospitalNumber = (string)($patient['hospital_number'] ?? '');
 
-    return 'Patient Name: ' . $name . PHP_EOL
-        . 'Patient Number: ' . $hospitalNumber;
+    $message = 'Patient Name: ' . $name . PHP_EOL
+        . 'Patient Number: ' . $hospitalNumber . PHP_EOL
+        . 'Report: ' . (string)($payload['title'] ?? 'Diagnostic report') . PHP_EOL
+        . 'Item: ' . (string)($payload['item'] ?? '');
+
+    $attachments = (array)($payload['attachments'] ?? []);
+    if ($attachments !== []) {
+        $message .= PHP_EOL . PHP_EOL . 'Files selected for attachment:';
+        foreach ($attachments as $attachment) {
+            $message .= PHP_EOL . '- ' . (string)($attachment['original_filename'] ?? 'Attachment');
+        }
+    }
+
+    return $message;
 }
 
 function safeReturnUrl(string $returnUrl): string

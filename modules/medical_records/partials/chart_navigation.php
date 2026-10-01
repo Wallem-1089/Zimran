@@ -58,7 +58,7 @@ if (!empty($canViewEcg)) {
 }
 
 if (!empty($canViewPop)) {
-    $chartTabs['pop'] = 'POP';
+    $chartTabs['pop'] = 'Plaster';
 }
 
 if (!empty($canViewPhysiotherapy)) {

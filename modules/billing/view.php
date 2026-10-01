@@ -32,7 +32,9 @@ $billingPayments = $billingTablesReady ? $billingService->listPayments($visitId,
 $billingRequests = $billingRequestsReady && $billingTablesReady ? $billingService->listBillingRequests(['visit_id' => $visitId], $currentUser) : [];
 $billingDiscounts = $billingDiscountsReady && $billingTablesReady ? $billingService->listDiscountsByVisit($visitId, $currentUser) : [];
 $billingInvoice = $billingSummary['invoice'] ?? null;
-$canCreatePatientCharge = $permissionService->canCreatePatientCharge($currentUser);
+$activeDepartmentName = (string)($currentUser['active_department_name'] ?? $currentUser['department_name'] ?? '');
+$canCreatePatientCharge = $permissionService->canCreatePatientCharge($currentUser)
+    && strcasecmp($activeDepartmentName, 'Accounts') !== 0;
 $canCancelPatientCharge = $permissionService->canCancelPatientCharge($currentUser);
 $canCreateBillingRequest = $permissionService->canCreateBillingRequest($currentUser);
 $canViewBillingRequests = $permissionService->canViewBillingRequests($currentUser);
@@ -41,6 +43,7 @@ $canCancelBillingRequest = $permissionService->canCancelBillingRequest($currentU
 $canCreateInvoice = $permissionService->canCreateInvoice($currentUser);
 $canRecordPayment = $permissionService->canRecordPayment($currentUser);
 $canViewReceipts = $permissionService->canViewReceipts($currentUser);
+$canCancelPayment = $permissionService->isAdministrator($currentUser);
 $canViewBillingDiscounts = $permissionService->canViewBillingDiscounts($currentUser);
 $canApplyBillingDiscount = $permissionService->canApplyBillingDiscount($currentUser);
 $canCancelBillingDiscount = $permissionService->canCancelBillingDiscount($currentUser);

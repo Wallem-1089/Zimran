@@ -22,12 +22,12 @@ $selectedDepartmentId = (int)($movement['department_id'] ?? 0);
         </div>
         <div class="form-group">
             <label for="quantity">Quantity</label>
-            <input type="number" id="quantity" name="quantity" min="0.01" step="0.01" required value="<?= e((string)($movement['quantity'] ?? '')) ?>">
+            <input type="number" id="quantity" name="quantity" min="1" step="1" required value="<?= e((string)($movement['quantity'] ?? '')) ?>">
             <small class="text-muted">
                 <?php if ($movementType === 'receive'): ?>
                     Adds this quantity to Central Store stock.
                 <?php elseif ($movementType === 'issue'): ?>
-                    Moves this quantity from Central Store to the selected destination department.
+                    Store can issue only to Pharmacy. Pharmacy can issue onward to other departments.
                 <?php elseif ($movementType === 'return'): ?>
                     Moves this quantity from the selected department back to Central Store.
                 <?php else: ?>

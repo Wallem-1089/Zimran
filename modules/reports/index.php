@@ -7,8 +7,8 @@ require __DIR__ . '/_bootstrap.php';
 reportsRequireAccess($permissionService, $currentUser);
 $dashboardService->recordReportView((int)($currentUser['id'] ?? 0), 'REPORT_VIEWED');
 $reportCards = [
-    ['Patient / Encounter Activity', 'activity.php', 'Encounter counts by date, department, and status.', true],
-    ['Emergency Register', 'emergency_register.php', 'Printable emergency book from Emergency encounters.', true],
+    ['Patient / Encounter Activity', 'activity.php', 'Encounter counts by date, department, and status.', $permissionService->canViewReports($currentUser)],
+    ['Emergency Register', 'emergency_register.php', 'Printable emergency book from Emergency encounters.', $permissionService->canViewEmergencyReports($currentUser)],
     ['Clinical Activity', 'clinical.php', 'Consultation, nursing, diagnostic, theatre, and pharmacy counts.', $permissionService->canViewClinicalReports($currentUser)],
     ['Laboratory Report Book', 'laboratory_report_book.php', 'Printable Laboratory request/result register.', $permissionService->canViewClinicalReports($currentUser)],
     ['Radiology Report Book', 'radiology_report_book.php', 'Printable Radiology study/report register.', $permissionService->canViewClinicalReports($currentUser)],

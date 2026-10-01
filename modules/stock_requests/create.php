@@ -74,7 +74,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                                 <?php endforeach; ?>
                             </select>
                         </td>
-                        <td><input name="quantity_requested[]" type="number" step="0.01" min="0" value="<?= e((string)($old['quantity_requested'][$i] ?? '')) ?>"></td>
+                        <td><input name="quantity_requested[]" type="number" step="1" min="0" value="<?= e((string)($old['quantity_requested'][$i] ?? '')) ?>"></td>
                         <td><input name="notes[]" maxlength="1000" value="<?= e((string)($old['notes'][$i] ?? '')) ?>"></td>
                     </tr>
                 <?php endfor; ?>

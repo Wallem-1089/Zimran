@@ -24,8 +24,12 @@ $canAccessBillingSidebar = false;
 $canAccessReportsSidebar = false;
 $canAccessDepartmentSwitchSidebar = false;
 $canAccessDepartmentWorklistSidebar = false;
+$canAccessEmergencyWorklistSidebar = false;
+$canAccessEmergencySidebar = false;
 $sidebarStockRequestOnly = false;
 $departmentWorklistCount = 0;
+$emergencyWorklistCount = 0;
+$emergencyWorklistHref = '';
 $departmentNotificationCount = 0;
 $userNotificationCount = 0;
 
@@ -109,7 +113,7 @@ if ($currentUser && isset($pdo)) {
         && $sidebarOwnsDepartmentModule(['ECG Technician'], ['ECG']);
 
     $canAccessPopSidebar = $sidebarCan('view_pop')
-        && $sidebarOwnsDepartmentModule(['POP Technician'], ['POP']);
+        && $sidebarOwnsDepartmentModule(['Plaster Technician', 'POP Technician'], ['Plaster', 'POP']);
 
     $canAccessPhysiotherapySidebar = $sidebarCan('view_physiotherapy')
         && $sidebarOwnsDepartmentModule(['Physiotherapist'], ['Physiotherapy', 'Physio', 'Rehabilitation']);
@@ -118,10 +122,10 @@ if ($currentUser && isset($pdo)) {
         && $sidebarOwnsDepartmentModule(['Theatre Staff', 'Doctor'], ['Theatre', 'Doctor']);
 
     $canAccessAccountsSidebar = $sidebarCan('view_billable_items')
-        && $sidebarOwnsDepartmentModule(['Accountant', 'Accounts'], ['Accounts']);
+        && $sidebarOwnsDepartmentModule(['Accountant', 'Accounts', 'Pharmacist'], ['Accounts', 'Pharmacy']);
 
     $canAccessStoreSidebar = $sidebarCan('view_inventory')
-        && $sidebarOwnsDepartmentModule(['Store Officer'], ['Store']);
+        && $sidebarOwnsDepartmentModule(['Store Officer', 'Pharmacist'], ['Store', 'Pharmacy']);
 
     $canAccessStockRequestsSidebar = (
         $sidebarCan('view_stock_requests')
@@ -133,6 +137,7 @@ if ($currentUser && isset($pdo)) {
             'Laboratory Scientist',
             'Radiographer',
             'ECG Technician',
+            'Plaster Technician',
             'POP Technician',
             'Physiotherapist',
             'Theatre Staff',
@@ -147,6 +152,7 @@ if ($currentUser && isset($pdo)) {
             'Radiology',
             'X-Ray',
             'ECG',
+            'Plaster',
             'POP',
             'Physiotherapy',
             'Physio',
@@ -171,6 +177,7 @@ if ($currentUser && isset($pdo)) {
         && $sidebarOwnsDepartmentModule(['Accountant', 'Accounts'], ['Accounts']);
 
     $canAccessReportsSidebar = $sidebarIsAdmin
+        || $sidebarPermissionService->canViewEmergencyReports($currentUser)
         || (
             $sidebarDepartmentIn(['Accounts'])
             && (
@@ -209,6 +216,7 @@ if ($currentUser && isset($pdo)) {
             'Laboratory Scientist',
             'Radiographer',
             'ECG Technician',
+            'Plaster Technician',
             'POP Technician',
             'Physiotherapist',
             'Theatre Staff',
@@ -226,6 +234,7 @@ if ($currentUser && isset($pdo)) {
             'Radiology',
             'X-Ray',
             'ECG',
+            'Plaster',
             'POP',
             'Physiotherapy',
             'Physio',
@@ -235,10 +244,40 @@ if ($currentUser && isset($pdo)) {
             'Accounts',
         ]
     );
+    $canAccessEmergencyWorklistSidebar = $sidebarPermissionService->canViewEmergencyWorklist($currentUser)
+        && $sidebarDepartmentIn(['Emergency']);
+    $emergencyDepartmentId = 0;
+    try {
+        $stmt = $pdo->prepare("
+            SELECT id
+            FROM departments
+            WHERE department_name = 'Emergency'
+              AND is_active = 1
+            LIMIT 1
+        ");
+        $stmt->execute();
+        $emergencyDepartmentId = (int)$stmt->fetchColumn();
+    } catch (Throwable) {
+        $emergencyDepartmentId = 0;
+    }
+
+    if ($sidebarPermissionService->canViewEmergencyWorklist($currentUser)
+    ) {
+        $canAccessEmergencySidebar = true;
+        $emergencyWorklistHref = $baseUrl . '/modules/visits/department_worklist.php?department=Emergency';
+        if ($emergencyDepartmentId > 0) {
+            try {
+                $emergencyWorklistCount = count((new VisitService($pdo))->listDepartmentWorklist($emergencyDepartmentId));
+            } catch (Throwable) {
+                $emergencyWorklistCount = 0;
+            }
+        }
+    }
+
     if ($sidebarDepartmentId > 0) {
         try {
             if ($sidebarPermissionService->hasPermission('view_encounter', $currentUser)
-                && $sidebarOwnsEncounterWorklist
+                && ($sidebarOwnsEncounterWorklist || $canAccessEmergencyWorklistSidebar)
                 && (
                     $sidebarIsAdmin
                     || $sidebarPermissionService->canViewAllDepartmentWorklists($currentUser)
@@ -276,9 +315,17 @@ if ($currentUser && isset($pdo)) {
                     )->fetchColumn();
                     $departmentWorklistCount += (int)$pendingBillingRequests;
                 }
+
+                $stmt->execute([':table' => 'patient_registration_billing_requests']);
+                if ((int)$stmt->fetchColumn() > 0) {
+                    $pendingRegistrationBillingRequests = $pdo->query(
+                        "SELECT COUNT(*) FROM patient_registration_billing_requests WHERE status = 'Pending'"
+                    )->fetchColumn();
+                    $departmentWorklistCount += (int)$pendingRegistrationBillingRequests;
+                }
             } catch (Throwable) {
-                // Keep the sidebar usable even if the optional Billing Request
-                // table is not present yet.
+                // Keep the sidebar usable even if optional billing request
+                // tables are not present yet.
             }
         }
     }
@@ -390,7 +437,21 @@ $sidebarBranding = appBranding($pdo ?? null);
 
                     <a href="<?= e($baseUrl) ?>/modules/visits/department_worklist.php">
 
-                        Department Worklist<?= $departmentWorklistCount > 0 ? ' (' . (int)$departmentWorklistCount . ')' : '' ?>
+                        <?= $sidebarDepartment === 'Emergency' ? 'Emergency Worklist' : 'Department Worklist' ?><?= $departmentWorklistCount > 0 ? ' (' . (int)$departmentWorklistCount . ')' : '' ?>
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
+            <?php if ($canAccessEmergencySidebar && $sidebarDepartment !== 'Emergency'): ?>
+
+                <li>
+
+                    <a href="<?= e($emergencyWorklistHref) ?>">
+
+                        Emergency<?= $emergencyWorklistCount > 0 ? ' (' . (int)$emergencyWorklistCount . ')' : '' ?>
 
                     </a>
 
@@ -482,7 +543,7 @@ $sidebarBranding = appBranding($pdo ?? null);
 
                     <a href="<?= e($baseUrl) ?>/modules/pop/index.php">
 
-                        POP
+                        Plaster
 
                     </a>
 
@@ -524,7 +585,7 @@ $sidebarBranding = appBranding($pdo ?? null);
 
                     <a href="<?= e($baseUrl) ?>/modules/accounts/index.php">
 
-                        Accounts
+                        Price Catalogue
 
                     </a>
 

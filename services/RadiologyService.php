@@ -3,12 +3,14 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/AuditService.php';
+require_once __DIR__ . '/ClinicalBillingGateService.php';
 require_once __DIR__ . '/EncounterEventService.php';
 require_once __DIR__ . '/PermissionService.php';
 
 class RadiologyService
 {
     private AuditService $auditService;
+    private ClinicalBillingGateService $billingGateService;
     private EncounterEventService $eventService;
     private PermissionService $permissionService;
     private string $storageRoot;
@@ -18,9 +20,11 @@ class RadiologyService
         ?AuditService $auditService = null,
         ?EncounterEventService $eventService = null,
         ?PermissionService $permissionService = null,
-        ?string $storageRoot = null
+        ?string $storageRoot = null,
+        ?ClinicalBillingGateService $billingGateService = null
     ) {
         $this->auditService = $auditService ?? new AuditService($pdo);
+        $this->billingGateService = $billingGateService ?? new ClinicalBillingGateService($pdo);
         $this->eventService = $eventService ?? new EncounterEventService($pdo);
         $this->permissionService = $permissionService ?? new PermissionService($pdo);
         $config = require __DIR__ . '/../config/app.php';
@@ -39,6 +43,7 @@ class RadiologyService
             $priority = $this->normalizePriority((string)($data['priority'] ?? 'Routine'));
             $studyRequested = trim((string)($data['study_requested'] ?? $data['tests_requested'] ?? ''));
             $clinicalIndication = $this->nullableText($data['clinical_indication'] ?? $data['clinical_information'] ?? null);
+            $suggestedBillableItemIds = ClinicalBillingGateService::normalizeBillableItemIds($data);
             $errors = $this->validateRequest($visit, $user, $source, $priority, $studyRequested, $clinicalIndication);
 
             if (isset($data['patient_id']) && (int)$data['patient_id'] !== (int)$visit['patient_id']) {
@@ -48,6 +53,9 @@ class RadiologyService
             $departmentId = $this->resolveRadiologyDepartmentId();
             if ($departmentId === null) {
                 $errors[] = 'Radiology department is not available.';
+            }
+            if ($source === 'Clinical' && $suggestedBillableItemIds === []) {
+                $errors[] = 'At least one billable item is required before sending this request to Accounts.';
             }
 
             if ($errors !== []) {
@@ -77,6 +85,21 @@ class RadiologyService
                 ':priority' => $priority,
             ]);
             $requestId = (int)$this->pdo->lastInsertId();
+
+            $billingTask = $this->billingGateService->ensureBillingRequest(
+                'Radiology',
+                $requestId,
+                (int)$visit['id'],
+                (int)$visit['patient_id'],
+                (int)$user['id'],
+                'Radiology: ' . $studyRequested,
+                $departmentId,
+                $suggestedBillableItemIds
+            );
+            if (($billingTask['success'] ?? false) !== true) {
+                $this->rollback();
+                return $this->failure($billingTask['errors'] ?? ['Unable to create Accounts billing task.']);
+            }
 
             if (!$this->audit(
                 'RADIOLOGY_REQUEST_CREATED',
@@ -164,12 +187,12 @@ class RadiologyService
 
         $status = $this->normalizeWorklistStatus((string)($filters['status'] ?? ''));
         $params = [];
-        $where = '';
+        $where = " WHERE lr.request_source = 'Clinical'";
 
         if ($status === '') {
-            $where = " WHERE lr.status IN ('Requested', 'In Progress')";
+            $where .= " AND lr.status IN ('Requested', 'In Progress')";
         } elseif ($status !== 'All') {
-            $where = ' WHERE lr.status = :status';
+            $where .= ' AND lr.status = :status';
             $params[':status'] = $status;
         }
 
@@ -321,7 +344,7 @@ class RadiologyService
             }
 
             $visit = $this->lockVisit((int)$request['visit_id']);
-            $errors = $this->validateProcessing($request, $visit, $user, 'process_radiology_request');
+            $errors = $this->validateProcessing($request, $visit, $user, 'process_radiology_request', false);
 
             if ((string)($request['status'] ?? '') !== 'Requested' && (string)($request['status'] ?? '') !== 'In Progress') {
                 $errors[] = 'Only active radiology requests can be cancelled.';
@@ -330,6 +353,11 @@ class RadiologyService
             if ($this->lockResultByRequest($requestId) !== null) {
                 $errors[] = 'Requests with results cannot be cancelled.';
             }
+
+            $errors = array_merge(
+                $errors,
+                $this->billingGateService->cancellationErrors('Radiology', $requestId, (int)$request['visit_id'], $user)
+            );
 
             if ($errors !== []) {
                 $this->rollback();
@@ -596,11 +624,15 @@ class RadiologyService
         return $errors;
     }
 
-    private function validateProcessing(array $request, array $visit, array $user, string $permissionKey): array
+    private function validateProcessing(array $request, array $visit, array $user, string $permissionKey, bool $requireBillingClearance = true): array
     {
         $errors = [];
         if (!$this->permissionService->canViewRadiology((int)($visit['patient_id'] ?? 0), $user)) {
             $errors[] = 'You cannot access this encounter.';
+        }
+
+        if ((string)($request['request_source'] ?? 'Clinical') !== 'Clinical') {
+            $errors[] = 'Only clinical radiology requests can be processed.';
         }
 
         if (in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)
@@ -634,6 +666,18 @@ class RadiologyService
             $errors[] = 'Completed radiology requests are view-only.';
         }
 
+        if ($requireBillingClearance) {
+            $errors = array_merge(
+                $errors,
+                $this->billingGateService->processingErrors(
+                    'Radiology',
+                    (int)($request['id'] ?? 0),
+                    (int)($visit['id'] ?? $request['visit_id'] ?? 0),
+                    $user
+                )
+            );
+        }
+
         return $errors;
     }
 
@@ -648,7 +692,7 @@ class RadiologyService
             }
 
             $visit = $this->lockVisit((int)$request['visit_id']);
-            $errors = $this->validateProcessing($request, $visit, $user, 'process_radiology_request');
+            $errors = $this->validateProcessing($request, $visit, $user, 'process_radiology_request', $newStatus !== 'Cancelled');
 
             if ($newStatus === 'In Progress' && (string)($request['status'] ?? '') !== 'Requested') {
                 $errors[] = 'Only requested radiology requests can be started.';

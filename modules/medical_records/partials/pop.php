@@ -13,11 +13,11 @@ $popPreviewRows = array_slice($popHistory ?? [], 0, 10);
 <section class="card">
     <div class="card-header">
         <div>
-            <h2>POP</h2>
-            <p>Patient POP/casting requests and procedure records.</p>
+            <h2>Plaster</h2>
+            <p>Patient Plaster requests and procedure records.</p>
         </div>
         <?php if (!empty($visitId) && isset($visit) && $permissionService->canCreatePopRequest($visit, $currentUser, 'Clinical')): ?>
-            <a class="btn-primary" href="../pop/request.php?visit=<?= (int)$visitId ?>&source=Clinical">Request POP / Casting</a>
+            <a class="btn-primary" href="../pop/request.php?visit=<?= (int)$visitId ?>&source=Clinical">Request Plaster</a>
         <?php endif; ?>
     </div>
 
@@ -43,10 +43,10 @@ $popPreviewRows = array_slice($popHistory ?? [], 0, 10);
 
 <section class="card">
     <?php if (empty($popHistory)): ?>
-        <p class="text-muted">No POP records found.</p>
+        <p class="text-muted">No Plaster records found.</p>
     <?php else: ?>
         <?php if (count($popHistory) > count($popPreviewRows)): ?>
-            <p class="text-muted">Showing latest <?= count($popPreviewRows) ?> of <?= count($popHistory) ?> POP records. Open history to see all records.</p>
+            <p class="text-muted">Showing latest <?= count($popPreviewRows) ?> of <?= count($popHistory) ?> Plaster records. Open history to see all records.</p>
         <?php endif; ?>
         <div class="table-responsive">
             <table class="table">
@@ -66,7 +66,7 @@ $popPreviewRows = array_slice($popHistory ?? [], 0, 10);
                     <?php foreach ($popPreviewRows as $request): ?>
                         <tr>
                             <td>#<?= (int)$request['id'] ?></td>
-                            <td><?= e((string)($request['procedure_requested'] ?? 'POP / Casting')) ?></td>
+                            <td><?= e((string)($request['procedure_requested'] ?? 'Plaster')) ?></td>
                             <td><?= e((string)($request['body_part'] ?? '-')) ?></td>
                             <td><?= e((string)($request['request_source'] ?? '-')) ?></td>
                             <td><?= e((string)($request['priority'] ?? '-')) ?></td>

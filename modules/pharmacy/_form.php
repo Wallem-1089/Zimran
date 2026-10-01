@@ -6,10 +6,9 @@ if (!isset($pharmacyPrescription, $inventoryItems, $requestSource, $formAction, 
     return;
 }
 
-$selectedInventoryItemId = (int)($pharmacyPrescription['inventory_item_id'] ?? 0);
-$requestSourceNote ??= $requestSource === 'Direct'
-    ? 'Direct Pharmacy is for patients whose active encounter is currently in Pharmacy.'
-    : 'Clinical prescriptions are linked to this encounter without transferring ownership.';
+$selectedInventoryItemIds = $pharmacyPrescription['inventory_item_ids']
+    ?? ($pharmacyPrescription['inventory_item_id'] ?? null);
+$requestSourceNote ??= 'Clinical prescriptions are linked to this encounter without transferring ownership.';
 $enableWritingMode ??= isset($permissionService)
     && method_exists($permissionService, 'canUseConsultationHandwriting')
     && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
@@ -30,22 +29,11 @@ $enableWritingMode ??= isset($permissionService)
         <p class="text-muted"><?= e($requestSourceNote) ?></p>
     </div>
 
-    <div class="form-group">
-        <label for="inventory_item_id">Medication / Inventory Item</label>
-        <select id="inventory_item_id" name="inventory_item_id">
-            <option value="">Select an item or leave blank for free text</option>
-            <?php foreach ($inventoryItems as $item): ?>
-                <?php
-                    $unitPrice = $item['unit_price'] ?? null;
-                    $priceLabel = $unitPrice !== null ? ' — ₦' . number_format((float)$unitPrice, 2) : '';
-                    $stockLabel = isset($item['pharmacy_stock_available']) ? ' — Stock: ' . number_format((float)$item['pharmacy_stock_available'], 2) : '';
-                ?>
-                <option value="<?= (int)$item['id'] ?>"<?= (int)$item['id'] === $selectedInventoryItemId ? ' selected' : '' ?>>
-                    <?= e((string)$item['item_name']) ?><?= e($priceLabel . $stockLabel) ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-    </div>
+    <?php if ($requestSource === 'Clinical'): ?>
+        <?php hmsRenderBillableItemSelect($billableItemOptions ?? [], $pharmacyPrescription['suggested_billable_item_ids'] ?? ($pharmacyPrescription['suggested_billable_item_id'] ?? null)); ?>
+    <?php endif; ?>
+
+    <?php hmsRenderInventoryItemSelect($inventoryItems, $selectedInventoryItemIds); ?>
 
     <div class="form-group">
         <label for="medication_name">Medication Name Snapshot</label>
@@ -53,8 +41,8 @@ $enableWritingMode ??= isset($permissionService)
             type="text"
             id="medication_name"
             name="medication_name"
-            value="<?= e((string)($pharmacyPrescription['medication_name'] ?? '')) ?>"
-            required>
+            value="<?= e((string)($pharmacyPrescription['medication_name'] ?? '')) ?>">
+        <small class="form-help">Required only when no inventory item is selected.</small>
     </div>
 
     <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Prescription Entry Mode'); ?>
@@ -68,8 +56,8 @@ $enableWritingMode ??= isset($permissionService)
             type="number"
             id="quantity"
             name="quantity"
-            min="0.01"
-            step="0.01"
+            min="1"
+            step="1"
             value="<?= e((string)($pharmacyPrescription['quantity'] ?? '')) ?>"
             required>
     </div>

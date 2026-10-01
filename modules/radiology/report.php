@@ -112,6 +112,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
         </div>
 
+        <div class="form-group">
+            <label for="diagnostic_attachments">Additional X-Ray/Radiology Attachments</label>
+            <input id="diagnostic_attachments" name="diagnostic_attachments[]" type="file" accept="application/pdf,image/jpeg,image/png" multiple>
+            <small class="text-muted">Optional. Upload one or more PDF, JPG, or PNG files. Maximum size: 10 MB each.</small>
+        </div>
+
         <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Radiology Report Entry Mode'); ?>
         <?php hmsRenderHandwritingTextarea('findings', 'Findings', (string)($radiologyResult['findings'] ?? ''), 5, false, $enableWritingMode); ?>
         <?php hmsRenderHandwritingTextarea('impression', 'Impression', (string)($radiologyResult['impression'] ?? ''), 6, true, $enableWritingMode); ?>

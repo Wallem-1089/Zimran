@@ -28,7 +28,7 @@ function popFlash(array $result, string $successMessage): void
         $_SESSION['success_message'] = $successMessage;
         return;
     }
-    $_SESSION['validation_errors'] = $result['errors'] ?? ['Unable to complete the POP action.'];
+    $_SESSION['validation_errors'] = $result['errors'] ?? ['Unable to complete the Plaster action.'];
 }
 
 function popRequireVisit(VisitService $visitService, int $visitId): array
@@ -45,11 +45,11 @@ function popRequireCreateAccess(PermissionService $permissionService, array $vis
 {
     if (!$permissionService->canViewEncounter($visit, $user)) {
         http_response_code(403);
-        exit('POP access denied.');
+        exit('Plaster access denied.');
     }
     if (!$permissionService->canCreatePopRequest($visit, $user, $requestSource)) {
         http_response_code(403);
-        exit('You do not have permission to create this POP request.');
+        exit('You do not have permission to create this Plaster request.');
     }
 }
 
@@ -60,7 +60,7 @@ function popBackToWorkspace(int $visitId): string
 
 function popRequestSourceLabel(string $source): string
 {
-    return $source === 'Direct' ? 'Direct' : 'Clinical';
+    return 'Clinical';
 }
 
 $visitService = new VisitService($pdo);

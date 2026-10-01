@@ -5,7 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/_bootstrap.php';
 
 $visitId = filter_input(INPUT_GET, 'visit', FILTER_VALIDATE_INT) ?: 0;
-$requestedSource = popRequestSourceLabel((string)($_GET['source'] ?? ''));
+$requestSource = popRequestSourceLabel((string)($_GET['source'] ?? ''));
 
 if (!$visitId) {
     header('Location: index.php');
@@ -13,21 +13,12 @@ if (!$visitId) {
 }
 
 $visit = popRequireVisit($visitService, $visitId);
-$isDirectPopEncounter = (string)($visit['department_name'] ?? '') === 'POP';
 $requestSourceNote = '';
-if ($requestedSource === 'Direct' && !$isDirectPopEncounter) {
-    $requestSource = 'Clinical';
-    $requestSourceNote = 'Direct is only for active encounters currently in POP. This request is being recorded as Clinical.';
-} elseif (in_array($requestedSource, ['Clinical', 'Direct'], true)) {
-    $requestSource = $requestedSource;
-} else {
-    $requestSource = $isDirectPopEncounter ? 'Direct' : 'Clinical';
-}
 popRequireCreateAccess($permissionService, $visit, $currentUser, $requestSource);
 
 if (!$popTablesReady) {
     http_response_code(503);
-    exit('POP tables are not available yet. Apply Migration 059 to enable this section.');
+    exit('Plaster tables are not available yet. Apply Migration 059 to enable this section.');
 }
 
 $patient = $patientService->getPatientById((int)$visit['patient_id']);
@@ -39,13 +30,14 @@ if (!$patient) {
 $popRequest = $_SESSION['old_pop_request'] ?? [
     'request_source' => $requestSource,
     'priority' => 'Routine',
-    'procedure_requested' => 'POP / Casting',
+    'procedure_requested' => 'Plaster',
     'clinical_indication' => ''
 ];
 $popRequest['request_source'] = $requestSource;
 unset($_SESSION['old_pop_request']);
+$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Plaster', 'POP', 'Casting']));
 
-$pageTitle = $requestSource === 'Direct' ? 'Create Direct POP Request' : 'Create POP Request';
+$pageTitle = 'Create Plaster Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 
 require __DIR__ . '/../../layouts/header.php';
@@ -86,7 +78,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="summary-item"><span class="summary-label">Encounter Status</span> <span class="summary-value"><?= e((string)($visit['visit_status'] ?? '-')) ?></span></div>
     </div>
 
-    <?php $buttonLabel = $requestSource === 'Direct' ? 'Save Direct POP Request' : 'Save POP Request'; require __DIR__ . '/_form.php'; ?>
+    <?php $buttonLabel = 'Save Plaster Request'; require __DIR__ . '/_form.php'; ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

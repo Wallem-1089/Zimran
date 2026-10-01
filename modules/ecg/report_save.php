@@ -41,6 +41,26 @@ if (($result['success'] ?? false) === true) {
         header('Location: report.php?id=' . $requestId);
         exit;
     }
+    $uploadResult = $diagnosticAttachmentService->uploadMany(
+        'ECG',
+        $requestId,
+        [
+            'visit_id' => (int)$request['visit_id'],
+            'patient_id' => (int)$request['patient_id'],
+        ],
+        $_FILES['diagnostic_attachments'] ?? null,
+        $currentUser
+    );
+    if (empty($uploadResult['success'])) {
+        $_SESSION['validation_errors'] = $uploadResult['errors'] ?? ['Unable to upload ECG attachments.'];
+        header('Location: report.php?id=' . $requestId);
+        exit;
+    }
+    if ((int)($uploadResult['uploaded'] ?? 0) > 0) {
+        $_SESSION['success_message'] = 'ECG chart and notes saved. Uploaded ' . (int)$uploadResult['uploaded'] . ' attachment(s).';
+        header('Location: report.php?id=' . $requestId);
+        exit;
+    }
 }
 ecgFlash($result, 'ECG chart and notes saved.');
 

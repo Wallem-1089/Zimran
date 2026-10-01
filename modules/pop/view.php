@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/../../services/ClinicalBillingGateService.php';
 
 $requestId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: 0;
 if (!$requestId) {
@@ -11,13 +12,13 @@ if (!$requestId) {
 }
 if (!$popTablesReady) {
     http_response_code(503);
-    exit('POP tables are not available yet. Apply Migration 059 to enable this section.');
+    exit('Plaster tables are not available yet. Apply Migration 059 to enable this section.');
 }
 
 $request = $popService->getRequestById($requestId, $currentUser);
 if (!$request) {
     http_response_code(404);
-    exit('POP request not found.');
+    exit('Plaster request not found.');
 }
 $visit = popRequireVisit($visitService, (int)$request['visit_id']);
 $patient = $patientService->getPatientById((int)$request['patient_id']);
@@ -27,6 +28,10 @@ if (!$patient) {
 }
 
 $record = $popService->getRecord($requestId, $currentUser);
+$billingGate = new ClinicalBillingGateService($pdo);
+$billingClearance = $billingGate->status('POP', $requestId, (int)$request['visit_id'], $currentUser);
+$billingCleared = (bool)($billingClearance['cleared'] ?? false);
+$canCancelForBilling = $billingGate->cancellationErrors('POP', $requestId, (int)$request['visit_id'], $currentUser) === [];
 $canProcess = $permissionService->canProcessPopRequest($visit, $currentUser);
 $canRecord = $permissionService->canRecordPopProcedure($visit, $currentUser);
 $canEdit = $permissionService->canEditPopRecord($visit, $currentUser);
@@ -34,9 +39,9 @@ $canComplete = $permissionService->canCompletePopRequest($visit, $currentUser);
 $isClosed = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
 $isRequestClosed = in_array((string)($request['status'] ?? ''), ['Completed', 'Cancelled'], true);
 $hasRecord = $record && !empty($record['record_id']);
-$popConfiguredDisplayValues = $configurableFormService->getResponseValues('pop_record', 'POP Record', $requestId);
+$popConfiguredDisplayValues = $configurableFormService->getResponseValues('pop_record', 'Plaster Record', $requestId);
 
-$pageTitle = 'POP Request';
+$pageTitle = 'Plaster Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 
 require __DIR__ . '/../../layouts/header.php';
@@ -59,18 +64,18 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="page-header">
         <div>
-            <h1>POP Request #<?= (int)$request['id'] ?></h1>
+            <h1>Plaster Request #<?= (int)$request['id'] ?></h1>
             <p><?= e((string)($request['visit_number'] ?? ('Encounter #' . (int)$request['visit_id']))) ?></p>
         </div>
         <div class="form-actions">
-            <button class="btn-secondary" type="button" onclick="window.print()">Print POP Record</button>
+            <button class="btn-secondary" type="button" onclick="window.print()">Print Plaster Record</button>
             <?php if ($permissionService->canViewPopWorklist($currentUser)): ?>
                 <a class="btn-secondary" href="index.php">Worklist</a>
             <?php endif; ?>
             <a class="btn-secondary" href="<?= e(popBackToWorkspace((int)$request['visit_id'])) ?>">Workspace</a>
             <a class="btn-secondary" href="history.php?visit=<?= (int)$request['visit_id'] ?>">History</a>
             <?php if (!$isClosed && $permissionService->canCreateBillingRequest($currentUser)): ?>
-                <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$request['visit_id'] ?>&source_module=POP&source_record_id=<?= (int)$request['id'] ?>&description=<?= urlencode('POP: ' . (string)($request['procedure_requested'] ?? 'POP / Casting')) ?>">Request Billing</a>
+                <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$request['visit_id'] ?>&source_module=POP&source_record_id=<?= (int)$request['id'] ?>&description=<?= urlencode('Plaster: ' . (string)($request['procedure_requested'] ?? 'Plaster')) ?>">Request Billing</a>
             <?php endif; ?>
         </div>
     </div>
@@ -82,38 +87,39 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <div class="summary-item"><span class="summary-label">Source</span> <span class="summary-value"><?= e((string)$request['request_source']) ?></span></div>
             <div class="summary-item"><span class="summary-label">Priority</span> <span class="summary-value"><?= e((string)$request['priority']) ?></span></div>
             <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)$request['status']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Accounts Clearance</span> <span class="summary-value"><?= e((string)($billingClearance['label'] ?? 'Unknown')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Requested By</span> <span class="summary-value"><?= e((string)($request['requested_by_name'] ?? '-')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Requested</span> <span class="summary-value"><?= e((string)($request['created_at'] ?? '-')) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Department</span> <span class="summary-value"><?= e((string)($request['department_name'] ?? 'POP')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Department</span> <span class="summary-value"><?= e((string)($request['department_name'] ?? 'Plaster')) ?></span></div>
         </div>
     </div>
 
     <div class="card">
         <h3>Procedure Requested</h3>
-        <p><?php hmsRenderNarrative((string)($request['procedure_requested'] ?? 'POP / Casting')); ?></p>
+        <p><?php hmsRenderNarrative((string)($request['procedure_requested'] ?? 'Plaster')); ?></p>
         <h3>Clinical Indication / Reason</h3>
         <p><?php trim((string)($request['clinical_indication'] ?? '')) === '' ? print '<span class="text-muted">No clinical indication recorded.</span>' : hmsRenderNarrative((string)$request['clinical_indication']); ?></p>
     </div>
 
     <div class="card">
         <div class="form-actions">
-            <?php if (!$isClosed && !$isRequestClosed && $canProcess && (string)$request['status'] === 'Requested'): ?>
-                <form method="post" action="start.php"><?= csrfField() ?><input type="hidden" name="id" value="<?= (int)$request['id'] ?>"><button type="submit" class="btn-primary">Start</button></form>
+            <?php if (!$billingCleared): ?>
+                <p class="text-muted">Awaiting Accounts clearance before Plaster can start, record procedure, or complete this request.</p>
             <?php endif; ?>
-            <?php if (!$isClosed && !$isRequestClosed && ($canRecord || $canEdit)): ?>
-                <a class="btn-secondary" href="record.php?id=<?= (int)$request['id'] ?>"><?= $hasRecord ? 'Edit POP Record' : 'Record POP Procedure' ?></a>
+            <?php if ($billingCleared && !$isClosed && !$isRequestClosed && ($canRecord || $canEdit)): ?>
+                <a class="btn-primary" href="record.php?id=<?= (int)$request['id'] ?>"><?= $hasRecord ? 'Edit Plaster Record' : 'Record Plaster Procedure' ?></a>
             <?php endif; ?>
-            <?php if (!$isClosed && !$isRequestClosed && $canComplete): ?>
+            <?php if ($billingCleared && !$isClosed && !$isRequestClosed && $canComplete): ?>
                 <form method="post" action="complete.php"><?= csrfField() ?><input type="hidden" name="id" value="<?= (int)$request['id'] ?>"><button type="submit" class="btn-secondary">Complete</button></form>
             <?php endif; ?>
-            <?php if (!$isClosed && !$isRequestClosed && $canProcess): ?>
-                <form method="post" action="cancel.php" onsubmit="return confirm('Cancel this POP request?');"><?= csrfField() ?><input type="hidden" name="id" value="<?= (int)$request['id'] ?>"><button type="submit" class="btn-secondary">Cancel Request</button></form>
+            <?php if ($canCancelForBilling && !$isClosed && !$isRequestClosed && $canProcess): ?>
+                <form method="post" action="cancel.php" onsubmit="return confirm('Cancel this Plaster request?');"><?= csrfField() ?><input type="hidden" name="id" value="<?= (int)$request['id'] ?>"><button type="submit" class="btn-secondary">Cancel Request</button></form>
             <?php endif; ?>
         </div>
     </div>
 
     <div class="card">
-        <h3>POP / Casting Record</h3>
+        <h3>Plaster Record</h3>
         <?php if ($hasRecord): ?>
             <div class="summary-grid">
                 <div class="summary-item"><span class="summary-label">Cast Type</span> <span class="summary-value"><?= e((string)($record['cast_type'] ?? '-')) ?></span></div>
@@ -126,7 +132,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <h4>Aftercare Instructions</h4><p><?php trim((string)($record['aftercare_instructions'] ?? '')) === '' ? print '<span class="text-muted">No aftercare instructions recorded.</span>' : hmsRenderNarrative((string)$record['aftercare_instructions']); ?></p>
             <h4>Remarks</h4><p><?php trim((string)($record['remarks'] ?? '')) === '' ? print '<span class="text-muted">No remarks recorded.</span>' : hmsRenderNarrative((string)$record['remarks']); ?></p>
         <?php else: ?>
-            <p class="text-muted">No POP procedure record yet.</p>
+            <p class="text-muted">No Plaster procedure record yet.</p>
         <?php endif; ?>
     </div>
     <?php hmsRenderConfiguredValues($popConfiguredDisplayValues); ?>

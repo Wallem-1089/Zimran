@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/../../services/ClinicalBillingGateService.php';
 
 $recordId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: 0;
 if (!$recordId) {
@@ -30,6 +31,10 @@ if (!$patient) {
 
 $latestSession = $physiotherapyService->getResult($recordId, $currentUser);
 $sessions = $physiotherapyService->listSessions($recordId, $currentUser);
+$billingGate = new ClinicalBillingGateService($pdo);
+$billingClearance = $billingGate->status('Physiotherapy', $recordId, (int)$record['visit_id'], $currentUser);
+$billingCleared = (bool)($billingClearance['cleared'] ?? false);
+$canCancelForBilling = $billingGate->cancellationErrors('Physiotherapy', $recordId, (int)$record['visit_id'], $currentUser) === [];
 $canEdit = $permissionService->canEditPhysiotherapy($visit, $currentUser);
 $canManageSessions = $permissionService->canManagePhysiotherapySessions($visit, $currentUser);
 $canComplete = $permissionService->canCompletePhysiotherapy($visit, $currentUser);
@@ -40,6 +45,8 @@ if ($isClosed) {
     $addSessionBlockedReason = 'Add Session is unavailable because this encounter is completed or cancelled.';
 } elseif ($recordIsClosed) {
     $addSessionBlockedReason = 'Add Session is unavailable because this physiotherapy record is completed or cancelled.';
+} elseif (!$billingCleared) {
+    $addSessionBlockedReason = 'Add Session is unavailable until Accounts clears this physiotherapy request for payment.';
 } elseif (!$canManageSessions) {
     $addSessionBlockedReason = 'Add Session is available to authorized Physiotherapy users when the encounter is currently in the Physiotherapy department. If the patient is ready for physiotherapy treatment, transfer and receive the encounter in Physiotherapy first.';
 }
@@ -82,7 +89,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <a class="btn-secondary" href="<?= e(physiotherapyBackToWorkspace((int)$record['visit_id'])) ?>">Workspace</a>
             <a class="btn-secondary" href="history.php?visit=<?= (int)$record['visit_id'] ?>">History</a>
             <a class="btn-secondary" href="#sessions">Sessions</a>
-            <?php if (!$isClosed && !$recordIsClosed && $canManageSessions): ?>
+            <?php if ($billingCleared && !$isClosed && !$recordIsClosed && $canManageSessions): ?>
                 <a class="btn-primary" href="report.php?record=<?= (int)$record['id'] ?>">Add New Session</a>
             <?php endif; ?>
             <?php if (!$isClosed && $permissionService->canCreateBillingRequest($currentUser)): ?>
@@ -97,6 +104,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <div class="summary-item"><span class="summary-label">Hospital Number</span> <span class="summary-value"><?= e((string)($record['hospital_number'] ?? $patient['hospital_number'])) ?></span></div>
             <div class="summary-item"><span class="summary-label">Source</span> <span class="summary-value"><?= e((string)$record['record_source']) ?></span></div>
             <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)$record['status']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Accounts Clearance</span> <span class="summary-value"><?= e((string)($billingClearance['label'] ?? 'Unknown')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Physiotherapist</span> <span class="summary-value"><?= e((string)($record['physiotherapist_name'] ?? '-')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Created By</span> <span class="summary-value"><?= e((string)($record['created_by_name'] ?? '-')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Created At</span> <span class="summary-value"><?= e((string)($record['created_at'] ?? '-')) ?></span></div>
@@ -150,7 +158,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="section-heading">
             <h3>Sessions</h3>
             <div class="form-actions">
-                <?php if (!$isClosed && !$recordIsClosed && $canManageSessions): ?>
+                <?php if ($billingCleared && !$isClosed && !$recordIsClosed && $canManageSessions): ?>
                     <a class="btn-primary" href="report.php?record=<?= (int)$record['id'] ?>">Add New Session</a>
                 <?php endif; ?>
             </div>
@@ -188,7 +196,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                                 <td><?php hmsRenderNarrative((string)($session['next_plan'] ?? '-')); ?></td>
                                 <td><?= e((string)($session['recorded_by_name'] ?? '-')) ?></td>
                                 <td>
-                                    <?php if (!$isClosed && !$recordIsClosed && $canManageSessions): ?>
+                                    <?php if ($billingCleared && !$isClosed && !$recordIsClosed && $canManageSessions): ?>
                                         <a class="btn-secondary btn-sm" href="report.php?session=<?= (int)$session['id'] ?>">Edit</a>
                                     <?php endif; ?>
                                 </td>
@@ -216,17 +224,20 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <div class="form-actions">
-            <?php if (!$isClosed && $canEdit && (string)$record['status'] === 'Active'): ?>
+            <?php if (!$billingCleared): ?>
+                <p class="text-muted">Awaiting Accounts clearance before Physiotherapy can edit, record sessions, or complete this request.</p>
+            <?php endif; ?>
+            <?php if ($billingCleared && !$isClosed && $canEdit && (string)$record['status'] === 'Active'): ?>
                 <a class="btn-secondary" href="edit.php?id=<?= (int)$record['id'] ?>">Edit Record</a>
             <?php endif; ?>
-            <?php if (!$isClosed && $canComplete && (string)$record['status'] === 'Active'): ?>
+            <?php if ($billingCleared && !$isClosed && $canComplete && (string)$record['status'] === 'Active'): ?>
                 <form method="post" action="complete.php" onsubmit="return confirm('Complete this physiotherapy record?');">
                     <?= csrfField() ?>
                     <input type="hidden" name="id" value="<?= (int)$record['id'] ?>">
                     <button type="submit" class="btn-primary">Complete</button>
                 </form>
             <?php endif; ?>
-            <?php if (!$isClosed && $canEdit && (string)$record['status'] === 'Active'): ?>
+            <?php if ($canCancelForBilling && !$isClosed && $canEdit && (string)$record['status'] === 'Active'): ?>
                 <form method="post" action="cancel.php" onsubmit="return confirm('Cancel this physiotherapy record?');">
                     <?= csrfField() ?>
                     <input type="hidden" name="id" value="<?= (int)$record['id'] ?>">

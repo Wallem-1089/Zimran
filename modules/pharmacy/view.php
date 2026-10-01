@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/../../services/BillingService.php';
+require_once __DIR__ . '/../../services/ClinicalBillingGateService.php';
 
 $prescriptionId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: 0;
 if (!$prescriptionId) {
@@ -41,6 +42,10 @@ if (pharmacyTableExists($pdo, 'billing_requests')) {
     ], $currentUser);
 }
 $latestBillingRequest = $billingRequests[0] ?? null;
+$billingGate = new ClinicalBillingGateService($pdo);
+$billingClearance = $billingGate->status('Pharmacy', $prescriptionId, (int)$prescription['visit_id'], $currentUser);
+$billingCleared = (bool)($billingClearance['cleared'] ?? false);
+$canCancelForBilling = $billingGate->cancellationErrors('Pharmacy', $prescriptionId, (int)$prescription['visit_id'], $currentUser) === [];
 $hasActiveBillingRequest = $latestBillingRequest !== null
     && (string)($latestBillingRequest['status'] ?? '') !== 'Cancelled';
 $canCancelLatestBillingRequest = $latestBillingRequest !== null
@@ -48,8 +53,10 @@ $canCancelLatestBillingRequest = $latestBillingRequest !== null
 $canEdit = (string)$prescription['status'] === 'Prescribed'
     && $permissionService->canEditPrescription($visit, $currentUser, (string)$prescription['prescription_source']);
 $canDispense = (string)$prescription['status'] === 'Prescribed'
-    && $permissionService->canDispensePrescription($visit, $currentUser);
+    && $permissionService->canDispensePrescription($visit, $currentUser)
+    && $billingCleared;
 $canCancel = (string)$prescription['status'] === 'Prescribed'
+    && $canCancelForBilling
     && $permissionService->canEditPrescription($visit, $currentUser, (string)$prescription['prescription_source']);
 $canRecordDrugChart = !in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)
     && $permissionService->canCreateNursing($visit, $currentUser);
@@ -107,6 +114,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <div class="summary-item"><span class="summary-label">Quantity</span> <span class="summary-value"><?= e((string)$prescription['quantity']) ?></span></div>
             <div class="summary-item"><span class="summary-label">Source</span> <span class="summary-value"><?= e((string)$prescription['prescription_source']) ?></span></div>
             <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)$prescription['status']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Accounts Clearance</span> <span class="summary-value"><?= e((string)($billingClearance['label'] ?? 'Unknown')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Prescriber</span> <span class="summary-value"><?= e((string)($prescription['prescribed_by_name'] ?? '-')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Requested</span> <span class="summary-value"><?= e((string)($prescription['created_at'] ?? '-')) ?></span></div>
         </div>
@@ -189,6 +197,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <div class="form-actions">
+            <?php if (!$billingCleared): ?>
+                <p class="text-muted">Awaiting Accounts clearance before Pharmacy can dispense this prescription.</p>
+            <?php endif; ?>
             <?php if ($canEdit): ?>
                 <a class="btn-secondary" href="edit.php?id=<?= (int)$prescription['id'] ?>">Edit</a>
             <?php endif; ?>

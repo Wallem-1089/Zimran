@@ -5,6 +5,11 @@ declare(strict_types=1);
 require __DIR__ . '/_bootstrap.php';
 
 reportsRequireAccess($permissionService, $currentUser);
+if (!$permissionService->canViewReports($currentUser)) {
+    http_response_code(403);
+    exit('You are not allowed to view encounter activity reports.');
+}
+
 $filters = reportsDateFilters();
 $departments = $dashboardService->listReportDepartments();
 $report = $dashboardService->getPatientEncounterActivity($filters);

@@ -82,7 +82,7 @@ $canCreateClinicalPrescription = isset($permissionService)
                         <a class="btn-secondary" href="../ecg/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request ECG</a>
                     <?php endif; ?>
                     <?php if ($canCreateClinicalPopRequest): ?>
-                        <a class="btn-secondary" href="../pop/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request POP / Casting</a>
+                        <a class="btn-secondary" href="../pop/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request Plaster</a>
                     <?php endif; ?>
                     <?php if ($canCreateClinicalPhysiotherapyRequest): ?>
                         <a class="btn-secondary" href="../physiotherapy/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Refer Physiotherapy</a>

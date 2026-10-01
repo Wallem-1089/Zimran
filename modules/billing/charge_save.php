@@ -17,6 +17,12 @@ if (!$visit) {
     exit('Encounter not found.');
 }
 
+$activeDepartmentName = (string)($currentUser['active_department_name'] ?? $currentUser['department_name'] ?? '');
+if (strcasecmp($activeDepartmentName, 'Accounts') === 0 && !$permissionService->isAdministrator($currentUser)) {
+    http_response_code(403);
+    exit('Accounts charges are created automatically from billing requests.');
+}
+
 $result = $billingService->createCharge($_POST, $currentUser);
 $_SESSION['success_message'] = $result['success'] ? 'Patient charge saved.' : null;
 $_SESSION['error_message'] = $result['success'] ? null : implode(' ', (array)($result['errors'] ?? ['Unable to save patient charge.']));

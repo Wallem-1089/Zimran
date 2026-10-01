@@ -39,6 +39,7 @@ require_once __DIR__ . '/../../../layouts/sidebar.php';
         </dl>
         <p>
             <a class="btn-primary" href="edit.php?id=<?= $userId ?>">Edit</a>
+            <a href="staff_profile.php?id=<?= $userId ?>">Staff Profile</a>
             <a href="reset_password.php?id=<?= $userId ?>">Reset Password</a>
             <a href="departments.php?id=<?= $userId ?>">Departments</a>
         </p>

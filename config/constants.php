@@ -2,7 +2,7 @@
 
 define("APP_NAME","Zimran E-HMIS");
 
-define("APP_VERSION","1.1");
+define("APP_VERSION","1.2");
 
 $appConfig = require __DIR__ . '/app.php';
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';

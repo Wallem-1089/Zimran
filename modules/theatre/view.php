@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/../../services/ClinicalBillingGateService.php';
 
 $recordId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: 0;
 $theatre = $theatreService->getById($recordId, $currentUser);
@@ -15,10 +16,15 @@ if (!$theatre) {
 $visit = theatreRequireVisit($visitService, (int)$theatre['visit_id']);
 theatreRequireAccess($permissionService, $visit, $currentUser);
 
+$billingGate = new ClinicalBillingGateService($pdo);
+$billingClearance = $billingGate->status('Theatre', $recordId, (int)$theatre['visit_id'], $currentUser);
+$billingCleared = (bool)($billingClearance['cleared'] ?? false);
 $canEdit = (string)$theatre['status'] === 'Draft'
-    && $permissionService->canEditTheatre($visit, $currentUser);
+    && $permissionService->canEditTheatre($visit, $currentUser)
+    && $billingCleared;
 $canComplete = (string)$theatre['status'] === 'Draft'
-    && $permissionService->canCompleteTheatre($visit, $currentUser);
+    && $permissionService->canCompleteTheatre($visit, $currentUser)
+    && $billingCleared;
 $latestVitalSigns = $vitalSignsService
     ? $vitalSignsService->getLatestByVisit((int)$visit['id'], $currentUser)
     : null;
@@ -56,6 +62,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php if (!in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true) && $permissionService->canCreateBillingRequest($currentUser)): ?>
                 <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$theatre['visit_id'] ?>&source_module=Theatre&source_record_id=<?= (int)$theatre['id'] ?>&description=<?= urlencode('Theatre: ' . (string)($theatre['procedure_name'] ?? '')) ?>">Request Billing</a>
             <?php endif; ?>
+            <?php if (!$billingCleared): ?>
+                <span class="text-muted">Awaiting Accounts clearance</span>
+            <?php endif; ?>
             <?php if ($canEdit): ?>
                 <a class="btn-secondary" href="edit.php?id=<?= (int)$theatre['id'] ?>">Edit</a>
             <?php endif; ?>
@@ -71,6 +80,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="card">
         <div class="summary-grid">
             <div class="summary-item"><span class="summary-label">Procedure</span> <span class="summary-value"><?= e((string)$theatre['procedure_name']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Accounts Clearance</span> <span class="summary-value"><?= e((string)($billingClearance['label'] ?? 'Unknown')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Surgeon</span> <span class="summary-value"><?= e((string)($theatre['surgeon_name'] ?? '-')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Department</span> <span class="summary-value"><?= e((string)($theatre['department_name'] ?? '-')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Created By</span> <span class="summary-value"><?= e((string)($theatre['created_by_name'] ?? '-')) ?></span></div>

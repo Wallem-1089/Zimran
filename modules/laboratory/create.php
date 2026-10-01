@@ -5,7 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/_bootstrap.php';
 
 $visitId = filter_input(INPUT_GET, 'visit', FILTER_VALIDATE_INT) ?: 0;
-$requestedSource = laboratoryRequestSourceLabel((string)($_GET['source'] ?? ''));
+$requestSource = laboratoryRequestSourceLabel((string)($_GET['source'] ?? ''));
 
 if (!$visitId) {
     header('Location: index.php');
@@ -13,16 +13,7 @@ if (!$visitId) {
 }
 
 $visit = laboratoryRequireVisit($visitService, $visitId);
-$isDirectLaboratoryEncounter = (string)($visit['department_name'] ?? '') === 'Laboratory';
 $requestSourceNote = '';
-if ($requestedSource === 'Direct' && !$isDirectLaboratoryEncounter) {
-    $requestSource = 'Clinical';
-    $requestSourceNote = 'Direct is only for active encounters currently in Laboratory. This request is being recorded as Clinical.';
-} elseif (in_array($requestedSource, ['Clinical', 'Direct'], true)) {
-    $requestSource = $requestedSource;
-} else {
-    $requestSource = $isDirectLaboratoryEncounter ? 'Direct' : 'Clinical';
-}
 laboratoryRequireAccess($permissionService, $visit, $currentUser, $requestSource);
 
 if (!$laboratoryTablesReady) {
@@ -46,7 +37,8 @@ $laboratoryRequest['request_source'] = $requestSource;
 unset($_SESSION['old_laboratory_request']);
 
 $existingRequests = $laboratoryService->listByVisit($visitId, $currentUser);
-$pageTitle = $requestSource === 'Direct' ? 'Create Direct Laboratory Request' : 'Create Laboratory Request';
+$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Laboratory']));
+$pageTitle = 'Create Laboratory Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 
 require __DIR__ . '/../../layouts/header.php';
@@ -86,7 +78,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="summary-item"><span class="summary-label">Encounter Status</span> <span class="summary-value"><?= e((string)($visit['visit_status'] ?? '-')) ?></span></div>
     </div>
 
-    <?php $buttonLabel = $requestSource === 'Direct' ? 'Save Direct Laboratory Request' : 'Save Laboratory Request'; require __DIR__ . '/_form.php'; ?>
+    <?php $buttonLabel = 'Save Laboratory Request'; require __DIR__ . '/_form.php'; ?>
 
     <div class="card">
         <h3>Existing Requests for This Encounter</h3>

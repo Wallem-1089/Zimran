@@ -857,6 +857,139 @@ public function deletePatient(
         return $patient ?: null;
     }
 
+    public function activateRegistrationAfterPayment(int $patientId, int $clearedBy): array
+    {
+        try {
+            $stmt = $this->pdo->prepare('SELECT * FROM patients WHERE id = :id FOR UPDATE');
+            $stmt->execute([':id' => $patientId]);
+            $patient = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$patient) {
+                return ['success' => false, 'errors' => ['Patient not found.']];
+            }
+
+            $hospitalNumber = trim((string)($patient['hospital_number'] ?? ''));
+            if ($hospitalNumber === '') {
+                $hospitalNumber = $this->generateHospitalNumber($patientId);
+            }
+
+            $update = $this->pdo->prepare('
+                UPDATE patients
+                SET hospital_number = :hospital_number,
+                    registration_status = \'Active\',
+                    registration_paid_at = COALESCE(registration_paid_at, NOW()),
+                    registration_valid_until = DATE_ADD(CURDATE(), INTERVAL 30 DAY),
+                    registration_completed_at = COALESCE(registration_completed_at, NOW()),
+                    updated_at = NOW()
+                WHERE id = :id
+            ');
+            $update->execute([
+                ':hospital_number' => $hospitalNumber,
+                ':id' => $patientId,
+            ]);
+
+            $this->auditService->logPatient(
+                $clearedBy,
+                $patientId,
+                null,
+                'Patients',
+                'PATIENT_REGISTRATION_ACTIVATED',
+                'Activated patient registration after payment. Hospital Number: ' . $hospitalNumber . '.',
+                null,
+                'INFO',
+                'PATIENT_REGISTRATION_ACTIVATED'
+            );
+
+            return ['success' => true, 'hospital_number' => $hospitalNumber, 'errors' => []];
+        } catch (Throwable) {
+            return ['success' => false, 'errors' => ['Unable to activate patient registration.']];
+        }
+    }
+
+    public function renewRegistrationAfterPayment(int $patientId, int $clearedBy): array
+    {
+        try {
+            $stmt = $this->pdo->prepare('
+                UPDATE patients
+                SET registration_status = \'Active\',
+                    registration_valid_until = DATE_ADD(
+                        GREATEST(COALESCE(registration_valid_until, CURDATE()), CURDATE()),
+                        INTERVAL 30 DAY
+                    ),
+                    updated_at = NOW()
+                WHERE id = :id
+            ');
+            $stmt->execute([':id' => $patientId]);
+
+            $this->auditService->logPatient(
+                $clearedBy,
+                $patientId,
+                null,
+                'Patients',
+                'PATIENT_REGISTRATION_RENEWED',
+                'Renewed patient monthly registration validity after payment.',
+                null,
+                'INFO',
+                'PATIENT_REGISTRATION_RENEWED'
+            );
+
+            return ['success' => true, 'errors' => []];
+        } catch (Throwable) {
+            return ['success' => false, 'errors' => ['Unable to renew patient registration.']];
+        }
+    }
+
+    public function getRegistrationGateStatus(int $patientId): array
+    {
+        $patient = $this->getPatientById($patientId);
+        if (!$patient) {
+            return [
+                'can_create_encounter' => false,
+                'status' => 'NotFound',
+                'message' => 'Patient not found.',
+            ];
+        }
+
+        if (trim((string)($patient['hospital_number'] ?? '')) === ''
+            || (string)($patient['registration_status'] ?? 'Active') !== 'Active'
+        ) {
+            return [
+                'can_create_encounter' => false,
+                'status' => 'PendingPayment',
+                'message' => 'Patient registration payment is pending. Accounts must clear the registration bill before a patient ID is generated.',
+            ];
+        }
+
+        $validUntil = trim((string)($patient['registration_valid_until'] ?? ''));
+        if ($validUntil !== '') {
+            try {
+                $expiry = new DateTimeImmutable($validUntil);
+                if ($expiry < new DateTimeImmutable('today')) {
+                    return [
+                        'can_create_encounter' => false,
+                        'status' => 'Expired',
+                        'message' => 'Patient registration has expired. A monthly renewal charge must be paid before a new encounter can be created.',
+                        'valid_until' => $validUntil,
+                    ];
+                }
+            } catch (Throwable) {
+                // Treat invalid dates as expired so Accounts can repair by renewal.
+                return [
+                    'can_create_encounter' => false,
+                    'status' => 'Expired',
+                    'message' => 'Patient registration validity is not current. A monthly renewal charge must be paid before a new encounter can be created.',
+                    'valid_until' => $validUntil,
+                ];
+            }
+        }
+
+        return [
+            'can_create_encounter' => true,
+            'status' => 'Active',
+            'message' => 'Patient registration is active.',
+            'valid_until' => $validUntil,
+        ];
+    }
+
     public function searchPatientsPaginated(
         array $filters,
         int $page = 1,

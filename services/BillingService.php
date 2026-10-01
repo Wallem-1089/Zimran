@@ -52,10 +52,13 @@ class BillingService
         string $sourceModule,
         ?int $sourceRecordId,
         ?string $description,
-        array $user
+        array $user,
+        bool $enforcePermission = true
     ): array {
         try {
-            $this->assertCanCreateCharge($user);
+            if ($enforcePermission) {
+                $this->assertCanCreateCharge($user);
+            }
 
             $visit = $this->loadVisit($visitId);
             if (!$visit) {
@@ -807,6 +810,68 @@ class BillingService
         return array_map([$this, 'decoratePayment'], $stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
+    public function cancelPayment(int $paymentId, string $reason, array $user): array
+    {
+        try {
+            if (!$this->permissionService->isAdministrator($user)) {
+                return $this->failure(['Only Super Administrator can cancel payments.']);
+            }
+
+            $reason = trim($reason);
+            if ($reason === '') {
+                return $this->failure(['Cancellation reason is required.']);
+            }
+
+            $transactionStarted = $this->beginTransactionIfNeeded();
+            $payment = $this->lockPayment($paymentId);
+            if (!$payment) {
+                $this->rollback();
+                return $this->failure(['Payment not found.']);
+            }
+
+            if ((string)($payment['status'] ?? 'Active') === 'Cancelled') {
+                $this->rollback();
+                return $this->failure(['Payment is already cancelled.']);
+            }
+
+            $stmt = $this->pdo->prepare('
+                UPDATE payments
+                SET status = \'Cancelled\',
+                    cancelled_by = :cancelled_by,
+                    cancelled_at = NOW(),
+                    cancel_reason = :cancel_reason
+                WHERE id = :id
+            ');
+            $stmt->execute([
+                ':cancelled_by' => (int)$user['id'],
+                ':cancel_reason' => $reason,
+                ':id' => $paymentId,
+            ]);
+
+            $this->refreshInvoiceTotals((int)$payment['visit_id'], $user);
+
+            if (!$this->audit(
+                (int)$user['id'],
+                (int)$payment['patient_id'],
+                (int)$payment['visit_id'],
+                'PAYMENT_CANCELLED',
+                'Cancelled payment #' . $paymentId . '.',
+                null
+            )) {
+                throw new RuntimeException('Unable to audit payment cancellation.');
+            }
+
+            if ($transactionStarted) {
+                $this->pdo->commit();
+            }
+
+            return ['success' => true, 'payment_id' => $paymentId, 'errors' => []];
+        } catch (Throwable) {
+            $this->rollback();
+            return $this->failure(['Unable to cancel payment.']);
+        }
+    }
+
     public function listPaymentsFiltered(array $filters = [], ?array $user = null, int $limit = 0): array
     {
         if ($user !== null && !$this->permissionService->canViewBilling($user)) {
@@ -992,11 +1057,24 @@ class BillingService
                 throw new RuntimeException('Unable to audit billing request creation.');
             }
 
+            $autoChargeResult = $this->autoChargeBillingRequest($requestId, $user);
+            if (($autoChargeResult['success'] ?? false) !== true) {
+                $this->rollback();
+                return $this->failure($autoChargeResult['errors'] ?? ['Unable to automatically create patient charge.']);
+            }
+
             if ($transactionStarted) {
                 $this->pdo->commit();
             }
 
-            return ['success' => true, 'billing_request_id' => $requestId, 'errors' => []];
+            return [
+                'success' => true,
+                'billing_request_id' => $requestId,
+                'patient_charge_id' => (int)($autoChargeResult['patient_charge_id'] ?? 0),
+                'auto_charged' => !empty($autoChargeResult['auto_charged']),
+                'auto_charge_skipped' => !empty($autoChargeResult['skipped']),
+                'errors' => [],
+            ];
         } catch (Throwable) {
             $this->rollback();
             return $this->failure(['Unable to create billing request.']);
@@ -1132,6 +1210,128 @@ class BillingService
         } catch (Throwable) {
             $this->rollback();
             return $this->failure(['Unable to create charge from billing request.']);
+        }
+    }
+
+    public function autoChargeBillingRequest(int $requestId, array $actor): array
+    {
+        try {
+            $transactionStarted = $this->beginTransactionIfNeeded();
+            $request = $this->lockBillingRequest($requestId);
+            if (!$request) {
+                if ($transactionStarted) {
+                    $this->pdo->rollBack();
+                }
+                return $this->failure(['Billing request not found.']);
+            }
+
+            if ((string)$request['status'] !== 'Pending') {
+                if ($transactionStarted) {
+                    $this->pdo->commit();
+                }
+
+                return [
+                    'success' => true,
+                    'billing_request_id' => $requestId,
+                    'patient_charge_id' => (int)($request['patient_charge_id'] ?? 0),
+                    'auto_charged' => false,
+                    'skipped' => true,
+                    'errors' => [],
+                ];
+            }
+
+            $resolvedItem = $this->resolveAutomaticBillableItem($request);
+            if ($resolvedItem === null) {
+                $this->markBillingRequestAutoChargeSkipped(
+                    $requestId,
+                    'Automatic charge pending: no single active price catalogue item could be determined. Add a suggested billable item or keep one clear active item for this department/source.'
+                );
+
+                if ($transactionStarted) {
+                    $this->pdo->commit();
+                }
+
+                return [
+                    'success' => true,
+                    'billing_request_id' => $requestId,
+                    'patient_charge_id' => 0,
+                    'auto_charged' => false,
+                    'skipped' => true,
+                    'errors' => [],
+                ];
+            }
+
+            $quantity = (float)($request['quantity'] ?? 1);
+            $chargeResult = $this->createChargeFromBillableItem(
+                (int)$request['visit_id'],
+                (int)$resolvedItem['id'],
+                $quantity > 0 ? $quantity : 1.0,
+                'BillingRequest',
+                $requestId,
+                (string)($request['description'] ?? ''),
+                $actor,
+                false
+            );
+
+            if (empty($chargeResult['success'])) {
+                if ($transactionStarted && $this->pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
+                return $chargeResult;
+            }
+
+            $patientChargeId = (int)($chargeResult['patient_charge_id'] ?? 0);
+            $stmt = $this->pdo->prepare('
+                UPDATE billing_requests
+                SET status = \'Charged\',
+                    reviewed_by = :reviewed_by,
+                    reviewed_at = NOW(),
+                    patient_charge_id = :patient_charge_id,
+                    notes = :notes,
+                    updated_at = NOW()
+                WHERE id = :id
+                  AND status = \'Pending\'
+            ');
+            $stmt->execute([
+                ':reviewed_by' => (int)$actor['id'],
+                ':patient_charge_id' => $patientChargeId > 0 ? $patientChargeId : null,
+                ':notes' => 'Automatically charged from billing request using ' . (string)$resolvedItem['item_name'] . '.',
+                ':id' => $requestId,
+            ]);
+
+            if ($stmt->rowCount() !== 1) {
+                throw new RuntimeException('Unable to update billing request after automatic charge.');
+            }
+
+            if (!$this->audit(
+                (int)$actor['id'],
+                (int)$request['patient_id'],
+                (int)$request['visit_id'],
+                'BILLING_REQUEST_AUTO_CHARGED',
+                'Automatically converted billing request #' . $requestId . ' to patient charge #' . $patientChargeId . '.',
+                (int)($request['department_id'] ?? 0) ?: null
+            )) {
+                throw new RuntimeException('Unable to audit automatic billing request charge.');
+            }
+
+            if ($transactionStarted) {
+                $this->pdo->commit();
+            }
+
+            return [
+                'success' => true,
+                'billing_request_id' => $requestId,
+                'patient_charge_id' => $patientChargeId,
+                'auto_charged' => true,
+                'skipped' => false,
+                'errors' => [],
+            ];
+        } catch (Throwable $e) {
+            $this->rollback();
+            if ((string)getenv('HMS_APP_ENV') === 'testing') {
+                return $this->failure(['Unable to automatically create charge from billing request: ' . $e->getMessage()]);
+            }
+            return $this->failure(['Unable to automatically create charge from billing request.']);
         }
     }
 
@@ -1390,6 +1590,18 @@ class BillingService
         return $row ? $this->decorateCharge($row) : null;
     }
 
+    private function lockPayment(int $paymentId): ?array
+    {
+        if ($paymentId <= 0) {
+            return null;
+        }
+
+        $stmt = $this->pdo->prepare($this->paymentBaseSelect() . ' WHERE p.id = :id LIMIT 1 FOR UPDATE');
+        $stmt->execute([':id' => $paymentId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $this->decoratePayment($row) : null;
+    }
+
     private function lockDiscount(int $discountId): ?array
     {
         if ($discountId <= 0 || !$this->billingDiscountsAvailable()) {
@@ -1517,10 +1729,14 @@ class BillingService
 
     private function sumPaymentsByVisit(int $visitId): float
     {
+        $statusFilter = $this->columnExists('payments', 'status')
+            ? " AND (status IS NULL OR status = 'Active')"
+            : '';
         $stmt = $this->pdo->prepare('
             SELECT COALESCE(SUM(amount), 0)
             FROM payments
             WHERE visit_id = :visit_id
+            ' . $statusFilter . '
         ');
         $stmt->execute([':visit_id' => $visitId]);
         return (float)$stmt->fetchColumn();
@@ -1570,6 +1786,26 @@ class BillingService
         }
 
         return $available;
+    }
+
+    private function columnExists(string $table, string $column): bool
+    {
+        try {
+            $stmt = $this->pdo->prepare('
+                SELECT COUNT(*)
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = :table
+                  AND COLUMN_NAME = :column
+            ');
+            $stmt->execute([
+                ':table' => $table,
+                ':column' => $column,
+            ]);
+            return (int)$stmt->fetchColumn() > 0;
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     private function buildInvoiceFilters(array $filters): array
@@ -1662,7 +1898,7 @@ class BillingService
         }
 
         $status = trim((string)($filters['visit_status'] ?? ''));
-        if ($status !== '' && in_array($status, ['Waiting', 'Reception', 'Records', 'Nursing', 'Doctor', 'Laboratory', 'Radiology', 'X-Ray', 'ECG', 'POP', 'Pharmacy', 'Physiotherapy', 'Theatre', 'Accounts', 'Store', 'Orderly', 'Completed', 'Cancelled'], true)) {
+        if ($status !== '' && in_array($status, ['Waiting', 'Reception', 'Records', 'Nursing', 'Doctor', 'Laboratory', 'Radiology', 'X-Ray', 'ECG', 'Plaster', 'POP', 'Pharmacy', 'Physiotherapy', 'Theatre', 'Accounts', 'Store', 'Orderly', 'Completed', 'Cancelled'], true)) {
             $where[] = 'v.visit_status = :visit_status';
             $params[':visit_status'] = $status;
         }
@@ -1696,16 +1932,37 @@ class BillingService
             $params[':department_id'] = $departmentId;
         }
 
+        $statuses = $filters['statuses'] ?? null;
+        if (is_array($statuses)) {
+            $allowedStatuses = array_values(array_intersect(
+                ['Pending', 'Charged', 'Paid', 'Waived', 'Exempted', 'Cleared', 'Cancelled'],
+                array_map('strval', $statuses)
+            ));
+            if ($allowedStatuses !== []) {
+                $placeholders = [];
+                foreach ($allowedStatuses as $index => $allowedStatus) {
+                    $placeholder = ':status_' . $index;
+                    $placeholders[] = $placeholder;
+                    $params[$placeholder] = $allowedStatus;
+                }
+                $where[] = 'br.status IN (' . implode(', ', $placeholders) . ')';
+            }
+        }
+
         $status = trim((string)($filters['status'] ?? ''));
-        if ($status !== '' && in_array($status, ['Pending', 'Charged', 'Cancelled'], true)) {
+        if ($statuses === null && $status !== '' && in_array($status, ['Pending', 'Charged', 'Paid', 'Waived', 'Exempted', 'Cleared', 'Cancelled'], true)) {
             $where[] = 'br.status = :status';
             $params[':status'] = $status;
         }
 
         $sourceModule = trim((string)($filters['source_module'] ?? ''));
         if ($sourceModule !== '') {
-            $where[] = 'br.source_module = :source_module';
-            $params[':source_module'] = $sourceModule;
+            if (strcasecmp($sourceModule, 'Plaster') === 0) {
+                $where[] = "br.source_module IN ('Plaster', 'POP')";
+            } else {
+                $where[] = 'br.source_module = :source_module';
+                $params[':source_module'] = $sourceModule;
+            }
         }
 
         $sourceRecordId = (int)($filters['source_record_id'] ?? 0);
@@ -1744,6 +2001,12 @@ class BillingService
         if ($visitId > 0) {
             $where[] = 'p.visit_id = :visit_id';
             $params[':visit_id'] = $visitId;
+        }
+
+        $paymentStatus = trim((string)($filters['payment_status'] ?? ''));
+        if ($paymentStatus !== '' && in_array($paymentStatus, ['Active', 'Cancelled'], true)) {
+            $where[] = 'p.status = :payment_status';
+            $params[':payment_status'] = $paymentStatus;
         }
 
         if (!empty($filters['invoice_number'])) {
@@ -1830,6 +2093,9 @@ class BillingService
 
     private function paymentBaseSelect(): string
     {
+        $hasPaymentCancellationColumns = $this->columnExists('payments', 'status')
+            && $this->columnExists('payments', 'cancelled_by');
+
         return '
             SELECT
                 p.*,
@@ -1838,7 +2104,9 @@ class BillingService
                 i.total_amount AS invoice_total_amount,
                 i.amount_paid AS invoice_amount_paid,
                 i.balance_due AS invoice_balance_due,
+                ' . ($hasPaymentCancellationColumns ? 'p.status,' : '\'Active\' AS status,') . '
                 CONCAT(received_by.first_name, " ", received_by.last_name) AS received_by_name,
+                ' . ($hasPaymentCancellationColumns ? 'CONCAT(cancelled_by.first_name, " ", cancelled_by.last_name)' : 'NULL') . ' AS cancelled_by_name,
                 CONCAT(patient.first_name, " ", patient.last_name) AS patient_name,
                 patient.hospital_number,
                 v.visit_number
@@ -1847,6 +2115,7 @@ class BillingService
             INNER JOIN patients patient ON patient.id = p.patient_id
             INNER JOIN visits v ON v.id = p.visit_id
             LEFT JOIN users received_by ON received_by.id = p.received_by
+            ' . ($hasPaymentCancellationColumns ? 'LEFT JOIN users cancelled_by ON cancelled_by.id = p.cancelled_by' : '') . '
         ';
     }
 
@@ -1939,6 +2208,81 @@ class BillingService
             ? number_format((float)$row['suggested_unit_price'], 2)
             : null;
         return $row;
+    }
+
+    private function resolveAutomaticBillableItem(array $request): ?array
+    {
+        $suggestedItemId = (int)($request['suggested_billable_item_id'] ?? 0);
+        if ($suggestedItemId > 0) {
+            $suggested = $this->accountsService->getItemById($suggestedItemId);
+            if ($suggested && !empty($suggested['is_active'])) {
+                return $suggested;
+            }
+        }
+
+        $departmentId = (int)($request['department_id'] ?? 0);
+        if ($departmentId <= 0) {
+            return null;
+        }
+
+        $sourceModule = trim((string)($request['source_module'] ?? ''));
+        if ($sourceModule !== '') {
+            $like = '%' . $sourceModule . '%';
+            $stmt = $this->pdo->prepare('
+                SELECT *
+                FROM billable_items
+                WHERE department_id = :department_id
+                  AND is_active = 1
+                  AND (
+                      item_code = :source_module_code
+                      OR item_name = :source_module_name
+                      OR item_name LIKE :like_source_module_name
+                      OR description LIKE :like_source_module_description
+                  )
+                ORDER BY item_name ASC, id ASC
+                LIMIT 2
+            ');
+            $stmt->execute([
+                ':department_id' => $departmentId,
+                ':source_module_code' => $sourceModule,
+                ':source_module_name' => $sourceModule,
+                ':like_source_module_name' => $like,
+                ':like_source_module_description' => $like,
+            ]);
+            $matches = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            if (count($matches) === 1) {
+                return $matches[0];
+            }
+        }
+
+        $stmt = $this->pdo->prepare('
+            SELECT *
+            FROM billable_items
+            WHERE department_id = :department_id
+              AND is_active = 1
+            ORDER BY item_name ASC, id ASC
+            LIMIT 2
+        ');
+        $stmt->execute([':department_id' => $departmentId]);
+        $departmentItems = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        return count($departmentItems) === 1 ? $departmentItems[0] : null;
+    }
+
+    private function markBillingRequestAutoChargeSkipped(int $requestId, string $note): void
+    {
+        $stmt = $this->pdo->prepare('
+            UPDATE billing_requests
+            SET notes = :notes,
+                updated_at = NOW()
+            WHERE id = :id
+              AND status = \'Pending\'
+              AND (notes IS NULL OR notes NOT LIKE \'Automatic charge pending:%\')
+        ');
+        $stmt->execute([
+            ':notes' => $note,
+            ':id' => $requestId,
+        ]);
     }
 
     private function lockBillingRequest(int $requestId): ?array

@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../../config/auth.php';
 require_once __DIR__ . '/../../../config/database.php';
 require_once __DIR__ . '/../../../config/helpers.php';
 require_once __DIR__ . '/../../../services/UserService.php';
+require_once __DIR__ . '/../../../services/StaffProfileService.php';
 require_once __DIR__ . '/../../../services/RoleService.php';
 require_once __DIR__ . '/../../../services/PermissionService.php';
 require_once __DIR__ . '/../../../services/DepartmentService.php';
@@ -22,6 +23,7 @@ if (!$permissionService->isAdministrationUser($currentUser)) {
 }
 
 $userService = new UserService($pdo);
+$staffProfileService = new StaffProfileService($pdo);
 $roleService = new RoleService($pdo);
 $departmentService = new DepartmentService($pdo);
 $userDepartmentService = new UserDepartmentService($pdo);

@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/AuditService.php';
 require_once __DIR__ . '/../../services/ConfigurableFormService.php';
+require_once __DIR__ . '/../../services/DiagnosticAttachmentService.php';
 require_once __DIR__ . '/../../services/ECGService.php';
 require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
@@ -67,13 +68,14 @@ function ecgBackToWorkspace(int $visitId): string
 
 function ecgRequestSourceLabel(string $source): string
 {
-    return $source === 'Direct' ? 'Direct' : 'Clinical';
+    return 'Clinical';
 }
 
 $visitService = new VisitService($pdo);
 $patientService = new PatientService($pdo);
 $permissionService = new PermissionService($pdo);
 $configurableFormService = new ConfigurableFormService($pdo, $permissionService);
+$diagnosticAttachmentService = new DiagnosticAttachmentService($pdo, $permissionService);
 $ecgService = new ECGService($pdo, null, null, $permissionService);
 $ecgTablesReady = ecgTableExists($pdo, 'ecg_requests')
     && ecgTableExists($pdo, 'ecg_reports');

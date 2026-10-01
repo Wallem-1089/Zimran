@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/AuditService.php';
+require_once __DIR__ . '/../../services/DiagnosticAttachmentService.php';
 require_once __DIR__ . '/../../services/LaboratoryService.php';
 require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
@@ -70,12 +71,13 @@ function laboratoryBackToConsultation(int $visitId): string
 
 function laboratoryRequestSourceLabel(string $source): string
 {
-    return $source === 'Direct' ? 'Direct' : 'Clinical';
+    return 'Clinical';
 }
 
 $visitService = new VisitService($pdo);
 $patientService = new PatientService($pdo);
 $permissionService = new PermissionService($pdo);
+$diagnosticAttachmentService = new DiagnosticAttachmentService($pdo, $permissionService);
 $laboratoryService = new LaboratoryService($pdo, null, null, $permissionService);
 $laboratoryTablesReady = laboratoryTableExists($pdo, 'laboratory_requests')
     && laboratoryTableExists($pdo, 'laboratory_results');

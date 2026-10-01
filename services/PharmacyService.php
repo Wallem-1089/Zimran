@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/AuditService.php';
+require_once __DIR__ . '/ClinicalBillingGateService.php';
 require_once __DIR__ . '/ClinicalSafetyService.php';
 require_once __DIR__ . '/EncounterEventService.php';
 require_once __DIR__ . '/PermissionService.php';
@@ -12,6 +13,8 @@ require_once __DIR__ . '/VisitService.php';
 class PharmacyService
 {
     private AuditService $auditService;
+
+    private ClinicalBillingGateService $billingGateService;
 
     private ClinicalSafetyService $clinicalSafetyService;
 
@@ -32,9 +35,11 @@ class PharmacyService
         ?AuditService $auditService = null,
         ?EncounterEventService $eventService = null,
         ?PermissionService $permissionService = null,
-        ?VisitService $visitService = null
+        ?VisitService $visitService = null,
+        ?ClinicalBillingGateService $billingGateService = null
     ) {
         $this->storeService = $storeService ?? new StoreService($pdo);
+        $this->billingGateService = $billingGateService ?? new ClinicalBillingGateService($pdo);
         $this->clinicalSafetyService = $clinicalSafetyService ?? new ClinicalSafetyService($pdo);
         $this->auditService = $auditService ?? new AuditService($pdo);
         $this->eventService = $eventService ?? new EncounterEventService($pdo);
@@ -44,6 +49,48 @@ class PharmacyService
 
     public function createPrescription(array $data, array $user): array
     {
+        $inventoryItemIds = $this->normalizeInventoryItemIds($data);
+        if (empty($data['_hms_single_prescription_batch']) && count($inventoryItemIds) > 1) {
+            $prescriptionIds = [];
+            foreach ($inventoryItemIds as $inventoryItemId) {
+                $single = $data;
+                $single['inventory_item_id'] = $inventoryItemId;
+                $single['inventory_item_ids'] = [];
+                $single['_hms_single_prescription_batch'] = '1';
+
+                $linkedBillableItemId = $this->billableItemIdForInventoryItem($inventoryItemId);
+                if ($linkedBillableItemId > 0) {
+                    $single['suggested_billable_item_id'] = $linkedBillableItemId;
+                    $single['suggested_billable_item_ids'] = [$linkedBillableItemId];
+                }
+
+                $result = $this->createPrescription($single, $user);
+                if (($result['success'] ?? false) !== true) {
+                    return $result;
+                }
+                $prescriptionIds[] = (int)($result['prescription_id'] ?? 0);
+            }
+
+            return [
+                'success' => true,
+                'prescription_id' => $prescriptionIds[0] ?? 0,
+                'prescription_ids' => array_values(array_filter($prescriptionIds)),
+                'errors' => [],
+            ];
+        }
+
+        if (count($inventoryItemIds) === 1 && (int)($data['inventory_item_id'] ?? 0) <= 0) {
+            $data['inventory_item_id'] = $inventoryItemIds[0];
+        }
+
+        if (count($inventoryItemIds) === 1 && empty($data['suggested_billable_item_ids']) && empty($data['suggested_billable_item_id'])) {
+            $linkedBillableItemId = $this->billableItemIdForInventoryItem($inventoryItemIds[0]);
+            if ($linkedBillableItemId > 0) {
+                $data['suggested_billable_item_id'] = $linkedBillableItemId;
+                $data['suggested_billable_item_ids'] = [$linkedBillableItemId];
+            }
+        }
+
         try {
             $prepared = $this->preparePrescription($data);
             if ($prepared['errors'] !== []) {
@@ -87,6 +134,11 @@ class PharmacyService
             $departmentId = $this->pharmacyDepartmentId();
             if ($departmentId <= 0) {
                 return $this->failure(['Pharmacy department is not configured.']);
+            }
+            if ($prepared['data']['prescription_source'] === 'Clinical'
+                && empty($prepared['data']['suggested_billable_item_ids'])
+            ) {
+                return $this->failure(['At least one billable item is required before sending this request to Accounts.']);
             }
 
             $prescribedBy = null;
@@ -152,6 +204,23 @@ class PharmacyService
                 ':created_by' => (int)$user['id'],
             ]);
             $prescriptionId = (int)$this->pdo->lastInsertId();
+
+            if ($prepared['data']['prescription_source'] === 'Clinical') {
+                $billingTask = $this->billingGateService->ensureBillingRequest(
+                    'Pharmacy',
+                    $prescriptionId,
+                    (int)$prepared['data']['visit_id'],
+                    (int)$prepared['data']['patient_id'],
+                    (int)$user['id'],
+                    'Pharmacy: ' . $prepared['data']['medication_name'] . ' x ' . (string)$prepared['data']['quantity'],
+                    $departmentId,
+                    $prepared['data']['suggested_billable_item_ids']
+                );
+                if (($billingTask['success'] ?? false) !== true) {
+                    $this->rollback();
+                    return $this->failure($billingTask['errors'] ?? ['Unable to create Accounts billing task.']);
+                }
+            }
 
             $this->audit(
                 (int)$user['id'],
@@ -254,7 +323,7 @@ class PharmacyService
         }
 
         $status = trim((string)($filters['status'] ?? 'Prescribed'));
-        $where = 'WHERE p.status <> \'Cancelled\'';
+        $where = 'WHERE p.status <> \'Cancelled\' AND p.prescription_source = \'Clinical\'';
         $params = [
             ':pharmacy_department_id' => $this->pharmacyDepartmentId(),
         ];
@@ -403,6 +472,22 @@ class PharmacyService
             if ((int)$visit['patient_id'] !== (int)$current['patient_id']) {
                 $this->rollback();
                 return $this->failure(['Patient and encounter do not match.']);
+            }
+
+            if ((string)($current['prescription_source'] ?? 'Clinical') !== 'Clinical') {
+                $this->rollback();
+                return $this->failure(['Only clinical prescriptions can be dispensed.']);
+            }
+
+            $billingErrors = $this->billingGateService->processingErrors(
+                'Pharmacy',
+                $prescriptionId,
+                (int)$current['visit_id'],
+                $user
+            );
+            if ($billingErrors !== []) {
+                $this->rollback();
+                return $this->failure($billingErrors);
             }
 
             if (!$this->permissionService->canDispensePrescription($visit, $user)) {
@@ -556,6 +641,17 @@ class PharmacyService
                 return $this->failure(['You do not have permission to cancel this prescription.']);
             }
 
+            $billingCancellationErrors = $this->billingGateService->cancellationErrors(
+                'Pharmacy',
+                $prescriptionId,
+                (int)$current['visit_id'],
+                $user
+            );
+            if ($billingCancellationErrors !== []) {
+                $this->rollback();
+                return $this->failure($billingCancellationErrors);
+            }
+
             $stmt = $this->pdo->prepare('
                 UPDATE prescriptions
                 SET status = \'Cancelled\',
@@ -633,6 +729,7 @@ class PharmacyService
         $instructions = trim((string)($data['instructions'] ?? ''));
         $quantity = (float)($data['quantity'] ?? 0);
         $inventoryItemId = (int)($data['inventory_item_id'] ?? 0);
+        $suggestedBillableItemIds = ClinicalBillingGateService::normalizeBillableItemIds($data);
 
         if ($visitId <= 0) {
             $errors[] = 'Encounter is required.';
@@ -675,6 +772,8 @@ class PharmacyService
                 'duration' => $duration === '' ? null : $duration,
                 'quantity' => $quantity,
                 'instructions' => $instructions === '' ? null : $instructions,
+                'suggested_billable_item_id' => $suggestedBillableItemIds[0] ?? null,
+                'suggested_billable_item_ids' => $suggestedBillableItemIds,
             ]
         ];
     }
@@ -717,6 +816,49 @@ class PharmacyService
         }
 
         return $row;
+    }
+
+    private function normalizeInventoryItemIds(array $data): array
+    {
+        $values = $data['inventory_item_ids'] ?? [];
+        if (!is_array($values)) {
+            $values = [$values];
+        }
+
+        if (isset($data['inventory_item_id']) && (int)$data['inventory_item_id'] > 0) {
+            array_unshift($values, $data['inventory_item_id']);
+        }
+
+        $ids = [];
+        foreach ($values as $value) {
+            $id = (int)$value;
+            if ($id > 0 && !in_array($id, $ids, true)) {
+                $ids[] = $id;
+            }
+        }
+
+        return $ids;
+    }
+
+    private function billableItemIdForInventoryItem(int $inventoryItemId): int
+    {
+        if ($inventoryItemId <= 0) {
+            return 0;
+        }
+
+        try {
+            $stmt = $this->pdo->prepare('
+                SELECT billable_item_id
+                FROM inventory_items
+                WHERE id = :id
+                  AND is_active = 1
+                LIMIT 1
+            ');
+            $stmt->execute([':id' => $inventoryItemId]);
+            return (int)($stmt->fetchColumn() ?: 0);
+        } catch (Throwable) {
+            return 0;
+        }
     }
 
     private function fetchPrescriptionRow(int $prescriptionId): ?array

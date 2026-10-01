@@ -5,7 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/_bootstrap.php';
 
 $visitId = filter_input(INPUT_GET, 'visit', FILTER_VALIDATE_INT) ?: 0;
-$requestedSource = physiotherapyRequestSourceLabel((string)($_GET['source'] ?? ''));
+$recordSource = physiotherapyRequestSourceLabel((string)($_GET['source'] ?? ''));
 
 if (!$visitId) {
     header('Location: index.php');
@@ -13,16 +13,7 @@ if (!$visitId) {
 }
 
 $visit = physiotherapyRequireVisit($visitService, $visitId);
-$isDirectPhysiotherapyEncounter = in_array((string)($visit['department_name'] ?? ''), ['Physiotherapy', 'Physio', 'Rehabilitation'], true);
 $recordSourceNote = '';
-if ($requestedSource === 'Direct' && !$isDirectPhysiotherapyEncounter) {
-    $recordSource = 'Clinical';
-    $recordSourceNote = 'Direct is only for active encounters currently in Physiotherapy. This record is being created as Clinical.';
-} elseif (in_array($requestedSource, ['Clinical', 'Direct'], true)) {
-    $recordSource = $requestedSource;
-} else {
-    $recordSource = $isDirectPhysiotherapyEncounter ? 'Direct' : 'Clinical';
-}
 physiotherapyRequireAccess($permissionService, $visit, $currentUser, $recordSource);
 
 if (!$physiotherapyTablesReady) {
@@ -54,7 +45,8 @@ unset($_SESSION['old_configured_fields']);
 
 $existingRecords = $physiotherapyService->listByVisit($visitId, $currentUser);
 $existingRecord = $existingRecords[0] ?? null;
-$pageTitle = $recordSource === 'Direct' ? 'Start Direct Physiotherapy Record' : 'Create Physiotherapy Record';
+$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Physiotherapy']));
+$pageTitle = 'Create Physiotherapy Record';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 
 require __DIR__ . '/../../layouts/header.php';
@@ -115,7 +107,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             </div>
         </div>
     <?php else: ?>
-        <?php $buttonLabel = $recordSource === 'Direct' ? 'Save Direct Physiotherapy Record' : 'Save Physiotherapy Record'; require __DIR__ . '/_form.php'; ?>
+        <?php $buttonLabel = 'Save Physiotherapy Record'; require __DIR__ . '/_form.php'; ?>
     <?php endif; ?>
 
     <div class="card">

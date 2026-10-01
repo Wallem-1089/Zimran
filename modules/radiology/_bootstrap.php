@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/AuditService.php';
+require_once __DIR__ . '/../../services/DiagnosticAttachmentService.php';
 require_once __DIR__ . '/../../services/RadiologyService.php';
 require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
@@ -70,12 +71,13 @@ function radiologyBackToConsultation(int $visitId): string
 
 function radiologyRequestSourceLabel(string $source): string
 {
-    return $source === 'Direct' ? 'Direct' : 'Clinical';
+    return 'Clinical';
 }
 
 $visitService = new VisitService($pdo);
 $patientService = new PatientService($pdo);
 $permissionService = new PermissionService($pdo);
+$diagnosticAttachmentService = new DiagnosticAttachmentService($pdo, $permissionService);
 $radiologyService = new RadiologyService($pdo, null, null, $permissionService);
 $radiologyTablesReady = radiologyTableExists($pdo, 'radiology_requests')
     && radiologyTableExists($pdo, 'radiology_reports');

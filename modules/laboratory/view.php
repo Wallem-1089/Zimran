@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/../../services/ClinicalBillingGateService.php';
 
 $requestId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: 0;
 if (!$requestId) {
@@ -29,6 +30,11 @@ if (!$patient) {
 }
 
 $result = $laboratoryService->getResult($requestId, $currentUser);
+$diagnosticAttachments = $diagnosticAttachmentService->listForSource('Laboratory', $requestId, $currentUser);
+$billingGate = new ClinicalBillingGateService($pdo);
+$billingClearance = $billingGate->status('Laboratory', $requestId, (int)$request['visit_id'], $currentUser);
+$billingCleared = (bool)($billingClearance['cleared'] ?? false);
+$canCancelForBilling = $billingGate->cancellationErrors('Laboratory', $requestId, (int)$request['visit_id'], $currentUser) === [];
 $canProcess = $permissionService->canProcessLaboratoryRequest($visit, $currentUser);
 $canEnter = $permissionService->canEnterLaboratoryResult($visit, $currentUser);
 $canEdit = $permissionService->canEditLaboratoryResult($visit, $currentUser);
@@ -85,6 +91,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <div class="summary-item"><span class="summary-label">Source</span> <span class="summary-value"><?= e((string)$request['request_source']) ?></span></div>
             <div class="summary-item"><span class="summary-label">Priority</span> <span class="summary-value"><?= e((string)$request['priority']) ?></span></div>
             <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)$request['status']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Accounts Clearance</span> <span class="summary-value"><?= e((string)($billingClearance['label'] ?? 'Unknown')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Requested By</span> <span class="summary-value"><?= e((string)($request['requested_by_name'] ?? '-')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Requested</span> <span class="summary-value"><?= e((string)($request['created_at'] ?? '-')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Department</span> <span class="summary-value"><?= e((string)($request['department_name'] ?? '-')) ?></span></div>
@@ -107,24 +114,20 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <div class="form-actions">
-            <?php if (!$isClosed && !$isRequestClosed && $canProcess && (string)$request['status'] === 'Requested'): ?>
-                <form method="post" action="start.php">
-                    <?= csrfField() ?>
-                    <input type="hidden" name="id" value="<?= (int)$request['id'] ?>">
-                    <button type="submit" class="btn-primary">Start</button>
-                </form>
+            <?php if (!$billingCleared): ?>
+                <p class="text-muted">Awaiting Accounts clearance before Laboratory can start, enter result, or complete this request.</p>
             <?php endif; ?>
-            <?php if (!$isClosed && !$isRequestClosed && ($canEnter || $canEdit)): ?>
-                <a class="btn-secondary" href="result.php?id=<?= (int)$request['id'] ?>"><?= $result ? 'Edit Result' : 'Enter Result' ?></a>
+            <?php if ($billingCleared && !$isClosed && !$isRequestClosed && ($canEnter || $canEdit)): ?>
+                <a class="btn-primary" href="result.php?id=<?= (int)$request['id'] ?>"><?= $result ? 'Edit Result' : 'Enter Result' ?></a>
             <?php endif; ?>
-            <?php if (!$isClosed && !$isRequestClosed && $canComplete): ?>
+            <?php if ($billingCleared && !$isClosed && !$isRequestClosed && $canComplete): ?>
                 <form method="post" action="complete.php">
                     <?= csrfField() ?>
                     <input type="hidden" name="id" value="<?= (int)$request['id'] ?>">
                     <button type="submit" class="btn-secondary">Complete</button>
                 </form>
             <?php endif; ?>
-            <?php if (!$isClosed && !$isRequestClosed && $canProcess && (string)$request['status'] !== 'Completed'): ?>
+            <?php if ($canCancelForBilling && !$isClosed && !$isRequestClosed && $canProcess && (string)$request['status'] !== 'Completed'): ?>
                 <form method="post" action="cancel.php" onsubmit="return confirm('Cancel this laboratory request?');">
                     <?= csrfField() ?>
                     <input type="hidden" name="id" value="<?= (int)$request['id'] ?>">
@@ -164,6 +167,67 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
         <?php endif; ?>
     </div>
+    <?php if ($diagnosticAttachments !== []): ?>
+        <div class="card">
+            <h3>Uploaded Attachments</h3>
+            <div class="table-responsive">
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Uploaded By</th>
+                            <th>Uploaded At</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($diagnosticAttachments as $attachment): ?>
+                            <tr>
+                                <td><?= e((string)$attachment['original_filename']) ?></td>
+                                <td><?= e((string)($attachment['uploaded_by_name'] ?? '-')) ?></td>
+                                <td><?= e((string)($attachment['uploaded_at'] ?? '-')) ?></td>
+                                <td><a class="btn-secondary btn-sm" href="../diagnostic_attachments/download.php?id=<?= (int)$attachment['id'] ?>" target="_blank" rel="noopener">Open</a></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    <?php endif; ?>
+    <?php if ($result && trim((string)($result['result'] ?? '')) !== ''): ?>
+        <div class="card whatsapp-handoff-card">
+            <div class="whatsapp-handoff-header">
+                <div>
+                    <h3>Send Result via WhatsApp</h3>
+                    <p class="text-muted">Opens WhatsApp with a safe message. Select files below, then attach them manually in WhatsApp.</p>
+                </div>
+                <span class="whatsapp-pill">Patient handoff</span>
+            </div>
+            <form class="whatsapp-handoff-form" method="post" action="../patient_communications/whatsapp_handoff.php" target="_blank">
+                <?= csrfField() ?>
+                <input type="hidden" name="source_type" value="laboratory_result">
+                <input type="hidden" name="source_id" value="<?= (int)$request['id'] ?>">
+                <input type="hidden" name="return_url" value="../laboratory/view.php?id=<?= (int)$request['id'] ?>">
+                <?php if ($diagnosticAttachments !== []): ?>
+                    <div class="form-group">
+                        <label>Attachments to send</label>
+                        <?php foreach ($diagnosticAttachments as $attachment): ?>
+                            <label class="inline-check">
+                                <input type="checkbox" name="attachment_ids[]" value="<?= (int)$attachment['id'] ?>">
+                                <?= e((string)$attachment['original_filename']) ?>
+                            </label>
+                        <?php endforeach; ?>
+                        <small class="text-muted">Selected files are listed in the WhatsApp message for manual attachment.</small>
+                    </div>
+                <?php endif; ?>
+                <label class="inline-check whatsapp-consent">
+                    <input type="checkbox" name="patient_consent_confirmed" value="1" required>
+                    Patient consent confirmed
+                </label>
+                <button class="btn-whatsapp" type="submit">Send via WhatsApp</button>
+            </form>
+        </div>
+    <?php endif; ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

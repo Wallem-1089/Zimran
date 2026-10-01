@@ -103,7 +103,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
                                             <form method="post" action="resolve.php" style="display:inline">
                                                 <?= csrfField() ?>
                                                 <input type="hidden" name="id" value="<?= (int)$notification['id'] ?>">
-                                                <button class="btn-primary" type="submit">Resolve</button>
+                                                <button class="btn-primary" type="submit">Resolved</button>
                                             </form>
                                         <?php endif; ?>
                                     </td>

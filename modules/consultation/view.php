@@ -228,23 +228,23 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="card">
         <div class="card-header">
             <div>
-                <h3>POP / Casting Requests</h3>
-                <p>Encounter POP, casting and splinting requests.</p>
+                <h3>Plaster Requests</h3>
+                <p>Encounter Plaster and splinting requests.</p>
             </div>
             <?php if ($popService && $permissionService->canCreatePopRequest($visit, $currentUser, 'Clinical')): ?>
-                <a class="btn-primary" href="../pop/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request POP / Casting</a>
+                <a class="btn-primary" href="../pop/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Request Plaster</a>
             <?php endif; ?>
         </div>
         <?php if (!$popService): ?>
-            <p class="text-muted">POP tables are not available yet.</p>
+            <p class="text-muted">Plaster tables are not available yet.</p>
         <?php elseif ($latestPopRequests === []): ?>
-            <p class="text-muted">No POP / Casting requests recorded.</p>
+            <p class="text-muted">No Plaster requests recorded.</p>
         <?php else: ?>
             <ul class="clean-list">
                 <?php foreach (array_slice($latestPopRequests, 0, 5) as $request): ?>
                     <li>
                         <a href="../pop/view.php?id=<?= (int)$request['id'] ?>">#<?= (int)$request['id'] ?></a>
-                        — <?= e((string)($request['procedure_requested'] ?? 'POP / Casting')) ?>
+                        — <?= e((string)($request['procedure_requested'] ?? 'Plaster')) ?>
                         (<?= e((string)$request['status']) ?>)
                     </li>
                 <?php endforeach; ?>

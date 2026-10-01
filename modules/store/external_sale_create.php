@@ -55,6 +55,17 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?php else: ?>
             <form method="post" action="external_sale_save.php">
                 <?= csrfField() ?>
+                <input type="hidden" id="store_department_id" value="<?= (int)$storeDepartmentId ?>">
+
+                <?php
+                    $barcodeScanId = 'external_sale_barcode_scan';
+                    $barcodeScanLabel = 'Scan Item Barcode / SKU';
+                    $barcodeScanHelp = 'Scan an available Store item to select it for this sale.';
+                    $barcodeScanTargetSelect = 'inventory_item_id';
+                    $barcodeScanDepartmentInput = 'store_department_id';
+                    $barcodeScanRequireStock = true;
+                    require __DIR__ . '/_barcode_scan.php';
+                ?>
 
                 <div class="form-grid">
                     <div class="form-group">
@@ -80,7 +91,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
                     <div class="form-group">
                         <label for="quantity">Quantity <span class="required">*</span></label>
-                        <input id="quantity" name="quantity" type="number" step="0.01" min="0.01" required value="<?= e((string)($old['quantity'] ?? '')) ?>">
+                        <input id="quantity" name="quantity" type="number" step="1" min="1" required value="<?= e((string)($old['quantity'] ?? '')) ?>">
                     </div>
 
                     <div class="form-group">

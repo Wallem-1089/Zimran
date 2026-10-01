@@ -7,9 +7,28 @@ require_once __DIR__ . '/EncounterEventService.php';
 require_once __DIR__ . '/EncounterStateService.php';
 require_once __DIR__ . '/QueueService.php';
 require_once __DIR__ . '/PermissionService.php';
+require_once __DIR__ . '/PatientService.php';
 
 class VisitService
 {
+    private const REQUEST_ONLY_DEPARTMENTS = [
+        'Laboratory',
+        'Radiology',
+        'X-Ray',
+        'ECG',
+        'Plaster',
+        'POP',
+        'Pharmacy',
+        'Physiotherapy',
+        'Physio',
+        'Rehabilitation',
+    ];
+
+    private const NON_ENCOUNTER_CREATION_DEPARTMENTS = [
+        'Reception',
+        'Store',
+    ];
+
     private PDO $pdo;
 
     private AuditService $auditService;
@@ -21,6 +40,7 @@ class VisitService
     private QueueService $queueService;
 
     private PermissionService $permissionService;
+    private PatientService $patientService;
 
     public function __construct(PDO $pdo)
     {
@@ -35,6 +55,7 @@ class VisitService
         $this->queueService = new QueueService($pdo);
 
         $this->permissionService = new PermissionService($pdo);
+        $this->patientService = new PatientService($pdo);
     }
 
     /*
@@ -246,6 +267,13 @@ class VisitService
     */
 
     $errors = $this->validate($visit);
+
+    if (empty($errors)) {
+        $registrationGate = $this->patientService->getRegistrationGateStatus((int)($visit['patient_id'] ?? 0));
+        if (empty($registrationGate['can_create_encounter'])) {
+            $errors[] = (string)($registrationGate['message'] ?? 'Patient registration payment must be cleared before creating an encounter.');
+        }
+    }
 
     if (!empty($errors)) {
 
@@ -545,6 +573,10 @@ class VisitService
         if (empty($visit['current_department_id'])) {
 
             $errors[] = 'Receiving department is required.';
+
+        } elseif (!$this->isAllowedInitialEncounterDepartment((int)$visit['current_department_id'])) {
+
+            $errors[] = 'The selected department works from clinical requests or internal workflows and cannot be the initial encounter department.';
 
         }
 
@@ -2232,6 +2264,36 @@ public function canAccessDepartmentWorkspace(
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function getEncounterTransferDepartments(): array
+    {
+        return array_values(array_filter(
+            $this->getDepartments(),
+            static fn (array $department): bool => !self::isRequestOnlyDepartmentName(
+                (string)($department['department_name'] ?? '')
+            )
+        ));
+    }
+
+    public function getEncounterCreationDepartments(): array
+    {
+        return array_values(array_filter(
+            $this->getDepartments(),
+            fn (array $department): bool => $this->isAllowedInitialEncounterDepartmentRow($department)
+        ));
+    }
+
+    public function getDefaultEncounterDepartmentId(): ?int
+    {
+        $departments = $this->getEncounterCreationDepartments();
+        foreach ($departments as $department) {
+            if ((string)($department['department_name'] ?? '') === 'Doctor') {
+                return (int)$department['id'];
+            }
+        }
+
+        return isset($departments[0]['id']) ? (int)$departments[0]['id'] : null;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Doctors
@@ -2481,6 +2543,17 @@ public function canAccessDepartmentWorkspace(
 
         ];
 
+    }
+
+    if (self::isRequestOnlyDepartmentName((string)$department['department_name'])) {
+        return [
+            'success' => false,
+            'department_name' => $department['department_name'],
+            'visit_status' => $visit['visit_status'],
+            'errors' => [
+                $department['department_name'] . ' works from clinical requests and cannot receive encounter ownership transfers.'
+            ]
+        ];
     }
 
     /*
@@ -3311,7 +3384,7 @@ private function appendDepartmentRequestWorklistRows(
         ],
         [
             'table' => 'pop_requests',
-            'title' => 'POP Request',
+            'title' => 'Plaster Request',
             'label' => 'procedure_requested',
             'statuses' => ['Requested', 'In Progress'],
         ],
@@ -4013,5 +4086,42 @@ public function receiveVisit(
                 'Unable to record audit log.'
             );
         }
+    }
+
+    private static function isRequestOnlyDepartmentName(string $departmentName): bool
+    {
+        return in_array(trim($departmentName), self::REQUEST_ONLY_DEPARTMENTS, true);
+    }
+
+    private static function isNonEncounterCreationDepartmentName(string $departmentName): bool
+    {
+        return in_array(trim($departmentName), self::NON_ENCOUNTER_CREATION_DEPARTMENTS, true);
+    }
+
+    private function isAllowedInitialEncounterDepartment(int $departmentId): bool
+    {
+        if ($departmentId <= 0) {
+            return false;
+        }
+
+        $stmt = $this->pdo->prepare('
+            SELECT id, department_name
+            FROM departments
+            WHERE id = :id
+              AND is_active = 1
+            LIMIT 1
+        ');
+        $stmt->execute([':id' => $departmentId]);
+        $department = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $department !== false && $this->isAllowedInitialEncounterDepartmentRow($department);
+    }
+
+    private function isAllowedInitialEncounterDepartmentRow(array $department): bool
+    {
+        $departmentName = (string)($department['department_name'] ?? '');
+
+        return !self::isRequestOnlyDepartmentName($departmentName)
+            && !self::isNonEncounterCreationDepartmentName($departmentName);
     }
 }

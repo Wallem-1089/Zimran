@@ -14,6 +14,7 @@ require_once __DIR__ . '/../../config/helpers.php';
 
 require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/VisitService.php';
+require_once __DIR__ . '/../../services/PatientRegistrationBillingService.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -58,6 +59,7 @@ if (!$patientId) {
 
 $patientService = new PatientService($pdo);
 $visitService   = new VisitService($pdo);
+$registrationBillingService = new PatientRegistrationBillingService($pdo);
 
 /*
 |--------------------------------------------------------------------------
@@ -81,6 +83,21 @@ if ((int)($patient['is_deleted'] ?? 0) === 1) {
 
     exit('This patient record has been deleted/voided. New encounters cannot be created for deleted patients.');
 
+}
+
+$registrationGate = $patientService->getRegistrationGateStatus($patientId);
+if (empty($registrationGate['can_create_encounter'])) {
+    $currentUser = $currentUser ?? ($_SESSION['user'] ?? null);
+    if (($registrationGate['status'] ?? '') === 'Expired' && $currentUser) {
+        $registrationBillingService->ensureRenewalRequest($patientId, $currentUser);
+    }
+
+    $_SESSION['validation_errors'] = [
+        (string)($registrationGate['message'] ?? 'Registration payment is required before creating an encounter.')
+    ];
+
+    header('Location: ../patients/view.php?id=' . $patientId);
+    exit;
 }
 
 /*
@@ -113,7 +130,8 @@ if ($activeVisit !== null) {
 |--------------------------------------------------------------------------
 */
 
-$departments = $visitService->getDepartments();
+$departments = $visitService->getEncounterCreationDepartments();
+$defaultDepartmentId = $visitService->getDefaultEncounterDepartmentId();
 
 /*
 |--------------------------------------------------------------------------
@@ -338,7 +356,7 @@ value="<?= $type ?>"
 
 <label>
 
-Department
+Initial Encounter Department
 
 <span class="required">*</span>
 
@@ -358,13 +376,14 @@ Select Department
 
 <?php foreach ($departments as $department) : ?>
 
+<?php $selectedDepartmentId = $old['current_department_id'] ?? $defaultDepartmentId; ?>
+
 <option
 
 value="<?= (int)$department['id'] ?>"
 
 <?=
-
-($old['current_department_id'] ?? '') ==
+($selectedDepartmentId ?? '') ==
 
 $department['id']
 
@@ -381,6 +400,7 @@ $department['id']
 <?php endforeach; ?>
 
 </select>
+<small>Doctor is the normal starting point. Laboratory, Radiology/X-Ray, ECG, Plaster, Physiotherapy, Pharmacy, and Store work from requests instead of encounter ownership.</small>
 
 </div>
 

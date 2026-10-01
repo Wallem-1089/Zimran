@@ -29,7 +29,7 @@ $requestSource = $physiotherapyRequestSource ?? 'Clinical';
                     <span class="badge badge-warning">No physiotherapy permission</span>
                 <?php elseif ($record === null && !$isClosedEncounter && $canCreatePhysiotherapyRequest): ?>
                     <a href="../physiotherapy/request.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
-                        <?= $requestSource === 'Direct' ? 'Start Direct Record' : 'Refer to Physiotherapy' ?>
+                        Refer to Physiotherapy
                     </a>
                 <?php endif; ?>
             </div>
@@ -69,7 +69,7 @@ $requestSource = $physiotherapyRequestSource ?? 'Clinical';
             <?php if (!$isClosedEncounter && $canCreatePhysiotherapyRequest): ?>
                 <p>
                     <a href="../physiotherapy/request.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
-                        <?= $requestSource === 'Direct' ? 'Start Direct Record' : 'Refer to Physiotherapy' ?>
+                        Refer to Physiotherapy
                     </a>
                 </p>
             <?php endif; ?>

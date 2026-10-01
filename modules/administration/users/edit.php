@@ -28,6 +28,7 @@ require_once __DIR__ . '/../../../layouts/sidebar.php';
     <?php require_once __DIR__ . '/../../../layouts/navbar.php'; ?>
     <section class="card">
         <h2>Edit User</h2>
+        <p><a class="btn-secondary" href="staff_profile.php?id=<?= $userId ?>">Edit Staff Profile</a></p>
         <?php if (!empty($_SESSION['administration_errors'])): ?>
             <ul class="alert alert-danger">
                 <?php foreach ($_SESSION['administration_errors'] as $error): ?><li><?= e($error) ?></li><?php endforeach; ?>

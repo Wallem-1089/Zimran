@@ -28,7 +28,7 @@ $requestSource = $pharmacyRequestSource ?? 'Clinical';
                     <span class="badge badge-warning">No pharmacy permission</span>
                 <?php elseif (!$isClosedEncounter && $canCreatePrescription): ?>
                     <a href="../pharmacy/prescribe.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
-                        <?= $requestSource === 'Direct' ? 'Create Direct Prescription' : 'Create Prescription' ?>
+                        Create Prescription
                     </a>
                 <?php endif; ?>
             </div>
@@ -68,7 +68,7 @@ $requestSource = $pharmacyRequestSource ?? 'Clinical';
             <?php if (!$isClosedEncounter && $canCreatePrescription): ?>
                 <p>
                     <a href="../pharmacy/prescribe.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
-                        <?= $requestSource === 'Direct' ? 'Create Direct Prescription' : 'Create Prescription' ?>
+                        Create Prescription
                     </a>
                 </p>
             <?php endif; ?>
@@ -92,7 +92,7 @@ $requestSource = $pharmacyRequestSource ?? 'Clinical';
                 <?php endif; ?>
                 <?php if (!$isClosedEncounter && $canCreatePrescription): ?>
                     <a href="../pharmacy/prescribe.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-secondary">
-                        <?= $requestSource === 'Direct' ? 'Create Direct Prescription' : 'Create Prescription' ?>
+                        Create Prescription
                     </a>
                 <?php endif; ?>
                 <?php if (!$isClosedEncounter && $canDispensePrescription && (string)$latest['status'] === 'Prescribed'): ?>

@@ -48,6 +48,60 @@ function storeDepartments(PDO $pdo): array
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+function storeDepartmentIdByName(PDO $pdo, string $departmentName): ?int
+{
+    $stmt = $pdo->prepare('
+        SELECT id
+        FROM departments
+        WHERE department_name = :department_name
+        LIMIT 1
+    ');
+    $stmt->execute([':department_name' => $departmentName]);
+    $id = $stmt->fetchColumn();
+    return $id ? (int)$id : null;
+}
+
+function storeCurrentDepartmentName(PDO $pdo, array $currentUser): string
+{
+    $departmentId = (int)(
+        $currentUser['active_department_id']
+        ?? $_SESSION['active_department_id']
+        ?? $currentUser['department_id']
+        ?? 0
+    );
+    if ($departmentId <= 0) {
+        return '';
+    }
+
+    $stmt = $pdo->prepare('SELECT department_name FROM departments WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $departmentId]);
+    return trim((string)($stmt->fetchColumn() ?: ''));
+}
+
+function storeMovementDepartmentOptions(PDO $pdo, array $currentUser, string $movementType): array
+{
+    $departments = storeDepartments($pdo);
+    if ($movementType !== 'issue') {
+        return $departments;
+    }
+
+    $currentDepartmentName = storeCurrentDepartmentName($pdo, $currentUser);
+    $storeDepartmentId = storeDepartmentIdByName($pdo, 'Store');
+    $pharmacyDepartmentId = storeDepartmentIdByName($pdo, 'Pharmacy');
+
+    if (strcasecmp($currentDepartmentName, 'Pharmacy') === 0) {
+        return array_values(array_filter(
+            $departments,
+            static fn (array $department): bool => !in_array((int)$department['id'], array_filter([$storeDepartmentId, $pharmacyDepartmentId]), true)
+        ));
+    }
+
+    return array_values(array_filter(
+        $departments,
+        static fn (array $department): bool => $pharmacyDepartmentId !== null && (int)$department['id'] === $pharmacyDepartmentId
+    ));
+}
+
 function storeBillableItems(PDO $pdo): array
 {
     $stmt = $pdo->query('

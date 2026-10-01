@@ -65,6 +65,14 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="summary-item"><span class="summary-label">Inactive Items</span> <span class="summary-value"><?= count($allItems) - $activeItems ?></span></div>
     </div>
 
+    <?php
+        $barcodeScanId = 'inventory_barcode_scan';
+        $barcodeScanLabel = 'Scan Barcode / SKU';
+        $barcodeScanHelp = 'Scan an item barcode or item code to open its inventory record.';
+        $barcodeScanRedirect = 'view.php?id=__ITEM_ID__';
+        require __DIR__ . '/_barcode_scan.php';
+    ?>
+
     <form method="get" class="card">
         <div class="form-grid">
             <div class="form-group">
@@ -77,7 +85,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
             </div>
             <div class="form-group">
                 <label for="category">Category</label>
-                <input id="category" name="category" value="<?= e($filters['category']) ?>">
+                <select id="category" name="category">
+                    <option value="">All</option>
+                    <?php foreach (['Drug', 'Consumable'] as $category): ?>
+                        <option value="<?= e($category) ?>" <?= $filters['category'] === $category ? 'selected' : '' ?>><?= e($category) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
             <div class="form-group">
                 <label for="status">Status</label>

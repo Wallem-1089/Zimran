@@ -260,13 +260,13 @@ function isActiveTab(
 
                 <strong>
 
-                    POP
+                    Plaster
 
                 </strong>
 
                 <span>
 
-                    Casting services
+                    Plaster services
 
                 </span>
 

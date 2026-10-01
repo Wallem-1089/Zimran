@@ -5,7 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/_bootstrap.php';
 
 $visitId = filter_input(INPUT_GET, 'visit', FILTER_VALIDATE_INT) ?: 0;
-$requestedSource = ecgRequestSourceLabel((string)($_GET['source'] ?? ''));
+$requestSource = ecgRequestSourceLabel((string)($_GET['source'] ?? ''));
 
 if (!$visitId) {
     header('Location: index.php');
@@ -13,16 +13,7 @@ if (!$visitId) {
 }
 
 $visit = ecgRequireVisit($visitService, $visitId);
-$isDirectEcgEncounter = (string)($visit['department_name'] ?? '') === 'ECG';
 $requestSourceNote = '';
-if ($requestedSource === 'Direct' && !$isDirectEcgEncounter) {
-    $requestSource = 'Clinical';
-    $requestSourceNote = 'Direct is only for active encounters currently in ECG. This request is being recorded as Clinical.';
-} elseif (in_array($requestedSource, ['Clinical', 'Direct'], true)) {
-    $requestSource = $requestedSource;
-} else {
-    $requestSource = $isDirectEcgEncounter ? 'Direct' : 'Clinical';
-}
 ecgRequireCreateAccess($permissionService, $visit, $currentUser, $requestSource);
 
 if (!$ecgTablesReady) {
@@ -44,8 +35,9 @@ $ecgRequest = $_SESSION['old_ecg_request'] ?? [
 ];
 $ecgRequest['request_source'] = $requestSource;
 unset($_SESSION['old_ecg_request']);
+$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['ECG']));
 
-$pageTitle = $requestSource === 'Direct' ? 'Create Direct ECG Request' : 'Create ECG Request';
+$pageTitle = 'Create ECG Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 
 require __DIR__ . '/../../layouts/header.php';
@@ -86,7 +78,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="summary-item"><span class="summary-label">Encounter Status</span> <span class="summary-value"><?= e((string)($visit['visit_status'] ?? '-')) ?></span></div>
     </div>
 
-    <?php $buttonLabel = $requestSource === 'Direct' ? 'Save Direct ECG Request' : 'Save ECG Request'; require __DIR__ . '/_form.php'; ?>
+    <?php $buttonLabel = 'Save ECG Request'; require __DIR__ . '/_form.php'; ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

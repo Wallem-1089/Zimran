@@ -259,6 +259,63 @@
     box-shadow:0 3px 12px rgba(15,23,42,.06);
 }
 
+.whatsapp-handoff-card{
+    border-color:#b7ebc6;
+    background:linear-gradient(180deg,#ffffff 0%,#f4fff7 100%);
+}
+
+.whatsapp-handoff-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-bottom:16px;
+}
+
+.whatsapp-pill{
+    display:inline-flex;
+    align-items:center;
+    padding:5px 10px;
+    border-radius:999px;
+    background:#dcfce7;
+    color:#166534;
+    font-size:.85rem;
+    font-weight:700;
+}
+
+.whatsapp-handoff-form{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.inline-check{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:.25rem 0;
+}
+
+.btn-whatsapp{
+    align-self:flex-start;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:10px 16px;
+    border:0;
+    border-radius:6px;
+    background:#25d366;
+    color:#fff;
+    font-weight:700;
+    text-decoration:none;
+    cursor:pointer;
+}
+
+.btn-whatsapp:hover{
+    background:#1faf54;
+}
+
 .workspace-card:hover{
     border-color:#93c5fd;
     box-shadow:0 10px 22px rgba(37,99,235,.12);
@@ -500,4 +557,77 @@
 .summary-item{
     overflow-wrap:break-word;
     word-break:normal;
+}
+
+/* Broad responsive hardening for dense admin/accounts/worklist screens. */
+.content,
+.card,
+.summary-item,
+.table,
+.data-table,
+.summary-table,
+.form-grid,
+.form-actions{
+    min-width:0;
+}
+
+.table-responsive{
+    width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+}
+
+.table-responsive table,
+table.table,
+table.data-table{
+    max-width:100%;
+}
+
+.table th,
+.table td,
+.data-table th,
+.data-table td{
+    overflow-wrap:anywhere;
+    vertical-align:top;
+}
+
+.form-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.6rem;
+    align-items:center;
+}
+
+.form-actions > *{
+    max-width:100%;
+}
+
+.summary-grid{
+    grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));
+}
+
+@media(max-width:720px){
+    .page-header,
+    .card-header,
+    .section-header{
+        align-items:stretch;
+        flex-direction:column;
+    }
+
+    .form-actions a,
+    .form-actions button,
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger{
+        text-align:center;
+    }
+}
+
+.workspace-collapse-patient{
+    color:#0f172a;
+    display:block;
+    font-size:1.05rem;
+    font-weight:700;
+    margin-bottom:.15rem;
+    overflow-wrap:anywhere;
 }

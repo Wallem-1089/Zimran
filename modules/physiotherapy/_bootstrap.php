@@ -71,7 +71,7 @@ function physiotherapyBackToConsultation(int $visitId): string
 
 function physiotherapyRequestSourceLabel(string $source): string
 {
-    return $source === 'Direct' ? 'Direct' : 'Clinical';
+    return 'Clinical';
 }
 
 $visitService = new VisitService($pdo);

@@ -3,12 +3,14 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/AuditService.php';
+require_once __DIR__ . '/ClinicalBillingGateService.php';
 require_once __DIR__ . '/EncounterEventService.php';
 require_once __DIR__ . '/PermissionService.php';
 
 class LaboratoryService
 {
     private AuditService $auditService;
+    private ClinicalBillingGateService $billingGateService;
     private EncounterEventService $eventService;
     private PermissionService $permissionService;
 
@@ -16,9 +18,11 @@ class LaboratoryService
         private PDO $pdo,
         ?AuditService $auditService = null,
         ?EncounterEventService $eventService = null,
-        ?PermissionService $permissionService = null
+        ?PermissionService $permissionService = null,
+        ?ClinicalBillingGateService $billingGateService = null
     ) {
         $this->auditService = $auditService ?? new AuditService($pdo);
+        $this->billingGateService = $billingGateService ?? new ClinicalBillingGateService($pdo);
         $this->eventService = $eventService ?? new EncounterEventService($pdo);
         $this->permissionService = $permissionService ?? new PermissionService($pdo);
     }
@@ -33,6 +37,7 @@ class LaboratoryService
             $priority = $this->normalizePriority((string)($data['priority'] ?? 'Routine'));
             $testsRequested = trim((string)($data['tests_requested'] ?? ''));
             $clinicalInformation = $this->nullableText($data['clinical_information'] ?? null);
+            $suggestedBillableItemIds = ClinicalBillingGateService::normalizeBillableItemIds($data);
             $errors = $this->validateRequest($visit, $user, $source, $priority, $testsRequested, $clinicalInformation);
 
             if (isset($data['patient_id']) && (int)$data['patient_id'] !== (int)$visit['patient_id']) {
@@ -42,6 +47,9 @@ class LaboratoryService
             $departmentId = $this->resolveLaboratoryDepartmentId();
             if ($departmentId === null) {
                 $errors[] = 'Laboratory department is not available.';
+            }
+            if ($source === 'Clinical' && $suggestedBillableItemIds === []) {
+                $errors[] = 'At least one billable item is required before sending this request to Accounts.';
             }
 
             if ($errors !== []) {
@@ -71,6 +79,21 @@ class LaboratoryService
                 ':priority' => $priority,
             ]);
             $requestId = (int)$this->pdo->lastInsertId();
+
+            $billingTask = $this->billingGateService->ensureBillingRequest(
+                'Laboratory',
+                $requestId,
+                (int)$visit['id'],
+                (int)$visit['patient_id'],
+                (int)$user['id'],
+                'Laboratory: ' . $testsRequested,
+                $departmentId,
+                $suggestedBillableItemIds
+            );
+            if (($billingTask['success'] ?? false) !== true) {
+                $this->rollback();
+                return $this->failure($billingTask['errors'] ?? ['Unable to create Accounts billing task.']);
+            }
 
             if (!$this->audit(
                 'LABORATORY_REQUEST_CREATED',
@@ -158,12 +181,12 @@ class LaboratoryService
 
         $status = $this->normalizeWorklistStatus((string)($filters['status'] ?? ''));
         $params = [];
-        $where = '';
+        $where = " WHERE lr.request_source = 'Clinical'";
 
         if ($status === '') {
-            $where = " WHERE lr.status IN ('Requested', 'In Progress')";
+            $where .= " AND lr.status IN ('Requested', 'In Progress')";
         } elseif ($status !== 'All') {
-            $where = ' WHERE lr.status = :status';
+            $where .= ' AND lr.status = :status';
             $params[':status'] = $status;
         }
 
@@ -286,7 +309,7 @@ class LaboratoryService
             }
 
             $visit = $this->lockVisit((int)$request['visit_id']);
-            $errors = $this->validateProcessing($request, $visit, $user, 'process_laboratory_request');
+            $errors = $this->validateProcessing($request, $visit, $user, 'process_laboratory_request', false);
 
             if ((string)($request['status'] ?? '') !== 'Requested' && (string)($request['status'] ?? '') !== 'In Progress') {
                 $errors[] = 'Only active laboratory requests can be cancelled.';
@@ -295,6 +318,11 @@ class LaboratoryService
             if ($this->lockResultByRequest($requestId) !== null) {
                 $errors[] = 'Requests with results cannot be cancelled.';
             }
+
+            $errors = array_merge(
+                $errors,
+                $this->billingGateService->cancellationErrors('Laboratory', $requestId, (int)$request['visit_id'], $user)
+            );
 
             if ($errors !== []) {
                 $this->rollback();
@@ -468,12 +496,7 @@ class LaboratoryService
                 $errors[] = 'You cannot create a clinical laboratory request.';
             }
         } elseif ($source === 'Direct') {
-            if (!$this->permissionService->canCreateLaboratoryRequest($visit, $user, 'Direct')) {
-                $errors[] = 'You cannot create a direct laboratory request.';
-            }
-            if (!$this->isLaboratoryEncounter($visit)) {
-                $errors[] = 'Direct laboratory requests require an active Laboratory encounter.';
-            }
+            $errors[] = 'Direct laboratory requests are no longer allowed. Create a clinical request from the clinical workflow.';
         } else {
             $errors[] = 'Invalid laboratory request source.';
         }
@@ -497,11 +520,15 @@ class LaboratoryService
         return $errors;
     }
 
-    private function validateProcessing(array $request, array $visit, array $user, string $permissionKey): array
+    private function validateProcessing(array $request, array $visit, array $user, string $permissionKey, bool $requireBillingClearance = true): array
     {
         $errors = [];
         if (!$this->permissionService->canViewLaboratory((int)($visit['patient_id'] ?? 0), $user)) {
             $errors[] = 'You cannot access this encounter.';
+        }
+
+        if ((string)($request['request_source'] ?? 'Clinical') !== 'Clinical') {
+            $errors[] = 'Only clinical laboratory requests can be processed.';
         }
 
         if (in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)
@@ -535,6 +562,18 @@ class LaboratoryService
             $errors[] = 'Completed laboratory requests are view-only.';
         }
 
+        if ($requireBillingClearance) {
+            $errors = array_merge(
+                $errors,
+                $this->billingGateService->processingErrors(
+                    'Laboratory',
+                    (int)($request['id'] ?? 0),
+                    (int)($visit['id'] ?? $request['visit_id'] ?? 0),
+                    $user
+                )
+            );
+        }
+
         return $errors;
     }
 
@@ -549,7 +588,7 @@ class LaboratoryService
             }
 
             $visit = $this->lockVisit((int)$request['visit_id']);
-            $errors = $this->validateProcessing($request, $visit, $user, 'process_laboratory_request');
+            $errors = $this->validateProcessing($request, $visit, $user, 'process_laboratory_request', $newStatus !== 'Cancelled');
 
             if ($newStatus === 'In Progress' && (string)($request['status'] ?? '') !== 'Requested') {
                 $errors[] = 'Only requested laboratory requests can be started.';

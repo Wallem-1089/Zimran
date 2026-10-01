@@ -5,7 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/_bootstrap.php';
 
 $visitId = filter_input(INPUT_GET, 'visit', FILTER_VALIDATE_INT) ?: 0;
-$requestedSource = pharmacyRequestSourceLabel((string)($_GET['source'] ?? ''));
+$requestSource = pharmacyRequestSourceLabel((string)($_GET['source'] ?? ''));
 
 if (!$visitId) {
     header('Location: index.php');
@@ -13,16 +13,7 @@ if (!$visitId) {
 }
 
 $visit = pharmacyRequireVisit($visitService, $visitId);
-$isDirectPharmacyEncounter = (string)($visit['department_name'] ?? '') === 'Pharmacy';
 $requestSourceNote = '';
-if ($requestedSource === 'Direct' && !$isDirectPharmacyEncounter) {
-    $requestSource = 'Clinical';
-    $requestSourceNote = 'Direct Pharmacy is only for active encounters currently in Pharmacy. This prescription is being recorded as Clinical.';
-} elseif (in_array($requestedSource, ['Clinical', 'Direct'], true)) {
-    $requestSource = $requestedSource;
-} else {
-    $requestSource = $isDirectPharmacyEncounter ? 'Direct' : 'Clinical';
-}
 $patient = $patientService->getPatientById((int)$visit['patient_id']);
 if (!$patient) {
     http_response_code(404);
@@ -40,6 +31,7 @@ if (!$permissionService->canCreatePrescription($visit, $currentUser, $requestSou
 }
 
 $inventoryItems = pharmacyInventoryOptions($storeService, $permissionService, $currentUser);
+$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Pharmacy']));
 foreach ($inventoryItems as &$inventoryItem) {
     $balance = $storeService->getDepartmentBalance((int)$inventoryItem['id'], pharmacyDepartmentId($pdo), $currentUser);
     $inventoryItem['pharmacy_stock_available'] = (float)($balance['quantity'] ?? 0);
@@ -71,7 +63,7 @@ $alerts = $canViewClinicalSafety
 
 $existingPrescriptions = $pharmacyService->listByVisit($visitId, $currentUser);
 
-$pageTitle = $requestSource === 'Direct' ? 'Create Direct Prescription' : 'Create Prescription';
+$pageTitle = 'Create Prescription';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 require __DIR__ . '/../../layouts/header.php';
 require __DIR__ . '/../../layouts/sidebar.php';
@@ -126,7 +118,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
     <?php endif; ?>
 
-    <?php $pharmacyPrescription = $pharmacyPrescription; $formAction = 'save.php'; $buttonLabel = $requestSource === 'Direct' ? 'Save Direct Prescription' : 'Save Prescription'; require __DIR__ . '/_form.php'; ?>
+    <?php $pharmacyPrescription = $pharmacyPrescription; $formAction = 'save.php'; $buttonLabel = 'Save Prescription'; require __DIR__ . '/_form.php'; ?>
 
     <div class="card">
         <h3>Existing Prescriptions for This Encounter</h3>

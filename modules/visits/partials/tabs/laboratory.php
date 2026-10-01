@@ -29,7 +29,7 @@ $requestSource = $laboratoryRequestSource ?? 'Clinical';
                     <span class="badge badge-warning">No laboratory permission</span>
                 <?php elseif (!$isClosedEncounter && $canCreateLaboratoryRequest): ?>
                     <a href="../laboratory/create.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
-                        <?= $requestSource === 'Direct' ? 'Create Direct Request' : 'Request Laboratory Test' ?>
+                        Request Laboratory Test
                     </a>
                 <?php endif; ?>
             </div>
@@ -69,7 +69,7 @@ $requestSource = $laboratoryRequestSource ?? 'Clinical';
             <?php if (!$isClosedEncounter && $canCreateLaboratoryRequest): ?>
                 <p>
                     <a href="../laboratory/create.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
-                        <?= $requestSource === 'Direct' ? 'Create Direct Request' : 'Request Laboratory Test' ?>
+                        Request Laboratory Test
                     </a>
                 </p>
             <?php endif; ?>

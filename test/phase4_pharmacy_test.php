@@ -7,6 +7,7 @@ require_once __DIR__ . '/../config/test_database.php';
 require_once __DIR__ . '/../database/tools/DatabaseSafety.php';
 require_once __DIR__ . '/../database/tools/MigrationManager.php';
 require_once __DIR__ . '/../services/AccountsService.php';
+require_once __DIR__ . '/../services/BillingService.php';
 require_once __DIR__ . '/../services/PharmacyService.php';
 require_once __DIR__ . '/../services/PermissionService.php';
 require_once __DIR__ . '/../services/StoreService.php';
@@ -50,22 +51,6 @@ function createPharmacyEncounter(PDO $pdo, array $actor, int $patientId, int $de
     return (int)$pdo->lastInsertId();
 }
 
-function routePharmacyEncounter(PDO $pdo, int $visitId, int $departmentId): void
-{
-    $stmt = $pdo->prepare("
-        UPDATE visits
-        SET current_department_id = :department_id,
-            current_department_received_status = 'Received',
-            visit_status = 'Pharmacy',
-            updated_at = NOW()
-        WHERE id = :visit_id
-    ");
-    $stmt->execute([
-        ':department_id' => $departmentId,
-        ':visit_id' => $visitId,
-    ]);
-}
-
 $config = require __DIR__ . '/../config/app.php';
 $resolved = DatabaseSafety::resolveTestDatabase($config);
 $databaseName = (string)$pdo->query('SELECT DATABASE()')->fetchColumn();
@@ -89,6 +74,10 @@ $manager->apply(__DIR__ . '/../database/migrations/032_phase4_pharmacy_up.sql', 
 $pdo->exec("DELETE FROM encounter_events WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P43-%')");
 $pdo->exec("DELETE FROM audit_logs WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P43-%')");
 $pdo->exec("DELETE FROM pharmacy_dispensing WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P43-%')");
+$pdo->exec("DELETE FROM billing_requests WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P43-%')");
+$pdo->exec("DELETE FROM payments WHERE invoice_id IN (SELECT id FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P43-%'))");
+$pdo->exec("DELETE FROM patient_charges WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P43-%')");
+$pdo->exec("DELETE FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P43-%')");
 $pdo->exec("DELETE FROM prescriptions WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P43-%')");
 $pdo->exec("DELETE FROM stock_transactions WHERE inventory_item_id IN (SELECT id FROM inventory_items WHERE item_code LIKE 'P43-%')");
 $pdo->exec("DELETE FROM department_stock_balances WHERE inventory_item_id IN (SELECT id FROM inventory_items WHERE item_code LIKE 'P43-%')");
@@ -177,6 +166,7 @@ $patientId = (int)$patientRow['id'];
 $service = new PharmacyService($pdo, new StoreService($pdo, null, new PermissionService($pdo)), null, null, null, new PermissionService($pdo), new VisitService($pdo));
 $storeService = new StoreService($pdo, null, new PermissionService($pdo));
 $accountsService = new AccountsService($pdo, null, new PermissionService($pdo));
+$billingService = new BillingService($pdo, null, null, new PermissionService($pdo));
 $permissionService = new PermissionService($pdo);
 
 try {
@@ -209,14 +199,14 @@ try {
 
     assertPharmacy($permissionService->canViewPharmacy($patientId, $pharmacist), 'Pharmacist should be able to view pharmacy records.');
     assertPharmacy($permissionService->canCreatePrescription($doctorEncounterStub, $doctor, 'Clinical'), 'Doctor should create clinical prescriptions.');
-    assertPharmacy($permissionService->canCreatePrescription($pharmacyEncounterStub, $pharmacist, 'Direct'), 'Pharmacist should create direct prescriptions.');
-    assertPharmacy($permissionService->canDispensePrescription($pharmacyEncounterStub, $pharmacist), 'Pharmacist should dispense prescriptions.');
+    assertPharmacy(!$permissionService->canCreatePrescription($pharmacyEncounterStub, $pharmacist, 'Direct'), 'Pharmacist should not create direct prescriptions.');
+    assertPharmacy($permissionService->canDispensePrescription($doctorEncounterStub, $pharmacist), 'Pharmacist should dispense clinical prescriptions without encounter transfer.');
     assertPharmacy(!$permissionService->canCreatePrescription(['visit_status' => 'Doctor', 'patient_id' => $patientId, 'department_name' => 'Doctor'], $nurse, 'Clinical'), 'Nurse should not create prescriptions.');
 
     $billable = requirePharmacySuccess($accountsService->createItem([
         'item_code' => 'P43-BILL-001',
         'item_name' => 'Amoxicillin 500 mg',
-        'item_type' => 'Product',
+        'item_type' => 'Drug',
         'department_id' => $pharmacyDepartmentId,
         'description' => 'Pharmacy test price.',
         'unit_price' => 150,
@@ -228,7 +218,7 @@ try {
     $item = requirePharmacySuccess($storeService->createItem([
         'item_code' => 'P43-ITEM-001',
         'item_name' => 'Amoxicillin 500 mg',
-        'category' => 'Medication',
+        'category' => 'Drug',
         'unit' => 'Capsule',
         'description' => 'Pharmacy stock item.',
         'billable_item_id' => $billableItemId,
@@ -266,8 +256,24 @@ try {
         'duration' => '5 days',
         'quantity' => 15,
         'instructions' => 'Take after meals.',
+        'suggested_billable_item_id' => $billableItemId,
     ], $doctor), 'Create clinical prescription');
     $clinicalPrescriptionId = (int)$clinicalCreate['prescription_id'];
+    $clinicalBillingRequests = $billingService->listBillingRequests([
+        'visit_id' => $doctorVisitId,
+        'source_module' => 'Pharmacy',
+        'source_record_id' => $clinicalPrescriptionId,
+    ], $admin);
+    assertPharmacy(count($clinicalBillingRequests) === 1, 'Clinical prescription did not create a billing request.');
+    assertPharmacy((string)$clinicalBillingRequests[0]['status'] === 'Charged', 'Clinical prescription billing request was not auto-charged.');
+    $clinicalInvoice = $billingService->getInvoiceByVisit($doctorVisitId, $admin);
+    assertPharmacy($clinicalInvoice !== null, 'Clinical prescription invoice was not created.');
+    requirePharmacySuccess($billingService->recordPayment([
+        'invoice_id' => (int)$clinicalInvoice['id'],
+        'amount' => (float)$clinicalInvoice['balance_due'],
+        'payment_method' => 'Cash',
+        'reference' => 'P43-RX-AUTO-PAID',
+    ], $accounts), 'Pay clinical prescription invoice');
 
     $clinicalPrescription = $service->getPrescriptionById($clinicalPrescriptionId, $doctor);
     assertPharmacy($clinicalPrescription !== null, 'Clinical prescription not returned.');
@@ -295,7 +301,7 @@ try {
     ], $doctor), 'Update prescription');
     assertPharmacy((string)$service->getPrescriptionById($clinicalPrescriptionId, $doctor)['medication_name'] === 'Amoxicillin 500 mg Updated', 'Prescription update did not persist.');
 
-    $pharmacyCreate = requirePharmacySuccess($service->createPrescription([
+    $directCreate = $service->createPrescription([
         'visit_id' => $pharmacyVisitId,
         'patient_id' => $patientId,
         'prescription_source' => 'Direct',
@@ -306,10 +312,33 @@ try {
         'duration' => '5 days',
         'quantity' => 5,
         'instructions' => 'External prescription.',
-    ], $pharmacist), 'Create direct prescription');
-    $directPrescriptionId = (int)$pharmacyCreate['prescription_id'];
+    ], $pharmacist);
+    assertPharmacy(!($directCreate['success'] ?? true), 'Pharmacist created a direct prescription unexpectedly.');
 
-    routePharmacyEncounter($pdo, $doctorVisitId, $pharmacyDepartmentId);
+    $cancellableCreate = requirePharmacySuccess($service->createPrescription([
+        'visit_id' => $doctorVisitId,
+        'patient_id' => $patientId,
+        'prescription_source' => 'Clinical',
+        'inventory_item_id' => $itemId,
+        'medication_name' => 'Amoxicillin 500 mg cancel test',
+        'dosage' => '1 capsule',
+        'frequency' => '2 times daily',
+        'duration' => '5 days',
+        'quantity' => 5,
+        'instructions' => 'Clinical cancellation test.',
+        'suggested_billable_item_id' => $billableItemId,
+    ], $doctor), 'Create clinical prescription for cancellation');
+    $cancellablePrescriptionId = (int)$cancellableCreate['prescription_id'];
+    $invoiceAfterCancellable = $billingService->getInvoiceByVisit($doctorVisitId, $admin);
+    if ($invoiceAfterCancellable !== null && (float)$invoiceAfterCancellable['balance_due'] > 0) {
+        requirePharmacySuccess($billingService->recordPayment([
+            'invoice_id' => (int)$invoiceAfterCancellable['id'],
+            'amount' => (float)$invoiceAfterCancellable['balance_due'],
+            'payment_method' => 'Cash',
+            'reference' => 'P43-RX-AUTO-PAID-2',
+        ], $accounts), 'Pay updated prescription invoice balance');
+    }
+
     $dispenseResult = requirePharmacySuccess($service->dispense($clinicalPrescriptionId, [
         'quantity_dispensed' => 15,
         'dispensing_notes' => 'Dispensed at the counter.',
@@ -328,9 +357,12 @@ try {
     ], $pharmacist);
     assertPharmacy(!($dupDispense['success'] ?? true), 'Duplicate dispensing was accepted.');
 
-    $cancelResult = requirePharmacySuccess($service->cancelPrescription($directPrescriptionId, $pharmacist, 'No longer needed.'), 'Cancel direct prescription');
-    assertPharmacy(($cancelResult['success'] ?? false) === true, 'Cancellation failed.');
-    $cancelDispense = $service->dispense($directPrescriptionId, ['quantity_dispensed' => 5], $pharmacist);
+    $blockedCancelResult = $service->cancelPrescription($cancellablePrescriptionId, $doctor, 'No longer needed.');
+    assertPharmacy(($blockedCancelResult['success'] ?? false) === false, 'Department user cancelled a paid clinical prescription.');
+
+    $cancelResult = requirePharmacySuccess($service->cancelPrescription($cancellablePrescriptionId, $admin, 'Super Admin cancellation.'), 'Super Admin cancels paid clinical prescription');
+    assertPharmacy(($cancelResult['success'] ?? false) === true, 'Super Admin cancellation failed.');
+    $cancelDispense = $service->dispense($cancellablePrescriptionId, ['quantity_dispensed' => 5], $pharmacist);
     assertPharmacy(!($cancelDispense['success'] ?? true), 'Cancelled prescription was dispensed.');
 
     $mismatch = $service->createPrescription([
@@ -417,6 +449,7 @@ try {
         'duration' => '2 days',
         'quantity' => 2,
         'instructions' => 'Admin test.',
+        'suggested_billable_item_id' => $billableItemId,
     ], $admin), 'Administrator create prescription');
     assertPharmacy((int)$pdo->query("SELECT COUNT(*) FROM prescriptions WHERE visit_id = $doctorVisitId AND patient_id = $patientId AND status = 'Dispensed'")->fetchColumn() >= 1, 'Dispense record missing.');
 
@@ -439,6 +472,10 @@ try {
     $pdo->exec("DELETE FROM encounter_events WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P43-%')");
     $pdo->exec("DELETE FROM audit_logs WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P43-%')");
     $pdo->exec("DELETE FROM pharmacy_dispensing WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P43-%')");
+    $pdo->exec("DELETE FROM billing_requests WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P43-%')");
+    $pdo->exec("DELETE FROM payments WHERE invoice_id IN (SELECT id FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P43-%'))");
+    $pdo->exec("DELETE FROM patient_charges WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P43-%')");
+    $pdo->exec("DELETE FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P43-%')");
     $pdo->exec("DELETE FROM prescriptions WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P43-%')");
     $pdo->exec("DELETE FROM stock_transactions WHERE inventory_item_id IN (SELECT id FROM inventory_items WHERE item_code LIKE 'P43-%')");
     $pdo->exec("DELETE FROM department_stock_balances WHERE inventory_item_id IN (SELECT id FROM inventory_items WHERE item_code LIKE 'P43-%')");

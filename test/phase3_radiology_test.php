@@ -6,6 +6,7 @@ require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/test_database.php';
 require_once __DIR__ . '/../database/tools/DatabaseSafety.php';
 require_once __DIR__ . '/../database/tools/MigrationManager.php';
+require_once __DIR__ . '/../services/BillingService.php';
 require_once __DIR__ . '/../services/ConsultationService.php';
 require_once __DIR__ . '/../services/PatientService.php';
 require_once __DIR__ . '/../services/PermissionService.php';
@@ -52,22 +53,6 @@ function createRadiologyEncounter(PDO $pdo, array $actor, int $patientId, int $d
     return (int)$pdo->lastInsertId();
 }
 
-function routeRadiologyEncounter(PDO $pdo, int $visitId, array $departmentUser): void
-{
-    $stmt = $pdo->prepare("
-        UPDATE visits
-        SET current_department_id = :department_id,
-            current_department_received_status = 'Received',
-            visit_status = 'Radiology',
-            updated_at = NOW()
-        WHERE id = :visit_id
-    ");
-    $stmt->execute([
-        ':department_id' => (int)$departmentUser['department_id'],
-        ':visit_id' => $visitId,
-    ]);
-}
-
 function fileContains(string $path, string $needle): bool
 {
     $contents = file_get_contents($path);
@@ -96,6 +81,10 @@ $pdo->exec("DELETE ce FROM encounter_events ce INNER JOIN visits v ON v.id = ce.
 $pdo->exec("DELETE al FROM audit_logs al INNER JOIN visits v ON v.id = al.visit_id WHERE v.visit_number LIKE 'P35-%'");
 $pdo->exec("DELETE rr FROM radiology_reports rr INNER JOIN radiology_requests rq ON rq.id = rr.radiology_request_id INNER JOIN visits v ON v.id = rq.visit_id WHERE v.visit_number LIKE 'P35-%'");
 $pdo->exec("DELETE rq FROM radiology_requests rq INNER JOIN visits v ON v.id = rq.visit_id WHERE v.visit_number LIKE 'P35-%'");
+$pdo->exec("DELETE FROM billing_requests WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P35-%')");
+$pdo->exec("DELETE FROM payments WHERE invoice_id IN (SELECT id FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P35-%'))");
+$pdo->exec("DELETE FROM patient_charges WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P35-%')");
+$pdo->exec("DELETE FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P35-%')");
 $pdo->exec("DELETE c FROM consultations c INNER JOIN visits v ON v.id = c.visit_id WHERE v.visit_number LIKE 'P35-%'");
 $pdo->exec("DELETE vs FROM vital_signs vs INNER JOIN visits v ON v.id = vs.visit_id WHERE v.visit_number LIKE 'P35-%'");
 $pdo->exec("DELETE na FROM nursing_assessments na INNER JOIN visits v ON v.id = na.visit_id WHERE v.visit_number LIKE 'P35-%'");
@@ -106,7 +95,7 @@ $rows = $pdo->query("
     FROM users u
     INNER JOIN roles r ON r.id = u.role_id
     INNER JOIN departments d ON d.id = u.department_id
-    WHERE u.username IN ('admin','dev_doctor','dev_nurse','dev_records','dev_radiology')
+    WHERE u.username IN ('admin','dev_accounts','dev_doctor','dev_nurse','dev_records','dev_radiology')
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 $users = [];
@@ -114,11 +103,12 @@ foreach ($rows as $row) {
     $users[$row['username']] = $row;
 }
 
-foreach (['admin', 'dev_doctor', 'dev_nurse', 'dev_records', 'dev_radiology'] as $username) {
+foreach (['admin', 'dev_accounts', 'dev_doctor', 'dev_nurse', 'dev_records', 'dev_radiology'] as $username) {
     assertRadiology(isset($users[$username]), 'Missing fixture user ' . $username . '.');
 }
 
 $admin = $users['admin'];
+$accounts = $users['dev_accounts'];
 $doctor = $users['dev_doctor'];
 $nurse = $users['dev_nurse'];
 $records = $users['dev_records'];
@@ -160,9 +150,17 @@ try {
     $visitIds = [$clinicalVisitId, $radiologyVisitId, $completedVisitId];
 
     $radiologyService = new RadiologyService($pdo, null, null, new PermissionService($pdo));
+    $billingService = new BillingService($pdo);
     $consultationService = new ConsultationService($pdo);
     $vitalSignsService = new VitalSignsService($pdo, null, new PermissionService($pdo));
     $nursingService = new NursingService($pdo, null, null, new PermissionService($pdo));
+    $radiologyDepartmentId = (int)$pdo->query("SELECT id FROM departments WHERE department_name IN ('Radiology','X-Ray') ORDER BY FIELD(department_name,'Radiology','X-Ray') LIMIT 1")->fetchColumn();
+    $pdo->prepare("
+        INSERT INTO billable_items (item_code, item_name, item_type, department_id, description, unit_price, unit, is_active, created_by, created_at, updated_at)
+        SELECT 'P35-RAD-AUTO', 'P35 Radiology Study', 'Service', :department_id, 'Radiology fixture.', 1500.00, '', 1, :created_by, NOW(), NOW()
+        WHERE NOT EXISTS (SELECT 1 FROM billable_items WHERE item_code = 'P35-RAD-AUTO')
+    ")->execute([':department_id' => $radiologyDepartmentId, ':created_by' => (int)$admin['id']]);
+    $radiologyBillableItemId = (int)$pdo->query("SELECT id FROM billable_items WHERE item_code = 'P35-RAD-AUTO' LIMIT 1")->fetchColumn();
 
     $clinicalCreate = requireRadiologySuccess($radiologyService->createRequest([
         'visit_id' => $clinicalVisitId,
@@ -171,9 +169,20 @@ try {
         'priority' => 'Routine',
         'study_requested' => 'Chest X-ray',
         'clinical_indication' => 'Persistent cough, fever, and shortness of breath.',
+        'suggested_billable_item_id' => $radiologyBillableItemId,
     ], $doctor), 'Clinical radiology create');
     $clinicalRequestId = (int)$clinicalCreate['radiology_request_id'];
     $requestIds[] = $clinicalRequestId;
+    $pdo->prepare("UPDATE billing_requests SET status = 'Charged', reviewed_by = :reviewed_by, reviewed_at = NOW(), updated_at = NOW() WHERE source_module = 'Radiology' AND source_record_id = :source_record_id")
+        ->execute([':reviewed_by' => (int)$accounts['id'], ':source_record_id' => $clinicalRequestId]);
+    $radiologyInvoice = $billingService->getInvoiceByVisit($clinicalVisitId);
+    assertRadiology($radiologyInvoice !== null, 'Radiology invoice was not created.');
+    requireRadiologySuccess($billingService->recordPayment([
+        'invoice_id' => (int)$radiologyInvoice['id'],
+        'amount' => (float)$radiologyInvoice['balance_due'],
+        'payment_method' => 'Cash',
+        'reference' => 'P35-RAD-PAID',
+    ], $accounts), 'Pay radiology invoice');
 
     $clinicalRequest = $radiologyService->getRequestById($clinicalRequestId, $doctor);
     assertRadiology($clinicalRequest !== null, 'Clinical radiology request could not be loaded.');
@@ -192,7 +201,6 @@ try {
     ], $doctor);
     assertRadiology(($notAllowed['success'] ?? true) === false, 'Patient/visit mismatch was accepted.');
 
-    routeRadiologyEncounter($pdo, $clinicalVisitId, $radiographer);
     $startClinical = requireRadiologySuccess($radiologyService->startRequest($clinicalRequestId, $radiographer), 'Clinical radiology start');
     assertRadiology(($startClinical['success'] ?? false) === true, 'Clinical radiology start failed.');
 
@@ -226,31 +234,15 @@ try {
     ], $radiographer);
     assertRadiology(($clinicalReadOnly['success'] ?? true) === false, 'Completed radiology request accepted an edit.');
 
-    $directCreate = requireRadiologySuccess($radiologyService->createRequest([
+    $directCreate = $radiologyService->createRequest([
         'visit_id' => $radiologyVisitId,
         'patient_id' => $patientId,
         'request_source' => 'Direct',
         'priority' => 'Urgent',
         'study_requested' => 'Abdominal Ultrasound',
         'clinical_indication' => 'Direct radiology walk-in.',
-    ], $radiographer), 'Direct radiology create');
-    $directRequestId = (int)$directCreate['radiology_request_id'];
-    $requestIds[] = $directRequestId;
-
-    $directRequest = $radiologyService->getRequestById($directRequestId, $radiographer);
-    assertRadiology($directRequest !== null && (string)$directRequest['request_source'] === 'Direct', 'Direct radiology request did not persist.');
-
-    $noConsultation = $consultationService->getByVisit($radiologyVisitId);
-    assertRadiology($noConsultation === null, 'Direct radiology patient unexpectedly required consultation.');
-
-    $directReport = requireRadiologySuccess($radiologyService->saveResult([
-        'radiology_request_id' => $directRequestId,
-        'findings' => 'Liver is normal in size.',
-        'impression' => 'Normal abdominal ultrasound.',
-        'recommendation' => 'No additional radiology follow-up required.',
-    ], $radiographer), 'Direct radiology report save');
-    assertRadiology(($directReport['success'] ?? false) === true, 'Direct radiology report save failed.');
-    requireRadiologySuccess($radiologyService->completeRequest($directRequestId, $radiographer), 'Direct radiology completion');
+    ], $radiographer);
+    assertRadiology(($directCreate['success'] ?? true) === false, 'Radiology created a direct request unexpectedly.');
 
     $unauthorisedNurse = $radiologyService->createRequest([
         'visit_id' => $clinicalVisitId,
@@ -278,6 +270,7 @@ try {
         'priority' => 'Routine',
         'study_requested' => 'KUB',
         'clinical_indication' => 'Completion guard test.',
+        'suggested_billable_item_id' => $radiologyBillableItemId,
     ], $doctor);
     assertRadiology(($completionWithoutReport['success'] ?? false) === true, 'Guard request creation failed.');
     $guardRequestId = (int)$completionWithoutReport['radiology_request_id'];
@@ -306,7 +299,7 @@ try {
         WHERE visit_id IN ($clinicalVisitId, $radiologyVisitId)
           AND event_type IN ('RADIOLOGY_REQUESTED', 'RADIOLOGY_REQUEST_STARTED', 'RADIOLOGY_COMPLETED')
     ")->fetchColumn();
-    assertRadiology($eventCount >= 4, 'Radiology encounter events are missing.');
+    assertRadiology($eventCount >= 3, 'Radiology encounter events are missing.');
 
     assertRadiology(fileContains(__DIR__ . '/../modules/visits/partials/tabs/radiology.php', 'Request Radiology Study'), 'Workspace radiology tab is missing the request action.');
     assertRadiology(fileContains(__DIR__ . '/../modules/radiology/report.php', 'Findings'), 'Radiology report page is missing report fields.');
@@ -332,10 +325,15 @@ try {
     if ($requestIds !== []) {
         $ids = implode(',', array_map('intval', $requestIds));
         $pdo->exec("DELETE FROM radiology_reports WHERE radiology_request_id IN ($ids)");
+        $pdo->exec("DELETE FROM billing_requests WHERE source_module = 'Radiology' AND source_record_id IN ($ids)");
         $pdo->exec("DELETE FROM radiology_requests WHERE id IN ($ids)");
     }
 
     if ($visitIds !== []) {
-        $pdo->exec("DELETE FROM visits WHERE id IN (" . implode(',', array_map('intval', $visitIds)) . ")");
+        $visitList = implode(',', array_map('intval', $visitIds));
+        $pdo->exec("DELETE FROM payments WHERE invoice_id IN (SELECT id FROM invoices WHERE visit_id IN ($visitList))");
+        $pdo->exec("DELETE FROM patient_charges WHERE visit_id IN ($visitList)");
+        $pdo->exec("DELETE FROM invoices WHERE visit_id IN ($visitList)");
+        $pdo->exec("DELETE FROM visits WHERE id IN ($visitList)");
     }
 }

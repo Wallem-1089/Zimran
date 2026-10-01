@@ -114,6 +114,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php endif; ?>
         </div>
 
+        <div class="form-group">
+            <label for="diagnostic_attachments">Additional ECG Attachments</label>
+            <input id="diagnostic_attachments" name="diagnostic_attachments[]" type="file" accept="application/pdf,image/jpeg,image/png" multiple>
+            <small class="text-muted">Optional. Upload one or more PDF, JPG, or PNG files. Maximum size: 10 MB each.</small>
+        </div>
+
         <?php hmsRenderHandwritingToolbar($enableWritingMode, 'ECG Notes Entry Mode'); ?>
         <?php hmsRenderHandwritingTextarea('notes', 'ECG Notes', (string)($report['notes'] ?? ''), 7, false, $enableWritingMode); ?>
         <?php hmsRenderHandwritingTextarea('remarks', 'Remarks', (string)($report['remarks'] ?? ''), 5, false, $enableWritingMode); ?>

@@ -30,7 +30,7 @@ $requestClosed = $latest !== null && in_array((string)($latest['status'] ?? ''),
                     <span class="badge badge-warning">No ECG permission</span>
                 <?php elseif (!$isClosedEncounter && !empty($canCreateEcgRequest)): ?>
                     <a href="../ecg/request.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
-                        <?= $requestSource === 'Direct' ? 'Create Direct ECG Request' : 'Request ECG' ?>
+                        Request ECG
                     </a>
                 <?php endif; ?>
             </div>
@@ -70,7 +70,7 @@ $requestClosed = $latest !== null && in_array((string)($latest['status'] ?? ''),
             <?php if (!$isClosedEncounter && !empty($canCreateEcgRequest)): ?>
                 <p>
                     <a href="../ecg/request.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
-                        <?= $requestSource === 'Direct' ? 'Create Direct ECG Request' : 'Request ECG' ?>
+                        Request ECG
                     </a>
                 </p>
             <?php endif; ?>

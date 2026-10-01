@@ -5,6 +5,10 @@ declare(strict_types=1);
 require __DIR__ . '/_bootstrap.php';
 
 reportsRequireAccess($permissionService, $currentUser);
+if (!$permissionService->canViewEmergencyReports($currentUser)) {
+    http_response_code(403);
+    exit('You are not allowed to view the emergency register.');
+}
 
 $filters = reportsDateFilters();
 $departments = $dashboardService->listReportDepartments();

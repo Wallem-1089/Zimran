@@ -6,6 +6,7 @@ require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/test_database.php';
 require_once __DIR__ . '/../database/tools/DatabaseSafety.php';
 require_once __DIR__ . '/../database/tools/MigrationManager.php';
+require_once __DIR__ . '/../services/BillingService.php';
 require_once __DIR__ . '/../services/ConsultationService.php';
 require_once __DIR__ . '/../services/LaboratoryService.php';
 require_once __DIR__ . '/../services/PatientService.php';
@@ -54,22 +55,6 @@ function createLaboratoryEncounter(PDO $pdo, array $actor, int $patientId, int $
     ]);
 
     return (int)$pdo->lastInsertId();
-}
-
-function routeLaboratoryEncounter(PDO $pdo, int $visitId, array $departmentUser): void
-{
-    $stmt = $pdo->prepare("
-        UPDATE visits
-        SET current_department_id = :department_id,
-            current_department_received_status = 'Received',
-            visit_status = 'Laboratory',
-            updated_at = NOW()
-        WHERE id = :visit_id
-    ");
-    $stmt->execute([
-        ':department_id' => (int)$departmentUser['department_id'],
-        ':visit_id' => $visitId,
-    ]);
 }
 
 function fileContains(string $path, string $needle): bool
@@ -122,6 +107,10 @@ $pdo->exec("
     INNER JOIN visits v ON v.id = lq.visit_id
     WHERE v.visit_number LIKE 'P34-%'
 ");
+$pdo->exec("DELETE FROM billing_requests WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P34-%')");
+$pdo->exec("DELETE FROM payments WHERE invoice_id IN (SELECT id FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P34-%'))");
+$pdo->exec("DELETE FROM patient_charges WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P34-%')");
+$pdo->exec("DELETE FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P34-%')");
 $pdo->exec("
     DELETE c
     FROM consultations c
@@ -215,8 +204,16 @@ try {
     $laboratoryService = new LaboratoryService($pdo, null, null, new PermissionService($pdo));
     $visitService = new VisitService($pdo);
     $consultationService = new ConsultationService($pdo);
+    $billingService = new BillingService($pdo);
     $vitalSignsService = new VitalSignsService($pdo, null, new PermissionService($pdo));
     $nursingService = new NursingService($pdo, null, null, new PermissionService($pdo));
+    $laboratoryDepartmentId = (int)$pdo->query("SELECT id FROM departments WHERE department_name = 'Laboratory' LIMIT 1")->fetchColumn();
+    $pdo->prepare("
+        INSERT INTO billable_items (item_code, item_name, item_type, department_id, description, unit_price, unit, is_active, created_by, created_at, updated_at)
+        SELECT 'P34-LAB-AUTO', 'P34 Laboratory Test', 'Service', :department_id, 'Laboratory test fixture.', 1200.00, '', 1, :created_by, NOW(), NOW()
+        WHERE NOT EXISTS (SELECT 1 FROM billable_items WHERE item_code = 'P34-LAB-AUTO')
+    ")->execute([':department_id' => $laboratoryDepartmentId, ':created_by' => (int)$admin['id']]);
+    $laboratoryBillableItemId = (int)$pdo->query("SELECT id FROM billable_items WHERE item_code = 'P34-LAB-AUTO' LIMIT 1")->fetchColumn();
 
     $clinicalCreate = requireLaboratorySuccess($laboratoryService->createRequest([
         'visit_id' => $doctorVisitId,
@@ -225,9 +222,19 @@ try {
         'priority' => 'Routine',
         'tests_requested' => 'Malaria Parasite, Full Blood Count',
         'clinical_information' => 'Fever for 3 days; suspected malaria.',
+        'suggested_billable_item_id' => $laboratoryBillableItemId,
     ], $doctor), 'Clinical request create');
     $clinicalRequestId = (int)$clinicalCreate['laboratory_request_id'];
     $requestIds[] = $clinicalRequestId;
+    $pdo->prepare("UPDATE billing_requests SET status = 'Charged', reviewed_by = :reviewed_by, reviewed_at = NOW(), updated_at = NOW() WHERE source_module = 'Laboratory' AND source_record_id = :source_record_id")
+        ->execute([':reviewed_by' => (int)$admin['id'], ':source_record_id' => $clinicalRequestId]);
+    $labInvoice = $billingService->getInvoiceByVisit($doctorVisitId, $admin);
+    requireLaboratorySuccess($billingService->recordPayment([
+        'invoice_id' => (int)$labInvoice['id'],
+        'amount' => (float)$labInvoice['balance_due'],
+        'payment_method' => 'Cash',
+        'reference' => 'P34-LAB-PAID',
+    ], $admin), 'Pay laboratory invoice');
 
     $clinicalRequest = $laboratoryService->getRequestById($clinicalRequestId, $doctor);
     assertLaboratory($clinicalRequest !== null, 'Clinical request could not be loaded.');
@@ -237,7 +244,6 @@ try {
     assertLaboratory($laboratoryService->listByPatient($patientId, $doctor) !== [], 'Patient laboratory history is empty.');
     assertLaboratory($laboratoryService->listWorklist($lab, ['status' => 'Requested']) !== [], 'Worklist did not include the created request.');
 
-    routeLaboratoryEncounter($pdo, $doctorVisitId, $lab);
     $startClinical = requireLaboratorySuccess($laboratoryService->startRequest($clinicalRequestId, $lab), 'Clinical request start');
     assertLaboratory(($startClinical['success'] ?? false) === true, 'Clinical request start failed.');
 
@@ -266,27 +272,15 @@ try {
     $viewResult = $laboratoryService->getResult($clinicalRequestId, $doctor);
     assertLaboratory($viewResult !== null && trim((string)$viewResult['result']) !== '', 'Clinical result is not visible.');
 
-    $directCreate = requireLaboratorySuccess($laboratoryService->createRequest([
+    $directCreate = $laboratoryService->createRequest([
         'visit_id' => $labVisitId,
         'patient_id' => $patientId,
         'request_source' => 'Direct',
         'priority' => 'Urgent',
         'tests_requested' => 'Blood Glucose',
         'clinical_information' => 'Direct laboratory walk-in.',
-    ], $lab), 'Direct request create');
-    $directRequestId = (int)$directCreate['laboratory_request_id'];
-    $requestIds[] = $directRequestId;
-
-    $directResult = requireLaboratorySuccess($laboratoryService->saveResult([
-        'laboratory_request_id' => $directRequestId,
-        'sample_taken' => 'Capillary blood',
-        'findings' => 'Glucose sample obtained.',
-        'result' => 'Blood Glucose: 5.3 mmol/L',
-        'interpretation' => 'Within normal range.',
-    ], $lab), 'Direct result save');
-    $resultIds[] = (int)$directResult['laboratory_request_id'];
-
-    requireLaboratorySuccess($laboratoryService->completeRequest($directRequestId, $lab), 'Direct request complete');
+    ], $lab);
+    assertLaboratory(($directCreate['success'] ?? true) === false, 'Laboratory created a direct request unexpectedly.');
 
     $adminCompletedCreate = requireLaboratorySuccess($laboratoryService->createRequest([
         'visit_id' => $completedVisitId,
@@ -295,6 +289,7 @@ try {
         'priority' => 'Routine',
         'tests_requested' => 'Administrator test entry',
         'clinical_information' => 'Development override.',
+        'suggested_billable_item_id' => $laboratoryBillableItemId,
     ], $admin), 'Administrator create on completed encounter');
     $adminRequestId = (int)$adminCompletedCreate['laboratory_request_id'];
     $requestIds[] = $adminRequestId;
@@ -386,7 +381,7 @@ try {
         WHERE visit_id IN ($doctorVisitId, $labVisitId)
           AND event_type IN ('LABORATORY_REQUESTED', 'LABORATORY_COMPLETED')
     ")->fetchColumn();
-    assertLaboratory($eventCount >= 4, 'Laboratory encounter events are missing.');
+    assertLaboratory($eventCount >= 2, 'Laboratory encounter events are missing.');
 
     assertLaboratory(fileContains(__DIR__ . '/../modules/visits/workspace.php', "case 'laboratory'"), 'Workspace missing laboratory tab routing.');
     assertLaboratory(fileContains(__DIR__ . '/../modules/visits/partials/workspace_navigation.php', 'Laboratory'), 'Workspace navigation missing laboratory entry.');
@@ -433,9 +428,14 @@ try {
     if ($requestIds !== []) {
         $ids = implode(',', array_map('intval', $requestIds));
         $pdo->exec("DELETE FROM laboratory_results WHERE laboratory_request_id IN ($ids)");
+        $pdo->exec("DELETE FROM billing_requests WHERE source_module = 'Laboratory' AND source_record_id IN ($ids)");
         $pdo->exec("DELETE FROM laboratory_requests WHERE id IN ($ids)");
     }
     if ($visitIds !== []) {
-        $pdo->exec("DELETE FROM visits WHERE id IN (" . implode(',', array_map('intval', $visitIds)) . ")");
+        $visitList = implode(',', array_map('intval', $visitIds));
+        $pdo->exec("DELETE FROM payments WHERE invoice_id IN (SELECT id FROM invoices WHERE visit_id IN ($visitList))");
+        $pdo->exec("DELETE FROM patient_charges WHERE visit_id IN ($visitList)");
+        $pdo->exec("DELETE FROM invoices WHERE visit_id IN ($visitList)");
+        $pdo->exec("DELETE FROM visits WHERE id IN ($visitList)");
     }
 }

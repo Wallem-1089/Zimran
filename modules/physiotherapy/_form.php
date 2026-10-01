@@ -6,9 +6,7 @@ $physiotherapyRecord ??= [];
 $action ??= 'save.php';
 $buttonLabel ??= 'Save Physiotherapy Record';
 $recordSource = (string)($physiotherapyRecord['record_source'] ?? ($recordSource ?? 'Clinical'));
-$recordSourceNote ??= $recordSource === 'Direct'
-    ? 'Direct Physiotherapy is for patients whose active encounter is currently in Physiotherapy.'
-    : 'Clinical referrals are linked to this encounter without transferring ownership.';
+$recordSourceNote ??= 'Clinical referrals are linked to this encounter without transferring ownership.';
 $physiotherapyConfiguredFields ??= [];
 $physiotherapyConfiguredValues ??= [];
 $enableWritingMode ??= isset($permissionService)
@@ -30,6 +28,8 @@ $enableWritingMode ??= isset($permissionService)
         <div class="readonly-field"><?= e($recordSource) ?></div>
         <p class="text-muted"><?= e($recordSourceNote) ?></p>
     </div>
+
+    <?php hmsRenderBillableItemSelect($billableItemOptions ?? [], $physiotherapyRecord['suggested_billable_item_ids'] ?? ($physiotherapyRecord['suggested_billable_item_id'] ?? null)); ?>
 
     <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Physiotherapy Entry Mode'); ?>
     <?php hmsRenderHandwritingTextarea('referral_reason', 'Referral Reason', (string)($physiotherapyRecord['referral_reason'] ?? ''), 3, false, $enableWritingMode); ?>

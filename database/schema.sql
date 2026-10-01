@@ -67,6 +67,8 @@ VALUES
 
 ('Doctor', 'Medical consultation'),
 
+('Emergency', 'Emergency care and triage'),
+
 ('Nursing', 'Nursing services'),
 
 ('Laboratory', 'Laboratory investigations'),
@@ -79,7 +81,7 @@ VALUES
 
 ('ECG', 'Electrocardiography services'),
 
-('POP', 'Plaster of Paris and casting services'),
+('Plaster', 'Plaster of Paris and casting services'),
 
 ('Theatre', 'Surgical theatre'),
 
@@ -143,6 +145,12 @@ VALUES
 
 ('Doctor','Medical consultation'),
 
+('Emergency Doctor','Emergency department doctor'),
+
+('Emergency Nurse','Emergency triage and emergency care nurse'),
+
+('Triage Nurse','Emergency triage nurse'),
+
 ('Nurse','Nursing care'),
 
 ('Laboratory Scientist','Laboratory investigations'),
@@ -155,7 +163,7 @@ VALUES
 
 ('ECG Technician','ECG services'),
 
-('POP Technician','POP and casting services'),
+('Plaster Technician','Plaster services'),
 
 ('Theatre Staff','Surgical procedures'),
 
@@ -278,6 +286,90 @@ CREATE TABLE users (
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
 COLLATE=utf8mb4_unicode_ci;
+
+/*
+|--------------------------------------------------------------------------
+| Staff Profiles
+|--------------------------------------------------------------------------
+*/
+
+CREATE TABLE staff_profiles (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    surname VARCHAR(100) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    middle_name VARCHAR(100) NULL,
+    title VARCHAR(20) NULL,
+    gender VARCHAR(20) NULL,
+    date_of_birth DATE NULL,
+    place_of_birth VARCHAR(150) NULL,
+    marital_status VARCHAR(50) NULL,
+    home_town VARCHAR(150) NULL,
+    permanent_home_address TEXT NULL,
+    residential_address TEXT NULL,
+    phone_no VARCHAR(50) NULL,
+    personal_email VARCHAR(150) NULL,
+    religion VARCHAR(100) NULL,
+    national_identity_number VARCHAR(50) NULL,
+    first_appointment_date DATE NULL,
+    first_appointment_salary_grade VARCHAR(100) NULL,
+    employee_no VARCHAR(50) NOT NULL,
+    official_email VARCHAR(150) NULL,
+    profile_photo_path VARCHAR(255) NULL,
+    salary_bank VARCHAR(150) NULL,
+    salary_bank_account_no VARCHAR(50) NULL,
+    next_of_kin1_name VARCHAR(150) NULL,
+    next_of_kin1_address TEXT NULL,
+    next_of_kin1_date_of_birth DATE NULL,
+    next_of_kin1_relationship VARCHAR(100) NULL,
+    next_of_kin1_phone VARCHAR(50) NULL,
+    next_of_kin2_name VARCHAR(150) NULL,
+    next_of_kin2_address TEXT NULL,
+    next_of_kin2_date_of_birth DATE NULL,
+    next_of_kin2_relationship VARCHAR(100) NULL,
+    next_of_kin2_phone VARCHAR(50) NULL,
+    created_by INT NULL,
+    updated_by INT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_staff_profiles_user (user_id),
+    INDEX idx_staff_profiles_employee_no (employee_no),
+    INDEX idx_staff_profiles_surname_first (surname, first_name),
+    CONSTRAINT fk_staff_profiles_user FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT fk_staff_profiles_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    CONSTRAINT fk_staff_profiles_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE staff_educational_qualifications (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    staff_profile_id BIGINT NOT NULL,
+    sort_order INT NOT NULL DEFAULT 1,
+    school_attended_with_dates TEXT NULL,
+    course_of_study VARCHAR(255) NULL,
+    certificates_obtained VARCHAR(255) NULL,
+    class_of_degree VARCHAR(100) NULL,
+    year_of_graduation VARCHAR(20) NULL,
+    remarks TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_staff_education_profile_order (staff_profile_id, sort_order),
+    CONSTRAINT fk_staff_education_profile FOREIGN KEY (staff_profile_id) REFERENCES staff_profiles(id) ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE staff_professional_qualifications (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    staff_profile_id BIGINT NOT NULL,
+    sort_order INT NOT NULL DEFAULT 1,
+    certification_type VARCHAR(150) NULL,
+    certificates VARCHAR(255) NULL,
+    certification_license_no VARCHAR(100) NULL,
+    certification_expiration_date DATE NULL,
+    year_attained VARCHAR(20) NULL,
+    remarks TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_staff_professional_profile_order (staff_profile_id, sort_order),
+    INDEX idx_staff_professional_expiration (certification_expiration_date),
+    CONSTRAINT fk_staff_professional_profile FOREIGN KEY (staff_profile_id) REFERENCES staff_profiles(id) ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 /*
 |--------------------------------------------------------------------------
@@ -596,13 +688,15 @@ DEFAULT 'Outpatient',
 
         'Doctor',
 
+        'Emergency',
+
         'Laboratory',
 
         'X-Ray',
 
         'ECG',
 
-        'POP',
+        'Plaster',
 
         'Pharmacy',
 
@@ -2138,7 +2232,7 @@ CREATE TABLE pop_requests (
     requested_by INT NOT NULL,
     department_id INT NULL,
     request_source ENUM('Clinical','Direct') NOT NULL DEFAULT 'Clinical',
-    procedure_requested VARCHAR(255) NOT NULL DEFAULT 'POP / Casting',
+    procedure_requested VARCHAR(255) NOT NULL DEFAULT 'Plaster',
     clinical_indication TEXT NULL,
     priority ENUM('Routine','Urgent') NOT NULL DEFAULT 'Routine',
     status ENUM('Requested','In Progress','Completed','Cancelled') NOT NULL DEFAULT 'Requested',
@@ -2186,12 +2280,12 @@ CREATE TABLE pop_records (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO permissions (permission_key, permission_name, module, description, is_active) VALUES
-('view_pop', 'View POP', 'POP', 'View POP requests and casting/procedure records.', 1),
-('create_pop_request', 'Create POP Request', 'POP', 'Create a clinical or direct POP/casting request.', 1),
-('process_pop_request', 'Process POP Request', 'POP', 'Start and process POP requests.', 1),
-('record_pop_procedure', 'Record POP Procedure', 'POP', 'Document POP/casting procedure details.', 1),
-('edit_pop_record', 'Edit POP Record', 'POP', 'Edit POP records before completion.', 1),
-('complete_pop_request', 'Complete POP Request', 'POP', 'Complete POP requests after procedure documentation.', 1)
+('view_pop', 'View Plaster', 'Plaster', 'View Plaster requests and procedure records.', 1),
+('create_pop_request', 'Create Plaster Request', 'Plaster', 'Create a clinical Plaster request.', 1),
+('process_pop_request', 'Process Plaster Request', 'Plaster', 'Start and process Plaster requests.', 1),
+('record_pop_procedure', 'Record Plaster Procedure', 'Plaster', 'Document Plaster procedure details.', 1),
+('edit_pop_record', 'Edit Plaster Record', 'Plaster', 'Edit Plaster records before completion.', 1),
+('complete_pop_request', 'Complete Plaster Request', 'Plaster', 'Complete Plaster requests after procedure documentation.', 1)
 ON DUPLICATE KEY UPDATE
     permission_name = VALUES(permission_name),
     module = VALUES(module),
@@ -2202,7 +2296,7 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
 INNER JOIN permissions p
-WHERE r.role_name = 'POP Technician'
+WHERE r.role_name = 'Plaster Technician'
   AND p.permission_key IN (
       'view_pop',
       'create_pop_request',
@@ -2237,7 +2331,7 @@ CREATE TABLE billable_items (
     id INT NOT NULL AUTO_INCREMENT,
     item_code VARCHAR(30) NOT NULL,
     item_name VARCHAR(255) NOT NULL,
-    item_type ENUM('Service','Product') NOT NULL,
+    item_type ENUM('Drug','Consumable','Service') NOT NULL,
     department_id INT NULL,
     description TEXT NULL,
     unit_price DECIMAL(12,2) NOT NULL DEFAULT 0.00,
@@ -2389,13 +2483,19 @@ CREATE TABLE payments (
     payment_method ENUM('Cash','Card','Transfer','Other') NOT NULL,
     reference TEXT NULL,
     notes TEXT NULL,
+    status ENUM('Active','Cancelled') NOT NULL DEFAULT 'Active',
     received_by INT NOT NULL,
+    cancelled_by INT NULL,
+    cancelled_at DATETIME NULL,
+    cancel_reason TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_payments_invoice (invoice_id),
     KEY idx_payments_visit (visit_id),
     KEY idx_payments_patient (patient_id),
+    KEY idx_payments_status (status),
     KEY idx_payments_received_by (received_by),
+    KEY idx_payments_cancelled_by (cancelled_by),
     KEY idx_payments_created_at (created_at),
     CONSTRAINT fk_payments_invoice
         FOREIGN KEY (invoice_id) REFERENCES invoices(id)
@@ -2566,6 +2666,26 @@ CREATE TABLE inventory_items (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_inventory_items_updated_by
         FOREIGN KEY (updated_by) REFERENCES users(id)
+        ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE inventory_item_barcodes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    inventory_item_id INT NOT NULL,
+    barcode_value VARCHAR(100) NOT NULL,
+    barcode_type ENUM('Manufacturer','Internal','Other') NOT NULL DEFAULT 'Manufacturer',
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_by INT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_inventory_item_barcodes_value (barcode_value),
+    KEY idx_inventory_item_barcodes_item (inventory_item_id),
+    KEY idx_inventory_item_barcodes_active (is_active),
+    CONSTRAINT fk_inventory_item_barcodes_item
+        FOREIGN KEY (inventory_item_id) REFERENCES inventory_items(id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT fk_inventory_item_barcodes_created_by
+        FOREIGN KEY (created_by) REFERENCES users(id)
         ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -3035,6 +3155,18 @@ INSERT INTO permissions (permission_key, permission_name, module, description, i
 SELECT 'view_clinical_reports', 'View Clinical Reports', 'Reports', 'View aggregate clinical activity summaries.', 1
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE permission_key = 'view_clinical_reports');
 
+INSERT INTO permissions (permission_key, permission_name, module, description, is_active)
+SELECT 'view_emergency', 'View Emergency', 'Emergency', 'Access Emergency department options.', 1
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE permission_key = 'view_emergency');
+
+INSERT INTO permissions (permission_key, permission_name, module, description, is_active)
+SELECT 'view_emergency_worklist', 'View Emergency Worklist', 'Emergency', 'Access the Emergency department worklist from the sidebar.', 1
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE permission_key = 'view_emergency_worklist');
+
+INSERT INTO permissions (permission_key, permission_name, module, description, is_active)
+SELECT 'view_emergency_reports', 'View Emergency Reports', 'Reports', 'Access Emergency reports and the emergency register.', 1
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE permission_key = 'view_emergency_reports');
+
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
@@ -3062,6 +3194,13 @@ FROM roles r
 INNER JOIN permissions p
 WHERE r.role_name IN ('System Administrator','Doctor','Nurse','Laboratory Scientist','Radiographer','Physiotherapist','Theatre Staff','Pharmacist','Records Officer')
   AND p.permission_key = 'view_clinical_reports';
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+INNER JOIN permissions p
+WHERE r.role_name IN ('Super Administrator','System Administrator')
+  AND p.permission_key IN ('view_emergency', 'view_emergency_worklist', 'view_emergency_reports');
 
 /*
 |--------------------------------------------------------------------------
@@ -3212,6 +3351,16 @@ INNER JOIN permissions p
 WHERE r.role_name = 'Receptionist'
   AND p.permission_key IN ('view_admissions', 'create_admission', 'transfer_admission');
 
+-- Records Officer inherits all Receptionist role grants.
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT records.id, p.id
+FROM roles records
+INNER JOIN roles reception ON reception.role_name = 'Receptionist'
+INNER JOIN role_permissions rp ON rp.role_id = reception.id
+INNER JOIN permissions p ON p.id = rp.permission_id
+WHERE records.role_name = 'Records Officer'
+  AND p.permission_key <> 'delete_patient';
+
 INSERT INTO permissions (permission_key, permission_name, module, description, is_active)
 SELECT 'use_consultation_handwriting', 'Use Handwriting Entry Mode', 'Clinical Entry', 'Use the handwriting/touch-pad entry mode on supported narrative forms.', 1
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE permission_key = 'use_consultation_handwriting');
@@ -3242,6 +3391,9 @@ WHERE r.role_name = 'System Administrator'
   AND p.permission_key IN (
       'view_encounter',
       'view_admissions',
+      'view_emergency',
+      'view_emergency_worklist',
+      'view_emergency_reports',
       'create_admission',
       'transfer_admission',
       'manage_users',

@@ -39,7 +39,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="page-header">
         <div>
             <h1>Create Price Catalogue Item</h1>
-            <p>Standalone hospital price master data.</p>
+            <p>Pharmacy-managed hospital price master data.</p>
         </div>
         <div><a class="btn-secondary" href="index.php">Back to Catalogue</a></div>
     </div>
@@ -47,4 +47,3 @@ require __DIR__ . '/../../layouts/sidebar.php';
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
-

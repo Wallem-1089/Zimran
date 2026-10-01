@@ -22,8 +22,108 @@ $filters = [
 $items = $accountsService->searchItems($filters, $currentUser);
 $allItems = $accountsService->searchItems(['status' => 'all'], $currentUser);
 $activeServices = count(array_filter($allItems, static fn (array $item): bool => !empty($item['is_active']) && (string)$item['item_type'] === 'Service'));
-$activeProducts = count(array_filter($allItems, static fn (array $item): bool => !empty($item['is_active']) && (string)$item['item_type'] === 'Product'));
+$activeDrugs = count(array_filter($allItems, static fn (array $item): bool => !empty($item['is_active']) && (string)$item['item_type'] === 'Drug'));
+$activeConsumables = count(array_filter($allItems, static fn (array $item): bool => !empty($item['is_active']) && in_array((string)$item['item_type'], ['Consumable', 'Product'], true)));
+$canViewBillingRequestQueues = $permissionService->canViewBillingRequests($currentUser);
 
+function accountsPendingClinicalBillingCount(PDO $pdo, string $sourceModule): int
+{
+    if (!accountsTableExists($pdo, 'billing_requests')) {
+        return 0;
+    }
+
+    if (strcasecmp($sourceModule, 'Plaster') === 0) {
+        $stmt = $pdo->query("SELECT COUNT(*) FROM billing_requests WHERE status = 'Pending' AND source_module IN ('Plaster', 'POP')");
+        return (int)$stmt->fetchColumn();
+    }
+
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM billing_requests WHERE status = 'Pending' AND source_module = :source_module");
+    $stmt->execute([':source_module' => $sourceModule]);
+    return (int)$stmt->fetchColumn();
+}
+
+function accountsPendingRegistrationBillingCount(PDO $pdo, string $billingType, ?string $registrationType = null): int
+{
+    if (!accountsTableExists($pdo, 'patient_registration_billing_requests')) {
+        return 0;
+    }
+
+    $where = ['status = \'Pending\'', 'billing_type = :billing_type'];
+    $params = [':billing_type' => $billingType];
+    if ($registrationType !== null) {
+        $where[] = 'registration_type = :registration_type';
+        $params[':registration_type'] = $registrationType;
+    }
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM patient_registration_billing_requests WHERE ' . implode(' AND ', $where));
+    $stmt->execute($params);
+    return (int)$stmt->fetchColumn();
+}
+
+$departmentBillingQueues = [
+    ['label' => 'Laboratory', 'source_module' => 'Laboratory'],
+    ['label' => 'Radiology / X-Ray', 'source_module' => 'Radiology'],
+    ['label' => 'ECG', 'source_module' => 'ECG'],
+    ['label' => 'Plaster', 'source_module' => 'Plaster'],
+    ['label' => 'Physiotherapy', 'source_module' => 'Physiotherapy'],
+    ['label' => 'Pharmacy', 'source_module' => 'Pharmacy'],
+    ['label' => 'Theatre', 'source_module' => 'Theatre'],
+    ['label' => 'Patient Stock Usage', 'source_module' => 'Patient Stock Usage'],
+    ['label' => 'Admission', 'source_module' => 'Admission'],
+    ['label' => 'Nursing', 'source_module' => 'Nursing'],
+    ['label' => 'Dressing', 'source_module' => 'Dressing'],
+];
+
+foreach ($departmentBillingQueues as $index => $queue) {
+    $departmentBillingQueues[$index]['pending_count'] = accountsPendingClinicalBillingCount($pdo, (string)$queue['source_module']);
+    $departmentBillingQueues[$index]['href'] = '../billing/billing_requests.php?' . http_build_query([
+        'status' => 'Pending',
+        'source_module' => $queue['source_module'],
+    ]);
+}
+
+$priorityBillingQueues = [
+    [
+        'label' => 'Patient Registration',
+        'description' => 'Normal registration payments',
+        'pending_count' => accountsPendingRegistrationBillingCount($pdo, 'InitialRegistration', 'Normal'),
+        'href' => '../billing/registration_requests.php?' . http_build_query([
+            'status' => 'Pending',
+            'billing_type' => 'InitialRegistration',
+            'registration_type' => 'Normal',
+        ]),
+    ],
+    [
+        'label' => 'Consultation Fee',
+        'description' => 'Consultation billing requests',
+        'pending_count' => accountsPendingClinicalBillingCount($pdo, 'Consultation'),
+        'href' => '../billing/billing_requests.php?' . http_build_query([
+            'status' => 'Pending',
+            'source_module' => 'Consultation',
+        ]),
+    ],
+    [
+        'label' => 'Patient Renewal',
+        'description' => 'Monthly renewal payments',
+        'pending_count' => accountsPendingRegistrationBillingCount($pdo, 'MonthlyRenewal'),
+        'href' => '../billing/registration_requests.php?' . http_build_query([
+            'status' => 'Pending',
+            'billing_type' => 'MonthlyRenewal',
+        ]),
+    ],
+    [
+        'label' => 'Emergency Registration',
+        'description' => 'Emergency registration payments',
+        'pending_count' => accountsPendingRegistrationBillingCount($pdo, 'InitialRegistration', 'Emergency'),
+        'href' => '../billing/registration_requests.php?' . http_build_query([
+            'status' => 'Pending',
+            'billing_type' => 'InitialRegistration',
+            'registration_type' => 'Emergency',
+        ]),
+    ],
+];
+
+$registrationBillingQueues = [];
 $pageTitle = 'Price Catalogue';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 require __DIR__ . '/../../layouts/header.php';
@@ -32,6 +132,28 @@ require __DIR__ . '/../../layouts/sidebar.php';
 <div class="main-container">
 <?php require __DIR__ . '/../../layouts/navbar.php'; ?>
 <main class="content">
+    <style>
+        .accounts-queue-grid .accounts-queue-button {
+            color: inherit;
+            display: block;
+            min-height: 112px;
+            text-decoration: none;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+        }
+
+        .accounts-queue-grid .accounts-queue-button:hover,
+        .accounts-queue-grid .accounts-queue-button:focus {
+            border-color: #2563eb;
+            box-shadow: 0 10px 24px rgba(37, 99, 235, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .accounts-queue-grid .queue-hint {
+            display: block;
+            margin-top: 0.35rem;
+            font-size: 0.82rem;
+        }
+    </style>
     <?php if (isset($_SESSION['success_message'])): ?>
         <div class="alert-success"><?= e((string)$_SESSION['success_message']) ?></div>
         <?php unset($_SESSION['success_message']); ?>
@@ -43,7 +165,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="page-header">
         <div>
             <h1>Price Catalogue</h1>
-            <p>Hospital-wide billable items and price master data.</p>
+            <p>Hospital-wide billable items and Pharmacy-managed price master data.</p>
         </div>
         <div>
             <?php if ($permissionService->canCreateBillableItems($currentUser)): ?>
@@ -52,10 +174,46 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
     </div>
 
+    <?php if ($canViewBillingRequestQueues): ?>
+        <div class="card">
+            <div class="section-header">
+                <div>
+                    <h2>Accounts Billing Queues</h2>
+                    <p class="text-muted">Open pending billing requests directly by department or registration type.</p>
+                </div>
+                <a class="btn-secondary btn-sm" href="../billing/billing_requests.php?status=Pending">All Pending Requests</a>
+            </div>
+            <div class="summary-grid accounts-queue-grid">
+                <?php foreach ($priorityBillingQueues as $queue): ?>
+                    <a class="summary-item accounts-queue-button" href="<?= e((string)$queue['href']) ?>">
+                        <span class="summary-label"><?= e((string)$queue['label']) ?></span>
+                        <span class="summary-value"><?= (int)$queue['pending_count'] ?></span>
+                        <span class="text-muted queue-hint"><?= e((string)$queue['description']) ?></span>
+                    </a>
+                <?php endforeach; ?>
+                <?php foreach ($departmentBillingQueues as $queue): ?>
+                    <a class="summary-item accounts-queue-button" href="<?= e((string)$queue['href']) ?>">
+                        <span class="summary-label"><?= e((string)$queue['label']) ?> Billing Requests</span>
+                        <span class="summary-value"><?= (int)$queue['pending_count'] ?></span>
+                        <span class="text-muted queue-hint">Open pending queue</span>
+                    </a>
+                <?php endforeach; ?>
+                <?php foreach ($registrationBillingQueues as $queue): ?>
+                    <a class="summary-item accounts-queue-button" href="<?= e((string)$queue['href']) ?>">
+                        <span class="summary-label"><?= e((string)$queue['label']) ?></span>
+                        <span class="summary-value"><?= (int)$queue['pending_count'] ?></span>
+                        <span class="text-muted queue-hint"><?= e((string)$queue['description']) ?></span>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <div class="summary-grid">
         <div class="summary-item"><span class="summary-label">Catalogue Items</span> <span class="summary-value"><?= count($allItems) ?></span></div>
         <div class="summary-item"><span class="summary-label">Active Services</span> <span class="summary-value"><?= $activeServices ?></span></div>
-        <div class="summary-item"><span class="summary-label">Active Products</span> <span class="summary-value"><?= $activeProducts ?></span></div>
+        <div class="summary-item"><span class="summary-label">Active Drugs</span> <span class="summary-value"><?= $activeDrugs ?></span></div>
+        <div class="summary-item"><span class="summary-label">Active Consumables</span> <span class="summary-value"><?= $activeConsumables ?></span></div>
     </div>
 
     <form method="get" class="card">
@@ -72,7 +230,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <label for="item_type">Type</label>
                 <select id="item_type" name="item_type">
                     <option value="">All</option>
-                    <?php foreach (['Service', 'Product'] as $type): ?>
+                    <?php foreach (['Drug', 'Consumable', 'Service'] as $type): ?>
                         <option value="<?= e($type) ?>" <?= $filters['item_type'] === $type ? 'selected' : '' ?>><?= e($type) ?></option>
                     <?php endforeach; ?>
                 </select>

@@ -25,7 +25,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="page-header">
         <div>
             <h1>Pharmacy Worklist</h1>
-            <p>Clinical and direct prescriptions awaiting dispensing.</p>
+            <p>Clinical prescriptions awaiting dispensing.</p>
         </div>
         <div class="form-actions">
             <a class="btn-secondary" href="index.php">All</a>

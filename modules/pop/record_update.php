@@ -8,17 +8,17 @@ requireCsrfToken();
 $requestId = filter_input(INPUT_POST, 'pop_request_id', FILTER_VALIDATE_INT) ?: 0;
 if (!$requestId) {
     http_response_code(400);
-    exit('Invalid POP request.');
+    exit('Invalid Plaster request.');
 }
 $request = $popService->getRequestById($requestId, $currentUser);
 if (!$request) {
     http_response_code(404);
-    exit('POP request not found.');
+    exit('Plaster request not found.');
 }
 $visit = popRequireVisit($visitService, (int)$request['visit_id']);
 if (!$permissionService->canEditPopRecord($visit, $currentUser)) {
     http_response_code(403);
-    exit('You cannot edit this POP record.');
+    exit('You cannot edit this Plaster record.');
 }
 
 $result = $popService->updateRecord($_POST, $currentUser);
@@ -27,7 +27,7 @@ if (($result['success'] ?? false) === true) {
         'pop_record',
         (int)$request['patient_id'],
         (int)$request['visit_id'],
-        'POP Record',
+        'Plaster Record',
         $requestId,
         $_POST,
         $currentUser
@@ -39,6 +39,6 @@ if (($result['success'] ?? false) === true) {
         exit;
     }
 }
-popFlash($result, 'POP record updated.');
+popFlash($result, 'Plaster record updated.');
 header('Location: record.php?id=' . $requestId);
 exit;

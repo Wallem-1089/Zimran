@@ -26,12 +26,23 @@ $buttonLabel ??= 'Save Item';
         </div>
         <div class="form-group">
             <label for="category">Category</label>
-            <input type="text" id="category" name="category" maxlength="100" required value="<?= e((string)($item['category'] ?? '')) ?>">
+            <select id="category" name="category" required>
+                <?php foreach (['Drug', 'Consumable'] as $category): ?>
+                    <option value="<?= e($category) ?>" <?= (string)($item['category'] ?? 'Drug') === $category ? 'selected' : '' ?>>
+                        <?= e($category) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
         </div>
         <div class="form-group">
             <label for="unit">Unit</label>
             <input type="text" id="unit" name="unit" maxlength="50" required value="<?= e((string)($item['unit'] ?? '')) ?>">
             <small class="text-muted">Measurement unit only, for example tablet, capsule, box, vial, or pack. Do not enter stock quantity here.</small>
+        </div>
+        <div class="form-group">
+            <label for="barcodes">Barcodes / SKUs</label>
+            <textarea id="barcodes" name="barcodes" rows="3" placeholder="Scan or enter one barcode per line"><?= e((string)($item['barcodes'] ?? '')) ?></textarea>
+            <small class="text-muted">Optional. Add manufacturer barcodes or internal hospital barcode/SKU values. Item code is always scannable too.</small>
         </div>
         <div class="form-group">
             <label for="billable_item_id">Billable Item</label>

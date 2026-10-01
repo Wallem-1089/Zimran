@@ -3,12 +3,14 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/AuditService.php';
+require_once __DIR__ . '/ClinicalBillingGateService.php';
 require_once __DIR__ . '/EncounterEventService.php';
 require_once __DIR__ . '/PermissionService.php';
 
 class PhysiotherapyService
 {
     private AuditService $auditService;
+    private ClinicalBillingGateService $billingGateService;
     private EncounterEventService $eventService;
     private PermissionService $permissionService;
 
@@ -16,9 +18,11 @@ class PhysiotherapyService
         private PDO $pdo,
         ?AuditService $auditService = null,
         ?EncounterEventService $eventService = null,
-        ?PermissionService $permissionService = null
+        ?PermissionService $permissionService = null,
+        ?ClinicalBillingGateService $billingGateService = null
     ) {
         $this->auditService = $auditService ?? new AuditService($pdo);
+        $this->billingGateService = $billingGateService ?? new ClinicalBillingGateService($pdo);
         $this->eventService = $eventService ?? new EncounterEventService($pdo);
         $this->permissionService = $permissionService ?? new PermissionService($pdo);
     }
@@ -31,6 +35,7 @@ class PhysiotherapyService
             $visit = $this->lockVisit((int)($data['visit_id'] ?? 0));
             $source = $this->normalizeSource((string)($data['record_source'] ?? $data['source'] ?? 'Clinical'));
             $departmentId = $this->resolvePhysiotherapyDepartmentId();
+            $suggestedBillableItemIds = ClinicalBillingGateService::normalizeBillableItemIds($data);
             $errors = $this->validateRecord($visit, $user, $source, $data);
 
             if (isset($data['patient_id']) && (int)$data['patient_id'] !== (int)$visit['patient_id']) {
@@ -43,6 +48,9 @@ class PhysiotherapyService
 
             if ($departmentId === null) {
                 $errors[] = 'Physiotherapy department is not available.';
+            }
+            if ($source === 'Clinical' && $suggestedBillableItemIds === []) {
+                $errors[] = 'At least one billable item is required before sending this request to Accounts.';
             }
 
             if ($errors !== []) {
@@ -77,6 +85,23 @@ class PhysiotherapyService
                 ':created_by' => (int)$user['id'],
             ]);
             $recordId = (int)$this->pdo->lastInsertId();
+
+            if ($source === 'Clinical') {
+                $billingTask = $this->billingGateService->ensureBillingRequest(
+                    'Physiotherapy',
+                    $recordId,
+                    (int)$visit['id'],
+                    (int)$visit['patient_id'],
+                    (int)$user['id'],
+                    'Physiotherapy: ' . $this->requiredText($data['presenting_problem'] ?? $data['assessment'] ?? 'Referral'),
+                    $departmentId,
+                    $suggestedBillableItemIds
+                );
+                if (($billingTask['success'] ?? false) !== true) {
+                    $this->rollback();
+                    return $this->failure($billingTask['errors'] ?? ['Unable to create Accounts billing task.']);
+                }
+            }
 
             if (!$this->audit(
                 'PHYSIOTHERAPY_CREATED',
@@ -194,12 +219,12 @@ class PhysiotherapyService
 
         $status = $this->normalizeWorklistStatus((string)($filters['status'] ?? ''));
         $params = [];
-        $where = '';
+        $where = " WHERE pr.record_source = 'Clinical'";
 
         if ($status === '') {
-            $where = " WHERE pr.status = 'Active'";
+            $where .= " AND pr.status = 'Active'";
         } elseif ($status !== 'All') {
-            $where = ' WHERE pr.status = :status';
+            $where .= ' AND pr.status = :status';
             $params[':status'] = $status;
         }
 
@@ -607,11 +632,16 @@ class PhysiotherapyService
             }
 
             $visit = $this->lockVisit((int)$record['visit_id']);
-            $errors = $this->validateRecordMutation($record, $visit, $user, 'edit_physiotherapy');
+            $errors = $this->validateRecordMutation($record, $visit, $user, 'edit_physiotherapy', false);
 
             if ((string)$record['status'] !== 'Active') {
                 $errors[] = 'Only active physiotherapy records can be cancelled.';
             }
+
+            $errors = array_merge(
+                $errors,
+                $this->billingGateService->cancellationErrors('Physiotherapy', $recordId, (int)$record['visit_id'], $user)
+            );
 
             if ($errors !== []) {
                 $this->rollback();
@@ -675,6 +705,10 @@ class PhysiotherapyService
             $errors[] = 'You cannot access this encounter.';
         }
 
+        if ((string)($record['record_source'] ?? 'Clinical') !== 'Clinical') {
+            $errors[] = 'Only clinical physiotherapy records can be processed.';
+        }
+
         if (in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)
             && !$this->permissionService->isAdministrator($user)) {
             $errors[] = 'Completed or cancelled encounters cannot receive physiotherapy mutations.';
@@ -685,12 +719,7 @@ class PhysiotherapyService
                 $errors[] = 'You cannot create a clinical physiotherapy referral.';
             }
         } elseif ($source === 'Direct') {
-            if (!$this->permissionService->canCreatePhysiotherapy($visit, $user, 'Direct')) {
-                $errors[] = 'You cannot create a direct physiotherapy record.';
-            }
-            if (!$this->isPhysiotherapyEncounter($visit)) {
-                $errors[] = 'Direct physiotherapy records require an active Physiotherapy encounter.';
-            }
+            $errors[] = 'Direct physiotherapy records are no longer allowed. Create a clinical referral from the clinical workflow.';
         } else {
             $errors[] = 'Invalid physiotherapy record source.';
         }
@@ -727,7 +756,7 @@ class PhysiotherapyService
         return $errors;
     }
 
-    private function validateRecordMutation(array $record, array $visit, array $user, string $permission): array
+    private function validateRecordMutation(array $record, array $visit, array $user, string $permission, bool $requireBillingClearance = true): array
     {
         $errors = [];
 
@@ -752,6 +781,18 @@ class PhysiotherapyService
 
         if ((string)($record['status'] ?? '') === 'Completed') {
             $errors[] = 'Completed physiotherapy records are view-only.';
+        }
+
+        if ($requireBillingClearance) {
+            $errors = array_merge(
+                $errors,
+                $this->billingGateService->processingErrors(
+                    'Physiotherapy',
+                    (int)($record['id'] ?? 0),
+                    (int)($visit['id'] ?? $record['visit_id'] ?? 0),
+                    $user
+                )
+            );
         }
 
         return $errors;

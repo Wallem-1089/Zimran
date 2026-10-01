@@ -29,7 +29,7 @@ $requestSource = $radiologyRequestSource ?? 'Clinical';
                     <span class="badge badge-warning">No radiology permission</span>
                 <?php elseif (!$isClosedEncounter && $canCreateRadiologyRequest): ?>
                     <a href="../radiology/request.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
-                        <?= $requestSource === 'Direct' ? 'Create Direct Request' : 'Request Radiology Study' ?>
+                        Request Radiology Study
                     </a>
                 <?php endif; ?>
             </div>
@@ -69,7 +69,7 @@ $requestSource = $radiologyRequestSource ?? 'Clinical';
             <?php if (!$isClosedEncounter && $canCreateRadiologyRequest): ?>
                 <p>
                     <a href="../radiology/request.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
-                        <?= $requestSource === 'Direct' ? 'Create Direct Request' : 'Request Radiology Study' ?>
+                        Request Radiology Study
                     </a>
                 </p>
             <?php endif; ?>

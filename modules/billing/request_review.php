@@ -22,10 +22,6 @@ if (!$request) {
 }
 $canCancelThisRequest = $billingService->canCancelBillingRequestRow($request, $currentUser);
 
-$items = $accountsService->searchItems(['status' => 'active'], $currentUser);
-$items = array_values(array_filter($items, static fn (array $item): bool => !empty($item['is_active'])));
-$suggestedId = (int)($request['suggested_billable_item_id'] ?? 0);
-
 $pageTitle = 'Review Billing Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 require __DIR__ . '/../../layouts/header.php';
@@ -51,9 +47,15 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <div class="summary-item"><span class="summary-label">Department</span> <span class="summary-value"><?= e((string)($request['department_name'] ?? '-')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Source</span> <span class="summary-value"><?= e((string)($request['source_module'] ?? 'General')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)($request['status'] ?? 'Pending')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Suggested Item</span> <span class="summary-value"><?= e((string)($request['suggested_item_name'] ?? 'Not set')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Charged Item</span> <span class="summary-value"><?= e((string)($request['charged_item_name'] ?? 'Not charged')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Patient Charge</span> <span class="summary-value"><?= !empty($request['patient_charge_id']) ? '#' . (int)$request['patient_charge_id'] : 'Pending automatic charge' ?></span></div>
             <div class="summary-item"><span class="summary-label">Requested By</span> <span class="summary-value"><?= e((string)($request['requested_by_name'] ?? '-')) ?></span></div>
         </div>
         <p><?= nl2br(e((string)($request['description'] ?? ''))) ?></p>
+        <?php if (!empty($request['notes'])): ?>
+            <p class="text-muted"><?= nl2br(e((string)$request['notes'])) ?></p>
+        <?php endif; ?>
     </div>
 
     <?php if ((string)($request['status'] ?? '') !== 'Pending'): ?>
@@ -62,37 +64,11 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
     <?php else: ?>
         <div class="card">
-            <h3>Create Official Charge</h3>
-            <form method="post" action="request_charge_save.php" class="form-grid">
-                <?= csrfField() ?>
-                <input type="hidden" name="billing_request_id" value="<?= (int)$request['id'] ?>">
-                <div class="form-group">
-                    <label for="billable_item_id">Billable Item</label>
-                    <select id="billable_item_id" name="billable_item_id" required>
-                        <option value="">Select official item</option>
-                        <?php foreach ($items as $item): ?>
-                            <option value="<?= (int)$item['id'] ?>" <?= $suggestedId === (int)$item['id'] ? 'selected' : '' ?>>
-                                <?= e((string)$item['item_code']) ?> — <?= e((string)$item['item_name']) ?> (&#8358;<?= e(number_format((float)$item['unit_price'], 2)) ?>)
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="quantity">Quantity</label>
-                    <input id="quantity" name="quantity" type="number" min="0.01" step="0.01" value="<?= e((string)($request['display_quantity'] ?? '1')) ?>" required>
-                </div>
-                <div class="form-group full-width">
-                    <label for="description">Charge Description</label>
-                    <textarea id="description" name="description" rows="3"><?= e((string)($request['description'] ?? '')) ?></textarea>
-                </div>
-                <div class="form-group full-width">
-                    <label for="notes">Review Notes</label>
-                    <textarea id="notes" name="notes" rows="3" placeholder="Optional Accounts review note"></textarea>
-                </div>
-                <div class="form-actions">
-                    <button class="btn-primary" type="submit">Create Patient Charge</button>
-                </div>
-            </form>
+            <h3>Automatic Charge Pending</h3>
+            <p class="text-muted">
+                Accounts no longer creates this charge manually. Add a suggested billable item to the request source,
+                or keep one clear active price catalogue item for this department/source, then recreate the request.
+            </p>
 
             <?php if ($canCancelThisRequest): ?>
                 <form method="post" action="request_cancel.php" class="form-grid" style="margin-top:1rem;">

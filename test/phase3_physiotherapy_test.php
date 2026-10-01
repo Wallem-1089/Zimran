@@ -6,6 +6,7 @@ require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/test_database.php';
 require_once __DIR__ . '/../database/tools/DatabaseSafety.php';
 require_once __DIR__ . '/../database/tools/MigrationManager.php';
+require_once __DIR__ . '/../services/BillingService.php';
 require_once __DIR__ . '/../services/PhysiotherapyService.php';
 require_once __DIR__ . '/../services/PermissionService.php';
 require_once __DIR__ . '/../services/VisitService.php';
@@ -48,22 +49,6 @@ function createEncounter(PDO $pdo, array $actor, int $patientId, int $department
     return (int)$pdo->lastInsertId();
 }
 
-function routePhysioEncounter(PDO $pdo, int $visitId, int $departmentId): void
-{
-    $stmt = $pdo->prepare("
-        UPDATE visits
-        SET current_department_id = :department_id,
-            current_department_received_status = 'Received',
-            visit_status = 'Physiotherapy',
-            updated_at = NOW()
-        WHERE id = :visit_id
-    ");
-    $stmt->execute([
-        ':department_id' => $departmentId,
-        ':visit_id' => $visitId,
-    ]);
-}
-
 $config = require __DIR__ . '/../config/app.php';
 $resolved = DatabaseSafety::resolveTestDatabase($config);
 $databaseName = (string)$pdo->query('SELECT DATABASE()')->fetchColumn();
@@ -94,6 +79,10 @@ $pdo->exec("DELETE ce FROM encounter_events ce INNER JOIN visits v ON v.id = ce.
 $pdo->exec("DELETE al FROM audit_logs al INNER JOIN visits v ON v.id = al.visit_id WHERE v.visit_number LIKE 'P36-%'");
 $pdo->exec("DELETE ps FROM physiotherapy_sessions ps INNER JOIN physiotherapy_records pr ON pr.id = ps.physiotherapy_record_id INNER JOIN visits v ON v.id = pr.visit_id WHERE v.visit_number LIKE 'P36-%'");
 $pdo->exec("DELETE pr FROM physiotherapy_records pr INNER JOIN visits v ON v.id = pr.visit_id WHERE v.visit_number LIKE 'P36-%'");
+$pdo->exec("DELETE FROM billing_requests WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P36-%')");
+$pdo->exec("DELETE FROM payments WHERE invoice_id IN (SELECT id FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P36-%'))");
+$pdo->exec("DELETE FROM patient_charges WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P36-%')");
+$pdo->exec("DELETE FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P36-%')");
 $pdo->exec("DELETE FROM visits WHERE visit_number LIKE 'P36-%'");
 $pdo->exec("DELETE FROM users WHERE username = 'dev_physio'");
 
@@ -102,7 +91,7 @@ $rows = $pdo->query("
     FROM users u
     INNER JOIN roles r ON r.id = u.role_id
     INNER JOIN departments d ON d.id = u.department_id
-    WHERE u.username IN ('admin','dev_doctor','dev_nurse','dev_records')
+    WHERE u.username IN ('admin','dev_accounts','dev_doctor','dev_nurse','dev_records')
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 $users = [];
@@ -110,11 +99,12 @@ foreach ($rows as $row) {
     $users[$row['username']] = $row;
 }
 
-foreach (['admin', 'dev_doctor', 'dev_nurse', 'dev_records'] as $username) {
+foreach (['admin', 'dev_accounts', 'dev_doctor', 'dev_nurse', 'dev_records'] as $username) {
     assertPhysio(isset($users[$username]), 'Missing fixture user ' . $username . '.');
 }
 
 $admin = $users['admin'];
+$accounts = $users['dev_accounts'];
 $doctor = $users['dev_doctor'];
 $nurse = $users['dev_nurse'];
 
@@ -162,6 +152,7 @@ $physioVisitId = createEncounter($pdo, $physio, $patientId, $deptId, 'Physiother
 $completedVisitId = createEncounter($pdo, $doctor, $patientId, (int)$doctor['department_id'], 'Completed', 'CMP-' . time());
 
 $service = new PhysiotherapyService($pdo, null, null, new PermissionService($pdo));
+$billingService = new BillingService($pdo);
 
 foreach ([
     'view_physiotherapy',
@@ -177,6 +168,12 @@ foreach ([
 
 assertPhysio(in_array('physiotherapy_records', $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN), true), 'Physiotherapy record table is missing.');
 assertPhysio(in_array('physiotherapy_sessions', $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN), true), 'Physiotherapy session table is missing.');
+$pdo->prepare("
+    INSERT INTO billable_items (item_code, item_name, item_type, department_id, description, unit_price, unit, is_active, created_by, created_at, updated_at)
+    SELECT 'P36-PHY-AUTO', 'P36 Physiotherapy Session', 'Service', :department_id, 'Physiotherapy fixture.', 1800.00, '', 1, :created_by, NOW(), NOW()
+    WHERE NOT EXISTS (SELECT 1 FROM billable_items WHERE item_code = 'P36-PHY-AUTO')
+")->execute([':department_id' => $deptId, ':created_by' => (int)$accounts['id']]);
+$physioBillableItemId = (int)$pdo->query("SELECT id FROM billable_items WHERE item_code = 'P36-PHY-AUTO' LIMIT 1")->fetchColumn();
 
 try {
     $clinical = success($service->createRecord([
@@ -190,13 +187,22 @@ try {
         'treatment_plan' => 'Range of motion exercises and strengthening.',
         'goals' => 'Improve mobility.',
         'precautions' => 'Avoid heavy lifting.',
+        'suggested_billable_item_id' => $physioBillableItemId,
     ], $doctor), 'Clinical physiotherapy record create');
     $clinicalRecordId = (int)$clinical['physiotherapy_record_id'];
+    $pdo->prepare("UPDATE billing_requests SET status = 'Charged', reviewed_by = :reviewed_by, reviewed_at = NOW(), updated_at = NOW() WHERE source_module = 'Physiotherapy' AND source_record_id = :source_record_id")
+        ->execute([':reviewed_by' => (int)$accounts['id'], ':source_record_id' => $clinicalRecordId]);
+    $physioInvoice = $billingService->getInvoiceByVisit($doctorVisitId);
+    assertPhysio($physioInvoice !== null, 'Physiotherapy invoice was not created.');
+    success($billingService->recordPayment([
+        'invoice_id' => (int)$physioInvoice['id'],
+        'amount' => (float)$physioInvoice['balance_due'],
+        'payment_method' => 'Cash',
+        'reference' => 'P36-PHY-PAID',
+    ], $accounts), 'Pay physiotherapy invoice');
 
     $worklist = $service->listWorklist($physio, ['status' => 'Active']);
     assertPhysio($worklist !== [], 'Physiotherapy worklist did not include the clinical record.');
-    routePhysioEncounter($pdo, $doctorVisitId, $deptId);
-
     $doctorDenied = $service->createRecord([
         'visit_id' => $doctorVisitId,
         'patient_id' => $patientId,
@@ -250,28 +256,15 @@ try {
     ], $physio);
     assertPhysio(($readOnlyDenied['success'] ?? true) === false, 'Completed physiotherapy record accepted an update.');
 
-    $directCreate = success($service->createRecord([
+    $directCreate = $service->createRecord([
         'visit_id' => $physioVisitId,
         'patient_id' => $patientId,
         'record_source' => 'Direct',
         'presenting_problem' => 'Rehabilitation following knee injury.',
         'assessment' => 'Reduced knee range of motion.',
         'treatment_plan' => 'Mobility and strengthening sessions.',
-    ], $physio), 'Direct physiotherapy record create');
-    $directRecordId = (int)$directCreate['physiotherapy_record_id'];
-
-    $directRecord = $service->getRecordById($directRecordId, $physio);
-    assertPhysio($directRecord !== null && (string)$directRecord['record_source'] === 'Direct', 'Direct physiotherapy record did not persist.');
-
-    $completeDirect = $service->completeRecord($directRecordId, $physio);
-    assertPhysio(($completeDirect['success'] ?? false) === false, 'Direct record completed without a session.');
-
-    success($service->addSession([
-        'physiotherapy_record_id' => $directRecordId,
-        'session_date' => date('Y-m-d H:i:s'),
-        'treatment_given' => 'Manual therapy and gait training.',
-    ], $physio), 'Direct physiotherapy session create');
-    success($service->completeRecord($directRecordId, $physio), 'Direct physiotherapy completion');
+    ], $physio);
+    assertPhysio(($directCreate['success'] ?? true) === false, 'Physiotherapy created a direct record unexpectedly.');
 
     $nurseDenied = $service->createRecord([
         'visit_id' => $physioVisitId,
@@ -307,7 +300,11 @@ try {
     $pdo->exec("DELETE ce FROM encounter_events ce INNER JOIN visits v ON v.id = ce.visit_id WHERE v.visit_number LIKE 'P36-%'");
     $pdo->exec("DELETE al FROM audit_logs al INNER JOIN visits v ON v.id = al.visit_id WHERE v.visit_number LIKE 'P36-%'");
     $pdo->exec("DELETE ps FROM physiotherapy_sessions ps INNER JOIN physiotherapy_records pr ON pr.id = ps.physiotherapy_record_id INNER JOIN visits v ON v.id = pr.visit_id WHERE v.visit_number LIKE 'P36-%'");
+    $pdo->exec("DELETE FROM billing_requests WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P36-%')");
     $pdo->exec("DELETE pr FROM physiotherapy_records pr INNER JOIN visits v ON v.id = pr.visit_id WHERE v.visit_number LIKE 'P36-%'");
+    $pdo->exec("DELETE FROM payments WHERE invoice_id IN (SELECT id FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P36-%'))");
+    $pdo->exec("DELETE FROM patient_charges WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P36-%')");
+    $pdo->exec("DELETE FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P36-%')");
     $pdo->exec("DELETE FROM visits WHERE visit_number LIKE 'P36-%'");
     $pdo->exec("DELETE FROM users WHERE username = 'dev_physio'");
 }

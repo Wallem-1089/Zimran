@@ -92,7 +92,7 @@ if (!$patient) {
 
 $departmentName = 'Unknown Department';
 
-foreach ($visitService->getDepartments() as $department) {
+foreach ($visitService->getEncounterCreationDepartments() as $department) {
 
     if (
 
@@ -110,6 +110,15 @@ foreach ($visitService->getDepartments() as $department) {
 
     }
 
+}
+
+if ($departmentName === 'Unknown Department') {
+    $_SESSION['validation_errors'] = [
+        'The selected department cannot be used as the initial encounter department.'
+    ];
+    $_SESSION['old_visit'] = $_POST;
+    header('Location: create.php?patient=' . (int)$visit['patient_id']);
+    exit;
 }
 
 /*

@@ -6,6 +6,7 @@ require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/test_database.php';
 require_once __DIR__ . '/../database/tools/DatabaseSafety.php';
 require_once __DIR__ . '/../database/tools/MigrationManager.php';
+require_once __DIR__ . '/../services/BillingService.php';
 require_once __DIR__ . '/../services/PermissionService.php';
 require_once __DIR__ . '/../services/TheatreService.php';
 
@@ -68,6 +69,10 @@ $manager->apply(__DIR__ . '/../database/migrations/029_phase3_theatre_up.sql', 2
 $pdo->exec("DELETE ce FROM encounter_events ce INNER JOIN visits v ON v.id = ce.visit_id WHERE v.visit_number LIKE 'P37-%'");
 $pdo->exec("DELETE al FROM audit_logs al INNER JOIN visits v ON v.id = al.visit_id WHERE v.visit_number LIKE 'P37-%'");
 $pdo->exec("DELETE tr FROM theatre_records tr INNER JOIN visits v ON v.id = tr.visit_id WHERE v.visit_number LIKE 'P37-%'");
+$pdo->exec("DELETE FROM billing_requests WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P37-%')");
+$pdo->exec("DELETE FROM payments WHERE invoice_id IN (SELECT id FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P37-%'))");
+$pdo->exec("DELETE FROM patient_charges WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P37-%')");
+$pdo->exec("DELETE FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P37-%')");
 $pdo->exec("DELETE FROM visits WHERE visit_number LIKE 'P37-%'");
 $pdo->exec("DELETE FROM users WHERE username = 'dev_theatre'");
 
@@ -76,7 +81,7 @@ $rows = $pdo->query("
     FROM users u
     INNER JOIN roles r ON r.id = u.role_id
     INNER JOIN departments d ON d.id = u.department_id
-    WHERE u.username IN ('walter','dev_doctor','dev_nurse')
+    WHERE u.username IN ('walter','dev_accounts','dev_doctor','dev_nurse')
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 $users = [];
@@ -84,11 +89,12 @@ foreach ($rows as $row) {
     $users[$row['username']] = $row;
 }
 
-foreach (['walter', 'dev_doctor', 'dev_nurse'] as $username) {
+foreach (['walter', 'dev_accounts', 'dev_doctor', 'dev_nurse'] as $username) {
     assertTheatre(isset($users[$username]), 'Missing fixture user ' . $username . '.');
 }
 
 $admin = $users['walter'];
+$accounts = $users['dev_accounts'];
 $doctor = $users['dev_doctor'];
 $nurse = $users['dev_nurse'];
 
@@ -151,6 +157,7 @@ $theatreVisitId = createTheatreEncounter($pdo, $theatre, $patientId, $deptId, 'T
 $completedVisitId = createTheatreEncounter($pdo, $doctor, $patientId, (int)$doctor['department_id'], 'Completed', 'CMP-' . time());
 
 $service = new TheatreService($pdo, null, null, new PermissionService($pdo));
+$billingService = new BillingService($pdo);
 
 foreach ([
     'view_theatre',
@@ -164,6 +171,12 @@ foreach ([
 }
 
 assertTheatre(in_array('theatre_records', $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN), true), 'Theatre record table is missing.');
+$pdo->prepare("
+    INSERT INTO billable_items (item_code, item_name, item_type, department_id, description, unit_price, unit, is_active, created_by, created_at, updated_at)
+    SELECT 'P37-THE-AUTO', 'P37 Theatre Procedure', 'Service', :department_id, 'Theatre fixture.', 5000.00, '', 1, :created_by, NOW(), NOW()
+    WHERE NOT EXISTS (SELECT 1 FROM billable_items WHERE item_code = 'P37-THE-AUTO')
+")->execute([':department_id' => $deptId, ':created_by' => (int)$accounts['id']]);
+$theatreBillableItemId = (int)$pdo->query("SELECT id FROM billable_items WHERE item_code = 'P37-THE-AUTO' LIMIT 1")->fetchColumn();
 
 try {
     $clinical = requireTheatreSuccess($service->create([
@@ -178,8 +191,19 @@ try {
         'postoperative_notes' => 'Stable in recovery.',
         'postoperative_plan' => 'Observation and analgesia.',
         'anaesthesia_notes' => 'General anaesthesia used.',
+        'suggested_billable_item_id' => $theatreBillableItemId,
     ], $doctor), 'Clinical theatre create');
     $clinicalRecordId = (int)$clinical['theatre_record_id'];
+    $pdo->prepare("UPDATE billing_requests SET status = 'Charged', reviewed_by = :reviewed_by, reviewed_at = NOW(), updated_at = NOW() WHERE source_module = 'Theatre' AND source_record_id = :source_record_id")
+        ->execute([':reviewed_by' => (int)$accounts['id'], ':source_record_id' => $clinicalRecordId]);
+    $theatreInvoice = $billingService->getInvoiceByVisit($doctorVisitId);
+    assertTheatre($theatreInvoice !== null, 'Theatre invoice was not created.');
+    requireTheatreSuccess($billingService->recordPayment([
+        'invoice_id' => (int)$theatreInvoice['id'],
+        'amount' => (float)$theatreInvoice['balance_due'],
+        'payment_method' => 'Cash',
+        'reference' => 'P37-THE-PAID',
+    ], $accounts), 'Pay theatre invoice');
 
     $duplicate = $service->create([
         'visit_id' => $doctorVisitId,
@@ -266,6 +290,7 @@ try {
         'postoperative_notes' => 'Recovered well.',
         'postoperative_plan' => 'Observe overnight.',
         'anaesthesia_notes' => 'Regional anaesthesia.',
+        'suggested_billable_item_id' => $theatreBillableItemId,
     ], $theatre), 'Direct theatre create');
     $directRecordId = (int)$theatreCreate['theatre_record_id'];
 
@@ -306,6 +331,10 @@ try {
     $pdo->exec("DELETE ce FROM encounter_events ce INNER JOIN visits v ON v.id = ce.visit_id WHERE v.visit_number LIKE 'P37-%'");
     $pdo->exec("DELETE al FROM audit_logs al INNER JOIN visits v ON v.id = al.visit_id WHERE v.visit_number LIKE 'P37-%'");
     $pdo->exec("DELETE tr FROM theatre_records tr INNER JOIN visits v ON v.id = tr.visit_id WHERE v.visit_number LIKE 'P37-%'");
+    $pdo->exec("DELETE FROM billing_requests WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P37-%')");
+    $pdo->exec("DELETE FROM payments WHERE invoice_id IN (SELECT id FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P37-%'))");
+    $pdo->exec("DELETE FROM patient_charges WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P37-%')");
+    $pdo->exec("DELETE FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'P37-%')");
     $pdo->exec("DELETE FROM visits WHERE visit_number LIKE 'P37-%'");
     $pdo->exec("DELETE FROM users WHERE username = 'dev_theatre'");
 }

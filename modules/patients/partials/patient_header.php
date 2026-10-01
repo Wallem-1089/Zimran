@@ -43,7 +43,7 @@ if ($dateOfBirth !== '') {
             <div class="patient-hospital-number">
                 Hospital No.
                 <strong>
-                    <?= e($hospitalNumber) ?>
+                    <?= e($hospitalNumber !== '' ? $hospitalNumber : 'Pending payment') ?>
                 </strong>
             </div>
 
@@ -60,8 +60,8 @@ if ($dateOfBirth !== '') {
     </div>
 
     <div class="patient-status">
-        <span class="status-badge active">
-            Active
+        <span class="status-badge <?= (string)($patient['registration_status'] ?? 'Active') === 'Active' ? 'active' : '' ?>">
+            <?= e((string)($patient['registration_status'] ?? 'Active')) ?>
         </span>
     </div>
 

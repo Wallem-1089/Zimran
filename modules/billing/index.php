@@ -21,18 +21,42 @@ $filters = [
     'status' => trim((string)($_GET['status'] ?? '')),
 ];
 $showFullHistory = (string)($_GET['full'] ?? '') === '1';
+$hasSearchFilters = $filters['patient_name'] !== ''
+    || $filters['hospital_number'] !== ''
+    || $filters['visit_number'] !== ''
+    || $filters['encounter_id'] !== ''
+    || $filters['payment_reference'] !== ''
+    || $filters['invoice_number'] !== ''
+    || $filters['status'] !== '';
 
 $invoices = $billingTablesReady ? $billingService->listInvoices($filters, $currentUser) : [];
 $encounterMatches = ($filters['patient_name'] !== '' || $filters['hospital_number'] !== '' || $filters['visit_number'] !== '' || $filters['encounter_id'] !== '' || $filters['payment_reference'] !== '')
     ? $billingService->searchEncountersForBilling($filters, $currentUser)
     : [];
 $recentPayments = $billingTablesReady ? $billingService->listPaymentsFiltered($filters, $currentUser) : [];
+$registrationPayments = $registrationBillingService->listRegistrationPaymentsFiltered($filters, $currentUser);
+$registrationBillingMatches = ($filters['patient_name'] !== '' || $filters['hospital_number'] !== '' || $filters['payment_reference'] !== '' || $filters['status'] !== '')
+    ? $registrationBillingService->listRequests([
+        'status' => in_array($filters['status'], ['Pending', 'Paid', 'Cancelled'], true) ? $filters['status'] : '',
+        'patient_name' => $filters['patient_name'],
+        'hospital_number' => $filters['hospital_number'],
+        'payment_reference' => $filters['payment_reference'],
+    ])
+    : [];
 $displayInvoices = $showFullHistory ? $invoices : array_slice($invoices, 0, 50);
 $displayPayments = $showFullHistory ? $recentPayments : array_slice($recentPayments, 0, 20);
+$displayRegistrationPayments = $showFullHistory ? $registrationPayments : array_slice($registrationPayments, 0, 20);
 $billingRequestCount = ($billingTablesReady && $billingRequestsReady && $permissionService->canViewBillingRequests($currentUser))
     ? count($billingService->listBillingRequests(['status' => 'Pending'], $currentUser))
     : 0;
+$registrationBillingRequestCount = $permissionService->canViewBillingRequests($currentUser)
+    ? count($registrationBillingService->listRequests(['status' => 'Pending']))
+    : 0;
 $openInvoices = count(array_filter($invoices, static fn (array $invoice): bool => in_array((string)($invoice['status'] ?? ''), ['Unpaid', 'Partially Paid'], true)));
+$paymentCount = count($recentPayments) + count($registrationPayments);
+$activeDepartmentName = (string)($currentUser['active_department_name'] ?? $currentUser['department_name'] ?? '');
+$canShowManualChargeButton = $permissionService->canCreatePatientCharge($currentUser)
+    && strcasecmp($activeDepartmentName, 'Accounts') !== 0;
 
 $pageTitle = 'Billing';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -45,11 +69,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="page-header">
         <div>
             <h1>Billing</h1>
-            <p>Patient Accounts, invoices, and payments.</p>
+            <p>Patient Accounts, invoices, encounter payments, and registration payment clearances.</p>
         </div>
         <div class="form-actions">
             <?php if ($permissionService->canViewBillingRequests($currentUser)): ?>
                 <a class="btn-primary" href="billing_requests.php">Billing Requests</a>
+                <a class="btn-primary" href="registration_requests.php">Registration Requests</a>
             <?php endif; ?>
             <?php if (!$showFullHistory): ?>
                 <a class="btn-secondary" href="index.php?<?= e(http_build_query(array_merge($_GET, ['full' => '1']))) ?>">Full History</a>
@@ -61,10 +86,11 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="summary-grid">
         <div class="summary-item"><span class="summary-label">Open Invoices</span> <span class="summary-value"><?= $openInvoices ?></span></div>
-        <div class="summary-item"><span class="summary-label">Recent Payments</span> <span class="summary-value"><?= count($recentPayments) ?></span></div>
+        <div class="summary-item"><span class="summary-label">Payments / Clearances</span> <span class="summary-value"><?= $paymentCount ?></span></div>
         <div class="summary-item"><span class="summary-label">Filtered Invoices</span> <span class="summary-value"><?= count($invoices) ?></span></div>
         <?php if ($permissionService->canViewBillingRequests($currentUser)): ?>
             <div class="summary-item"><span class="summary-label">Pending Requests</span> <span class="summary-value"><?= $billingRequestCount ?></span></div>
+            <div class="summary-item"><span class="summary-label">Pending Registration</span> <span class="summary-value"><?= $registrationBillingRequestCount ?></span></div>
         <?php endif; ?>
     </div>
 
@@ -95,10 +121,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <input id="visit_number" name="visit_number" value="<?= e($filters['visit_number']) ?>">
             </div>
             <div class="form-group">
-                <label for="status">Status</label>
+                <label for="status">Invoice / Request Status</label>
                 <select id="status" name="status">
                     <option value="">All</option>
-                    <?php foreach (['Unpaid', 'Partially Paid', 'Paid', 'Cancelled'] as $status): ?>
+                    <?php foreach (['Unpaid', 'Partially Paid', 'Paid', 'Pending', 'Cancelled'] as $status): ?>
                         <option value="<?= e($status) ?>" <?= $filters['status'] === $status ? 'selected' : '' ?>><?= e($status) ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -146,9 +172,60 @@ require __DIR__ . '/../../layouts/sidebar.php';
                                     <td>₦<?= e(number_format((float)($match['balance_due'] ?? 0), 2)) ?></td>
                                     <td>
                                         <a class="btn-secondary btn-sm" href="view.php?visit=<?= (int)$match['visit_id'] ?>">Open Billing</a>
-                                        <?php if ($permissionService->canCreatePatientCharge($currentUser) && !in_array((string)($match['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)): ?>
+                                        <?php if ($canShowManualChargeButton && !in_array((string)($match['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)): ?>
                                             <a class="btn-primary btn-sm" href="charge_create.php?visit=<?= (int)$match['visit_id'] ?>">Add Charge</a>
                                         <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($hasSearchFilters && $permissionService->canViewBillingRequests($currentUser)): ?>
+        <div class="card">
+            <h3>Registration Billing Matches</h3>
+            <p class="text-muted">Initial registration and monthly renewal requests are patient-level billing records, so they may not have an encounter or invoice number.</p>
+
+            <?php if ($registrationBillingMatches === []): ?>
+                <div class="empty-state">No matching registration billing requests found.</div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Hospital Number</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Requested</th>
+                                <th>Cleared</th>
+                                <th>Reference / Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($registrationBillingMatches as $request): ?>
+                                <tr>
+                                    <td><?= e((string)($request['patient_name'] ?? '-')) ?><br><small><?= e((string)($request['phone'] ?? '-')) ?></small></td>
+                                    <td><?= e((string)($request['hospital_number'] ?? 'Pending')) ?></td>
+                                    <td><?= e((string)$request['billing_type']) ?><?= !empty($request['registration_type']) ? ' / ' . e((string)$request['registration_type']) : '' ?></td>
+                                    <td>&#8358;<?= e((string)$request['display_amount']) ?></td>
+                                    <td><?= e((string)$request['status']) ?></td>
+                                    <td><?= e((string)$request['requested_at']) ?><br><small><?= e((string)($request['requested_by_name'] ?? '-')) ?></small></td>
+                                    <td><?= e((string)($request['cleared_at'] ?? '-')) ?><br><small><?= e((string)($request['cleared_by_name'] ?? '')) ?></small></td>
+                                    <td><?= e((string)($request['notes'] ?? '-')) ?></td>
+                                    <td>
+                                        <a class="btn-secondary btn-sm" href="../patients/view.php?id=<?= (int)$request['patient_id'] ?>">Patient</a>
+                                        <a class="btn-secondary btn-sm" href="registration_requests.php?<?= e(http_build_query([
+                                            'status' => (string)$request['status'],
+                                            'patient_name' => (string)($request['patient_name'] ?? ''),
+                                            'hospital_number' => (string)($request['hospital_number'] ?? ''),
+                                        ])) ?>">Registration Requests</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -213,13 +290,15 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="section-header">
             <div>
                 <h3>Recent Payments</h3>
-                <p class="text-muted"><?= $showFullHistory ? 'Showing full payment history.' : 'Showing latest 20 payments.' ?></p>
+                <p class="text-muted"><?= $showFullHistory ? 'Showing full payment and registration clearance history.' : 'Showing latest 20 encounter payments and latest 20 registration clearances.' ?></p>
             </div>
         </div>
-        <?php if ($recentPayments === []): ?>
+        <?php if ($recentPayments === [] && $registrationPayments === []): ?>
             <div class="empty-state">No payments recorded yet.</div>
         <?php else: ?>
-            <div class="table-responsive">
+            <?php if ($displayPayments !== []): ?>
+                <h4>Encounter Invoice Payments</h4>
+                <div class="table-responsive">
                 <table class="table">
                     <thead>
                         <tr>
@@ -257,6 +336,46 @@ require __DIR__ . '/../../layouts/sidebar.php';
                     </tbody>
                 </table>
             </div>
+            <?php endif; ?>
+
+            <?php if ($displayRegistrationPayments !== []): ?>
+                <h4>Registration Payment Clearances</h4>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Request</th>
+                                <th>Patient</th>
+                                <th>Hospital Number</th>
+                                <th>Type</th>
+                                <th>Reference / Notes</th>
+                                <th>Amount</th>
+                                <th>Cleared By</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($displayRegistrationPayments as $payment): ?>
+                                <tr>
+                                    <td>#<?= (int)$payment['id'] ?></td>
+                                    <td><?= e((string)($payment['patient_name'] ?? '-')) ?></td>
+                                    <td><?= e((string)($payment['hospital_number'] ?? '-')) ?></td>
+                                    <td><?= e((string)$payment['billing_type']) ?><?= !empty($payment['registration_type']) ? ' / ' . e((string)$payment['registration_type']) : '' ?></td>
+                                    <td><?= e((string)($payment['notes'] ?? '-')) ?></td>
+                                    <td>&#8358;<?= e((string)$payment['display_amount']) ?></td>
+                                    <td><?= e((string)($payment['cleared_by_name'] ?? '-')) ?></td>
+                                    <td><?= e((string)($payment['cleared_at'] ?? '-')) ?></td>
+                                    <td>
+                                        <a class="btn-secondary btn-sm" href="../patients/view.php?id=<?= (int)$payment['patient_id'] ?>">Patient</a>
+                                        <a class="btn-secondary btn-sm" href="registration_requests.php?status=Paid&patient_name=<?= e(urlencode((string)($payment['patient_name'] ?? ''))) ?>">Request</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 </main>

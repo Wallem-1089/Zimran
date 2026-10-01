@@ -36,8 +36,14 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div><h1>Receive Stock</h1><p><?= e((string)$item['item_code']) ?> — <?= e((string)$item['item_name']) ?></p></div>
         <div><a class="btn-secondary" href="<?= e(storeBackToView($itemId)) ?>">Back</a></div>
     </div>
+    <?php
+        $barcodeScanId = 'receive_barcode_scan';
+        $barcodeScanLabel = 'Scan Different Item';
+        $barcodeScanHelp = 'Scan to switch this receive form to another inventory item.';
+        $barcodeScanRedirect = 'receive.php?id=__ITEM_ID__';
+        require __DIR__ . '/_barcode_scan.php';
+    ?>
     <?php $departments = $storeDepartmentOptions; $action = 'receive_save.php'; $buttonLabel = 'Receive'; $movementType = 'receive'; require __DIR__ . '/_stock_form.php'; ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
-

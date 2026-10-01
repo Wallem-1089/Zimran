@@ -3,12 +3,14 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/AuditService.php';
+require_once __DIR__ . '/ClinicalBillingGateService.php';
 require_once __DIR__ . '/EncounterEventService.php';
 require_once __DIR__ . '/PermissionService.php';
 
 class TheatreService
 {
     private AuditService $auditService;
+    private ClinicalBillingGateService $billingGateService;
     private EncounterEventService $eventService;
     private PermissionService $permissionService;
 
@@ -16,9 +18,11 @@ class TheatreService
         private PDO $pdo,
         ?AuditService $auditService = null,
         ?EncounterEventService $eventService = null,
-        ?PermissionService $permissionService = null
+        ?PermissionService $permissionService = null,
+        ?ClinicalBillingGateService $billingGateService = null
     ) {
         $this->auditService = $auditService ?? new AuditService($pdo);
+        $this->billingGateService = $billingGateService ?? new ClinicalBillingGateService($pdo);
         $this->eventService = $eventService ?? new EncounterEventService($pdo);
         $this->permissionService = $permissionService ?? new PermissionService($pdo);
     }
@@ -29,6 +33,7 @@ class TheatreService
             $this->pdo->beginTransaction();
 
             $visit = $this->lockVisit((int)($data['visit_id'] ?? 0));
+            $suggestedBillableItemIds = ClinicalBillingGateService::normalizeBillableItemIds($data);
             $errors = $this->validateMutation($visit, $user, 'create_theatre');
 
             if (isset($data['patient_id']) && (int)$data['patient_id'] !== (int)$visit['patient_id']) {
@@ -42,6 +47,9 @@ class TheatreService
             $departmentId = $this->resolveTheatreDepartmentId();
             if ($departmentId === null) {
                 $errors[] = 'Theatre department is not available.';
+            }
+            if ($suggestedBillableItemIds === []) {
+                $errors[] = 'At least one billable item is required before sending this request to Accounts.';
             }
 
             if ($errors !== []) {
@@ -87,6 +95,21 @@ class TheatreService
                 ':created_by' => (int)$user['id'],
             ]);
             $recordId = (int)$this->pdo->lastInsertId();
+
+            $billingTask = $this->billingGateService->ensureBillingRequest(
+                'Theatre',
+                $recordId,
+                (int)$visit['id'],
+                (int)$visit['patient_id'],
+                (int)$user['id'],
+                'Theatre: ' . (string)$record['procedure_name'],
+                $departmentId,
+                $suggestedBillableItemIds
+            );
+            if (($billingTask['success'] ?? false) !== true) {
+                $this->rollback();
+                return $this->failure($billingTask['errors'] ?? ['Unable to create Accounts billing task.']);
+            }
 
             if (!$this->audit('THEATRE_CREATED', $visit, $user, 'Created theatre record #' . $recordId . '.')) {
                 throw new RuntimeException('Unable to audit theatre creation.');
@@ -192,7 +215,7 @@ class TheatreService
             }
 
             $visit = $this->lockVisit((int)$record['visit_id']);
-            $errors = $this->validateMutation($visit, $user, 'edit_theatre');
+            $errors = $this->validateMutation($visit, $user, 'edit_theatre', $record);
             if ((string)$record['status'] !== 'Draft') {
                 $errors[] = 'Completed theatre records are view-only.';
             }
@@ -263,7 +286,7 @@ class TheatreService
             }
 
             $visit = $this->lockVisit((int)$record['visit_id']);
-            $errors = $this->validateMutation($visit, $user, 'complete_theatre');
+            $errors = $this->validateMutation($visit, $user, 'complete_theatre', $record);
             if ((string)$record['status'] !== 'Draft') {
                 $errors[] = 'Only draft theatre records can be completed.';
             }
@@ -334,7 +357,7 @@ class TheatreService
         return $this->filterRows($stmt->fetchAll(PDO::FETCH_ASSOC), $user);
     }
 
-    private function validateMutation(array $visit, array $user, string $permission): array
+    private function validateMutation(array $visit, array $user, string $permission, ?array $record = null): array
     {
         $errors = [];
         if (!$this->permissionService->hasPermission($permission, $user)) {
@@ -345,6 +368,17 @@ class TheatreService
         }
         if (in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)) {
             $errors[] = 'Completed or cancelled encounters are read-only.';
+        }
+        if ($record !== null && $permission !== 'create_theatre') {
+            $errors = array_merge(
+                $errors,
+                $this->billingGateService->processingErrors(
+                    'Theatre',
+                    (int)($record['id'] ?? 0),
+                    (int)($visit['id'] ?? $record['visit_id'] ?? 0),
+                    $user
+                )
+            );
         }
         return $errors;
     }

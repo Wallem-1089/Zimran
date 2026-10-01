@@ -17,8 +17,8 @@ $requestClosed = $latest !== null && in_array((string)($latest['status'] ?? ''),
     <div class="card">
         <div class="card-header">
             <div>
-                <h2>POP / Casting</h2>
-                <p>POP and casting requests, procedure notes, materials used, aftercare, and remarks.</p>
+                <h2>Plaster</h2>
+                <p>Plaster requests, procedure notes, materials used, aftercare, and remarks.</p>
             </div>
             <div class="form-actions">
                 <?php if (!empty($canOpenPopWorklist)): ?>
@@ -27,10 +27,10 @@ $requestClosed = $latest !== null && in_array((string)($latest['status'] ?? ''),
                 <?php if (!($popTablesReady ?? false)): ?>
                     <span class="badge badge-warning">Migration required</span>
                 <?php elseif (!($canViewPop ?? false)): ?>
-                    <span class="badge badge-warning">No POP permission</span>
+                    <span class="badge badge-warning">No Plaster permission</span>
                 <?php elseif (!$isClosedEncounter && !empty($canCreatePopRequest)): ?>
                     <a href="../pop/request.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
-                        <?= $requestSource === 'Direct' ? 'Create Direct POP Request' : 'Request POP / Casting' ?>
+                        Request Plaster
                     </a>
                 <?php endif; ?>
             </div>
@@ -45,25 +45,25 @@ $requestClosed = $latest !== null && in_array((string)($latest['status'] ?? ''),
     </div>
 
     <?php if (!($popTablesReady ?? false)): ?>
-        <div class="card"><p>POP tables are not available yet. Apply Migration 059 to enable this section.</p></div>
+        <div class="card"><p>Plaster tables are not available yet. Apply Migration 059 to enable this section.</p></div>
     <?php elseif (!($canViewPop ?? false)): ?>
-        <div class="card alert-warning">You do not have permission to view POP requests.</div>
+        <div class="card alert-warning">You do not have permission to view Plaster requests.</div>
     <?php elseif ($latest === null): ?>
         <div class="card">
-            <p class="text-muted">No POP requests.</p>
+            <p class="text-muted">No Plaster requests.</p>
             <?php if (!$isClosedEncounter && !empty($canCreatePopRequest)): ?>
                 <p>
                     <a href="../pop/request.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
-                        <?= $requestSource === 'Direct' ? 'Create Direct POP Request' : 'Request POP / Casting' ?>
+                        Request Plaster
                     </a>
                 </p>
             <?php endif; ?>
         </div>
     <?php else: ?>
         <div class="card">
-            <h3>Latest POP Request</h3>
+            <h3>Latest Plaster Request</h3>
             <div class="summary-grid">
-                <div class="summary-item"><span class="summary-label">Procedure</span> <span class="summary-value"><?= e((string)($latest['procedure_requested'] ?? 'POP / Casting')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Procedure</span> <span class="summary-value"><?= e((string)($latest['procedure_requested'] ?? 'Plaster')) ?></span></div>
                 <div class="summary-item"><span class="summary-label">Source</span> <span class="summary-value"><?= e((string)$latest['request_source']) ?></span></div>
                 <div class="summary-item"><span class="summary-label">Priority</span> <span class="summary-value"><?= e((string)$latest['priority']) ?></span></div>
                 <div class="summary-item"><span class="summary-label">Record Status</span> <span class="summary-value"><?= e((string)($latest['record_status'] ?? 'Pending')) ?></span></div>
@@ -83,19 +83,19 @@ $requestClosed = $latest !== null && in_array((string)($latest['status'] ?? ''),
                     <form method="post" action="../pop/start.php"><?= csrfField() ?><input type="hidden" name="id" value="<?= (int)$latest['id'] ?>"><button type="submit" class="btn-primary">Start</button></form>
                 <?php endif; ?>
                 <?php if (!$isClosedEncounter && !$requestClosed && (!empty($canRecordPopProcedure) || !empty($canEditPopRecord))): ?>
-                    <a href="../pop/record.php?id=<?= (int)$latest['id'] ?>" class="btn-secondary"><?= $record && !empty($record['record_id']) ? 'Edit POP Record' : 'Record POP Procedure' ?></a>
+                    <a href="../pop/record.php?id=<?= (int)$latest['id'] ?>" class="btn-secondary"><?= $record && !empty($record['record_id']) ? 'Edit Plaster Record' : 'Record Plaster Procedure' ?></a>
                 <?php endif; ?>
                 <?php if (!$isClosedEncounter && !$requestClosed && !empty($canCompletePopRequest)): ?>
                     <form method="post" action="../pop/complete.php"><?= csrfField() ?><input type="hidden" name="id" value="<?= (int)$latest['id'] ?>"><button type="submit" class="btn-secondary">Complete</button></form>
                 <?php endif; ?>
                 <?php if (!$isClosedEncounter && !$requestClosed && !empty($billingRequestsReady) && !empty($canCreateBillingRequest)): ?>
-                    <a href="../billing/request_create.php?visit=<?= (int)$visit['id'] ?>&source_module=POP&source_record_id=<?= (int)$latest['id'] ?>&description=<?= rawurlencode('POP: ' . (string)($latest['procedure_requested'] ?? '')) ?>" class="btn-secondary">Request Billing</a>
+                    <a href="../billing/request_create.php?visit=<?= (int)$visit['id'] ?>&source_module=POP&source_record_id=<?= (int)$latest['id'] ?>&description=<?= rawurlencode('Plaster: ' . (string)($latest['procedure_requested'] ?? '')) ?>" class="btn-secondary">Request Billing</a>
                 <?php endif; ?>
             </div>
         </div>
 
         <div class="card">
-            <h3>Latest POP / Casting Record</h3>
+            <h3>Latest Plaster Record</h3>
             <?php if ($record && !empty($record['record_id'])): ?>
                 <div class="summary-grid">
                     <div class="summary-item"><span class="summary-label">Cast Type</span> <span class="summary-value"><?= e((string)($record['cast_type'] ?? '-')) ?></span></div>
@@ -108,7 +108,7 @@ $requestClosed = $latest !== null && in_array((string)($latest['status'] ?? ''),
                 <h4>Aftercare</h4><p><?= trim((string)($record['aftercare_instructions'] ?? '')) === '' ? '<span class="text-muted">No aftercare instructions recorded.</span>' : nl2br(e((string)$record['aftercare_instructions'])) ?></p>
                 <h4>Remarks</h4><p><?= trim((string)($record['remarks'] ?? '')) === '' ? '<span class="text-muted">No remarks recorded.</span>' : nl2br(e((string)$record['remarks'])) ?></p>
             <?php else: ?>
-                <p class="text-muted">No POP procedure record yet.</p>
+                <p class="text-muted">No Plaster procedure record yet.</p>
             <?php endif; ?>
         </div>
     <?php endif; ?>

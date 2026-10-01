@@ -16,9 +16,12 @@ if (!$visit) {
     exit('Encounter not found.');
 }
 
-if (!$permissionService->canCreatePatientCharge($currentUser)) {
+$activeDepartmentName = (string)($currentUser['active_department_name'] ?? $currentUser['department_name'] ?? '');
+if (!$permissionService->canCreatePatientCharge($currentUser)
+    || (strcasecmp($activeDepartmentName, 'Accounts') === 0 && !$permissionService->isAdministrator($currentUser))
+) {
     http_response_code(403);
-    exit('You are not allowed to create patient charges.');
+    exit('Accounts charges are created automatically from billing requests.');
 }
 
 if (!$billingTablesReady) {
@@ -75,7 +78,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 </div>
                 <div class="form-group">
                     <label for="quantity">Quantity</label>
-                    <input id="quantity" name="quantity" type="number" min="0.01" step="0.01" value="1" required>
+                    <input id="quantity" name="quantity" type="number" min="1" step="1" value="1" required>
                 </div>
                 <div class="form-group">
                     <label for="description">Description</label>

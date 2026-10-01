@@ -23,12 +23,19 @@ class AccountsService
     {
         try {
             $this->assertCanCreate($user);
-            $payload = $this->normalizePayload($data);
+            $payload = $this->normalizePayload($data, null, false);
             if ($payload['errors'] !== []) {
                 return $this->failure($payload['errors']);
             }
 
             $this->pdo->beginTransaction();
+
+            if ((string)$payload['data']['item_code'] === '') {
+                $payload['data']['item_code'] = $this->generateUniqueItemCode(
+                    (string)$payload['data']['item_type'],
+                    (int)($payload['data']['department_id'] ?? 0)
+                );
+            }
 
             if ($this->getItemByCode($payload['data']['item_code']) !== null) {
                 $this->rollback();
@@ -257,7 +264,7 @@ class AccountsService
             $params[':item_name'] = '%' . trim((string)$filters['item_name']) . '%';
         }
 
-        if (!empty($filters['item_type']) && in_array((string)$filters['item_type'], ['Service', 'Product'], true)) {
+        if (!empty($filters['item_type']) && in_array((string)$filters['item_type'], $this->allowedItemTypes(), true)) {
             $where[] = 'bi.item_type = :item_type';
             $params[':item_type'] = (string)$filters['item_type'];
         }
@@ -280,26 +287,26 @@ class AccountsService
         ];
     }
 
-    private function normalizePayload(array $data, ?array $existing = null): array
+    private function normalizePayload(array $data, ?array $existing = null, bool $requireItemCode = true): array
     {
         $errors = [];
 
         $itemCode = strtoupper(trim((string)($data['item_code'] ?? ($existing['item_code'] ?? ''))));
         $itemName = trim((string)($data['item_name'] ?? ($existing['item_name'] ?? '')));
-        $itemType = trim((string)($data['item_type'] ?? ($existing['item_type'] ?? '')));
+        $itemType = $this->normalizeItemType((string)($data['item_type'] ?? ($existing['item_type'] ?? '')));
         $description = trim((string)($data['description'] ?? ($existing['description'] ?? '')));
         $unit = trim((string)($data['unit'] ?? ($existing['unit'] ?? '')));
         $unitPriceRaw = $data['unit_price'] ?? ($existing['unit_price'] ?? null);
         $departmentId = $data['department_id'] ?? ($existing['department_id'] ?? null);
         $isActive = isset($data['is_active']) ? (int)!!$data['is_active'] : (int)($existing['is_active'] ?? 1);
 
-        if ($itemCode === '') {
+        if ($requireItemCode && $itemCode === '') {
             $errors[] = 'Item code is required.';
         }
         if ($itemName === '') {
             $errors[] = 'Item name is required.';
         }
-        if (!in_array($itemType, ['Service', 'Product'], true)) {
+        if (!in_array($itemType, $this->allowedItemTypes(), true)) {
             $errors[] = 'Valid item type is required.';
         }
 
@@ -332,6 +339,78 @@ class AccountsService
                 'is_active' => $isActive,
             ],
         ];
+    }
+
+    private function generateUniqueItemCode(string $itemType, int $departmentId = 0): string
+    {
+        $typePrefix = match ($itemType) {
+            'Drug' => 'DRG',
+            'Consumable' => 'CON',
+            default => 'SRV',
+        };
+        $departmentPrefix = $this->departmentCodePrefix($departmentId);
+        $prefix = trim($departmentPrefix . '-' . $typePrefix, '-');
+        if ($prefix === '') {
+            $prefix = 'ITEM';
+        }
+
+        $stmt = $this->pdo->prepare('
+            SELECT item_code
+            FROM billable_items
+            WHERE item_code LIKE :prefix
+            ORDER BY id DESC
+            LIMIT 250
+        ');
+        $stmt->execute([':prefix' => $prefix . '-%']);
+        $highest = 0;
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) ?: [] as $code) {
+            if (preg_match('/-(\d+)$/', (string)$code, $matches) === 1) {
+                $highest = max($highest, (int)$matches[1]);
+            }
+        }
+
+        for ($next = $highest + 1; $next < $highest + 10000; $next++) {
+            $candidate = $prefix . '-' . str_pad((string)$next, 5, '0', STR_PAD_LEFT);
+            if ($this->getItemByCode($candidate) === null) {
+                return $candidate;
+            }
+        }
+
+        throw new RuntimeException('Unable to generate a unique item code.');
+    }
+
+    private function departmentCodePrefix(int $departmentId): string
+    {
+        if ($departmentId <= 0) {
+            return 'GEN';
+        }
+
+        $stmt = $this->pdo->prepare('SELECT department_name FROM departments WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $departmentId]);
+        $departmentName = strtoupper((string)$stmt->fetchColumn());
+        $departmentName = preg_replace('/[^A-Z0-9]+/', ' ', $departmentName) ?? '';
+        $parts = array_values(array_filter(explode(' ', trim($departmentName))));
+        if ($parts === []) {
+            return 'GEN';
+        }
+
+        $prefix = '';
+        foreach ($parts as $part) {
+            $prefix .= $part[0];
+        }
+
+        return substr($prefix, 0, 6) ?: 'GEN';
+    }
+
+    private function allowedItemTypes(): array
+    {
+        return ['Drug', 'Consumable', 'Service'];
+    }
+
+    private function normalizeItemType(string $itemType): string
+    {
+        $itemType = trim($itemType);
+        return $itemType === 'Product' ? 'Consumable' : $itemType;
     }
 
     private function canViewRow(array $item, array $user): bool

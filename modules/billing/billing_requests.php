@@ -11,19 +11,24 @@ if (!$billingTablesReady || !$billingRequestsReady) {
     exit('Billing request tables are not available yet. Apply Migration 044 to enable this section.');
 }
 
+$requestedStatus = array_key_exists('status', $_GET) ? trim((string)$_GET['status']) : 'Actionable';
 $filters = [
-    'status' => trim((string)($_GET['status'] ?? 'Pending')),
+    'status' => $requestedStatus === 'Actionable' ? '' : $requestedStatus,
     'encounter_id' => trim((string)($_GET['encounter_id'] ?? '')),
     'patient_name' => trim((string)($_GET['patient_name'] ?? '')),
     'hospital_number' => trim((string)($_GET['hospital_number'] ?? '')),
     'visit_number' => trim((string)($_GET['visit_number'] ?? '')),
     'source_module' => trim((string)($_GET['source_module'] ?? '')),
 ];
+if ($requestedStatus === 'Actionable') {
+    $filters['statuses'] = ['Pending', 'Charged'];
+}
 $showFullHistory = (string)($_GET['full'] ?? '') === '1';
 $filters['limit'] = $showFullHistory ? 0 : 50;
 
 $requests = $billingService->listBillingRequests($filters, $currentUser);
 $pendingCount = count(array_filter($requests, static fn (array $row): bool => (string)($row['status'] ?? '') === 'Pending'));
+$chargedCount = count(array_filter($requests, static fn (array $row): bool => (string)($row['status'] ?? '') === 'Charged'));
 
 $pageTitle = 'Billing Requests';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -45,7 +50,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="page-header">
         <div>
             <h1>Billing Requests</h1>
-            <p>Department recommendations waiting for Accounts to convert into official patient charges.</p>
+            <p>Department recommendations that are automatically charged when a matching price catalogue item is available.</p>
         </div>
         <div class="form-actions">
             <a class="btn-secondary" href="index.php">Billing Home</a>
@@ -60,6 +65,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="summary-grid">
         <div class="summary-item"><span class="summary-label"><?= $showFullHistory ? 'Filtered Requests' : 'Recent Requests' ?></span> <span class="summary-value"><?= count($requests) ?></span></div>
         <div class="summary-item"><span class="summary-label">Pending</span> <span class="summary-value"><?= $pendingCount ?></span></div>
+        <div class="summary-item"><span class="summary-label">Auto-charged / Awaiting Payment</span> <span class="summary-value"><?= $chargedCount ?></span></div>
     </div>
 
     <form method="get" class="card">
@@ -67,8 +73,8 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <div class="form-group">
                 <label for="status">Status</label>
                 <select id="status" name="status">
-                    <?php foreach (['Pending', 'Charged', 'Cancelled', ''] as $status): ?>
-                        <option value="<?= e($status) ?>" <?= $filters['status'] === $status ? 'selected' : '' ?>><?= e($status === '' ? 'All' : $status) ?></option>
+                    <?php foreach (['Actionable', 'Pending', 'Charged', 'Cancelled', ''] as $status): ?>
+                        <option value="<?= e($status) ?>" <?= $requestedStatus === $status ? 'selected' : '' ?>><?= e($status === '' ? 'All' : $status) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -141,8 +147,8 @@ require __DIR__ . '/../../layouts/sidebar.php';
                                 <td>
                                     <a class="btn-secondary btn-sm" href="view.php?visit=<?= (int)$request['visit_id'] ?>">Open Billing</a>
                                     <a class="btn-secondary btn-sm" href="../visits/workspace.php?id=<?= (int)$request['visit_id'] ?>&tab=billing">Workspace</a>
-                                    <?php if ($permissionService->canReviewBillingRequest($currentUser) && (string)($request['status'] ?? '') === 'Pending'): ?>
-                                        <a class="btn-primary btn-sm" href="request_review.php?id=<?= (int)$request['id'] ?>">Create Charge</a>
+                                    <?php if ($permissionService->canReviewBillingRequest($currentUser)): ?>
+                                        <a class="btn-secondary btn-sm" href="request_review.php?id=<?= (int)$request['id'] ?>">Review</a>
                                     <?php endif; ?>
                                     <?php if ($canCancelThisRequest): ?>
                                         <details class="inline-details">

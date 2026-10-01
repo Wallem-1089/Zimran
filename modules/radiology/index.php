@@ -21,7 +21,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="page-header">
         <div>
             <h1>Radiology Worklist</h1>
-            <p>Clinical and direct radiology requests awaiting processing.</p>
+            <p>Clinical radiology requests awaiting processing.</p>
         </div>
         <div class="form-actions">
             <a class="btn-secondary" href="index.php">All</a>

@@ -3,12 +3,14 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/AuditService.php';
+require_once __DIR__ . '/ClinicalBillingGateService.php';
 require_once __DIR__ . '/EncounterEventService.php';
 require_once __DIR__ . '/PermissionService.php';
 
 class ECGService
 {
     private AuditService $auditService;
+    private ClinicalBillingGateService $billingGateService;
     private EncounterEventService $eventService;
     private PermissionService $permissionService;
     private string $storageRoot;
@@ -18,9 +20,11 @@ class ECGService
         ?AuditService $auditService = null,
         ?EncounterEventService $eventService = null,
         ?PermissionService $permissionService = null,
-        ?string $storageRoot = null
+        ?string $storageRoot = null,
+        ?ClinicalBillingGateService $billingGateService = null
     ) {
         $this->auditService = $auditService ?? new AuditService($pdo);
+        $this->billingGateService = $billingGateService ?? new ClinicalBillingGateService($pdo);
         $this->eventService = $eventService ?? new EncounterEventService($pdo);
         $this->permissionService = $permissionService ?? new PermissionService($pdo);
         $config = require __DIR__ . '/../config/app.php';
@@ -38,6 +42,7 @@ class ECGService
             $priority = $this->normalizePriority((string)($data['priority'] ?? 'Routine'));
             $study = trim((string)($data['study_requested'] ?? 'ECG'));
             $indication = $this->nullableText($data['clinical_indication'] ?? null);
+            $suggestedBillableItemIds = ClinicalBillingGateService::normalizeBillableItemIds($data);
             $errors = $this->validateRequest($visit, $user, $source, $priority, $study, $indication);
 
             if (isset($data['patient_id']) && (int)$data['patient_id'] !== (int)$visit['patient_id']) {
@@ -47,6 +52,9 @@ class ECGService
             $departmentId = $this->resolveEcgDepartmentId();
             if ($departmentId === null) {
                 $errors[] = 'ECG department is not available.';
+            }
+            if ($source === 'Clinical' && $suggestedBillableItemIds === []) {
+                $errors[] = 'At least one billable item is required before sending this request to Accounts.';
             }
 
             if ($errors !== []) {
@@ -76,6 +84,21 @@ class ECGService
                 ':priority' => $priority,
             ]);
             $requestId = (int)$this->pdo->lastInsertId();
+
+            $billingTask = $this->billingGateService->ensureBillingRequest(
+                'ECG',
+                $requestId,
+                (int)$visit['id'],
+                (int)$visit['patient_id'],
+                (int)$user['id'],
+                'ECG: ' . $study,
+                $departmentId,
+                $suggestedBillableItemIds
+            );
+            if (($billingTask['success'] ?? false) !== true) {
+                $this->rollback();
+                return $this->failure($billingTask['errors'] ?? ['Unable to create Accounts billing task.']);
+            }
 
             $this->audit('ECG_REQUEST_CREATED', $visit, $user, 'Created ECG request #' . $requestId . '.');
             $this->event((int)$visit['id'], 'ECG_REQUESTED', 'ECG Requested', 'ECG request created.', $visit, $user);
@@ -126,11 +149,11 @@ class ECGService
         }
         $status = $this->normalizeWorklistStatus((string)($filters['status'] ?? ''));
         $params = [];
-        $where = '';
+        $where = " WHERE er.request_source = 'Clinical'";
         if ($status === '') {
-            $where = " WHERE er.status IN ('Requested','In Progress')";
+            $where .= " AND er.status IN ('Requested','In Progress')";
         } elseif ($status !== 'All') {
-            $where = ' WHERE er.status = :status';
+            $where .= ' AND er.status = :status';
             $params[':status'] = $status;
         }
         $stmt = $this->pdo->prepare($this->baseSelect() . $where . " ORDER BY CASE WHEN er.priority = 'Urgent' THEN 0 ELSE 1 END, er.created_at DESC, er.id DESC");
@@ -384,9 +407,13 @@ class ECGService
         return $errors;
     }
 
-    private function validateProcessing(array $request, array $visit, array $user, string $permissionKey): array
+    private function validateProcessing(array $request, array $visit, array $user, string $permissionKey, bool $requireBillingClearance = true): array
     {
         $errors = [];
+        if ((string)($request['request_source'] ?? 'Clinical') !== 'Clinical') {
+            $errors[] = 'Only clinical ECG requests can be processed.';
+        }
+
         $allowed = match ($permissionKey) {
             'process_ecg_request' => $this->permissionService->canProcessEcgRequest($visit, $user),
             'upload_ecg_chart' => $this->permissionService->canUploadEcgChart($visit, $user),
@@ -406,6 +433,17 @@ class ECGService
         if (in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true) && !$this->permissionService->isAdministrator($user)) {
             $errors[] = 'Completed or cancelled encounters cannot receive ECG mutations.';
         }
+        if ($requireBillingClearance) {
+            $errors = array_merge(
+                $errors,
+                $this->billingGateService->processingErrors(
+                    'ECG',
+                    (int)($request['id'] ?? 0),
+                    (int)($visit['id'] ?? $request['visit_id'] ?? 0),
+                    $user
+                )
+            );
+        }
         return $errors;
     }
 
@@ -419,12 +457,18 @@ class ECGService
                 return $this->failure(['ECG request not found.']);
             }
             $visit = $this->lockVisit((int)$request['visit_id']);
-            $errors = $this->validateProcessing($request, $visit, $user, 'process_ecg_request');
+            $errors = $this->validateProcessing($request, $visit, $user, 'process_ecg_request', $status !== 'Cancelled');
             if ($status === 'In Progress' && (string)$request['status'] !== 'Requested') {
                 $errors[] = 'Only requested ECG requests can be started.';
             }
             if ($status === 'Cancelled' && !in_array((string)$request['status'], ['Requested', 'In Progress'], true)) {
                 $errors[] = 'Only active ECG requests can be cancelled.';
+            }
+            if ($status === 'Cancelled') {
+                $errors = array_merge(
+                    $errors,
+                    $this->billingGateService->cancellationErrors('ECG', $requestId, (int)$request['visit_id'], $user)
+                );
             }
             if ($errors !== []) {
                 $this->rollback();

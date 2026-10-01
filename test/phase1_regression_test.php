@@ -69,16 +69,18 @@ try {
     $departmentIds = $pdo->query("
         SELECT department_name, id
         FROM departments
-        WHERE department_name IN ('Administrator', 'Reception', 'Doctor', 'Nursing')
+        WHERE department_name IN ('Administrator', 'Reception', 'Doctor', 'Nursing', 'Laboratory', 'Store')
     ")->fetchAll(PDO::FETCH_KEY_PAIR);
 
     $administratorDepartmentId = (int)($departmentIds['Administrator'] ?? 0);
     $receptionDepartmentId = (int)($departmentIds['Reception'] ?? 0);
     $doctorDepartmentId = (int)($departmentIds['Doctor'] ?? 0);
     $nursingDepartmentId = (int)($departmentIds['Nursing'] ?? 0);
+    $laboratoryDepartmentId = (int)($departmentIds['Laboratory'] ?? 0);
+    $storeDepartmentId = (int)($departmentIds['Store'] ?? 0);
 
     assertRegression(
-        $administratorDepartmentId > 0 && $receptionDepartmentId > 0 && $doctorDepartmentId > 0 && $nursingDepartmentId > 0,
+        $administratorDepartmentId > 0 && $receptionDepartmentId > 0 && $doctorDepartmentId > 0 && $nursingDepartmentId > 0 && $laboratoryDepartmentId > 0 && $storeDepartmentId > 0,
         'Required department fixtures are missing.'
     );
 
@@ -265,6 +267,29 @@ try {
     ], $adminId);
     assertRegression(!$invalidEncounter['success'], 'Unsupported department status was accepted.');
 
+    $requestOnlyInitialEncounter = $visitService->createVisit([
+        'patient_id' => $patientId,
+        'visit_date' => date('Y-m-d H:i:s'),
+        'visit_type' => 'Outpatient',
+        'current_department_id' => $laboratoryDepartmentId
+    ], $adminId);
+    assertRegression(!$requestOnlyInitialEncounter['success'], 'Request-only Laboratory was accepted as the initial encounter department.');
+
+    $storeInitialEncounter = $visitService->createVisit([
+        'patient_id' => $patientId,
+        'visit_date' => date('Y-m-d H:i:s'),
+        'visit_type' => 'Outpatient',
+        'current_department_id' => $storeDepartmentId
+    ], $adminId);
+    assertRegression(!$storeInitialEncounter['success'], 'Store was accepted as the initial encounter department.');
+
+    $creationDepartments = $visitService->getEncounterCreationDepartments();
+    $creationDepartmentNames = array_map(static fn (array $department): string => (string)$department['department_name'], $creationDepartments);
+    assertRegression(in_array('Doctor', $creationDepartmentNames, true), 'Doctor is missing from encounter creation departments.');
+    assertRegression(!in_array('Laboratory', $creationDepartmentNames, true), 'Laboratory is visible in encounter creation departments.');
+    assertRegression(!in_array('Store', $creationDepartmentNames, true), 'Store is visible in encounter creation departments.');
+    assertRegression($visitService->getDefaultEncounterDepartmentId() === $doctorDepartmentId, 'Doctor is not the default encounter creation department.');
+
     $encounter = successful($visitService->createVisit([
         'patient_id' => $patientId,
         'visit_date' => date('Y-m-d H:i:s'),
@@ -299,6 +324,9 @@ try {
 
     $invalidTransfer = $visitService->transferVisit($visitId, 1, $adminId);
     assertRegression(!$invalidTransfer['success'], 'Unsupported workflow department accepted a transfer.');
+
+    $requestOnlyTransfer = $visitService->transferVisit($visitId, $laboratoryDepartmentId, $adminId);
+    assertRegression(!$requestOnlyTransfer['success'], 'Request-only Laboratory accepted an encounter transfer.');
 
     successful($visitService->transferVisit($visitId, $nursingDepartmentId, $adminId), 'Transfer to Nursing');
     $nursingQueue = $visitService->getQueueEntryForVisit($visitId);

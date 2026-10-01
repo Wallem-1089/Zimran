@@ -11,13 +11,13 @@ if (!$requestId) {
 }
 if (!$popTablesReady) {
     http_response_code(503);
-    exit('POP tables are not available yet. Apply Migration 059 to enable this section.');
+    exit('Plaster tables are not available yet. Apply Migration 059 to enable this section.');
 }
 
 $request = $popService->getRequestById($requestId, $currentUser);
 if (!$request) {
     http_response_code(404);
-    exit('POP request not found.');
+    exit('Plaster request not found.');
 }
 $visit = popRequireVisit($visitService, (int)$request['visit_id']);
 $record = $popService->getRecord($requestId, $currentUser);
@@ -32,11 +32,11 @@ if (($isClosed && !$permissionService->isAdministrator($currentUser)) || $isRequ
 }
 if ($hasRecord && !$permissionService->canEditPopRecord($visit, $currentUser)) {
     http_response_code(403);
-    exit('You cannot edit this POP record.');
+    exit('You cannot edit this Plaster record.');
 }
 if (!$hasRecord && !$permissionService->canRecordPopProcedure($visit, $currentUser)) {
     http_response_code(403);
-    exit('You cannot record this POP procedure.');
+    exit('You cannot record this Plaster procedure.');
 }
 
 $patient = $patientService->getPatientById((int)$request['patient_id']);
@@ -46,15 +46,15 @@ if (!$patient) {
 }
 
 $action = $hasRecord ? 'record_update.php' : 'record_save.php';
-$buttonLabel = $hasRecord ? 'Update POP Record' : 'Save POP Record';
+$buttonLabel = $hasRecord ? 'Update Plaster Record' : 'Save Plaster Record';
 $popConfiguredFields = $configurableFormService->listFields('pop_record', true);
-$popConfiguredValues = $configurableFormService->getResponseValueMap('pop_record', 'POP Record', $requestId);
+$popConfiguredValues = $configurableFormService->getResponseValueMap('pop_record', 'Plaster Record', $requestId);
 if (isset($_SESSION['old_configured_fields']) && is_array($_SESSION['old_configured_fields'])) {
     $popConfiguredValues = $_SESSION['old_configured_fields'];
     unset($_SESSION['old_configured_fields']);
 }
 
-$pageTitle = 'POP Procedure Record';
+$pageTitle = 'Plaster Procedure Record';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 
 require __DIR__ . '/../../layouts/header.php';
@@ -73,8 +73,8 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="page-header">
         <div>
-            <h1>POP Procedure Record</h1>
-            <p><?= e((string)($request['procedure_requested'] ?? 'POP / Casting')) ?></p>
+            <h1>Plaster Procedure Record</h1>
+            <p><?= e((string)($request['procedure_requested'] ?? 'Plaster')) ?></p>
         </div>
         <div class="form-actions">
             <a class="btn-secondary" href="view.php?id=<?= (int)$requestId ?>">Back</a>
@@ -105,7 +105,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             </div>
         </div>
 
-        <?php hmsRenderHandwritingToolbar($enableWritingMode, 'POP Procedure Entry Mode'); ?>
+        <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Plaster Procedure Entry Mode'); ?>
         <?php hmsRenderHandwritingTextarea('procedure_notes', 'Procedure Notes', (string)($record['procedure_notes'] ?? ''), 7, true, $enableWritingMode); ?>
         <?php hmsRenderHandwritingTextarea('materials_used', 'Materials Used', (string)($record['materials_used'] ?? ''), 4, false, $enableWritingMode); ?>
         <?php hmsRenderHandwritingTextarea('aftercare_instructions', 'Aftercare Instructions', (string)($record['aftercare_instructions'] ?? ''), 4, false, $enableWritingMode); ?>

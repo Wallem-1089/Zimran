@@ -45,6 +45,12 @@ class StoreService
                 return $this->failure(['Selected billable item is invalid.']);
             }
 
+            $barcodePayload = $this->normalizeBarcodePayload($data['barcodes'] ?? '');
+            if ($barcodePayload['errors'] !== []) {
+                $this->rollback();
+                return $this->failure($barcodePayload['errors']);
+            }
+
             $stmt = $this->pdo->prepare('
                 INSERT INTO inventory_items (
                     item_code, item_name, category, unit, description,
@@ -65,6 +71,12 @@ class StoreService
                 ':created_by' => (int)$user['id'],
             ]);
             $itemId = (int)$this->pdo->lastInsertId();
+
+            $barcodeErrors = $this->replaceItemBarcodes($itemId, $barcodePayload['data'], (int)$user['id']);
+            if ($barcodeErrors !== []) {
+                $this->rollback();
+                return $this->failure($barcodeErrors);
+            }
 
             if (!$this->audit((int)$user['id'], null, 'INVENTORY_ITEM_CREATED', 'Created inventory item #' . $itemId . '.')) {
                 throw new RuntimeException('Unable to audit inventory item creation.');
@@ -125,6 +137,43 @@ class StoreService
         return $this->listItems($filters, $user);
     }
 
+    public function getItemByBarcode(string $barcode, ?array $user = null): ?array
+    {
+        $barcode = $this->normalizeBarcodeValue($barcode);
+        if ($barcode === '') {
+            return null;
+        }
+
+        if ($user !== null
+            && !$this->permissionService->canViewInventory($user)
+            && !$this->permissionService->canRecordPatientStockUsage($user)
+            && !$this->permissionService->canCreateStockRequest($user)
+        ) {
+            return null;
+        }
+
+        $byCode = $this->getItemByCodeInternal($barcode);
+        if ($byCode) {
+            return $byCode;
+        }
+
+        if (!$this->tableExists('inventory_item_barcodes')) {
+            return null;
+        }
+
+        $stmt = $this->pdo->prepare($this->baseItemSelect() . '
+            INNER JOIN inventory_item_barcodes ib_lookup
+                ON ib_lookup.inventory_item_id = ii.id
+               AND ib_lookup.is_active = 1
+            WHERE ib_lookup.barcode_value = :barcode
+            LIMIT 1
+        ');
+        $stmt->execute([':barcode' => $barcode]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ? $this->decorateItem($row) : null;
+    }
+
     public function updateItem(int $itemId, array $data, array $user): array
     {
         try {
@@ -157,6 +206,12 @@ class StoreService
                 return $this->failure(['Selected billable item is invalid.']);
             }
 
+            $barcodePayload = $this->normalizeBarcodePayload($data['barcodes'] ?? '');
+            if ($barcodePayload['errors'] !== []) {
+                $this->rollback();
+                return $this->failure($barcodePayload['errors']);
+            }
+
             $stmt = $this->pdo->prepare('
                 UPDATE inventory_items
                 SET item_code = :item_code,
@@ -179,6 +234,12 @@ class StoreService
                 ':updated_by' => (int)$user['id'],
                 ':id' => $itemId,
             ]);
+
+            $barcodeErrors = $this->replaceItemBarcodes($itemId, $barcodePayload['data'], (int)$user['id']);
+            if ($barcodeErrors !== []) {
+                $this->rollback();
+                return $this->failure($barcodeErrors);
+            }
 
             if (!$this->audit((int)$user['id'], null, 'INVENTORY_ITEM_UPDATED', 'Updated inventory item #' . $itemId . '.')) {
                 throw new RuntimeException('Unable to audit inventory item update.');
@@ -674,8 +735,15 @@ class StoreService
 
     public function getItemLedger(int $itemId, ?array $user = null): array
     {
-        if ($user !== null && !$this->permissionService->canViewInventory($user)) {
+        if ($user !== null && !$this->permissionService->canViewStockLedger($user)) {
             return [];
+        }
+
+        if ($user !== null && !$this->permissionService->isAdministrator($user)) {
+            $activeDepartmentName = $this->departmentNameById($this->activeDepartmentId($user)) ?? '';
+            if (strcasecmp($activeDepartmentName, 'Pharmacy') === 0) {
+                return $this->listStockLedger(['item_id' => $itemId], $user, 50);
+            }
         }
 
         $stmt = $this->pdo->prepare('
@@ -701,7 +769,7 @@ class StoreService
 
     public function listStockLedger(array $filters = [], ?array $user = null, int $limit = 200): array
     {
-        if ($user !== null && !$this->permissionService->canViewInventory($user)) {
+        if ($user !== null && !$this->permissionService->canViewStockLedger($user)) {
             return [];
         }
 
@@ -716,6 +784,19 @@ class StoreService
         }
 
         $departmentId = (int)($filters['department_id'] ?? 0);
+        if ($user !== null && !$this->permissionService->isAdministrator($user)) {
+            $activeDepartmentName = $this->departmentNameById($this->activeDepartmentId($user)) ?? '';
+            if (strcasecmp($activeDepartmentName, 'Pharmacy') === 0) {
+                $pharmacyDepartmentId = $this->getPharmacyDepartmentId();
+                if ($pharmacyDepartmentId === null) {
+                    return [];
+                }
+                if ($departmentId > 0 && $departmentId !== $pharmacyDepartmentId) {
+                    return [];
+                }
+                $departmentId = $pharmacyDepartmentId;
+            }
+        }
         if ($departmentId > 0) {
             $where[] = '(st.from_department_id = :department_id OR st.to_department_id = :department_id)';
             $params[':department_id'] = $departmentId;
@@ -869,7 +950,7 @@ class StoreService
                 return $this->failure(['Store department is not available.']);
             }
 
-            $movement = $this->buildMovementContext($transactionType, $payload['data'], $storeDepartmentId);
+            $movement = $this->buildMovementContext($transactionType, $payload['data'], $storeDepartmentId, $user);
             if ($movement['errors'] !== []) {
                 if ($ownsTransaction) {
                     $this->rollback();
@@ -966,7 +1047,7 @@ class StoreService
         }
     }
 
-    private function buildMovementContext(string $transactionType, array $payload, int $storeDepartmentId): array
+    private function buildMovementContext(string $transactionType, array $payload, int $storeDepartmentId, array $user): array
     {
         $quantity = (float)$payload['quantity'];
         $fromDepartmentId = null;
@@ -981,6 +1062,9 @@ class StoreService
             'Adjustment' => 'Adjusted stock movement.',
             default => 'Processed stock movement.',
         };
+        $activeDepartmentName = $this->departmentNameById($this->activeDepartmentId($user)) ?? '';
+        $activeDepartmentName = trim($activeDepartmentName);
+        $pharmacyDepartmentId = $this->getPharmacyDepartmentId();
 
         switch ($transactionType) {
             case 'Receipt':
@@ -991,8 +1075,26 @@ class StoreService
             case 'Issue':
                 $auditAction = 'STOCK_ISSUED';
                 $toDepartmentId = $payload['department_id'];
-                $fromDepartmentId = $storeDepartmentId;
+                if (strcasecmp($activeDepartmentName, 'Pharmacy') === 0) {
+                    if ($pharmacyDepartmentId === null) {
+                        return $this->failure(['Pharmacy department is not available.']);
+                    }
+                    if ((int)$toDepartmentId === $pharmacyDepartmentId || (int)$toDepartmentId === $storeDepartmentId) {
+                        return $this->failure(['Pharmacy can only issue stock onward to another requesting department.']);
+                    }
+                    $fromDepartmentId = $pharmacyDepartmentId;
+                } else {
+                    if ($pharmacyDepartmentId === null) {
+                        return $this->failure(['Pharmacy department is not available.']);
+                    }
+                    if ((int)$toDepartmentId !== $pharmacyDepartmentId) {
+                        return $this->failure(['Store can only issue stock to Pharmacy. Pharmacy handles onward departmental stock movement.']);
+                    }
+                    $fromDepartmentId = $storeDepartmentId;
+                }
                 $balanceChanges[$storeDepartmentId] = -$quantity;
+                unset($balanceChanges[$storeDepartmentId]);
+                $balanceChanges[$fromDepartmentId] = -$quantity;
                 $balanceChanges[$toDepartmentId] = $quantity;
                 $requiresSourceBalance = true;
                 break;
@@ -1103,7 +1205,7 @@ class StoreService
 
         $itemCode = strtoupper(trim((string)($data['item_code'] ?? ($existing['item_code'] ?? ''))));
         $itemName = trim((string)($data['item_name'] ?? ($existing['item_name'] ?? '')));
-        $category = trim((string)($data['category'] ?? ($existing['category'] ?? '')));
+        $category = trim((string)($data['category'] ?? ($existing['category'] ?? 'Drug')));
         $unit = trim((string)($data['unit'] ?? ($existing['unit'] ?? '')));
         $description = trim((string)($data['description'] ?? ($existing['description'] ?? '')));
         $billableItemIdRaw = $data['billable_item_id'] ?? ($existing['billable_item_id'] ?? null);
@@ -1117,6 +1219,9 @@ class StoreService
         }
         if ($category === '') {
             $errors[] = 'Category is required.';
+        }
+        if (!in_array($category, ['Drug', 'Consumable'], true)) {
+            $errors[] = 'Category must be Drug or Consumable.';
         }
         if ($unit === '') {
             $errors[] = 'Unit is required.';
@@ -1159,13 +1264,130 @@ class StoreService
         ];
     }
 
+    private function normalizeBarcodePayload(mixed $barcodes): array
+    {
+        $errors = [];
+        $rows = [];
+        $seen = [];
+
+        $rawRows = is_array($barcodes)
+            ? $barcodes
+            : (preg_split('/\r\n|\r|\n|,/', (string)$barcodes) ?: []);
+
+        foreach ($rawRows as $raw) {
+            if (is_array($raw)) {
+                $value = $this->normalizeBarcodeValue((string)($raw['barcode_value'] ?? $raw['value'] ?? ''));
+                $type = trim((string)($raw['barcode_type'] ?? $raw['type'] ?? 'Manufacturer'));
+            } else {
+                $value = $this->normalizeBarcodeValue((string)$raw);
+                $type = 'Manufacturer';
+            }
+
+            if ($value === '') {
+                continue;
+            }
+
+            if (mb_strlen($value) > 100) {
+                $errors[] = 'Barcode values must not exceed 100 characters.';
+                continue;
+            }
+
+            if (!preg_match('/^[A-Z0-9._\-\/]+$/', $value)) {
+                $errors[] = 'Barcode "' . $value . '" contains unsupported characters.';
+                continue;
+            }
+
+            if (!in_array($type, ['Manufacturer', 'Internal', 'Other'], true)) {
+                $type = 'Manufacturer';
+            }
+
+            if (isset($seen[$value])) {
+                continue;
+            }
+
+            $seen[$value] = true;
+            $rows[] = [
+                'barcode_value' => $value,
+                'barcode_type' => $type,
+            ];
+        }
+
+        return ['errors' => array_values(array_unique($errors)), 'data' => $rows];
+    }
+
+    private function replaceItemBarcodes(int $itemId, array $barcodes, int $userId): array
+    {
+        if (!$this->tableExists('inventory_item_barcodes')) {
+            return [];
+        }
+
+        if ($barcodes !== []) {
+            $values = array_column($barcodes, 'barcode_value');
+            $placeholders = implode(',', array_fill(0, count($values), '?'));
+            $stmt = $this->pdo->prepare("
+                SELECT barcode_value
+                FROM inventory_item_barcodes
+                WHERE barcode_value IN ($placeholders)
+                  AND inventory_item_id <> ?
+                LIMIT 1
+            ");
+            $stmt->execute(array_merge($values, [$itemId]));
+            $duplicate = $stmt->fetchColumn();
+            if ($duplicate !== false) {
+                return ['Barcode "' . (string)$duplicate . '" is already assigned to another inventory item.'];
+            }
+        }
+
+        $this->pdo->prepare('DELETE FROM inventory_item_barcodes WHERE inventory_item_id = :item_id')
+            ->execute([':item_id' => $itemId]);
+
+        if ($barcodes === []) {
+            return [];
+        }
+
+        $stmt = $this->pdo->prepare('
+            INSERT INTO inventory_item_barcodes (
+                inventory_item_id, barcode_value, barcode_type, is_active, created_by, created_at
+            ) VALUES (
+                :inventory_item_id, :barcode_value, :barcode_type, 1, :created_by, NOW()
+            )
+        ');
+
+        foreach ($barcodes as $barcode) {
+            $stmt->execute([
+                ':inventory_item_id' => $itemId,
+                ':barcode_value' => $barcode['barcode_value'],
+                ':barcode_type' => $barcode['barcode_type'],
+                ':created_by' => $userId > 0 ? $userId : null,
+            ]);
+        }
+
+        return [];
+    }
+
+    private function normalizeBarcodeValue(string $barcode): string
+    {
+        return strtoupper(trim($barcode));
+    }
+
     private function buildItemFilters(array $filters): array
     {
         $where = [];
         $params = [];
 
         if (!empty($filters['item_code'])) {
-            $where[] = 'ii.item_code LIKE :item_code';
+            if ($this->tableExists('inventory_item_barcodes')) {
+                $where[] = '(ii.item_code LIKE :item_code OR EXISTS (
+                    SELECT 1
+                    FROM inventory_item_barcodes ib_filter
+                    WHERE ib_filter.inventory_item_id = ii.id
+                      AND ib_filter.is_active = 1
+                      AND ib_filter.barcode_value LIKE :item_code_barcode
+                ))';
+                $params[':item_code_barcode'] = '%' . strtoupper(trim((string)$filters['item_code'])) . '%';
+            } else {
+                $where[] = 'ii.item_code LIKE :item_code';
+            }
             $params[':item_code'] = '%' . strtoupper(trim((string)$filters['item_code'])) . '%';
         }
         if (!empty($filters['item_name'])) {
@@ -1268,9 +1490,19 @@ class StoreService
 
     private function baseItemSelect(): string
     {
+        $barcodeSelect = $this->tableExists('inventory_item_barcodes')
+            ? '(
+                    SELECT GROUP_CONCAT(ib.barcode_value ORDER BY ib.barcode_type, ib.barcode_value SEPARATOR "\n")
+                    FROM inventory_item_barcodes ib
+                    WHERE ib.inventory_item_id = ii.id
+                      AND ib.is_active = 1
+                ) AS barcodes,'
+            : 'NULL AS barcodes,';
+
         return '
             SELECT
                 ii.*,
+                ' . $barcodeSelect . '
                 bi.item_code AS billable_item_code,
                 bi.item_name AS billable_item_name,
                 bi.item_type AS billable_item_type,
@@ -1290,7 +1522,24 @@ class StoreService
         $row['billable_item_price_display'] = isset($row['billable_item_price'])
             ? number_format((float)$row['billable_item_price'], 2)
             : null;
+        $row['barcode_list'] = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)($row['barcodes'] ?? '')) ?: [])));
         return $row;
+    }
+
+    private function tableExists(string $table): bool
+    {
+        try {
+            $stmt = $this->pdo->prepare('
+                SELECT COUNT(*)
+                FROM information_schema.tables
+                WHERE table_schema = DATABASE()
+                  AND table_name = :table
+            ');
+            $stmt->execute([':table' => $table]);
+            return (int)$stmt->fetchColumn() > 0;
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     private function decorateBalanceRow(array $row): array
@@ -1510,6 +1759,18 @@ class StoreService
             SELECT id
             FROM departments
             WHERE department_name = 'Store'
+            LIMIT 1
+        ");
+        $id = $stmt->fetchColumn();
+        return $id ? (int)$id : null;
+    }
+
+    private function getPharmacyDepartmentId(): ?int
+    {
+        $stmt = $this->pdo->query("
+            SELECT id
+            FROM departments
+            WHERE department_name = 'Pharmacy'
             LIMIT 1
         ");
         $id = $stmt->fetchColumn();

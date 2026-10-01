@@ -111,7 +111,7 @@ if (!$stateValidation['success']) {
 
 $departments =
 
-    $visitService->getDepartments();
+    $visitService->getEncounterTransferDepartments();
 
 /*
 |--------------------------------------------------------------------------

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 /** @var array $patient */
 $isDeletedPatient = (int)($patient['is_deleted'] ?? 0) === 1;
+$registrationGate = $registrationGate ?? ['can_create_encounter' => true, 'message' => ''];
 ?>
 
 <div class="card patient-quick-actions-card">
@@ -19,7 +20,7 @@ $isDeletedPatient = (int)($patient['is_deleted'] ?? 0) === 1;
             </a>
         <?php endif; ?>
 
-        <?php if (!$isDeletedPatient): ?>
+        <?php if (!$isDeletedPatient && !empty($registrationGate['can_create_encounter'])): ?>
             <a href="../visits/create.php?patient=<?= (int)$patient['id'] ?>" class="action-card action-primary">
                 <span class="action-icon" aria-hidden="true">+</span>
                 <div class="action-content">
@@ -27,6 +28,14 @@ $isDeletedPatient = (int)($patient['is_deleted'] ?? 0) === 1;
                     <span>Register a new patient visit</span>
                 </div>
             </a>
+        <?php elseif (!$isDeletedPatient): ?>
+            <div class="action-card">
+                <span class="action-icon" aria-hidden="true">₦</span>
+                <div class="action-content">
+                    <strong>Encounter Blocked</strong>
+                    <span><?= e((string)($registrationGate['message'] ?? 'Registration payment is required.')) ?></span>
+                </div>
+            </div>
         <?php endif; ?>
 
         <?php if (!$isDeletedPatient): ?>
@@ -44,6 +53,14 @@ $isDeletedPatient = (int)($patient['is_deleted'] ?? 0) === 1;
             <div class="action-content">
                 <strong>View History</strong>
                 <span>Registration and activity history</span>
+            </div>
+        </a>
+
+        <a href="print_face_sheet.php?id=<?= (int)$patient['id'] ?>" class="action-card">
+            <span class="action-icon" aria-hidden="true">PR</span>
+            <div class="action-content">
+                <strong>Print Face Sheet</strong>
+                <span>Open the printable patient summary</span>
             </div>
         </a>
 

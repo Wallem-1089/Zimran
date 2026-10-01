@@ -117,7 +117,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 id="quantity_dispensed"
                 name="quantity_dispensed"
                 min="0.01"
-                step="0.01"
+                step="1"
                 value="<?= e((string)$prescription['quantity']) ?>"
                 required>
         </div>

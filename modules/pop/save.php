@@ -19,23 +19,23 @@ popRequireCreateAccess($permissionService, $visit, $currentUser, $requestSource)
 
 if (!$popTablesReady) {
     http_response_code(503);
-    exit('POP tables are not available yet. Apply Migration 059 to enable this section.');
+    exit('Plaster tables are not available yet. Apply Migration 059 to enable this section.');
 }
 
 $result = $popService->createRequest($_POST, $currentUser);
 
 if (!($result['success'] ?? false)) {
-    $_SESSION['validation_errors'] = $result['errors'] ?? ['Unable to save POP request.'];
+    $_SESSION['validation_errors'] = $result['errors'] ?? ['Unable to save Plaster request.'];
     $_SESSION['old_pop_request'] = [
         'request_source' => $requestSource,
         'priority' => (string)($_POST['priority'] ?? 'Routine'),
-        'procedure_requested' => (string)($_POST['procedure_requested'] ?? 'POP / Casting'),
+        'procedure_requested' => (string)($_POST['procedure_requested'] ?? 'Plaster'),
         'clinical_indication' => (string)($_POST['clinical_indication'] ?? ''),
     ];
     header('Location: request.php?visit=' . $visitId . '&source=' . urlencode($requestSource));
     exit;
 }
 
-$_SESSION['success_message'] = 'POP request saved.';
+$_SESSION['success_message'] = 'Plaster request saved.';
 header('Location: view.php?id=' . (int)$result['pop_request_id']);
 exit;

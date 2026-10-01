@@ -3,12 +3,14 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/AuditService.php';
+require_once __DIR__ . '/ClinicalBillingGateService.php';
 require_once __DIR__ . '/EncounterEventService.php';
 require_once __DIR__ . '/PermissionService.php';
 
 class POPService
 {
     private AuditService $auditService;
+    private ClinicalBillingGateService $billingGateService;
     private EncounterEventService $eventService;
     private PermissionService $permissionService;
 
@@ -16,9 +18,11 @@ class POPService
         private PDO $pdo,
         ?AuditService $auditService = null,
         ?EncounterEventService $eventService = null,
-        ?PermissionService $permissionService = null
+        ?PermissionService $permissionService = null,
+        ?ClinicalBillingGateService $billingGateService = null
     ) {
         $this->auditService = $auditService ?? new AuditService($pdo);
+        $this->billingGateService = $billingGateService ?? new ClinicalBillingGateService($pdo);
         $this->eventService = $eventService ?? new EncounterEventService($pdo);
         $this->permissionService = $permissionService ?? new PermissionService($pdo);
     }
@@ -30,8 +34,9 @@ class POPService
             $visit = $this->lockVisit((int)($data['visit_id'] ?? 0));
             $source = $this->normalizeSource((string)($data['request_source'] ?? 'Clinical'));
             $priority = $this->normalizePriority((string)($data['priority'] ?? 'Routine'));
-            $procedure = trim((string)($data['procedure_requested'] ?? 'POP / Casting'));
+            $procedure = trim((string)($data['procedure_requested'] ?? 'Plaster'));
             $indication = $this->nullableText($data['clinical_indication'] ?? null);
+            $suggestedBillableItemIds = ClinicalBillingGateService::normalizeBillableItemIds($data);
             $errors = $this->validateRequest($visit, $user, $source, $priority, $procedure, $indication);
 
             if (isset($data['patient_id']) && (int)$data['patient_id'] !== (int)$visit['patient_id']) {
@@ -40,7 +45,10 @@ class POPService
 
             $departmentId = $this->resolvePopDepartmentId();
             if ($departmentId === null) {
-                $errors[] = 'POP department is not available.';
+                $errors[] = 'Plaster department is not available.';
+            }
+            if ($source === 'Clinical' && $suggestedBillableItemIds === []) {
+                $errors[] = 'At least one billable item is required before sending this request to Accounts.';
             }
 
             if ($errors !== []) {
@@ -71,14 +79,29 @@ class POPService
             ]);
             $requestId = (int)$this->pdo->lastInsertId();
 
-            $this->audit('POP_REQUEST_CREATED', $visit, $user, 'Created POP request #' . $requestId . '.');
-            $this->event((int)$visit['id'], 'POP_REQUESTED', 'POP Requested', 'POP/casting request created.', $visit, $user);
+            $billingTask = $this->billingGateService->ensureBillingRequest(
+                'POP',
+                $requestId,
+                (int)$visit['id'],
+                (int)$visit['patient_id'],
+                (int)$user['id'],
+                'Plaster: ' . $procedure,
+                $departmentId,
+                $suggestedBillableItemIds
+            );
+            if (($billingTask['success'] ?? false) !== true) {
+                $this->rollback();
+                return $this->failure($billingTask['errors'] ?? ['Unable to create Accounts billing task.']);
+            }
+
+            $this->audit('POP_REQUEST_CREATED', $visit, $user, 'Created Plaster request #' . $requestId . '.');
+            $this->event((int)$visit['id'], 'POP_REQUESTED', 'Plaster Requested', 'Plaster request created.', $visit, $user);
             $this->pdo->commit();
 
             return ['success' => true, 'pop_request_id' => $requestId, 'visit_id' => (int)$visit['id'], 'patient_id' => (int)$visit['patient_id'], 'errors' => []];
         } catch (Throwable) {
             $this->rollback();
-            return $this->failure(['Unable to save POP request.']);
+            return $this->failure(['Unable to save Plaster request.']);
         }
     }
 
@@ -120,21 +143,21 @@ class POPService
         }
         $status = $this->normalizeWorklistStatus((string)($filters['status'] ?? ''));
         $params = [];
-        $where = '';
+        $where = " WHERE pr.request_source = 'Clinical'";
         if ($status === '') {
-            $where = " WHERE pr.status IN ('Requested','In Progress')";
+            $where .= " AND pr.status IN ('Requested','In Progress')";
         } elseif ($status !== 'All') {
-            $where = ' WHERE pr.status = :status';
+            $where .= ' AND pr.status = :status';
             $params[':status'] = $status;
         }
         $stmt = $this->pdo->prepare($this->baseSelect() . $where . " ORDER BY CASE WHEN pr.priority = 'Urgent' THEN 0 ELSE 1 END, pr.created_at DESC, pr.id DESC");
         $stmt->execute($params);
-        return $this->filterRows($stmt->fetchAll(PDO::FETCH_ASSOC), $user);
+        return array_map([$this, 'decorateRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
     public function startRequest(int $requestId, array $user): array
     {
-        return $this->transitionRequest($requestId, $user, 'In Progress', 'POP_REQUEST_STARTED', 'Started POP request #' . $requestId . '.');
+        return $this->transitionRequest($requestId, $user, 'In Progress', 'POP_REQUEST_STARTED', 'Started Plaster request #' . $requestId . '.');
     }
 
     public function saveRecord(array $data, array $user): array
@@ -164,13 +187,13 @@ class POPService
             $request = $this->lockRequest($requestId);
             if (!$request) {
                 $this->rollback();
-                return $this->failure(['POP request not found.']);
+                return $this->failure(['Plaster request not found.']);
             }
             $visit = $this->lockVisit((int)$request['visit_id']);
             $errors = $this->validateProcessing($request, $visit, $user, 'complete_pop_request');
             $record = $this->lockRecordByRequest($requestId);
             if (!$record || trim((string)($record['procedure_notes'] ?? '')) === '') {
-                $errors[] = 'Record POP/casting procedure notes before completion.';
+                $errors[] = 'Record Plaster procedure notes before completion.';
             }
             if ($errors !== []) {
                 $this->rollback();
@@ -179,19 +202,19 @@ class POPService
             $this->transitionRequestRecord($requestId, 'Completed');
             $stmt = $this->pdo->prepare('UPDATE pop_records SET completed_by = COALESCE(completed_by, :user_id), completed_at = COALESCE(completed_at, NOW()), updated_at = NOW() WHERE pop_request_id = :id');
             $stmt->execute([':user_id' => (int)$user['id'], ':id' => $requestId]);
-            $this->audit('POP_REQUEST_COMPLETED', $visit, $user, 'Completed POP request #' . $requestId . '.');
-            $this->event((int)$visit['id'], 'POP_COMPLETED', 'POP Completed', 'POP/casting request completed.', $visit, $user);
+            $this->audit('POP_REQUEST_COMPLETED', $visit, $user, 'Completed Plaster request #' . $requestId . '.');
+            $this->event((int)$visit['id'], 'POP_COMPLETED', 'Plaster Completed', 'Plaster request completed.', $visit, $user);
             $this->pdo->commit();
             return ['success' => true, 'pop_request_id' => $requestId, 'errors' => []];
         } catch (Throwable) {
             $this->rollback();
-            return $this->failure(['Unable to complete POP request.']);
+            return $this->failure(['Unable to complete Plaster request.']);
         }
     }
 
     public function cancelRequest(int $requestId, array $user): array
     {
-        return $this->transitionRequest($requestId, $user, 'Cancelled', 'POP_REQUEST_CANCELLED', 'Cancelled POP request #' . $requestId . '.');
+        return $this->transitionRequest($requestId, $user, 'Cancelled', 'POP_REQUEST_CANCELLED', 'Cancelled Plaster request #' . $requestId . '.');
     }
 
     private function saveOrUpdateRecord(array $data, array $user, bool $mustExist): array
@@ -202,17 +225,17 @@ class POPService
             $request = $this->lockRequest($requestId);
             if (!$request) {
                 $this->rollback();
-                return $this->failure(['POP request not found.']);
+                return $this->failure(['Plaster request not found.']);
             }
             $visit = $this->lockVisit((int)$request['visit_id']);
             $permission = $mustExist ? 'edit_pop_record' : 'record_pop_procedure';
             $errors = $this->validateProcessing($request, $visit, $user, $permission);
             $existing = $this->lockRecordByRequest($requestId);
             if ($mustExist && !$existing) {
-                $errors[] = 'POP record not found.';
+                $errors[] = 'Plaster record not found.';
             }
             if (!$mustExist && $existing) {
-                $errors[] = 'POP record already exists. Use edit instead.';
+                $errors[] = 'Plaster record already exists. Use edit instead.';
             }
 
             $castType = $this->nullableText($data['cast_type'] ?? null);
@@ -230,7 +253,7 @@ class POPService
             }
             foreach ([$procedureNotes, $materials, $aftercare, $remarks] as $value) {
                 if ($value !== null && $this->textLength($value) > 5000) {
-                    $errors[] = 'POP record text is too long.';
+                    $errors[] = 'Plaster record text is too long.';
                     break;
                 }
             }
@@ -262,7 +285,7 @@ class POPService
                     ':updated_by' => (int)$user['id'],
                     ':request_id' => $requestId,
                 ]);
-                $this->audit('POP_RECORD_UPDATED', $visit, $user, 'Updated POP record for request #' . $requestId . '.');
+                $this->audit('POP_RECORD_UPDATED', $visit, $user, 'Updated Plaster record for request #' . $requestId . '.');
             } else {
                 $stmt = $this->pdo->prepare('
                     INSERT INTO pop_records (
@@ -290,13 +313,13 @@ class POPService
                 if ((string)$request['status'] === 'Requested') {
                     $this->transitionRequestRecord($requestId, 'In Progress');
                 }
-                $this->audit('POP_RECORD_CREATED', $visit, $user, 'Created POP record for request #' . $requestId . '.');
+                $this->audit('POP_RECORD_CREATED', $visit, $user, 'Created Plaster record for request #' . $requestId . '.');
             }
             $this->pdo->commit();
             return ['success' => true, 'pop_request_id' => $requestId, 'errors' => []];
         } catch (Throwable) {
             $this->rollback();
-            return $this->failure(['Unable to save POP record.']);
+            return $this->failure(['Unable to save Plaster record.']);
         }
     }
 
@@ -307,17 +330,17 @@ class POPService
             $errors[] = 'You cannot access this encounter.';
         }
         if (in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true) && !$this->permissionService->isAdministrator($user)) {
-            $errors[] = 'Completed or cancelled encounters cannot receive POP mutations.';
+            $errors[] = 'Completed or cancelled encounters cannot receive Plaster mutations.';
         }
         if ($source === 'Clinical' && !$this->permissionService->canCreatePopRequest($visit, $user, 'Clinical')) {
-            $errors[] = 'You cannot create a clinical POP request.';
+            $errors[] = 'You cannot create a clinical Plaster request.';
         }
         if ($source === 'Direct') {
             if (!$this->permissionService->canCreatePopRequest($visit, $user, 'Direct')) {
-                $errors[] = 'You cannot create a direct POP request.';
+                $errors[] = 'You cannot create a direct Plaster request.';
             }
             if (!$this->isPopEncounter($visit)) {
-                $errors[] = 'Direct POP requests require an active POP encounter.';
+                $errors[] = 'Direct Plaster requests require an active Plaster encounter.';
             }
         }
         if ($procedure === '') {
@@ -327,13 +350,18 @@ class POPService
             $errors[] = 'Priority is invalid.';
         }
         if ($this->textLength($procedure) > 255 || ($indication !== null && $this->textLength($indication) > 5000)) {
-            $errors[] = 'POP request text is too long.';
+            $errors[] = 'Plaster request text is too long.';
         }
         return $errors;
     }
 
-    private function validateProcessing(array $request, array $visit, array $user, string $permissionKey): array
+    private function validateProcessing(array $request, array $visit, array $user, string $permissionKey, bool $requireBillingClearance = true): array
     {
+        $errors = [];
+        if ((string)($request['request_source'] ?? 'Clinical') !== 'Clinical') {
+            $errors[] = 'Only clinical Plaster requests can be processed.';
+        }
+
         $allowed = match ($permissionKey) {
             'process_pop_request' => $this->permissionService->canProcessPopRequest($visit, $user),
             'record_pop_procedure' => $this->permissionService->canRecordPopProcedure($visit, $user),
@@ -341,15 +369,28 @@ class POPService
             'complete_pop_request' => $this->permissionService->canCompletePopRequest($visit, $user),
             default => false,
         };
-        $errors = $allowed ? [] : ['You cannot perform this POP action.'];
+        if (!$allowed) {
+            $errors[] = 'You cannot perform this Plaster action.';
+        }
         if ((string)$request['status'] === 'Cancelled') {
-            $errors[] = 'Cancelled POP requests cannot be modified.';
+            $errors[] = 'Cancelled Plaster requests cannot be modified.';
         }
         if ((string)$request['status'] === 'Completed') {
-            $errors[] = 'Completed POP requests are view-only.';
+            $errors[] = 'Completed Plaster requests are view-only.';
         }
         if (in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true) && !$this->permissionService->isAdministrator($user)) {
-            $errors[] = 'Completed or cancelled encounters cannot receive POP mutations.';
+            $errors[] = 'Completed or cancelled encounters cannot receive Plaster mutations.';
+        }
+        if ($requireBillingClearance) {
+            $errors = array_merge(
+                $errors,
+                $this->billingGateService->processingErrors(
+                    'POP',
+                    (int)($request['id'] ?? 0),
+                    (int)($visit['id'] ?? $request['visit_id'] ?? 0),
+                    $user
+                )
+            );
         }
         return $errors;
     }
@@ -361,15 +402,21 @@ class POPService
             $request = $this->lockRequest($requestId);
             if (!$request) {
                 $this->rollback();
-                return $this->failure(['POP request not found.']);
+                return $this->failure(['Plaster request not found.']);
             }
             $visit = $this->lockVisit((int)$request['visit_id']);
-            $errors = $this->validateProcessing($request, $visit, $user, 'process_pop_request');
+            $errors = $this->validateProcessing($request, $visit, $user, 'process_pop_request', $status !== 'Cancelled');
             if ($status === 'In Progress' && (string)$request['status'] !== 'Requested') {
-                $errors[] = 'Only requested POP requests can be started.';
+                $errors[] = 'Only requested Plaster requests can be started.';
             }
             if ($status === 'Cancelled' && !in_array((string)$request['status'], ['Requested', 'In Progress'], true)) {
-                $errors[] = 'Only active POP requests can be cancelled.';
+                $errors[] = 'Only active Plaster requests can be cancelled.';
+            }
+            if ($status === 'Cancelled') {
+                $errors = array_merge(
+                    $errors,
+                    $this->billingGateService->cancellationErrors('POP', $requestId, (int)$request['visit_id'], $user)
+                );
             }
             if ($errors !== []) {
                 $this->rollback();
@@ -381,7 +428,7 @@ class POPService
             return ['success' => true, 'pop_request_id' => $requestId, 'errors' => []];
         } catch (Throwable) {
             $this->rollback();
-            return $this->failure(['Unable to update POP request.']);
+            return $this->failure(['Unable to update Plaster request.']);
         }
     }
 
@@ -474,14 +521,20 @@ class POPService
 
     private function resolvePopDepartmentId(): ?int
     {
-        $id = $this->pdo->query("SELECT id FROM departments WHERE department_name = 'POP' LIMIT 1")->fetchColumn();
+        $id = $this->pdo->query("
+            SELECT id
+            FROM departments
+            WHERE department_name IN ('Plaster', 'POP')
+            ORDER BY CASE WHEN department_name = 'Plaster' THEN 0 ELSE 1 END
+            LIMIT 1
+        ")->fetchColumn();
         return $id !== false ? (int)$id : null;
     }
 
     private function isPopEncounter(array $visit): bool
     {
-        return (string)($visit['visit_status'] ?? '') === 'POP'
-            || (string)($visit['department_name'] ?? '') === 'POP'
+        return in_array((string)($visit['visit_status'] ?? ''), ['Plaster', 'POP'], true)
+            || in_array((string)($visit['department_name'] ?? ''), ['Plaster', 'POP'], true)
             || (int)($visit['current_department_id'] ?? 0) === (int)($this->resolvePopDepartmentId() ?? 0);
     }
 
@@ -517,7 +570,7 @@ class POPService
             (int)($user['id'] ?? 0),
             (int)($visit['patient_id'] ?? 0),
             (int)($visit['id'] ?? 0),
-            'POP',
+            'Plaster',
             $action,
             $description,
             (int)($visit['current_department_id'] ?? 0) ?: null,

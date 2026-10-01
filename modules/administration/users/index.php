@@ -53,6 +53,7 @@ require_once __DIR__ . '/../../../layouts/sidebar.php';
                     <td>
                         <a href="view.php?id=<?= (int)$user['id'] ?>">View</a>
                         <a href="edit.php?id=<?= (int)$user['id'] ?>">Edit</a>
+                        <a href="staff_profile.php?id=<?= (int)$user['id'] ?>">Staff Profile</a>
                     </td>
                 </tr>
             <?php endforeach; ?>

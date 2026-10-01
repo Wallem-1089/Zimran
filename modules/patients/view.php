@@ -11,6 +11,7 @@ require_once __DIR__ . '/../../config/helpers.php';
 
 require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
+require_once __DIR__ . '/../../services/PatientRegistrationBillingService.php';
 
 $id = filter_input(
 
@@ -32,6 +33,7 @@ if (!$id) {
 
 $patientService = new PatientService($pdo);
 $permissionService = new PermissionService($pdo);
+$registrationBillingService = new PatientRegistrationBillingService($pdo);
 
 $patient = $patientService->getPatientById($id);
 
@@ -54,6 +56,31 @@ $canDeletePatient = $permissionService->canDeletePatient(
     $currentUser
 );
 $isDeletedPatient = (int)($patient['is_deleted'] ?? 0) === 1;
+$registrationGate = $patientService->getRegistrationGateStatus($id);
+$canRequestRegistrationRenewal = !$isDeletedPatient
+    && (
+        $permissionService->canRegisterPatient($currentUser)
+        || $permissionService->canCreateBillingRequest($currentUser)
+        || $permissionService->canReviewBillingRequest($currentUser)
+        || $permissionService->canRecordPayment($currentUser)
+    );
+$canViewRegistrationBillingActions = $canViewBilling
+    || $canRequestRegistrationRenewal
+    || $permissionService->canViewBillingRequests($currentUser);
+$canClearRegistrationPayment = $permissionService->canReviewBillingRequest($currentUser)
+    || $permissionService->canRecordPayment($currentUser);
+$registrationBillingHistory = $canViewRegistrationBillingActions
+    ? $registrationBillingService->listRequests(['patient_id' => $id, 'status' => ''])
+    : [];
+$pendingRenewalRequest = null;
+foreach ($registrationBillingHistory as $registrationRequest) {
+    if ((string)($registrationRequest['billing_type'] ?? '') === 'MonthlyRenewal'
+        && (string)($registrationRequest['status'] ?? '') === 'Pending'
+    ) {
+        $pendingRenewalRequest = $registrationRequest;
+        break;
+    }
+}
 
 if ($isDeletedPatient && !$permissionService->canViewDeletedPatient($currentUser)) {
     http_response_code(404);
@@ -97,7 +124,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="form-actions">
 
-        <button class="btn-secondary" type="button" onclick="window.print()">Print Patient Face Sheet</button>
+        <a class="btn-secondary" href="print_face_sheet.php?id=<?= (int)$patient['id'] ?>">Print Patient Face Sheet</a>
 
     </div>
 
@@ -115,6 +142,18 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
 <?php endif; ?>
 
+<?php if (isset($_SESSION['error_message'])) : ?>
+
+<div class="alert-danger">
+
+    <?= e($_SESSION['error_message']) ?>
+
+</div>
+
+<?php unset($_SESSION['error_message']); ?>
+
+<?php endif; ?>
+
 <?php if ($isDeletedPatient) : ?>
 
 <div class="alert-warning">
@@ -123,6 +162,32 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
     This patient has been soft-deleted/voided and is retained only for audit and
     historical record integrity. New encounters and normal chart access are disabled.
 
+</div>
+
+<?php endif; ?>
+
+<?php if (!$isDeletedPatient && empty($registrationGate['can_create_encounter'])) : ?>
+
+<div class="alert-warning">
+    <strong>Registration Billing Required</strong>
+    <?= e((string)$registrationGate['message']) ?>
+    <?php if (($registrationGate['status'] ?? '') === 'Expired' && $canRequestRegistrationRenewal): ?>
+        <?php if ($pendingRenewalRequest && $permissionService->canViewBillingRequests($currentUser)): ?>
+            <p style="margin-top: 1rem;">
+                <a class="btn-primary" href="../billing/registration_requests.php?<?= e(http_build_query([
+                    'status' => 'Pending',
+                    'patient_name' => trim((string)($patient['first_name'] ?? '') . ' ' . (string)($patient['last_name'] ?? '')),
+                    'hospital_number' => (string)($patient['hospital_number'] ?? ''),
+                ])) ?>">Open Pending Renewal Payment</a>
+            </p>
+        <?php elseif (!$pendingRenewalRequest): ?>
+            <form method="post" action="renew_registration.php" class="inline-form" style="margin-top: 1rem;">
+                <?= csrfField() ?>
+                <input type="hidden" name="patient_id" value="<?= (int)$patient['id'] ?>">
+                <button class="btn-primary" type="submit">Create Renewal Payment Request</button>
+            </form>
+        <?php endif; ?>
+    <?php endif; ?>
 </div>
 
 <?php endif; ?>
@@ -154,6 +219,97 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
     <!-- Quick Actions -->
     <?php require __DIR__ . '/partials/quick_actions.php'; ?>
+
+    <?php if ($canViewRegistrationBillingActions): ?>
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h2>Registration Billing</h2>
+                    <p>Initial registration and monthly renewal billing history for this patient.</p>
+                </div>
+                <div class="form-actions">
+                    <?php if (($registrationGate['status'] ?? '') === 'Expired' && $canRequestRegistrationRenewal): ?>
+                        <?php if ($pendingRenewalRequest && $permissionService->canViewBillingRequests($currentUser)): ?>
+                            <a class="btn-primary" href="../billing/registration_requests.php?<?= e(http_build_query([
+                                'status' => 'Pending',
+                                'patient_name' => trim((string)($patient['first_name'] ?? '') . ' ' . (string)($patient['last_name'] ?? '')),
+                                'hospital_number' => (string)($patient['hospital_number'] ?? ''),
+                            ])) ?>">Open Pending Renewal Payment</a>
+                        <?php elseif (!$pendingRenewalRequest): ?>
+                            <form method="post" action="renew_registration.php" class="inline-form">
+                                <?= csrfField() ?>
+                                <input type="hidden" name="patient_id" value="<?= (int)$patient['id'] ?>">
+                                <button class="btn-primary" type="submit">Create Renewal Payment Request</button>
+                            </form>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                    <?php if ($permissionService->canViewBillingRequests($currentUser) || $canViewBilling): ?>
+                        <a class="btn-secondary" href="../billing/registration_requests.php?<?= e(http_build_query([
+                            'status' => '',
+                            'patient_name' => trim((string)($patient['first_name'] ?? '') . ' ' . (string)($patient['last_name'] ?? '')),
+                            'hospital_number' => (string)($patient['hospital_number'] ?? ''),
+                        ])) ?>">Open Registration Payments</a>
+                    <?php endif; ?>
+                    <?php if ($canViewBilling): ?>
+                        <a class="btn-secondary" href="../billing/index.php?hospital_number=<?= e(urlencode((string)($patient['hospital_number'] ?? ''))) ?>">Billing Home</a>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <?php if ($registrationBillingHistory === []): ?>
+                <div class="empty-state">No registration billing requests recorded for this patient.</div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="summary-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Requested</th>
+                                <th>Cleared</th>
+                                <th>Reference / Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($registrationBillingHistory as $request): ?>
+                                <tr>
+                                    <td><?= e((string)$request['billing_type']) ?><?= !empty($request['registration_type']) ? ' / ' . e((string)$request['registration_type']) : '' ?></td>
+                                    <td>&#8358;<?= e((string)$request['display_amount']) ?></td>
+                                    <td><?= e((string)$request['status']) ?></td>
+                                    <td><?= e((string)$request['requested_at']) ?><br><small><?= e((string)($request['requested_by_name'] ?? '-')) ?></small></td>
+                                    <td><?= e((string)($request['cleared_at'] ?? '-')) ?><br><small><?= e((string)($request['cleared_by_name'] ?? '')) ?></small></td>
+                                    <td><?= e((string)($request['notes'] ?? '-')) ?></td>
+                                    <td>
+                                        <?php if ((string)$request['status'] === 'Pending' && $canClearRegistrationPayment): ?>
+                                            <form method="post" action="../billing/registration_request_pay.php" class="inline-form">
+                                                <?= csrfField() ?>
+                                                <input type="hidden" name="request_id" value="<?= (int)$request['id'] ?>">
+                                                <input type="hidden" name="return_to" value="../patients/view.php?id=<?= (int)$patient['id'] ?>">
+                                                <input name="notes" placeholder="Payment reference / notes">
+                                                <button class="btn-primary btn-sm" type="submit">Mark Paid</button>
+                                            </form>
+                                        <?php elseif ((string)$request['status'] === 'Pending' && $permissionService->canViewBillingRequests($currentUser)): ?>
+                                            <a class="btn-secondary btn-sm" href="../billing/registration_requests.php?<?= e(http_build_query([
+                                                'status' => 'Pending',
+                                                'patient_name' => trim((string)($patient['first_name'] ?? '') . ' ' . (string)($patient['last_name'] ?? '')),
+                                                'hospital_number' => (string)($patient['hospital_number'] ?? ''),
+                                            ])) ?>">Open Payment Request</a>
+                                        <?php elseif ((string)$request['status'] === 'Paid'): ?>
+                                            <span class="status-badge status-success">Payment Cleared</span>
+                                        <?php else: ?>
+                                            —
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 
     <?php if ($canDeletePatient && !$isDeletedPatient) : ?>
 

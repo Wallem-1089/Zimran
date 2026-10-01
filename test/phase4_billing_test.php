@@ -8,6 +8,7 @@ require_once __DIR__ . '/../database/tools/DatabaseSafety.php';
 require_once __DIR__ . '/../database/tools/MigrationManager.php';
 require_once __DIR__ . '/../services/AccountsService.php';
 require_once __DIR__ . '/../services/BillingService.php';
+require_once __DIR__ . '/../services/LaboratoryService.php';
 require_once __DIR__ . '/../services/PermissionService.php';
 
 function assertBilling(bool $condition, string $message): void
@@ -67,15 +68,20 @@ $manager->ensureLedger();
 $manager->apply(__DIR__ . '/../database/migrations/030_phase4_accounts_price_catalogue_up.sql', 30);
 $manager->apply(__DIR__ . '/../database/migrations/031_phase4_store_inventory_up.sql', 31);
 $manager->apply(__DIR__ . '/../database/migrations/032_phase4_pharmacy_up.sql', 32);
+$manager->apply(__DIR__ . '/../database/migrations/025_phase3_laboratory_up.sql', 25);
+$manager->apply(__DIR__ . '/../database/migrations/026_phase3_laboratory_result_details_up.sql', 26);
 $manager->apply(__DIR__ . '/../database/migrations/033_phase4_billing_up.sql', 33);
 $manager->apply(__DIR__ . '/../database/migrations/044_billing_requests_up.sql', 44);
 $manager->apply(__DIR__ . '/../database/migrations/072_billing_discounts_up.sql', 72);
+$manager->apply(__DIR__ . '/../database/migrations/076_emergency_department_up.sql', 76);
 
 $pdo->exec("DELETE FROM billing_requests WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
 $pdo->exec("DELETE FROM billing_discounts WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
 $pdo->exec("DELETE FROM payments WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
 $pdo->exec("DELETE FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
 $pdo->exec("DELETE FROM patient_charges WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
+$pdo->exec("DELETE lr FROM laboratory_results lr INNER JOIN laboratory_requests lq ON lq.id = lr.laboratory_request_id INNER JOIN visits v ON v.id = lq.visit_id WHERE v.visit_number LIKE 'BIL-%'");
+$pdo->exec("DELETE lq FROM laboratory_requests lq INNER JOIN visits v ON v.id = lq.visit_id WHERE v.visit_number LIKE 'BIL-%'");
 $pdo->exec("DELETE FROM encounter_events WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
 $pdo->exec("DELETE FROM audit_logs WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
 $pdo->exec("DELETE FROM visits WHERE visit_number LIKE 'BIL-%'");
@@ -86,14 +92,14 @@ $rows = $pdo->query("
     FROM users u
     INNER JOIN roles r ON r.id = u.role_id
     INNER JOIN departments d ON d.id = u.department_id
-    WHERE u.username IN ('walter','dev_accounts','dev_doctor','dev_nurse')
+    WHERE u.username IN ('walter','dev_accounts','dev_doctor','dev_nurse','dev_laboratory')
 ")->fetchAll(PDO::FETCH_ASSOC);
 $users = [];
 foreach ($rows as $row) {
     $users[$row['username']] = $row;
 }
 
-foreach (['walter', 'dev_accounts', 'dev_doctor', 'dev_nurse'] as $username) {
+foreach (['walter', 'dev_accounts', 'dev_doctor', 'dev_nurse', 'dev_laboratory'] as $username) {
     assertBilling(isset($users[$username]), 'Missing fixture user ' . $username . '.');
 }
 
@@ -101,9 +107,12 @@ $admin = $users['walter'];
 $accounts = $users['dev_accounts'];
 $doctor = $users['dev_doctor'];
 $nurse = $users['dev_nurse'];
+$laboratory = $users['dev_laboratory'];
 
 $doctorDepartmentId = (int)$pdo->query("SELECT id FROM departments WHERE department_name = 'Doctor' LIMIT 1")->fetchColumn();
 assertBilling($doctorDepartmentId > 0, 'Doctor department is missing.');
+$nursingDepartmentId = (int)$pdo->query("SELECT id FROM departments WHERE department_name = 'Nursing' LIMIT 1")->fetchColumn();
+assertBilling($nursingDepartmentId > 0, 'Nursing department is missing.');
 
 $patientId = (int)$pdo->query("SELECT id FROM patients WHERE hospital_number = 'DEV-PATIENT-0001' LIMIT 1")->fetchColumn();
 $patientId2 = (int)$pdo->query("SELECT id FROM patients WHERE hospital_number = 'DEV-PATIENT-0002' LIMIT 1")->fetchColumn();
@@ -142,7 +151,7 @@ try {
         'unit_price' => 2000,
         'unit' => '',
         'is_active' => 1,
-    ], $accounts), 'Create consultation item');
+    ], $admin), 'Create consultation item');
     $consultationItemId = (int)$consultationItem['billable_item_id'];
 
     $radiologyItem = requireBillingSuccess($accountsService->createItem([
@@ -154,8 +163,32 @@ try {
         'unit_price' => 1500,
         'unit' => '',
         'is_active' => 1,
-    ], $accounts), 'Create radiology item');
+    ], $admin), 'Create radiology item');
     $radiologyItemId = (int)$radiologyItem['billable_item_id'];
+
+    $laboratoryItem = requireBillingSuccess($accountsService->createItem([
+        'item_code' => 'BIL-SRV-003',
+        'item_name' => 'Full Blood Count',
+        'item_type' => 'Service',
+        'department_id' => (int)$pdo->query("SELECT id FROM departments WHERE department_name = 'Laboratory' LIMIT 1")->fetchColumn(),
+        'description' => 'Laboratory test fee.',
+        'unit_price' => 1200,
+        'unit' => '',
+        'is_active' => 1,
+    ], $admin), 'Create laboratory item');
+    $laboratoryItemId = (int)$laboratoryItem['billable_item_id'];
+
+    $laboratoryExtraItem = requireBillingSuccess($accountsService->createItem([
+        'item_code' => 'BIL-SRV-004',
+        'item_name' => 'Sample Collection Fee',
+        'item_type' => 'Service',
+        'department_id' => (int)$pdo->query("SELECT id FROM departments WHERE department_name = 'Laboratory' LIMIT 1")->fetchColumn(),
+        'description' => 'Laboratory sample collection fee.',
+        'unit_price' => 500,
+        'unit' => '',
+        'is_active' => 1,
+    ], $admin), 'Create laboratory extra item');
+    $laboratoryExtraItemId = (int)$laboratoryExtraItem['billable_item_id'];
 
     $visitId = createBillingEncounter($pdo, $admin, $patientId, $doctorDepartmentId, '001');
     $visitId2 = createBillingEncounter($pdo, $admin, $patientId2, $doctorDepartmentId, '002');
@@ -172,9 +205,11 @@ try {
     $pendingRequestId = (int)$pendingRequest['billing_request_id'];
 
     $billingRequestRows = $billingService->listBillingRequests(['visit_id' => $visitId], $accounts);
-    assertBilling(count($billingRequestRows) === 1, 'Accounts did not see pending billing request.');
-    assertBilling((string)$billingRequestRows[0]['status'] === 'Pending', 'Billing request should be pending.');
-    assertBilling(abs((float)$billingService->getEncounterBalance($visitId, $accounts)['total_charges']) < 0.01, 'Pending billing request changed charge totals.');
+    assertBilling(count($billingRequestRows) === 1, 'Accounts did not see billing request.');
+    assertBilling((string)$billingRequestRows[0]['status'] === 'Charged', 'Billing request should be automatically charged.');
+    assertBilling((int)($billingRequestRows[0]['patient_charge_id'] ?? 0) > 0, 'Auto-charged billing request is missing patient charge link.');
+    assertBilling(abs((float)$billingService->getEncounterBalance($visitId, $accounts)['total_charges'] - 2000.0) < 0.01, 'Auto-charged billing request did not update charge totals.');
+    $manualChargeId = (int)$billingRequestRows[0]['patient_charge_id'];
 
     $manualCharge = requireBillingSuccess($billingService->createCharge([
         'visit_id' => $visitId,
@@ -183,23 +218,21 @@ try {
         'description' => 'Manual consultation fee.',
         'source_module' => 'Billing',
     ], $accounts), 'Manual charge');
-    $manualChargeId = (int)$manualCharge['patient_charge_id'];
-
     $chargeCountAfterManual = (int)$pdo->query("SELECT COUNT(*) FROM patient_charges WHERE visit_id = {$visitId}")->fetchColumn();
-    assertBilling($chargeCountAfterManual === 1, 'Manual charge was not recorded.');
+    assertBilling($chargeCountAfterManual === 2, 'Manual charge was not recorded alongside the automatic request charge.');
 
-    $requestCharge = requireBillingSuccess($billingService->chargeBillingRequest([
+    $requestCharge = $billingService->chargeBillingRequest([
         'billing_request_id' => $pendingRequestId,
         'billable_item_id' => $consultationItemId,
         'quantity' => 1,
         'description' => 'Consultation fee from billing request.',
         'notes' => 'Approved by Accounts.',
-    ], $accounts), 'Charge billing request');
-    assertBilling((int)$requestCharge['patient_charge_id'] > 0, 'Billing request did not create a patient charge.');
+    ], $accounts);
+    assertBilling(($requestCharge['success'] ?? false) === false, 'Automatically charged billing request should not be converted manually.');
 
     $requestAfterCharge = $billingService->getBillingRequestById($pendingRequestId, $accounts);
     assertBilling($requestAfterCharge !== null && (string)$requestAfterCharge['status'] === 'Charged', 'Billing request was not marked Charged.');
-    assertBilling((int)$requestAfterCharge['patient_charge_id'] === (int)$requestCharge['patient_charge_id'], 'Billing request charge link was not stored.');
+    assertBilling((int)$requestAfterCharge['patient_charge_id'] === $manualChargeId, 'Billing request charge link was not stored.');
 
     $duplicateRequestCharge = $billingService->chargeBillingRequest([
         'billing_request_id' => $pendingRequestId,
@@ -211,7 +244,7 @@ try {
 
     $cancelRequest = requireBillingSuccess($billingService->createBillingRequest([
         'visit_id' => $visitId2,
-        'department_id' => $doctorDepartmentId,
+        'department_id' => $nursingDepartmentId,
         'source_module' => 'Nursing',
         'description' => 'Nursing supply used; please review.',
         'quantity' => 2,
@@ -265,11 +298,11 @@ try {
         'unit_price' => 2500,
         'unit' => '',
         'is_active' => 1,
-    ], $accounts), 'Update price catalogue item');
+    ], $admin), 'Update price catalogue item');
     assertBilling(($updateItem['success'] ?? false) === true, 'Price catalogue update failed.');
 
     $chargeRowAfterPriceChange = $pdo->query("SELECT amount FROM patient_charges WHERE id = {$manualChargeId}")->fetch(PDO::FETCH_ASSOC);
-    assertBilling(abs((float)$chargeRowAfterPriceChange['amount'] - 2000.0) < 0.01, 'Charge amount changed after Accounts price update.');
+    assertBilling(abs((float)$chargeRowAfterPriceChange['amount'] - 2000.0) < 0.01, 'Charge amount changed after catalogue price update.');
 
     $invoice = requireBillingSuccess($billingService->createInvoice($visitId, $accounts), 'Create invoice');
     $invoiceRow = $billingService->getInvoiceByVisit($visitId, $accounts);
@@ -380,6 +413,107 @@ try {
     assertBilling($receiptData !== null, 'Receipt data not found.');
     assertBilling((string)$receiptData['invoice_number'] === (string)$invoiceAfterFull['invoice_number'], 'Receipt invoice number mismatch.');
 
+    $laboratoryService = new LaboratoryService($pdo, null, null, $permissionService);
+    $labGateVisitId = createBillingEncounter($pdo, $doctor, $patientId, $doctorDepartmentId, 'LAB-GATE');
+    $labCreate = requireBillingSuccess($laboratoryService->createRequest([
+        'visit_id' => $labGateVisitId,
+        'patient_id' => $patientId,
+        'request_source' => 'Clinical',
+        'tests_requested' => 'Full Blood Count',
+        'clinical_information' => 'Billing gate regression.',
+        'priority' => 'Routine',
+        'suggested_billable_item_id' => $laboratoryItemId,
+    ], $doctor), 'Create laboratory request with automatic billing task');
+    $labRequestId = (int)$labCreate['laboratory_request_id'];
+    $labBillingRows = $billingService->listBillingRequests([
+        'visit_id' => $labGateVisitId,
+        'source_module' => 'Laboratory',
+        'source_record_id' => $labRequestId,
+    ], $accounts);
+    assertBilling(count($labBillingRows) === 1, 'Clinical laboratory request did not create an Accounts billing task.');
+    assertBilling((string)$labBillingRows[0]['status'] === 'Charged', 'Clinical laboratory billing task should be automatically charged.');
+    assertBilling((int)($labBillingRows[0]['patient_charge_id'] ?? 0) > 0, 'Clinical laboratory billing task is missing automatic patient charge.');
+
+    $blockedPending = $laboratoryService->startRequest($labRequestId, $laboratory);
+    assertBilling(($blockedPending['success'] ?? true) === false, 'Laboratory started work before patient payment.');
+
+    $labCharge = $billingService->chargeBillingRequest([
+        'billing_request_id' => (int)$labBillingRows[0]['id'],
+        'billable_item_id' => $laboratoryItemId,
+        'quantity' => 1,
+        'description' => 'Full Blood Count from clinical request.',
+    ], $accounts);
+    assertBilling(($labCharge['success'] ?? false) === false, 'Automatically charged laboratory request should not be charged manually.');
+    $labInvoice = requireBillingSuccess($billingService->createInvoice($labGateVisitId, $accounts), 'Create laboratory gate invoice');
+
+    $blockedUnpaid = $laboratoryService->startRequest($labRequestId, $laboratory);
+    assertBilling(($blockedUnpaid['success'] ?? true) === false, 'Laboratory started work before patient payment.');
+
+    requireBillingSuccess($billingService->recordPayment([
+        'invoice_id' => (int)$labInvoice['invoice_id'],
+        'amount' => 1200,
+        'payment_method' => 'Cash',
+        'reference' => 'RCPT-LAB-GATE',
+    ], $accounts), 'Pay laboratory gate invoice');
+    $allowedPaid = requireBillingSuccess($laboratoryService->startRequest($labRequestId, $laboratory), 'Laboratory starts after billing clearance');
+    assertBilling(($allowedPaid['success'] ?? false) === true, 'Laboratory did not start after Accounts clearance.');
+
+    $multiItemVisitId = createBillingEncounter($pdo, $doctor, $patientId, $doctorDepartmentId, 'LAB-MULTI');
+    $multiLabCreate = requireBillingSuccess($laboratoryService->createRequest([
+        'visit_id' => $multiItemVisitId,
+        'patient_id' => $patientId,
+        'request_source' => 'Clinical',
+        'tests_requested' => 'Full Blood Count with sample collection',
+        'clinical_information' => 'Multiple billable item regression.',
+        'priority' => 'Routine',
+        'suggested_billable_item_ids' => [$laboratoryItemId, $laboratoryExtraItemId],
+    ], $doctor), 'Create laboratory request with multiple billable items');
+    $multiRequestId = (int)$multiLabCreate['laboratory_request_id'];
+    $multiBillingRows = $billingService->listBillingRequests([
+        'visit_id' => $multiItemVisitId,
+        'source_module' => 'Laboratory',
+        'source_record_id' => $multiRequestId,
+    ], $accounts);
+    assertBilling(count($multiBillingRows) === 1, 'Multiple-item laboratory request did not create one Accounts billing task.');
+    $multiChargeCount = (int)$pdo->query("SELECT COUNT(*) FROM patient_charges WHERE visit_id = {$multiItemVisitId} AND status = 'Active'")->fetchColumn();
+    assertBilling($multiChargeCount === 2, 'Multiple-item laboratory request did not create two patient charges.');
+    $multiBalance = $billingService->getEncounterBalance($multiItemVisitId, $accounts);
+    assertBilling(abs((float)$multiBalance['total_charges'] - 1700.0) < 0.01, 'Multiple-item laboratory request did not total both charges.');
+
+    $superGateVisitId = createBillingEncounter($pdo, $doctor, $patientId, $doctorDepartmentId, 'LAB-SUPER');
+    $superLabCreate = requireBillingSuccess($laboratoryService->createRequest([
+        'visit_id' => $superGateVisitId,
+        'patient_id' => $patientId,
+        'request_source' => 'Clinical',
+        'tests_requested' => 'Super Admin Override Test',
+        'priority' => 'Routine',
+        'suggested_billable_item_id' => $laboratoryItemId,
+    ], $doctor), 'Create super admin override laboratory request');
+    $superStart = requireBillingSuccess(
+        $laboratoryService->startRequest((int)$superLabCreate['laboratory_request_id'], $admin),
+        'Super Admin billing gate override'
+    );
+    assertBilling(($superStart['success'] ?? false) === true, 'Super Admin override was blocked by billing gate.');
+
+    $emergencyDepartmentId = (int)$pdo->query("SELECT id FROM departments WHERE department_name = 'Emergency' LIMIT 1")->fetchColumn();
+    assertBilling($emergencyDepartmentId > 0, 'Emergency department is missing.');
+    $emergencyVisitId = createBillingEncounter($pdo, $doctor, $patientId, $emergencyDepartmentId, 'LAB-ER');
+    $pdo->prepare("UPDATE visits SET visit_type = 'Emergency', visit_status = 'Emergency', current_department_id = :department_id WHERE id = :id")
+        ->execute([':department_id' => $emergencyDepartmentId, ':id' => $emergencyVisitId]);
+    $emergencyLabCreate = requireBillingSuccess($laboratoryService->createRequest([
+        'visit_id' => $emergencyVisitId,
+        'patient_id' => $patientId,
+        'request_source' => 'Clinical',
+        'tests_requested' => 'Emergency Full Blood Count',
+        'priority' => 'Urgent',
+        'suggested_billable_item_id' => $laboratoryItemId,
+    ], $doctor), 'Create emergency laboratory request');
+    $emergencyStart = requireBillingSuccess(
+        $laboratoryService->startRequest((int)$emergencyLabCreate['laboratory_request_id'], $laboratory),
+        'Emergency billing gate override'
+    );
+    assertBilling(($emergencyStart['success'] ?? false) === true, 'Emergency request was blocked by billing gate.');
+
     $overBalance = $billingService->recordPayment([
         'invoice_id' => (int)$invoiceAfterFull['id'],
         'amount' => 1,
@@ -465,10 +599,12 @@ try {
     assertBilling(($cancelledPayment['success'] ?? false) === false, 'Cancelled encounter accepted a payment.');
 
     $pdo->exec("DELETE FROM billing_requests WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
-$pdo->exec("DELETE FROM billing_discounts WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
+    $pdo->exec("DELETE FROM billing_discounts WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
     $pdo->exec("DELETE FROM payments WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
     $pdo->exec("DELETE FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
     $pdo->exec("DELETE FROM patient_charges WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
+    $pdo->exec("DELETE lr FROM laboratory_results lr INNER JOIN laboratory_requests lq ON lq.id = lr.laboratory_request_id INNER JOIN visits v ON v.id = lq.visit_id WHERE v.visit_number LIKE 'BIL-%'");
+    $pdo->exec("DELETE lq FROM laboratory_requests lq INNER JOIN visits v ON v.id = lq.visit_id WHERE v.visit_number LIKE 'BIL-%'");
     $pdo->exec("DELETE FROM encounter_events WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
     $pdo->exec("DELETE FROM audit_logs WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
     $pdo->exec("DELETE FROM visits WHERE visit_number LIKE 'BIL-%'");

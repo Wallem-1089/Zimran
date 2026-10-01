@@ -979,6 +979,143 @@ function hmsRenderConfiguredValues(array $values): void
     echo '</tbody></table>';
     echo '</div>';
 }
+
+function hmsBillableItemOptions(PDO $pdo, ?int $departmentId = null): array
+{
+    try {
+        $where = ['is_active = 1'];
+        $params = [];
+        if ($departmentId !== null && $departmentId > 0) {
+            $where[] = 'department_id = :department_id';
+            $params[':department_id'] = $departmentId;
+        }
+
+        $stmt = $pdo->prepare(
+            'SELECT id, item_code, item_name, unit_price
+             FROM billable_items
+             WHERE ' . implode(' AND ', $where) . '
+             ORDER BY item_name ASC, id ASC'
+        );
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable) {
+        return [];
+    }
+}
+
+function hmsDepartmentIdByName(PDO $pdo, array $departmentNames): int
+{
+    foreach ($departmentNames as $departmentName) {
+        $stmt = $pdo->prepare('SELECT id FROM departments WHERE department_name = :name AND is_active = 1 LIMIT 1');
+        $stmt->execute([':name' => (string)$departmentName]);
+        $id = (int)($stmt->fetchColumn() ?: 0);
+        if ($id > 0) {
+            return $id;
+        }
+    }
+
+    return 0;
+}
+
+function hmsRenderBillableItemSelect(array $items, $selectedId = null, string $label = 'Billable Item'): void
+{
+    $selectedIds = [];
+    if (is_array($selectedId)) {
+        $selectedIds = array_values(array_filter(array_map('intval', $selectedId), static fn (int $id): bool => $id > 0));
+    } else {
+        $selected = (int)($selectedId ?? 0);
+        if ($selected > 0) {
+            $selectedIds[] = $selected;
+        }
+    }
+    if ($selectedIds === []) {
+        $selectedIds[] = 0;
+    }
+
+    $options = '<option value="">Select billable item</option>';
+    foreach ($items as $item) {
+        $id = (int)($item['id'] ?? 0);
+        $text = trim((string)($item['item_code'] ?? '') . ' - ' . (string)($item['item_name'] ?? ''));
+        $price = number_format((float)($item['unit_price'] ?? 0), 2);
+        $options .= '<option value="' . $id . '">' . e($text . ' (₦' . $price . ')') . '</option>';
+    }
+
+    $templateId = 'billable-item-template-' . bin2hex(random_bytes(3));
+
+    echo '<div class="form-group billable-item-picker" data-billable-item-picker>';
+    echo '<label>' . e($label) . ' <span class="required">*</span></label>';
+    echo '<div class="billable-item-rows" data-billable-item-rows>';
+    foreach ($selectedIds as $index => $selected) {
+        echo '<div class="billable-item-row" data-billable-item-row style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;">';
+        echo '<select name="suggested_billable_item_ids[]" ' . ($index === 0 ? 'required' : '') . ' style="flex:1;">';
+        echo str_replace('value="' . (int)$selected . '"', 'value="' . (int)$selected . '" selected', $options);
+        echo '</select>';
+        echo '<button type="button" class="btn-secondary" data-remove-billable-item title="Remove billable item" style="border-radius:999px;width:2rem;height:2rem;padding:0;' . ($index === 0 ? 'visibility:hidden;' : '') . '">&times;</button>';
+        echo '</div>';
+    }
+    echo '</div>';
+    echo '<button type="button" class="btn-primary" data-add-billable-item title="Add another billable item" style="border-radius:999px;width:2.75rem;height:2.75rem;padding:0;font-size:1.5rem;line-height:1;margin-top:.25rem;">+</button>';
+    echo '<small class="form-help">Select every item Accounts should bill for this request before the receiving department starts work.</small>';
+    echo '<template id="' . e($templateId) . '">';
+    echo '<div class="billable-item-row" data-billable-item-row style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;">';
+    echo '<select name="suggested_billable_item_ids[]" style="flex:1;">' . $options . '</select>';
+    echo '<button type="button" class="btn-secondary" data-remove-billable-item title="Remove billable item" style="border-radius:999px;width:2rem;height:2rem;padding:0;">&times;</button>';
+    echo '</div>';
+    echo '</template>';
+    echo '<script>(function(){var root=document.currentScript.closest("[data-billable-item-picker]");if(!root){return;}var rows=root.querySelector("[data-billable-item-rows]");var template=root.querySelector("template");var add=root.querySelector("[data-add-billable-item]");if(add&&rows&&template){add.addEventListener("click",function(){rows.appendChild(template.content.cloneNode(true));});}root.addEventListener("click",function(event){var button=event.target.closest("[data-remove-billable-item]");if(!button){return;}var row=button.closest("[data-billable-item-row]");if(row&&rows.querySelectorAll("[data-billable-item-row]").length>1){row.remove();}});})();</script>';
+    echo '</div>';
+}
+
+function hmsRenderInventoryItemSelect(array $items, $selectedId = null, string $label = 'Medication / Inventory Item'): void
+{
+    $selectedIds = [];
+    if (is_array($selectedId)) {
+        $selectedIds = array_values(array_filter(array_map('intval', $selectedId), static fn (int $id): bool => $id > 0));
+    } else {
+        $selected = (int)($selectedId ?? 0);
+        if ($selected > 0) {
+            $selectedIds[] = $selected;
+        }
+    }
+    if ($selectedIds === []) {
+        $selectedIds[] = 0;
+    }
+
+    $options = '<option value="">Select an item or leave blank for free text</option>';
+    foreach ($items as $item) {
+        $id = (int)($item['id'] ?? 0);
+        $unitPrice = $item['unit_price'] ?? null;
+        $priceLabel = $unitPrice !== null ? ' — ₦' . number_format((float)$unitPrice, 2) : '';
+        $stockLabel = isset($item['pharmacy_stock_available']) ? ' — Stock: ' . number_format((float)$item['pharmacy_stock_available'], 0) : '';
+        $text = trim((string)($item['item_code'] ?? '') . ' - ' . (string)($item['item_name'] ?? ''));
+        $options .= '<option value="' . $id . '">' . e($text . $priceLabel . $stockLabel) . '</option>';
+    }
+
+    $templateId = 'inventory-item-template-' . bin2hex(random_bytes(3));
+
+    echo '<div class="form-group inventory-item-picker" data-inventory-item-picker>';
+    echo '<label>' . e($label) . '</label>';
+    echo '<div class="inventory-item-rows" data-inventory-item-rows>';
+    foreach ($selectedIds as $index => $selected) {
+        echo '<div class="inventory-item-row" data-inventory-item-row style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;">';
+        echo '<select name="inventory_item_ids[]" ' . ($index === 0 ? 'id="inventory_item_id"' : '') . ' style="flex:1;">';
+        echo str_replace('value="' . (int)$selected . '"', 'value="' . (int)$selected . '" selected', $options);
+        echo '</select>';
+        echo '<button type="button" class="btn-secondary" data-remove-inventory-item title="Remove item" style="border-radius:999px;width:2rem;height:2rem;padding:0;' . ($index === 0 ? 'visibility:hidden;' : '') . '">&times;</button>';
+        echo '</div>';
+    }
+    echo '</div>';
+    echo '<button type="button" class="btn-primary" data-add-inventory-item title="Add another medication or inventory item" style="border-radius:999px;width:2.75rem;height:2.75rem;padding:0;font-size:1.5rem;line-height:1;margin-top:.25rem;">+</button>';
+    echo '<small class="form-help">Use the plus button to add multiple medications/items to the same pharmacy request.</small>';
+    echo '<template id="' . e($templateId) . '">';
+    echo '<div class="inventory-item-row" data-inventory-item-row style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;">';
+    echo '<select name="inventory_item_ids[]" style="flex:1;">' . $options . '</select>';
+    echo '<button type="button" class="btn-secondary" data-remove-inventory-item title="Remove item" style="border-radius:999px;width:2rem;height:2rem;padding:0;">&times;</button>';
+    echo '</div>';
+    echo '</template>';
+    echo '<script>(function(){var root=document.currentScript.closest("[data-inventory-item-picker]");if(!root){return;}var rows=root.querySelector("[data-inventory-item-rows]");var template=root.querySelector("template");var add=root.querySelector("[data-add-inventory-item]");if(add&&rows&&template){add.addEventListener("click",function(){rows.appendChild(template.content.cloneNode(true));});}root.addEventListener("click",function(event){var button=event.target.closest("[data-remove-inventory-item]");if(!button){return;}var row=button.closest("[data-inventory-item-row]");if(row&&rows.querySelectorAll("[data-inventory-item-row]").length>1){row.remove();}});})();</script>';
+    echo '</div>';
+}
 function field(
     string $name,
     array $patient,

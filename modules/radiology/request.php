@@ -5,7 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/_bootstrap.php';
 
 $visitId = filter_input(INPUT_GET, 'visit', FILTER_VALIDATE_INT) ?: 0;
-$requestedSource = radiologyRequestSourceLabel((string)($_GET['source'] ?? ''));
+$requestSource = radiologyRequestSourceLabel((string)($_GET['source'] ?? ''));
 
 if (!$visitId) {
     header('Location: index.php');
@@ -13,16 +13,7 @@ if (!$visitId) {
 }
 
 $visit = radiologyRequireVisit($visitService, $visitId);
-$isDirectRadiologyEncounter = in_array((string)($visit['department_name'] ?? ''), ['Radiology', 'X-Ray'], true);
 $requestSourceNote = '';
-if ($requestedSource === 'Direct' && !$isDirectRadiologyEncounter) {
-    $requestSource = 'Clinical';
-    $requestSourceNote = 'Direct is only for active encounters currently in Radiology/X-Ray. This request is being recorded as Clinical.';
-} elseif (in_array($requestedSource, ['Clinical', 'Direct'], true)) {
-    $requestSource = $requestedSource;
-} else {
-    $requestSource = $isDirectRadiologyEncounter ? 'Direct' : 'Clinical';
-}
 radiologyRequireAccess($permissionService, $visit, $currentUser, $requestSource);
 
 if (!$radiologyTablesReady) {
@@ -46,7 +37,8 @@ $radiologyRequest['request_source'] = $requestSource;
 unset($_SESSION['old_radiology_request']);
 
 $existingRequests = $radiologyService->listByVisit($visitId, $currentUser);
-$pageTitle = $requestSource === 'Direct' ? 'Create Direct Radiology/X-Ray Request' : 'Create Radiology Request';
+$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Radiology', 'X-Ray']));
+$pageTitle = 'Create Radiology Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 
 require __DIR__ . '/../../layouts/header.php';
@@ -86,7 +78,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="summary-item"><span class="summary-label">Encounter Status</span> <span class="summary-value"><?= e((string)($visit['visit_status'] ?? '-')) ?></span></div>
     </div>
 
-    <?php $buttonLabel = $requestSource === 'Direct' ? 'Save Direct Radiology/X-Ray Request' : 'Save Radiology Request'; require __DIR__ . '/_form.php'; ?>
+    <?php $buttonLabel = 'Save Radiology Request'; require __DIR__ . '/_form.php'; ?>
 
     <div class="card">
         <h3>Existing Requests for This Encounter</h3>

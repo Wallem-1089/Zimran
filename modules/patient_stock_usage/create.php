@@ -114,7 +114,18 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?= csrfField() ?>
         <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
         <input type="hidden" name="patient_id" value="<?= (int)$visit['patient_id'] ?>">
-        <input type="hidden" name="department_id" value="<?= (int)$selectedDepartmentId ?>">
+        <input type="hidden" id="patient_stock_department_id" name="department_id" value="<?= (int)$selectedDepartmentId ?>">
+
+        <?php
+            $barcodeScanId = 'patient_stock_barcode_scan';
+            $barcodeScanLabel = 'Scan Item Barcode / SKU';
+            $barcodeScanHelp = 'Scan an item available in the selected department stock to select it.';
+            $barcodeScanTargetSelect = 'inventory_item_id';
+            $barcodeScanDepartmentInput = 'patient_stock_department_id';
+            $barcodeScanRequireStock = true;
+            $barcodeScanEndpoint = '../store/barcode_lookup.php';
+            require __DIR__ . '/../store/_barcode_scan.php';
+        ?>
 
         <div class="form-grid">
             <div class="form-group">
@@ -136,7 +147,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
             <div class="form-group">
                 <label for="quantity">Quantity Used</label>
-                <input id="quantity" name="quantity" type="number" step="0.01" min="0.01" required value="<?= e((string)($old['quantity'] ?? '')) ?>">
+                <input id="quantity" name="quantity" type="number" step="1" min="1" required value="<?= e((string)($old['quantity'] ?? '')) ?>">
             </div>
 
             <div class="form-group full-width">

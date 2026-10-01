@@ -344,9 +344,7 @@ $latestPhysiotherapySession = $latestPhysiotherapyRecord
     ? $physiotherapyService->getResult((int)$latestPhysiotherapyRecord['id'], $currentUser)
     : null;
 $canViewPhysiotherapy = $permissionService->canViewPhysiotherapy((int)$visit['patient_id'], $currentUser);
-$physiotherapyRequestSource = in_array((string)($visit['department_name'] ?? ''), ['Physiotherapy', 'Physio', 'Rehabilitation'], true)
-    ? 'Direct'
-    : 'Clinical';
+$physiotherapyRequestSource = 'Clinical';
 $canCreatePhysiotherapyRequest = $permissionService->canCreatePhysiotherapyRequest($visit, $currentUser, $physiotherapyRequestSource);
 $canProcessPhysiotherapyRequest = $permissionService->canProcessPhysiotherapyRequest($visit, $currentUser);
 $canEnterPhysiotherapyReport = $permissionService->canEnterPhysiotherapyResult($visit, $currentUser);
@@ -387,18 +385,16 @@ $latestLaboratoryResult = $latestLaboratoryRequest
     ? $laboratoryService->getResult((int)$latestLaboratoryRequest['id'], $currentUser)
     : null;
 $canViewLaboratory = $permissionService->canViewLaboratory((int)$visit['patient_id'], $currentUser);
-$canCreateLaboratoryRequest = $permissionService->canCreateLaboratoryRequest($visit, $currentUser, ($visit['department_name'] ?? '') === 'Laboratory' ? 'Direct' : 'Clinical');
+$canCreateLaboratoryRequest = $permissionService->canCreateLaboratoryRequest($visit, $currentUser, 'Clinical');
 $canProcessLaboratoryRequest = $permissionService->canProcessLaboratoryRequest($visit, $currentUser);
 $canEnterLaboratoryResult = $permissionService->canEnterLaboratoryResult($visit, $currentUser);
 $canEditLaboratoryResult = $permissionService->canEditLaboratoryResult($visit, $currentUser);
 $canCompleteLaboratoryRequest = $permissionService->canCompleteLaboratoryRequest($visit, $currentUser);
-$laboratoryRequestSource = ($visit['department_name'] ?? '') === 'Laboratory' ? 'Direct' : 'Clinical';
+$laboratoryRequestSource = 'Clinical';
 $radiologyTablesReady = workspaceTableExists($pdo, 'radiology_requests')
     && workspaceTableExists($pdo, 'radiology_reports');
 $radiologyService = $radiologyTablesReady ? new RadiologyService($pdo, null, null, $permissionService) : null;
-$radiologyRequestSource = in_array((string)($visit['department_name'] ?? ''), ['Radiology', 'X-Ray'], true)
-    ? 'Direct'
-    : 'Clinical';
+$radiologyRequestSource = 'Clinical';
 $radiologyRequests = $radiologyService ? $radiologyService->listByVisit($visitId, $currentUser) : [];
 $latestRadiologyRequest = $radiologyRequests[0] ?? null;
 $latestRadiologyResult = $latestRadiologyRequest
@@ -414,9 +410,7 @@ $radiology = [];
 $ecgTablesReady = workspaceTableExists($pdo, 'ecg_requests')
     && workspaceTableExists($pdo, 'ecg_reports');
 $ecgService = $ecgTablesReady ? new ECGService($pdo, null, null, $permissionService) : null;
-$ecgRequestSource = (string)($visit['department_name'] ?? '') === 'ECG'
-    ? 'Direct'
-    : 'Clinical';
+$ecgRequestSource = 'Clinical';
 $ecgRequests = $ecgService ? $ecgService->listByVisit($visitId, $currentUser) : [];
 $latestEcgRequest = $ecgRequests[0] ?? null;
 $latestEcgReport = $latestEcgRequest
@@ -431,9 +425,7 @@ $canCompleteEcgRequest = $permissionService->canCompleteEcgRequest($visit, $curr
 $popTablesReady = workspaceTableExists($pdo, 'pop_requests')
     && workspaceTableExists($pdo, 'pop_records');
 $popService = $popTablesReady ? new POPService($pdo, null, null, $permissionService) : null;
-$popRequestSource = (string)($visit['department_name'] ?? '') === 'POP'
-    ? 'Direct'
-    : 'Clinical';
+$popRequestSource = 'Clinical';
 $popRequests = $popService ? $popService->listByVisit($visitId, $currentUser) : [];
 $latestPopRequest = $popRequests[0] ?? null;
 $latestPopRecord = $latestPopRequest
@@ -445,9 +437,7 @@ $canProcessPopRequest = $permissionService->canProcessPopRequest($visit, $curren
 $canRecordPopProcedure = $permissionService->canRecordPopProcedure($visit, $currentUser);
 $canEditPopRecord = $permissionService->canEditPopRecord($visit, $currentUser);
 $canCompletePopRequest = $permissionService->canCompletePopRequest($visit, $currentUser);
-$pharmacyRequestSource = in_array((string)($visit['department_name'] ?? ''), ['Pharmacy'], true)
-    ? 'Direct'
-    : 'Clinical';
+$pharmacyRequestSource = 'Clinical';
 $pharmacyClinicalSafetyService = isset($clinicalSafetyService)
     ? $clinicalSafetyService
     : new ClinicalSafetyService($pdo);
@@ -470,7 +460,9 @@ $canViewPharmacy = $permissionService->canViewPharmacy((int)$visit['patient_id']
 $canCreatePrescription = $permissionService->canCreatePrescription($visit, $currentUser, $pharmacyRequestSource);
 $canDispensePrescription = $permissionService->canDispensePrescription($visit, $currentUser);
 $canViewBilling = $permissionService->canViewBilling($currentUser);
-$canCreatePatientCharge = $permissionService->canCreatePatientCharge($currentUser);
+$activeBillingDepartmentName = (string)($currentUser['active_department_name'] ?? $currentUser['department_name'] ?? '');
+$canCreatePatientCharge = $permissionService->canCreatePatientCharge($currentUser)
+    && strcasecmp($activeBillingDepartmentName, 'Accounts') !== 0;
 $canCancelPatientCharge = $permissionService->canCancelPatientCharge($currentUser);
 $canCreateBillingRequest = $permissionService->canCreateBillingRequest($currentUser);
 $canViewBillingRequests = $permissionService->canViewBillingRequests($currentUser);
@@ -547,7 +539,7 @@ $workspaceTabTitles = [
     'laboratory' => 'Encounter Laboratory',
     'radiology' => 'Encounter X-Ray',
     'ecg' => 'Encounter ECG',
-    'pop' => 'Encounter POP',
+    'pop' => 'Encounter Plaster',
     'pharmacy' => 'Encounter Pharmacy',
     'billing' => 'Encounter Billing',
     'stock_usage' => 'Encounter Stock Usage',
@@ -601,6 +593,9 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
         <details class="workspace-collapse-panel">
             <summary class="workspace-collapse-summary">
                 <span class="workspace-collapse-main">
+                    <span class="workspace-collapse-patient">
+                        <?= e(trim((string)($patient['first_name'] ?? '') . ' ' . (string)($patient['last_name'] ?? ''))) ?>
+                    </span>
                     <span class="workspace-collapse-title">Patient / Encounter Context</span>
                     <span class="workspace-collapse-subtitle">
                         Patient identity, clinical safety, longitudinal summary, and latest key results.

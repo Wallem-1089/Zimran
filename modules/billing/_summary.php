@@ -165,8 +165,8 @@ foreach ($billingDiscounts as $discount) {
                             <td><?= e((string)($request['status'] ?? 'Pending')) ?></td>
                             <td><?= e((string)($request['requested_by_name'] ?? '-')) ?></td>
                             <td>
-                                <?php if (!empty($canReviewBillingRequest) && (string)($request['status'] ?? '') === 'Pending'): ?>
-                                    <a class="btn-primary btn-sm" href="../billing/request_review.php?id=<?= (int)$request['id'] ?>">Create Charge</a>
+                                <?php if (!empty($canReviewBillingRequest)): ?>
+                                    <a class="btn-secondary btn-sm" href="../billing/request_review.php?id=<?= (int)$request['id'] ?>">Review</a>
                                 <?php endif; ?>
                                 <?php if ($canCancelThisRequest): ?>
                                     <details class="inline-details">
@@ -386,6 +386,7 @@ foreach ($billingDiscounts as $discount) {
                         <th>Date</th>
                         <th>Amount</th>
                         <th>Method</th>
+                        <th>Status</th>
                         <th>Received By</th>
                         <th>Actions</th>
                     </tr>
@@ -397,10 +398,23 @@ foreach ($billingDiscounts as $discount) {
                             <td><?= e((string)($payment['created_at'] ?? '-')) ?></td>
                             <td>&#8358;<?= e((string)($payment['display_amount'] ?? '0.00')) ?></td>
                             <td><?= e((string)($payment['payment_method'] ?? '-')) ?></td>
+                            <td><?= e((string)($payment['status'] ?? 'Active')) ?></td>
                             <td><?= e((string)($payment['received_by_name'] ?? '-')) ?></td>
                             <td>
                                 <?php if (!empty($canViewReceipts)): ?>
                                         <a class="btn-secondary btn-sm" href="../billing/receipt.php?id=<?= (int)$payment['id'] ?>">Receipt</a>
+                                <?php endif; ?>
+                                <?php if (!empty($canCancelPayment) && (string)($payment['status'] ?? 'Active') === 'Active'): ?>
+                                    <details class="inline-details">
+                                        <summary class="btn-secondary btn-sm">Cancel Payment</summary>
+                                        <form method="post" action="../billing/payment_cancel.php" class="inline-cancel-form">
+                                            <?= csrfField() ?>
+                                            <input type="hidden" name="payment_id" value="<?= (int)$payment['id'] ?>">
+                                            <input type="hidden" name="visit_id" value="<?= (int)$visit['id'] ?>">
+                                            <textarea name="reason" rows="2" required placeholder="Cancellation reason"></textarea>
+                                            <button class="btn-danger btn-sm" type="submit">Confirm Cancel</button>
+                                        </form>
+                                    </details>
                                 <?php endif; ?>
                             </td>
                         </tr>

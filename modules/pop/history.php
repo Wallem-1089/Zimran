@@ -9,7 +9,7 @@ $patientId = filter_input(INPUT_GET, 'patient', FILTER_VALIDATE_INT) ?: 0;
 
 if (!$popTablesReady) {
     http_response_code(503);
-    exit('POP tables are not available yet. Apply Migration 059 to enable this section.');
+    exit('Plaster tables are not available yet. Apply Migration 059 to enable this section.');
 }
 
 if ($visitId > 0) {
@@ -29,7 +29,7 @@ if (!$patient) {
     exit('Patient not found.');
 }
 
-$pageTitle = 'POP History';
+$pageTitle = 'Plaster History';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 require __DIR__ . '/../../layouts/header.php';
 require __DIR__ . '/../../layouts/sidebar.php';
@@ -39,7 +39,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
 <main class="content">
     <div class="page-header">
         <div>
-            <h1>POP History</h1>
+            <h1>Plaster History</h1>
             <p><?= e((string)($patient['first_name'] . ' ' . $patient['last_name'])) ?> · <?= e((string)$patient['hospital_number']) ?></p>
         </div>
         <div class="form-actions">
@@ -52,7 +52,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <?php if ($requests === []): ?>
-            <p class="text-muted">No POP history found.</p>
+            <p class="text-muted">No Plaster history found.</p>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="data-table">
@@ -72,7 +72,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                             <tr>
                                 <td><?= e((string)($request['created_at'] ?? '-')) ?></td>
                                 <td><?= e((string)($request['visit_number'] ?? '-')) ?></td>
-                                <td><?= e((string)($request['procedure_requested'] ?? 'POP / Casting')) ?></td>
+                                <td><?= e((string)($request['procedure_requested'] ?? 'Plaster')) ?></td>
                                 <td><?= e((string)($request['body_part'] ?? '-')) ?></td>
                                 <td><?= e((string)$request['status']) ?></td>
                                 <td><?= e((string)($request['performed_by_name'] ?? '-')) ?></td>

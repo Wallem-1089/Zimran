@@ -33,7 +33,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <form class="card" method="post" action="issue_save.php">
         <?= csrfField() ?>
         <input type="hidden" name="id" value="<?= (int)$request['id'] ?>">
-        <p class="text-muted">Enter the quantity Store is issuing now. Leave a row as 0 to skip it.</p>
+        <p class="text-muted">Enter the quantity being issued now. Store issues to Pharmacy; Pharmacy issues onward to requesting departments. Leave a row as 0 to skip it.</p>
         <div class="table-responsive">
             <table class="table">
                 <thead><tr><th>Item</th><th>Requested</th><th>Already Issued</th><th>Remaining</th><th>Issue Now</th></tr></thead>
@@ -44,7 +44,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                         <td><?= e(number_format((float)$item['quantity_requested'], 2)) ?> <?= e((string)$item['unit']) ?></td>
                         <td><?= e(number_format((float)$item['quantity_issued'], 2)) ?> <?= e((string)$item['unit']) ?></td>
                         <td><?= e(number_format($remaining, 2)) ?> <?= e((string)$item['unit']) ?></td>
-                        <td><input name="issue_quantity[<?= (int)$item['id'] ?>]" type="number" min="0" max="<?= e((string)$remaining) ?>" step="0.01" value="<?= $remaining > 0 ? e((string)$remaining) : '0' ?>"></td>
+                        <td><input name="issue_quantity[<?= (int)$item['id'] ?>]" type="number" min="0" max="<?= e((string)$remaining) ?>" step="1" value="<?= $remaining > 0 ? e((string)$remaining) : '0' ?>"></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>

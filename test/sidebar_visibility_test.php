@@ -25,13 +25,13 @@ function sidebarUser(string $role, string $department): array
         'Store' => 12,
         'Orderly' => 13,
         'ECG' => 14,
-        'POP' => 15,
+        'Plaster' => 15,
         'Super Administrator' => 16,
     ];
     $departmentId = $departmentIds[$department] ?? 0;
 
     return [
-        'id' => $departmentId,
+        'id' => 9000 + $departmentId,
         'first_name' => 'Sidebar',
         'last_name' => 'Tester',
         'role_name' => $role,
@@ -68,27 +68,27 @@ function assertSidebarOmits(string $html, string $label, string $context): void
 }
 
 $superAdminSidebar = renderSidebarFor(sidebarUser('Super Administrator', 'Super Administrator'));
-foreach (['Medical Records', 'Accounts', 'Store', 'Admissions', 'Pharmacy', 'Billing', 'Reports', 'Administration', 'Switch Department'] as $label) {
+foreach (['Medical Records', 'Price Catalogue', 'Store', 'Admissions', 'Pharmacy', 'Billing', 'Emergency', 'Reports', 'Administration', 'Switch Department'] as $label) {
     assertSidebarContains($superAdminSidebar, $label, 'Super Administrator');
 }
 
 $adminSidebar = renderSidebarFor(sidebarUser('System Administrator', 'Administrator'));
-foreach (['Department Worklist', 'Administration'] as $label) {
+foreach (['Department Worklist', 'Emergency', 'Reports', 'Administration'] as $label) {
     assertSidebarContains($adminSidebar, $label, 'Administrator');
 }
-foreach (['Medical Records', 'Accounts', 'Store', 'Admissions', 'Pharmacy', 'Billing', 'Reports'] as $label) {
+foreach (['Medical Records', 'Price Catalogue', 'Store', 'Admissions', 'Pharmacy', 'Billing'] as $label) {
     assertSidebarOmits($adminSidebar, $label, 'Administrator');
 }
 
 $doctorSidebar = renderSidebarFor(sidebarUser('Doctor', 'Doctor'));
 assertSidebarContains($doctorSidebar, 'Admissions', 'Doctor');
-foreach (['Accounts', 'Store', 'Pharmacy', 'Billing', 'Reports', 'Medical Records', 'Administration'] as $label) {
+foreach (['Price Catalogue', 'Store', 'Pharmacy', 'Billing', 'Reports', 'Medical Records', 'Administration'] as $label) {
     assertSidebarOmits($doctorSidebar, $label, 'Doctor');
 }
 
 $nurseSidebar = renderSidebarFor(sidebarUser('Nurse', 'Nursing'));
 assertSidebarContains($nurseSidebar, 'Admissions', 'Nurse');
-foreach (['Accounts', 'Store', 'Pharmacy', 'Billing', 'Reports', 'Medical Records', 'Administration'] as $label) {
+foreach (['Price Catalogue', 'Store', 'Pharmacy', 'Billing', 'Reports', 'Medical Records', 'Administration'] as $label) {
     assertSidebarOmits($nurseSidebar, $label, 'Nurse');
 }
 
@@ -96,12 +96,12 @@ $recordsSidebar = renderSidebarFor(sidebarUser('Records Officer', 'Records'));
 foreach (['Medical Records', 'Admissions', 'Reports'] as $label) {
     assertSidebarContains($recordsSidebar, $label, 'Records Officer');
 }
-foreach (['Accounts', 'Store', 'Pharmacy', 'Billing', 'Administration'] as $label) {
+foreach (['Price Catalogue', 'Store', 'Pharmacy', 'Billing', 'Administration'] as $label) {
     assertSidebarOmits($recordsSidebar, $label, 'Records Officer');
 }
 
 $accountsSidebar = renderSidebarFor(sidebarUser('Accountant', 'Accounts'));
-foreach (['Accounts', 'Billing', 'Reports'] as $label) {
+foreach (['Price Catalogue', 'Billing', 'Reports'] as $label) {
     assertSidebarContains($accountsSidebar, $label, 'Accountant');
 }
 foreach (['Medical Records', 'Store', 'Admissions', 'Pharmacy', 'Administration'] as $label) {
@@ -112,19 +112,21 @@ $storeSidebar = renderSidebarFor(sidebarUser('Store Officer', 'Store'));
 foreach (['Store', 'Reports'] as $label) {
     assertSidebarContains($storeSidebar, $label, 'Store Officer');
 }
-foreach (['Medical Records', 'Accounts', 'Admissions', 'Pharmacy', 'Billing', 'Administration'] as $label) {
+foreach (['Medical Records', 'Price Catalogue', 'Admissions', 'Pharmacy', 'Billing', 'Administration'] as $label) {
     assertSidebarOmits($storeSidebar, $label, 'Store Officer');
 }
 
 $pharmacySidebar = renderSidebarFor(sidebarUser('Pharmacist', 'Pharmacy'));
-assertSidebarContains($pharmacySidebar, 'Pharmacy', 'Pharmacist');
-foreach (['Medical Records', 'Accounts', 'Store', 'Admissions', 'Billing', 'Reports', 'Administration'] as $label) {
+foreach (['Pharmacy', 'Price Catalogue', 'Store'] as $label) {
+    assertSidebarContains($pharmacySidebar, $label, 'Pharmacist');
+}
+foreach (['Medical Records', 'Admissions', 'Billing', 'Reports', 'Administration'] as $label) {
     assertSidebarOmits($pharmacySidebar, $label, 'Pharmacist');
 }
 
 $orderlySidebar = renderSidebarFor(sidebarUser('Orderly', 'Orderly'));
 assertSidebarContains($orderlySidebar, 'Stock Requests', 'Orderly');
-foreach (['Medical Records', 'Laboratory', 'Radiology', 'Physiotherapy', 'Theatre', 'Accounts', 'Store', 'Admissions', 'Pharmacy', 'Billing', 'Reports', 'Administration'] as $label) {
+foreach (['Medical Records', 'Laboratory', 'Radiology', 'Physiotherapy', 'Theatre', 'Price Catalogue', 'Store', 'Admissions', 'Pharmacy', 'Billing', 'Reports', 'Administration'] as $label) {
     assertSidebarOmits($orderlySidebar, $label, 'Orderly');
 }
 

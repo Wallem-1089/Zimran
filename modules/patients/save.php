@@ -14,6 +14,7 @@ require_once __DIR__ . '/../../config/helpers.php';
 
 require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
+require_once __DIR__ . '/../../services/PatientRegistrationBillingService.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -51,6 +52,7 @@ if (empty($_POST['first_name'])) {
 */
 
 $patientService = new PatientService($pdo);
+$registrationBillingService = new PatientRegistrationBillingService($pdo);
 
 /*
 |--------------------------------------------------------------------------
@@ -142,6 +144,29 @@ if (!$permissionService->canRegisterPatient($currentUser)) {
 }
 
 $registeredBy = (int)$currentUser['id'];
+
+if (($_POST['action'] ?? '') === 'initial_registration') {
+    $result = $registrationBillingService->createInitialRegistration([
+        'first_name' => trim($_POST['first_name'] ?? ''),
+        'middle_name' => trim($_POST['middle_name'] ?? ''),
+        'last_name' => trim($_POST['last_name'] ?? ''),
+        'phone' => trim($_POST['phone'] ?? ''),
+        'registration_type' => trim($_POST['registration_type'] ?? 'Normal'),
+    ], $currentUser);
+
+    if (empty($result['success'])) {
+        $_SESSION['validation_errors'] = $result['errors'] ?? ['Unable to create registration billing request.'];
+        $_SESSION['old_patient'] = $_POST;
+        header('Location: register.php?type=' . urlencode((string)($_POST['registration_type'] ?? 'Normal')));
+        exit;
+    }
+
+    $_SESSION['success_message'] =
+        'Initial details saved. Accounts must clear the registration fee before the patient ID is generated.';
+
+    header('Location: view.php?id=' . (int)$result['patient_id']);
+    exit;
+}
 
 /*
 |--------------------------------------------------------------------------

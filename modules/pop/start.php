@@ -8,20 +8,20 @@ requireCsrfToken();
 $requestId = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT) ?: 0;
 if (!$requestId) {
     http_response_code(400);
-    exit('Invalid POP request.');
+    exit('Invalid Plaster request.');
 }
 
 $request = $popService->getRequestById($requestId, $currentUser);
 if (!$request) {
     http_response_code(404);
-    exit('POP request not found.');
+    exit('Plaster request not found.');
 }
 $visit = popRequireVisit($visitService, (int)$request['visit_id']);
 if (!$permissionService->canProcessPopRequest($visit, $currentUser)) {
     http_response_code(403);
-    exit('You cannot start this POP request.');
+    exit('You cannot start this Plaster request.');
 }
 
-popFlash($popService->startRequest($requestId, $currentUser), 'POP request started.');
+popFlash($popService->startRequest($requestId, $currentUser), 'Plaster request started.');
 header('Location: view.php?id=' . $requestId);
 exit;

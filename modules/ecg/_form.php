@@ -5,9 +5,7 @@ declare(strict_types=1);
 $ecgRequest = $ecgRequest ?? [];
 $requestSource = ecgRequestSourceLabel((string)($ecgRequest['request_source'] ?? $requestSource ?? 'Clinical'));
 $buttonLabel ??= 'Save ECG Request';
-$requestSourceNote ??= $requestSource === 'Direct'
-    ? 'Direct ECG is for patients whose active encounter is currently in ECG.'
-    : 'Clinical requests are linked to this encounter without transferring ownership.';
+$requestSourceNote ??= 'Clinical requests are linked to this encounter without transferring ownership.';
 $enableWritingMode ??= isset($permissionService)
     && method_exists($permissionService, 'canUseConsultationHandwriting')
     && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
@@ -24,6 +22,8 @@ $enableWritingMode ??= isset($permissionService)
         <div class="readonly-field"><?= e($requestSource) ?></div>
         <p class="text-muted"><?= e($requestSourceNote) ?></p>
     </div>
+
+    <?php hmsRenderBillableItemSelect($billableItemOptions ?? [], $ecgRequest['suggested_billable_item_ids'] ?? ($ecgRequest['suggested_billable_item_id'] ?? null)); ?>
 
     <div class="form-group">
         <label for="study_requested">Study Requested</label>

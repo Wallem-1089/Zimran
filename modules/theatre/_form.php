@@ -34,6 +34,8 @@ $fields = [
     <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Theatre Entry Mode'); ?>
 
     <div class="form-grid">
+        <?php hmsRenderBillableItemSelect($billableItemOptions ?? [], $theatre['suggested_billable_item_ids'] ?? ($theatre['suggested_billable_item_id'] ?? null)); ?>
+
         <?php foreach ($fields as $field => $label): ?>
             <?php if ($field === 'procedure_name'): ?>
                 <div class="form-group">

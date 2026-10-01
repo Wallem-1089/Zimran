@@ -6,10 +6,8 @@ $popRequest = $popRequest ?? [];
 $visitId = (int)($visit['id'] ?? $popRequest['visit_id'] ?? 0);
 $patientId = (int)($visit['patient_id'] ?? $popRequest['patient_id'] ?? 0);
 $requestSource = (string)($popRequest['request_source'] ?? $requestSource ?? 'Clinical');
-$buttonLabel ??= 'Save POP Request';
-$requestSourceNote ??= $requestSource === 'Direct'
-    ? 'Direct POP is for patients whose active encounter is currently in POP.'
-    : 'Clinical requests are linked to this encounter without transferring ownership.';
+$buttonLabel ??= 'Save Plaster Request';
+$requestSourceNote ??= 'Clinical requests are linked to this encounter without transferring ownership.';
 $enableWritingMode ??= isset($permissionService)
     && method_exists($permissionService, 'canUseConsultationHandwriting')
     && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
@@ -27,10 +25,12 @@ $enableWritingMode ??= isset($permissionService)
         <p class="text-muted"><?= e($requestSourceNote) ?></p>
     </div>
 
+    <?php hmsRenderBillableItemSelect($billableItemOptions ?? [], $popRequest['suggested_billable_item_ids'] ?? ($popRequest['suggested_billable_item_id'] ?? null)); ?>
+
     <div class="form-grid">
         <div class="form-group">
             <label for="procedure_requested">Procedure / Cast Requested</label>
-            <input id="procedure_requested" name="procedure_requested" type="text" required maxlength="255" value="<?= e((string)($popRequest['procedure_requested'] ?? 'POP / Casting')) ?>">
+            <input id="procedure_requested" name="procedure_requested" type="text" required maxlength="255" value="<?= e((string)($popRequest['procedure_requested'] ?? 'Plaster')) ?>">
         </div>
         <div class="form-group">
             <label for="priority">Priority</label>
@@ -42,7 +42,7 @@ $enableWritingMode ??= isset($permissionService)
         </div>
     </div>
 
-    <?php hmsRenderHandwritingToolbar($enableWritingMode, 'POP Request Entry Mode'); ?>
+    <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Plaster Request Entry Mode'); ?>
     <?php hmsRenderHandwritingTextarea('clinical_indication', 'Clinical Indication / Reason', (string)($popRequest['clinical_indication'] ?? ''), 5, false, $enableWritingMode); ?>
 
     <div class="form-actions">

@@ -6,6 +6,7 @@ require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/test_database.php';
 require_once __DIR__ . '/../database/tools/DatabaseSafety.php';
 require_once __DIR__ . '/../database/tools/MigrationManager.php';
+require_once __DIR__ . '/../services/BillingService.php';
 require_once __DIR__ . '/../services/ConsultationService.php';
 require_once __DIR__ . '/../services/ECGService.php';
 require_once __DIR__ . '/../services/PermissionService.php';
@@ -97,22 +98,6 @@ function ecgCreateEncounter(PDO $pdo, array $actor, int $patientId, int $departm
     return (int)$pdo->lastInsertId();
 }
 
-function routeEcgEncounter(PDO $pdo, int $visitId, array $departmentUser): void
-{
-    $stmt = $pdo->prepare("
-        UPDATE visits
-        SET current_department_id = :department_id,
-            current_department_received_status = 'Received',
-            visit_status = 'ECG',
-            updated_at = NOW()
-        WHERE id = :visit_id
-    ");
-    $stmt->execute([
-        ':department_id' => (int)$departmentUser['department_id'],
-        ':visit_id' => $visitId,
-    ]);
-}
-
 function ecgWorklistContains(array $rows, int $requestId): bool
 {
     foreach ($rows as $row) {
@@ -140,10 +125,15 @@ $pdo->exec("DELETE ce FROM encounter_events ce INNER JOIN visits v ON v.id = ce.
 $pdo->exec("DELETE al FROM audit_logs al INNER JOIN visits v ON v.id = al.visit_id WHERE v.visit_number LIKE 'ECG-%'");
 $pdo->exec("DELETE erp FROM ecg_reports erp INNER JOIN ecg_requests er ON er.id = erp.ecg_request_id INNER JOIN visits v ON v.id = er.visit_id WHERE v.visit_number LIKE 'ECG-%'");
 $pdo->exec("DELETE er FROM ecg_requests er INNER JOIN visits v ON v.id = er.visit_id WHERE v.visit_number LIKE 'ECG-%'");
+$pdo->exec("DELETE FROM billing_requests WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'ECG-%')");
+$pdo->exec("DELETE FROM payments WHERE invoice_id IN (SELECT id FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'ECG-%'))");
+$pdo->exec("DELETE FROM patient_charges WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'ECG-%')");
+$pdo->exec("DELETE FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'ECG-%')");
 $pdo->exec("DELETE FROM visits WHERE visit_number LIKE 'ECG-%'");
 
 $doctor = ecgUser($pdo, 'dev_doctor');
 $nurse = ecgUser($pdo, 'dev_nurse');
+$accounts = ecgUser($pdo, 'dev_accounts');
 $ecgTech = ecgEnsureTechnician($pdo);
 
 $patientRows = $pdo->query("
@@ -158,7 +148,15 @@ assertEcg(count($patientRows) === 2, 'Dedicated patient fixtures are missing.');
 $permissionService = new PermissionService($pdo);
 $storageRoot = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'hms_ecg_test_' . bin2hex(random_bytes(4));
 $ecgService = new ECGService($pdo, null, null, $permissionService, $storageRoot);
+$billingService = new BillingService($pdo);
 $consultationService = new ConsultationService($pdo);
+$ecgDepartmentId = (int)$pdo->query("SELECT id FROM departments WHERE department_name = 'ECG' LIMIT 1")->fetchColumn();
+$pdo->prepare("
+    INSERT INTO billable_items (item_code, item_name, item_type, department_id, description, unit_price, unit, is_active, created_by, created_at, updated_at)
+    SELECT 'ECG-AUTO', 'ECG Study', 'Service', :department_id, 'ECG fixture.', 1000.00, '', 1, :created_by, NOW(), NOW()
+    WHERE NOT EXISTS (SELECT 1 FROM billable_items WHERE item_code = 'ECG-AUTO')
+")->execute([':department_id' => $ecgDepartmentId, ':created_by' => (int)$accounts['id']]);
+$ecgBillableItemId = (int)$pdo->query("SELECT id FROM billable_items WHERE item_code = 'ECG-AUTO' LIMIT 1")->fetchColumn();
 
 $clinicalVisitId = ecgCreateEncounter($pdo, $doctor, $patientId, (int)$doctor['department_id'], 'Doctor', (string)time());
 $directVisitId = ecgCreateEncounter($pdo, $ecgTech, $patientId, (int)$ecgTech['department_id'], 'ECG', (string)(time() + 1));
@@ -171,8 +169,19 @@ $clinical = requireEcgSuccess($ecgService->createRequest([
     'study_requested' => 'ECG',
     'clinical_indication' => 'Chest pain and palpitations.',
     'priority' => 'Urgent',
+    'suggested_billable_item_id' => $ecgBillableItemId,
 ], $doctor), 'Clinical ECG request');
 $clinicalRequestId = (int)$clinical['ecg_request_id'];
+$pdo->prepare("UPDATE billing_requests SET status = 'Charged', reviewed_by = :reviewed_by, reviewed_at = NOW(), updated_at = NOW() WHERE source_module = 'ECG' AND source_record_id = :source_record_id")
+    ->execute([':reviewed_by' => (int)$accounts['id'], ':source_record_id' => $clinicalRequestId]);
+$ecgInvoice = $billingService->getInvoiceByVisit($clinicalVisitId);
+assertEcg($ecgInvoice !== null, 'ECG invoice was not created.');
+requireEcgSuccess($billingService->recordPayment([
+    'invoice_id' => (int)$ecgInvoice['id'],
+    'amount' => (float)$ecgInvoice['balance_due'],
+    'payment_method' => 'Cash',
+    'reference' => 'ECG-PAID',
+], $accounts), 'Pay ECG invoice');
 
 $worklist = $ecgService->listWorklist($ecgTech, ['status' => 'Requested']);
 if (!ecgWorklistContains($worklist, $clinicalRequestId)) {
@@ -183,7 +192,6 @@ if (!ecgWorklistContains($worklist, $clinicalRequestId)) {
 }
 assertEcg(ecgWorklistContains($worklist, $clinicalRequestId), 'ECG worklist did not show the clinical request.');
 
-routeEcgEncounter($pdo, $clinicalVisitId, $ecgTech);
 requireEcgSuccess($ecgService->startRequest($clinicalRequestId, $ecgTech), 'Start ECG request');
 
 $tmpChart = tempnam(sys_get_temp_dir(), 'ecg-');
@@ -212,15 +220,15 @@ $readonly = $ecgService->updateReport([
 ], $ecgTech);
 assertEcg(($readonly['success'] ?? true) === false, 'Completed ECG request accepted report update.');
 
-$direct = requireEcgSuccess($ecgService->createRequest([
+$direct = $ecgService->createRequest([
     'visit_id' => $directVisitId,
     'patient_id' => $patientId,
     'request_source' => 'Direct',
     'study_requested' => 'ECG',
     'clinical_indication' => 'External clinic requested ECG.',
     'priority' => 'Routine',
-], $ecgTech), 'Direct ECG request');
-assertEcg($consultationService->getByVisit($directVisitId) === null, 'Direct ECG unexpectedly created/required Consultation.');
+], $ecgTech);
+assertEcg(($direct['success'] ?? true) === false, 'ECG created a direct request unexpectedly.');
 
 $mismatch = $ecgService->createRequest([
     'visit_id' => $clinicalVisitId,

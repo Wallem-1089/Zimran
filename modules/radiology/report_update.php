@@ -25,6 +25,28 @@ if (!$permissionService->canEditRadiologyResult($visit, $currentUser)) {
 }
 
 $result = $radiologyService->updateResult($_POST, $currentUser, $_FILES['radiology_chart'] ?? null);
+if (($result['success'] ?? false) === true) {
+    $uploadResult = $diagnosticAttachmentService->uploadMany(
+        'Radiology',
+        $requestId,
+        [
+            'visit_id' => (int)$request['visit_id'],
+            'patient_id' => (int)$request['patient_id'],
+        ],
+        $_FILES['diagnostic_attachments'] ?? null,
+        $currentUser
+    );
+    if (empty($uploadResult['success'])) {
+        $_SESSION['validation_errors'] = $uploadResult['errors'] ?? ['Unable to upload radiology attachments.'];
+        header('Location: report.php?id=' . $requestId);
+        exit;
+    }
+    if ((int)($uploadResult['uploaded'] ?? 0) > 0) {
+        $_SESSION['success_message'] = 'Radiology report updated. Uploaded ' . (int)$uploadResult['uploaded'] . ' attachment(s).';
+        header('Location: view.php?id=' . $requestId);
+        exit;
+    }
+}
 radiologyFlash($result, 'Radiology report updated.');
 
 header('Location: ' . (($result['success'] ?? false) ? 'view.php' : 'report.php') . '?id=' . $requestId);

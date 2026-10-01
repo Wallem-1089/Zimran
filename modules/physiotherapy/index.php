@@ -19,7 +19,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="page-header">
         <div>
             <h1>Physiotherapy Worklist</h1>
-            <p>Clinical and direct physiotherapy records awaiting processing.</p>
+            <p>Clinical physiotherapy referrals awaiting processing.</p>
         </div>
         <div class="form-actions">
             <a class="btn-secondary" href="index.php">All</a>

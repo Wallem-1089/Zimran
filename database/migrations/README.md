@@ -585,3 +585,69 @@ fields to other safe narrative/checklist-style forms: Theatre Record,
 Admission Record, Dressing Record, DM Sheet, ECG Report, POP Procedure Record,
 and Physiotherapy Record. Seeded fields remain inactive until an administrator
 activates them from Form Settings.
+
+## Migration 072 - Billing Discounts
+
+`072_billing_discounts_up.sql` adds invoice/charge discount tracking for the
+Billing module. It creates `billing_discounts`, supports discount application
+and cancellation auditability, and seeds the permissions needed to view, apply,
+and cancel billing discounts.
+
+## Migration 073 - Rename POP/Casting to Plaster
+
+`073_rename_pop_to_plaster_up.sql` updates user-facing POP/Casting naming to
+Plaster while intentionally preserving the internal `pop_*` table names and
+permission keys. It renames the department/role presentation, updates
+permission labels/modules, and keeps old visit history readable.
+
+## Migration 074 - Staff Profiles
+
+`074_staff_profiles_up.sql` adds Administration-managed staff profiles linked
+to user accounts. It stores staff biodata, contact, appointment, payroll, and
+next-of-kin details, plus repeatable educational and professional
+qualification rows.
+
+## Migration 075 - Store Inventory Barcodes
+
+`075_store_inventory_barcodes_up.sql` adds barcode aliases for inventory
+items. Store workflows can resolve items by manufacturer, internal, or other
+barcode values while preserving item codes as scannable identifiers.
+
+## Migration 076 - Emergency Department
+
+`076_emergency_department_up.sql` adds the Emergency department, Emergency
+roles, Emergency-compatible encounter status/type support, and the baseline
+permissions needed for Emergency clinical request workflows.
+
+## Migration 077 - Emergency Permissions
+
+`077_emergency_permissions_up.sql` adds explicit Emergency sidebar/worklist
+and Emergency report permissions. Super Administrator and System Administrator
+receive default access, while selected users can be granted Emergency access
+through the permission matrix.
+
+## Migration 078 - Patient Registration Billing
+
+`078_patient_registration_billing_up.sql` gates patient registration behind
+registration billing. It adds registration status/type/validity fields to
+patients, creates `patient_registration_billing_requests`, and seeds normal,
+emergency, and renewal registration billable items.
+
+## Migration 079 - Records Inherit Receptionist Permissions
+
+`079_records_inherit_receptionist_permissions_up.sql` aligns Records Officer
+with Receptionist operational access so Medical Records can perform the same
+registration and encounter-creation workflows Reception can perform.
+
+## Migration 080 - Diagnostic Attachments
+
+`080_diagnostic_attachments_up.sql` creates `diagnostic_attachments` for
+multi-file Laboratory, Radiology/X-Ray, and ECG report uploads. It supports
+choosing which uploaded files are included in the WhatsApp handoff workflow.
+
+## Migration 081 - Staff Photos, Item Types, and Payment Cancellation
+
+`081_staff_photo_item_type_payment_cancel_up.sql` adds profile-photo storage
+for staff profiles, changes billable item types from the old Service/Product
+model to Drug/Consumable/Service, and adds auditable payment cancellation for
+Super Administrator recovery workflows.

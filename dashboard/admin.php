@@ -142,12 +142,20 @@ function dashboardCount(array $values, string $key): int
             <div class="metric-list">
                 <div><span>Consultations</span><strong><?= dashboardCount($clinical, 'consultations_today') ?></strong></div>
                 <div><span>Nursing Assessments</span><strong><?= dashboardCount($clinical, 'nursing_today') ?></strong></div>
-                <div><span>Laboratory Requests</span><strong><?= dashboardCount($clinical, 'laboratory_today') ?></strong></div>
-                <div><span>Radiology Requests</span><strong><?= dashboardCount($clinical, 'radiology_today') ?></strong></div>
-                <div><span>Physio Records</span><strong><?= dashboardCount($clinical, 'physiotherapy_records_today') ?></strong></div>
+                <div><span>Laboratory Requests Today</span><strong><?= dashboardCount($clinical, 'laboratory_today') ?></strong></div>
+                <div><span>Active Laboratory Requests</span><strong><?= dashboardCount($clinical, 'laboratory_active') ?></strong></div>
+                <div><span>Radiology Requests Today</span><strong><?= dashboardCount($clinical, 'radiology_today') ?></strong></div>
+                <div><span>Active Radiology Requests</span><strong><?= dashboardCount($clinical, 'radiology_active') ?></strong></div>
+                <div><span>ECG Requests Today</span><strong><?= dashboardCount($clinical, 'ecg_today') ?></strong></div>
+                <div><span>Active ECG Requests</span><strong><?= dashboardCount($clinical, 'ecg_active') ?></strong></div>
+                <div><span>Plaster Requests Today</span><strong><?= dashboardCount($clinical, 'plaster_today') ?></strong></div>
+                <div><span>Active Plaster Requests</span><strong><?= dashboardCount($clinical, 'plaster_active') ?></strong></div>
+                <div><span>Physio Records Today</span><strong><?= dashboardCount($clinical, 'physiotherapy_records_today') ?></strong></div>
+                <div><span>Active Physio Records</span><strong><?= dashboardCount($clinical, 'physiotherapy_active') ?></strong></div>
                 <div><span>Physio Sessions</span><strong><?= dashboardCount($clinical, 'physiotherapy_sessions_today') ?></strong></div>
                 <div><span>Theatre Records</span><strong><?= dashboardCount($clinical, 'theatre_today') ?></strong></div>
-                <div><span>Prescriptions</span><strong><?= dashboardCount($clinical, 'prescriptions_today') ?></strong></div>
+                <div><span>Prescriptions Today</span><strong><?= dashboardCount($clinical, 'prescriptions_today') ?></strong></div>
+                <div><span>Active Prescriptions</span><strong><?= dashboardCount($clinical, 'prescriptions_active') ?></strong></div>
             </div>
         </article>
 

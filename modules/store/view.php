@@ -65,6 +65,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <div class="summary-item"><span class="summary-label">Created By</span> <span class="summary-value"><?= e((string)($item['created_by_name'] ?? '-')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Created At</span> <span class="summary-value"><?= e((string)($item['created_at'] ?? '-')) ?></span></div>
             <div class="summary-item"><span class="summary-label">Updated By</span> <span class="summary-value"><?= e((string)($item['updated_by_name'] ?? '-')) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Barcodes / SKUs</span> <span class="summary-value">
+                <?php $barcodes = $item['barcode_list'] ?? []; ?>
+                <?= $barcodes === [] ? '—' : e(implode(', ', $barcodes)) ?>
+            </span></div>
         </div>
         <?php if (!empty($item['description'])): ?>
             <p><?= nl2br(e((string)$item['description'])) ?></p>
@@ -146,4 +150,3 @@ require __DIR__ . '/../../layouts/sidebar.php';
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
-

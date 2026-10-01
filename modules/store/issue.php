@@ -35,8 +35,14 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div><h1>Issue Stock</h1><p><?= e((string)$item['item_code']) ?> — <?= e((string)$item['item_name']) ?></p></div>
         <div><a class="btn-secondary" href="<?= e(storeBackToView($itemId)) ?>">Back</a></div>
     </div>
-    <?php $departments = $storeDepartmentOptions; $action = 'issue_save.php'; $buttonLabel = 'Issue'; $movementType = 'issue'; require __DIR__ . '/_stock_form.php'; ?>
+    <?php
+        $barcodeScanId = 'issue_barcode_scan';
+        $barcodeScanLabel = 'Scan Different Item';
+        $barcodeScanHelp = 'Scan to switch this issue form to another inventory item.';
+        $barcodeScanRedirect = 'issue.php?id=__ITEM_ID__';
+        require __DIR__ . '/_barcode_scan.php';
+    ?>
+    <?php $departments = storeMovementDepartmentOptions($pdo, $currentUser, 'issue'); $action = 'issue_save.php'; $buttonLabel = 'Issue'; $movementType = 'issue'; require __DIR__ . '/_stock_form.php'; ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
-

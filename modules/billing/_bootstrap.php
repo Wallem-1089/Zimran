@@ -8,6 +8,7 @@ require_once __DIR__ . '/../../config/helpers.php';
 
 require_once __DIR__ . '/../../services/AccountsService.php';
 require_once __DIR__ . '/../../services/BillingService.php';
+require_once __DIR__ . '/../../services/PatientRegistrationBillingService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
 require_once __DIR__ . '/../../services/VisitService.php';
 
@@ -35,6 +36,7 @@ $billingDiscountsReady = billingTableExists($pdo, 'billing_discounts');
 
 $permissionService = new PermissionService($pdo);
 $billingService = new BillingService($pdo);
+$registrationBillingService = new PatientRegistrationBillingService($pdo);
 $accountsService = new AccountsService($pdo);
 $visitService = new VisitService($pdo);
 
