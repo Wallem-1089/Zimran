@@ -19,14 +19,11 @@ if (!$request) {
 }
 
 $visit = ecgRequireVisit($visitService, (int)$request['visit_id']);
-if (!$permissionService->canProcessEcgRequest($visit, $currentUser)) {
+if (!$permissionService->canUploadEcgChart($visit, $currentUser) && !$permissionService->canEditEcgReport($visit, $currentUser)) {
     http_response_code(403);
-    exit('You cannot start this ECG request.');
+    exit('You cannot upload this ECG chart.');
 }
 
-$result = $ecgService->startRequest($requestId, $currentUser);
-ecgFlash($result, 'ECG request started.');
-
-header('Location: view.php?id=' . $requestId);
+$_SESSION['success_message'] = 'Use Upload ECG Chart to work on this ECG request.';
+header('Location: report.php?id=' . $requestId);
 exit;
-

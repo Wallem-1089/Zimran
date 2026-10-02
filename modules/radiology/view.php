@@ -146,11 +146,11 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <div class="summary-item"><span class="summary-label">Findings</span> <span class="summary-value"><?php hmsRenderNarrative((string)($result['findings'] ?? '-')); ?></span></div>
                 <div class="summary-item"><span class="summary-label">Impression</span> <span class="summary-value"><?php hmsRenderNarrative((string)($result['impression'] ?? '-')); ?></span></div>
                 <div class="summary-item"><span class="summary-label">Recommendation</span> <span class="summary-value"><?php hmsRenderNarrative((string)($result['recommendation'] ?? '-')); ?></span></div>
-                <div class="summary-item"><span class="summary-label">Uploaded Document</span> <span class="summary-value">
+                <div class="summary-item"><span class="summary-label">Legacy Document</span> <span class="summary-value">
                     <?php if (!empty($result['chart_stored_path'])): ?>
                         <a href="download_chart.php?id=<?= (int)$request['id'] ?>" target="_blank" rel="noopener">Open scanned X-Ray/Radiology document</a>
                     <?php else: ?>
-                        Not uploaded
+                        Use Uploaded Attachments below
                     <?php endif; ?>
                 </span></div>
                 <div class="summary-item"><span class="summary-label">Performed By</span> <span class="summary-value"><?= e((string)($result['performed_by_name'] ?? '-')) ?></span></div>

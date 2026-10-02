@@ -17,7 +17,7 @@ $physiotherapyPreviewRows = array_slice($physiotherapyHistory ?? [], 0, 10);
             <p>Patient physiotherapy records and sessions.</p>
         </div>
         <?php if (!empty($visitId) && isset($visit) && $permissionService->canCreatePhysiotherapyRequest($visit, $currentUser, 'Clinical')): ?>
-            <a class="btn-primary" href="../physiotherapy/request.php?visit=<?= (int)$visitId ?>&source=Clinical">Refer to Physiotherapy</a>
+            <a class="btn-primary" href="../physiotherapy/request.php?visit=<?= (int)$visitId ?>&source=Clinical">Create Physiotherapy Request</a>
         <?php endif; ?>
     </div>
 

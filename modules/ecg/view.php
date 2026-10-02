@@ -120,7 +120,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <p class="text-muted">Awaiting Accounts clearance before ECG can start, upload chart, or complete this request.</p>
             <?php endif; ?>
             <?php if ($billingCleared && !$isClosed && !$isRequestClosed && ($canUpload || $canEdit)): ?>
-                <a class="btn-primary" href="report.php?id=<?= (int)$request['id'] ?>"><?= $report && !empty($report['report_id']) ? 'Edit ECG Chart/Notes' : 'Upload ECG Chart' ?></a>
+                <a class="btn-primary" href="report.php?id=<?= (int)$request['id'] ?>"><?= $report && !empty($report['report_id']) ? 'Edit ECG Report' : 'Enter ECG Report' ?></a>
             <?php endif; ?>
             <?php if ($billingCleared && !$isClosed && !$isRequestClosed && $canComplete): ?>
                 <form method="post" action="complete.php">
@@ -140,14 +140,14 @@ require __DIR__ . '/../../layouts/sidebar.php';
     </div>
 
     <div class="card">
-        <h3>ECG Chart and Notes</h3>
+        <h3>ECG Report and Notes</h3>
         <?php if ($report && !empty($report['report_id'])): ?>
             <div class="summary-grid">
-                <div class="summary-item"><span class="summary-label">Chart</span> <span class="summary-value">
+                <div class="summary-item"><span class="summary-label">Legacy Chart</span> <span class="summary-value">
                     <?php if (!empty($report['chart_stored_path'])): ?>
                         <a href="download_chart.php?id=<?= (int)$request['id'] ?>" target="_blank" rel="noopener">Open scanned ECG chart</a>
                     <?php else: ?>
-                        Not uploaded
+                        Use Uploaded Attachments below
                     <?php endif; ?>
                 </span></div>
                 <div class="summary-item"><span class="summary-label">Uploaded By</span> <span class="summary-value"><?= e((string)($report['performed_by_name'] ?? '-')) ?></span></div>
@@ -159,7 +159,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <h4>Remarks</h4>
             <p><?php trim((string)($report['remarks'] ?? '')) === '' ? print '<span class="text-muted">No ECG remarks recorded.</span>' : hmsRenderNarrative((string)$report['remarks']); ?></p>
         <?php else: ?>
-            <p class="text-muted">No scanned ECG chart or notes recorded.</p>
+            <p class="text-muted">No ECG report notes recorded.</p>
         <?php endif; ?>
     </div>
     <?php if ($diagnosticAttachments !== []): ?>

@@ -38,10 +38,17 @@ for ($i = count($professionalRows); $i < 3; $i++) {
 
 $pageTitle = 'Staff Profile';
 $errors = $_SESSION['administration_errors'] ?? [];
-unset($_SESSION['administration_errors']);
+$success = $_SESSION['success_message'] ?? null;
+unset($_SESSION['administration_errors'], $_SESSION['success_message']);
 
 $value = static fn (string $field): string => (string)($profile[$field] ?? '');
 $dateValue = static fn (string $field): string => (string)($profile[$field] ?? '');
+$staffPhotoUrl = !empty($profile['profile_photo_path'])
+    ? 'staff_photo.php?' . http_build_query([
+        'id' => $userId,
+        'v' => (string)($profile['updated_at'] ?? time()),
+    ])
+    : '';
 
 require_once __DIR__ . '/../../../layouts/header.php';
 require_once __DIR__ . '/../../../layouts/sidebar.php';
@@ -65,21 +72,24 @@ require_once __DIR__ . '/../../../layouts/sidebar.php';
                 <?php foreach ($errors as $error): ?><li><?= e((string)$error) ?></li><?php endforeach; ?>
             </ul>
         <?php endif; ?>
+        <?php if ($success): ?>
+            <div class="alert alert-success"><?= e((string)$success) ?></div>
+        <?php endif; ?>
 
         <form method="POST" action="staff_profile_save.php?id=<?= $userId ?>" enctype="multipart/form-data">
             <?= csrfField() ?>
 
             <h3>Personal Details</h3>
             <div class="card" style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
-                <div style="width:120px;height:120px;border:1px solid #d6e0ec;border-radius:12px;overflow:hidden;background:#f8fafc;display:flex;align-items:center;justify-content:center;">
-                    <?php if (!empty($profile['profile_photo_path'])): ?>
-                        <img src="<?= e(($baseUrl ?? '') . '/' . ltrim((string)$profile['profile_photo_path'], '/')) ?>" alt="Staff profile picture" style="width:100%;height:100%;object-fit:cover;">
+                <div id="staff-photo-preview" style="width:120px;height:120px;border:1px solid #d6e0ec;border-radius:12px;overflow:hidden;background:#f8fafc;display:flex;align-items:center;justify-content:center;">
+                    <?php if ($staffPhotoUrl !== ''): ?>
+                        <img id="staff-photo-preview-image" src="<?= e($staffPhotoUrl) ?>" alt="Staff profile picture" style="width:100%;height:100%;object-fit:cover;">
                     <?php else: ?>
-                        <span class="text-muted">No Photo</span>
+                        <span id="staff-photo-preview-placeholder" class="text-muted">No Photo</span>
                     <?php endif; ?>
                 </div>
                 <label style="flex:1;min-width:220px;">Profile Picture
-                    <input type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp,image/gif">
+                    <input id="staff-photo-input" type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp,image/gif">
                     <small class="form-help">Upload a clear passport/profile photo. JPG, PNG, WebP, or GIF; max 2 MB.</small>
                 </label>
             </div>
@@ -295,5 +305,38 @@ document.querySelectorAll('[data-add-row]').forEach((button) => {
         body.appendChild(row);
     });
 });
+
+(() => {
+    const input = document.getElementById('staff-photo-input');
+    const preview = document.getElementById('staff-photo-preview');
+    if (!input || !preview) {
+        return;
+    }
+
+    let objectUrl = null;
+    input.addEventListener('change', () => {
+        if (objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+            objectUrl = null;
+        }
+
+        const file = input.files && input.files[0] ? input.files[0] : null;
+        if (!file || !file.type.startsWith('image/')) {
+            preview.innerHTML = '<span id="staff-photo-preview-placeholder" class="text-muted">No Photo</span>';
+            return;
+        }
+
+        objectUrl = URL.createObjectURL(file);
+        preview.innerHTML = '';
+        const image = document.createElement('img');
+        image.id = 'staff-photo-preview-image';
+        image.alt = 'Selected staff profile picture preview';
+        image.src = objectUrl;
+        image.style.width = '100%';
+        image.style.height = '100%';
+        image.style.objectFit = 'cover';
+        preview.appendChild(image);
+    });
+})();
 </script>
 <?php require_once __DIR__ . '/../../../layouts/footer.php'; ?>

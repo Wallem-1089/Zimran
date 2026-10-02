@@ -7,6 +7,8 @@ if (!isset($theatre)) {
 }
 $theatreConfiguredFields ??= [];
 $theatreConfiguredValues ??= [];
+$theatreRequestOnly = !empty($theatreRequestOnly);
+$billableItemsLocked = !empty($billableItemsLocked);
 $enableWritingMode ??= isset($permissionService)
     && method_exists($permissionService, 'canUseConsultationHandwriting')
     && $permissionService->canUseConsultationHandwriting($currentUser ?? null);
@@ -22,6 +24,7 @@ $fields = [
     'postoperative_plan' => 'Postoperative Plan',
     'anaesthesia_notes' => 'Anaesthesia Notes',
 ];
+$requestOnlyFields = ['procedure_name', 'indication', 'preoperative_notes'];
 ?>
 
 <form method="post" action="<?= e($action) ?>" class="card form-card" <?= $enableWritingMode ? 'data-hms-handwriting-form="1"' : '' ?>>
@@ -33,10 +36,27 @@ $fields = [
 
     <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Theatre Entry Mode'); ?>
 
+    <?php if ($theatreRequestOnly): ?>
+        <div class="alert-info">
+            Create the Theatre request and billing task first. Operative details, findings, anaesthesia notes, completion, and procedure documentation unlock after Accounts clearance.
+        </div>
+    <?php endif; ?>
+
     <div class="form-grid">
-        <?php hmsRenderBillableItemSelect($billableItemOptions ?? [], $theatre['suggested_billable_item_ids'] ?? ($theatre['suggested_billable_item_id'] ?? null)); ?>
+        <?php if ($billableItemsLocked): ?>
+            <div class="form-group">
+                <label>Billable Item</label>
+                <div class="readonly-field">Locked after Accounts clearance</div>
+                <p class="text-muted">The billable item was charged when this Theatre request was created. Editing this operative record will not create another charge.</p>
+            </div>
+        <?php else: ?>
+            <?php hmsRenderBillableItemSelect($billableItemOptions ?? [], $theatre['suggested_billable_item_ids'] ?? ($theatre['suggested_billable_item_id'] ?? null)); ?>
+        <?php endif; ?>
 
         <?php foreach ($fields as $field => $label): ?>
+            <?php if ($theatreRequestOnly && !in_array($field, $requestOnlyFields, true)) {
+                continue;
+            } ?>
             <?php if ($field === 'procedure_name'): ?>
                 <div class="form-group">
                     <label for="<?= e($field) ?>"><?= e($label) ?></label>
@@ -61,7 +81,9 @@ $fields = [
         <?php endforeach; ?>
     </div>
 
-    <?php hmsRenderConfiguredFields($theatreConfiguredFields, $theatreConfiguredValues); ?>
+    <?php if (!$theatreRequestOnly): ?>
+        <?php hmsRenderConfiguredFields($theatreConfiguredFields, $theatreConfiguredValues); ?>
+    <?php endif; ?>
 
     <div class="form-actions">
         <button type="submit" class="btn-primary"><?= e($buttonLabel ?? 'Save Theatre Record') ?></button>

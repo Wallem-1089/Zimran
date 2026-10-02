@@ -448,7 +448,7 @@ class PharmacyService
     public function dispense(int $prescriptionId, array $data, array $user): array
     {
         try {
-            $quantity = (float)($data['quantity_dispensed'] ?? 0);
+            $quantity = $this->wholeQuantity($data['quantity_dispensed'] ?? 0);
             $notes = trim((string)($data['dispensing_notes'] ?? ''));
 
             $this->pdo->beginTransaction();
@@ -512,7 +512,7 @@ class PharmacyService
                 return $this->failure(['A linked inventory item is required before dispensing.']);
             }
 
-            $prescribedQuantity = (float)$current['quantity'];
+            $prescribedQuantity = $this->wholeQuantity($current['quantity'] ?? 0);
             if ($quantity <= 0) {
                 $quantity = $prescribedQuantity;
             }
@@ -525,7 +525,7 @@ class PharmacyService
             $consume = $this->storeService->consumeDepartmentStock([
                 'inventory_item_id' => (int)$inventoryItem['id'],
                 'department_id' => $this->pharmacyDepartmentId(),
-                'quantity' => $quantity,
+                'quantity' => number_format($quantity, 0, '.', ''),
                 'reference' => 'PRESCRIPTION #' . $prescriptionId,
                 'remarks' => $notes !== '' ? $notes : 'Dispensed prescription #' . $prescriptionId . '.',
             ], $user);
@@ -564,7 +564,7 @@ class PharmacyService
                 ':visit_id' => (int)$current['visit_id'],
                 ':patient_id' => (int)$current['patient_id'],
                 ':inventory_item_id' => (int)$inventoryItem['id'],
-                ':quantity_dispensed' => $quantity,
+                ':quantity_dispensed' => number_format($quantity, 0, '.', ''),
                 ':dispensing_notes' => $notes === '' ? null : $notes,
                 ':dispensed_by' => (int)$user['id'],
             ]);
@@ -727,7 +727,7 @@ class PharmacyService
         $frequency = trim((string)($data['frequency'] ?? ''));
         $duration = trim((string)($data['duration'] ?? ''));
         $instructions = trim((string)($data['instructions'] ?? ''));
-        $quantity = (float)($data['quantity'] ?? 0);
+        $quantity = $this->wholeQuantity($data['quantity'] ?? 0);
         $inventoryItemId = (int)($data['inventory_item_id'] ?? 0);
         $suggestedBillableItemIds = ClinicalBillingGateService::normalizeBillableItemIds($data);
 
@@ -770,7 +770,7 @@ class PharmacyService
                 'dosage' => $dosage === '' ? null : $dosage,
                 'frequency' => $frequency === '' ? null : $frequency,
                 'duration' => $duration === '' ? null : $duration,
-                'quantity' => $quantity,
+                'quantity' => number_format($quantity, 0, '.', ''),
                 'instructions' => $instructions === '' ? null : $instructions,
                 'suggested_billable_item_id' => $suggestedBillableItemIds[0] ?? null,
                 'suggested_billable_item_ids' => $suggestedBillableItemIds,
@@ -781,6 +781,20 @@ class PharmacyService
     private function requireVisit(int $visitId): ?array
     {
         return $this->visitService->getVisitById($visitId);
+    }
+
+    private function wholeQuantity(mixed $value): float
+    {
+        if (!is_numeric($value)) {
+            return 0.0;
+        }
+
+        $quantity = (float)$value;
+        if ($quantity <= 0) {
+            return 0.0;
+        }
+
+        return (float)max(1, (int)round($quantity));
     }
 
     private function resolveInventoryItemForPrescription(int $itemId, string $medicationName, array $user): ?array

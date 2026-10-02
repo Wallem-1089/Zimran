@@ -742,7 +742,7 @@ class StoreService
         if ($user !== null && !$this->permissionService->isAdministrator($user)) {
             $activeDepartmentName = $this->departmentNameById($this->activeDepartmentId($user)) ?? '';
             if (strcasecmp($activeDepartmentName, 'Pharmacy') === 0) {
-                return $this->listStockLedger(['item_id' => $itemId], $user, 50);
+                return $this->listStockLedger(['item_id' => $itemId], $user, 0);
             }
         }
 
@@ -773,7 +773,7 @@ class StoreService
             return [];
         }
 
-        $limit = max(1, min(500, $limit));
+        $limit = $limit > 0 ? max(1, min(500, $limit)) : 0;
         $where = [];
         $params = [];
 
@@ -840,7 +840,10 @@ class StoreService
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
 
-        $sql .= ' ORDER BY st.created_at DESC, st.id DESC LIMIT ' . $limit;
+        $sql .= ' ORDER BY st.created_at DESC, st.id DESC';
+        if ($limit > 0) {
+            $sql .= ' LIMIT ' . $limit;
+        }
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
@@ -854,7 +857,7 @@ class StoreService
             return [];
         }
 
-        $limit = max(1, min(200, $limit));
+        $limit = $limit > 0 ? max(1, min(200, $limit)) : 0;
 
         $stmt = $this->pdo->prepare('
             SELECT
@@ -873,7 +876,7 @@ class StoreService
             WHERE st.from_department_id = :from_department_id
                OR st.to_department_id = :to_department_id
             ORDER BY st.created_at DESC, st.id DESC
-            LIMIT ' . $limit
+            ' . ($limit > 0 ? 'LIMIT ' . $limit : '')
         );
         $stmt->execute([
             ':from_department_id' => $departmentId,
@@ -950,7 +953,7 @@ class StoreService
                 return $this->failure(['Store department is not available.']);
             }
 
-            $movement = $this->buildMovementContext($transactionType, $payload['data'], $storeDepartmentId, $user);
+            $movement = $this->buildMovementContext($transactionType, $payload['data'], $storeDepartmentId, $user, $item);
             if ($movement['errors'] !== []) {
                 if ($ownsTransaction) {
                     $this->rollback();
@@ -1047,7 +1050,7 @@ class StoreService
         }
     }
 
-    private function buildMovementContext(string $transactionType, array $payload, int $storeDepartmentId, array $user): array
+    private function buildMovementContext(string $transactionType, array $payload, int $storeDepartmentId, array $user, array $item): array
     {
         $quantity = (float)$payload['quantity'];
         $fromDepartmentId = null;
@@ -1065,6 +1068,7 @@ class StoreService
         $activeDepartmentName = $this->departmentNameById($this->activeDepartmentId($user)) ?? '';
         $activeDepartmentName = trim($activeDepartmentName);
         $pharmacyDepartmentId = $this->getPharmacyDepartmentId();
+        $itemCategory = (string)($item['category'] ?? '');
 
         switch ($transactionType) {
             case 'Receipt':
@@ -1079,16 +1083,23 @@ class StoreService
                     if ($pharmacyDepartmentId === null) {
                         return $this->failure(['Pharmacy department is not available.']);
                     }
+                    if ($itemCategory !== 'Drug') {
+                        return $this->failure(['Pharmacy can only issue drug stock onward to another requesting department.']);
+                    }
                     if ((int)$toDepartmentId === $pharmacyDepartmentId || (int)$toDepartmentId === $storeDepartmentId) {
-                        return $this->failure(['Pharmacy can only issue stock onward to another requesting department.']);
+                        return $this->failure(['Pharmacy can only issue drug stock onward to another requesting department.']);
                     }
                     $fromDepartmentId = $pharmacyDepartmentId;
                 } else {
                     if ($pharmacyDepartmentId === null) {
                         return $this->failure(['Pharmacy department is not available.']);
                     }
-                    if ((int)$toDepartmentId !== $pharmacyDepartmentId) {
-                        return $this->failure(['Store can only issue stock to Pharmacy. Pharmacy handles onward departmental stock movement.']);
+                    if ($itemCategory === 'Drug') {
+                        if ((int)$toDepartmentId !== $pharmacyDepartmentId) {
+                            return $this->failure(['Store can only issue drug stock to Pharmacy. Pharmacy handles drug stock movement to requesting departments.']);
+                        }
+                    } elseif ((int)$toDepartmentId === $pharmacyDepartmentId) {
+                        return $this->failure(['Consumable stock should be issued directly by Store to the requesting department.']);
                     }
                     $fromDepartmentId = $storeDepartmentId;
                 }

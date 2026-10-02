@@ -49,7 +49,7 @@ if (!$patient) {
 }
 
 $action = $hasReport ? 'report_update.php' : 'report_save.php';
-$buttonLabel = $hasReport ? 'Update ECG Chart/Notes' : 'Save ECG Chart/Notes';
+$buttonLabel = $hasReport ? 'Update ECG Report' : 'Save ECG Report';
 $ecgConfiguredFields = $configurableFormService->listFields('ecg_report', true);
 $ecgConfiguredValues = $configurableFormService->getResponseValueMap('ecg_report', 'ECG Report', $requestId);
 if (isset($_SESSION['old_configured_fields']) && is_array($_SESSION['old_configured_fields'])) {
@@ -57,7 +57,7 @@ if (isset($_SESSION['old_configured_fields']) && is_array($_SESSION['old_configu
     unset($_SESSION['old_configured_fields']);
 }
 
-$pageTitle = 'ECG Chart and Notes';
+$pageTitle = 'ECG Report';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 
 require __DIR__ . '/../../layouts/header.php';
@@ -84,7 +84,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="page-header">
         <div>
-            <h1>ECG Chart and Notes</h1>
+            <h1>ECG Report</h1>
             <p><?= e((string)($request['study_requested'] ?? 'ECG')) ?></p>
         </div>
         <div class="form-actions">
@@ -105,20 +105,14 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?= csrfField() ?>
         <input type="hidden" name="ecg_request_id" value="<?= (int)$requestId ?>">
 
-        <div class="form-group">
-            <label for="ecg_chart">Scanned ECG Chart <?= $hasReport ? '(optional replacement)' : '' ?></label>
-            <input id="ecg_chart" name="ecg_chart" type="file" accept="application/pdf,image/jpeg,image/png" <?= $hasReport ? '' : 'required' ?>>
-            <small class="text-muted">Allowed: PDF, JPG, PNG. Maximum size: 10 MB.</small>
-            <?php if ($hasReport && !empty($report['chart_original_name'])): ?>
-                <p>Current chart: <a href="download_chart.php?id=<?= (int)$requestId ?>" target="_blank" rel="noopener"><?= e((string)$report['chart_original_name']) ?></a></p>
-            <?php endif; ?>
-        </div>
+        <?php hmsRenderDiagnosticAttachmentPicker('ECG Attachments', 'Upload one or more PDF, JPG, or PNG ECG files. Use the round plus button to add more file rows. Maximum size: 10 MB each.'); ?>
 
-        <div class="form-group">
-            <label for="diagnostic_attachments">Additional ECG Attachments</label>
-            <input id="diagnostic_attachments" name="diagnostic_attachments[]" type="file" accept="application/pdf,image/jpeg,image/png" multiple>
-            <small class="text-muted">Optional. Upload one or more PDF, JPG, or PNG files. Maximum size: 10 MB each.</small>
-        </div>
+        <?php if ($hasReport && !empty($report['chart_original_name'])): ?>
+            <div class="alert-info">
+                Existing legacy ECG chart:
+                <a href="download_chart.php?id=<?= (int)$requestId ?>" target="_blank" rel="noopener"><?= e((string)$report['chart_original_name']) ?></a>
+            </div>
+        <?php endif; ?>
 
         <?php hmsRenderHandwritingToolbar($enableWritingMode, 'ECG Notes Entry Mode'); ?>
         <?php hmsRenderHandwritingTextarea('notes', 'ECG Notes', (string)($report['notes'] ?? ''), 7, false, $enableWritingMode); ?>

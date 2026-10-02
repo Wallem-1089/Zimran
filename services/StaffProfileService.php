@@ -77,8 +77,12 @@ class StaffProfileService
         $photoResult = $this->handleProfilePhotoUpload($files['profile_photo'] ?? null, $userId);
         if (($photoResult['success'] ?? true) !== true) {
             $errors = array_merge($errors, $photoResult['errors'] ?? ['Invalid profile photo.']);
-        } elseif (!empty($photoResult['path']) && $this->columnExists('staff_profiles', 'profile_photo_path')) {
-            $profile['profile_photo_path'] = (string)$photoResult['path'];
+        } elseif (!empty($photoResult['path'])) {
+            if (!$this->columnExists('staff_profiles', 'profile_photo_path')) {
+                $errors[] = 'Staff profile photo storage is not fully installed. Apply the latest database migration.';
+            } else {
+                $profile['profile_photo_path'] = (string)$photoResult['path'];
+            }
         }
 
         if ($errors !== []) {
@@ -440,7 +444,7 @@ class StaffProfileService
         }
 
         $tmpName = (string)($file['tmp_name'] ?? '');
-        if ($tmpName === '' || !is_uploaded_file($tmpName)) {
+        if ($tmpName === '' || (!is_uploaded_file($tmpName) && !is_file($tmpName))) {
             return ['success' => false, 'errors' => ['Profile picture upload is invalid.']];
         }
 
@@ -464,7 +468,10 @@ class StaffProfileService
 
         $filename = 'staff_' . $userId . '_' . bin2hex(random_bytes(8)) . '.' . $extensions[$mime];
         $target = $storageDir . DIRECTORY_SEPARATOR . $filename;
-        if (!move_uploaded_file($tmpName, $target)) {
+        $moved = is_uploaded_file($tmpName)
+            ? move_uploaded_file($tmpName, $target)
+            : rename($tmpName, $target);
+        if (!$moved) {
             return ['success' => false, 'errors' => ['Unable to save profile picture.']];
         }
 

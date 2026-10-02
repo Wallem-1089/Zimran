@@ -26,20 +26,42 @@ $activeDrugs = count(array_filter($allItems, static fn (array $item): bool => !e
 $activeConsumables = count(array_filter($allItems, static fn (array $item): bool => !empty($item['is_active']) && in_array((string)$item['item_type'], ['Consumable', 'Product'], true)));
 $canViewBillingRequestQueues = $permissionService->canViewBillingRequests($currentUser);
 
-function accountsPendingClinicalBillingCount(PDO $pdo, string $sourceModule): int
+function accountsClinicalBillingCount(PDO $pdo, string $sourceModule, array $statuses = ['Pending']): int
 {
     if (!accountsTableExists($pdo, 'billing_requests')) {
         return 0;
     }
 
+    $statuses = array_values(array_filter(
+        array_map(static fn (mixed $status): string => trim((string)$status), $statuses),
+        static fn (string $status): bool => $status !== ''
+    ));
+    if ($statuses === []) {
+        return 0;
+    }
+    $statusPlaceholders = [];
+    $params = [];
+    foreach ($statuses as $index => $status) {
+        $placeholder = ':status_' . $index;
+        $statusPlaceholders[] = $placeholder;
+        $params[$placeholder] = $status;
+    }
+
     if (strcasecmp($sourceModule, 'Plaster') === 0) {
-        $stmt = $pdo->query("SELECT COUNT(*) FROM billing_requests WHERE status = 'Pending' AND source_module IN ('Plaster', 'POP')");
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM billing_requests WHERE status IN (' . implode(', ', $statusPlaceholders) . ") AND source_module IN ('Plaster', 'POP')");
+        $stmt->execute($params);
         return (int)$stmt->fetchColumn();
     }
 
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM billing_requests WHERE status = 'Pending' AND source_module = :source_module");
-    $stmt->execute([':source_module' => $sourceModule]);
+    $params[':source_module'] = $sourceModule;
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM billing_requests WHERE status IN (' . implode(', ', $statusPlaceholders) . ') AND source_module = :source_module');
+    $stmt->execute($params);
     return (int)$stmt->fetchColumn();
+}
+
+function accountsPendingClinicalBillingCount(PDO $pdo, string $sourceModule): int
+{
+    return accountsClinicalBillingCount($pdo, $sourceModule, ['Pending']);
 }
 
 function accountsPendingRegistrationBillingCount(PDO $pdo, string $billingType, ?string $registrationType = null): int
@@ -75,9 +97,13 @@ $departmentBillingQueues = [
 ];
 
 foreach ($departmentBillingQueues as $index => $queue) {
-    $departmentBillingQueues[$index]['pending_count'] = accountsPendingClinicalBillingCount($pdo, (string)$queue['source_module']);
+    $pendingCount = accountsClinicalBillingCount($pdo, (string)$queue['source_module'], ['Pending']);
+    $chargedCount = accountsClinicalBillingCount($pdo, (string)$queue['source_module'], ['Charged']);
+    $departmentBillingQueues[$index]['pending_count'] = $pendingCount;
+    $departmentBillingQueues[$index]['charged_count'] = $chargedCount;
+    $departmentBillingQueues[$index]['actionable_count'] = $pendingCount + $chargedCount;
     $departmentBillingQueues[$index]['href'] = '../billing/billing_requests.php?' . http_build_query([
-        'status' => 'Pending',
+        'status' => 'Actionable',
         'source_module' => $queue['source_module'],
     ]);
 }
@@ -96,9 +122,9 @@ $priorityBillingQueues = [
     [
         'label' => 'Consultation Fee',
         'description' => 'Consultation billing requests',
-        'pending_count' => accountsPendingClinicalBillingCount($pdo, 'Consultation'),
+        'pending_count' => accountsClinicalBillingCount($pdo, 'Consultation', ['Pending', 'Charged']),
         'href' => '../billing/billing_requests.php?' . http_build_query([
-            'status' => 'Pending',
+            'status' => 'Actionable',
             'source_module' => 'Consultation',
         ]),
     ],
@@ -179,9 +205,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <div class="section-header">
                 <div>
                     <h2>Accounts Billing Queues</h2>
-                    <p class="text-muted">Open pending billing requests directly by department or registration type.</p>
+                    <p class="text-muted">Open billing requests directly by department, including auto-charged requests awaiting payment.</p>
                 </div>
-                <a class="btn-secondary btn-sm" href="../billing/billing_requests.php?status=Pending">All Pending Requests</a>
+                <div class="form-actions">
+                    <a class="btn-secondary btn-sm" href="../billing/billing_requests.php?status=Charged">Auto-charged Bills</a>
+                    <a class="btn-secondary btn-sm" href="../billing/billing_requests.php?status=Actionable">All Actionable Requests</a>
+                </div>
             </div>
             <div class="summary-grid accounts-queue-grid">
                 <?php foreach ($priorityBillingQueues as $queue): ?>
@@ -194,8 +223,8 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <?php foreach ($departmentBillingQueues as $queue): ?>
                     <a class="summary-item accounts-queue-button" href="<?= e((string)$queue['href']) ?>">
                         <span class="summary-label"><?= e((string)$queue['label']) ?> Billing Requests</span>
-                        <span class="summary-value"><?= (int)$queue['pending_count'] ?></span>
-                        <span class="text-muted queue-hint">Open pending queue</span>
+                        <span class="summary-value"><?= (int)$queue['actionable_count'] ?></span>
+                        <span class="text-muted queue-hint"><?= (int)$queue['pending_count'] ?> pending · <?= (int)$queue['charged_count'] ?> auto-charged</span>
                     </a>
                 <?php endforeach; ?>
                 <?php foreach ($registrationBillingQueues as $queue): ?>

@@ -36,7 +36,7 @@ $default = $service->defaultProfileFromUser($user);
 assertStaffProfile($default['surname'] === $user['last_name'], 'Default profile did not use user surname.');
 assertStaffProfile($default['employee_no'] === $user['employee_id'], 'Default profile did not use employee number.');
 
-$result = $service->saveProfile((int)$user['id'], [
+$profilePayload = [
     'surname' => 'Doctor',
     'first_name' => 'Development',
     'middle_name' => 'Test',
@@ -92,7 +92,9 @@ $result = $service->saveProfile((int)$user['id'], [
             'remarks' => 'Current',
         ],
     ],
-], 1);
+];
+
+$result = $service->saveProfile((int)$user['id'], $profilePayload, 1);
 
 assertStaffProfile(($result['success'] ?? false) === true, 'Staff profile save failed: ' . implode(' ', $result['errors'] ?? []));
 
@@ -101,6 +103,27 @@ assertStaffProfile((string)$loaded['profile']['surname'] === 'Doctor', 'Saved pr
 assertStaffProfile(count($loaded['education']) === 2, 'Educational qualification rows were not saved.');
 assertStaffProfile(count($loaded['professional']) === 1, 'Professional qualification rows were not saved.');
 
+$pngBytes = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', true);
+assertStaffProfile(is_string($pngBytes), 'Unable to prepare profile photo fixture.');
+$tmpPhoto = tempnam(sys_get_temp_dir(), 'staff-profile-photo-');
+assertStaffProfile(is_string($tmpPhoto) && $tmpPhoto !== '', 'Unable to create temporary profile photo.');
+file_put_contents($tmpPhoto, $pngBytes);
+$photoResult = $service->saveProfile((int)$user['id'], $profilePayload, 1, [
+    'profile_photo' => [
+        'name' => 'profile.png',
+        'type' => 'image/png',
+        'tmp_name' => $tmpPhoto,
+        'error' => UPLOAD_ERR_OK,
+        'size' => strlen($pngBytes),
+    ],
+]);
+assertStaffProfile(($photoResult['success'] ?? false) === true, 'Staff profile photo save failed: ' . implode(' ', $photoResult['errors'] ?? []));
+$loadedWithPhoto = $service->getProfile((int)$user['id']);
+$photoPath = (string)($loadedWithPhoto['profile']['profile_photo_path'] ?? '');
+assertStaffProfile(str_starts_with($photoPath, 'storage/staff_profiles/'), 'Saved profile photo path was not stored in staff profile storage.');
+$absolutePhotoPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $photoPath);
+assertStaffProfile(is_file($absolutePhotoPath), 'Saved profile photo file is missing from storage.');
+
 $invalid = $service->saveProfile((int)$user['id'], [
     'surname' => 'Doctor',
     'first_name' => 'Development',
@@ -108,5 +131,13 @@ $invalid = $service->saveProfile((int)$user['id'], [
     'date_of_birth' => '31-99-2020',
 ], 1);
 assertStaffProfile(($invalid['success'] ?? true) === false, 'Invalid profile date was accepted.');
+
+$staffProfilePage = file_get_contents(__DIR__ . '/../modules/administration/users/staff_profile.php');
+$staffViewPage = file_get_contents(__DIR__ . '/../modules/administration/users/view.php');
+$staffPhotoController = file_get_contents(__DIR__ . '/../modules/administration/users/staff_photo.php');
+assertStaffProfile(is_string($staffProfilePage) && str_contains($staffProfilePage, 'staff_photo.php?'), 'Staff profile edit page should preview saved photos through the protected staff photo endpoint.');
+assertStaffProfile(is_string($staffViewPage) && str_contains($staffViewPage, 'staff_photo.php?'), 'Staff profile view page should render saved photos through the protected staff photo endpoint.');
+assertStaffProfile(is_string($staffPhotoController) && str_contains($staffPhotoController, 'administrationGuardSuperAdministratorUser'), 'Staff photo endpoint should enforce administration profile access rules.');
+@unlink($absolutePhotoPath);
 
 fwrite(STDOUT, "Staff profile tests passed.\n");

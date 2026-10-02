@@ -114,13 +114,13 @@ class PhysiotherapyService
 
             if (!$this->event(
                 (int)$visit['id'],
-                'PHYSIOTHERAPY_STARTED',
-                'Physiotherapy Started',
-                'Physiotherapy record created.',
+                'PHYSIOTHERAPY_REQUESTED',
+                'Physiotherapy Requested',
+                'Physiotherapy request created for Accounts clearance.',
                 $visit,
                 $user
             )) {
-                throw new RuntimeException('Unable to record physiotherapy start event.');
+                throw new RuntimeException('Unable to record physiotherapy request event.');
             }
 
             $this->pdo->commit();
@@ -246,6 +246,9 @@ class PhysiotherapyService
 
             $visit = $this->lockVisit((int)$record['visit_id']);
             $errors = $this->validateRecordMutation($record, $visit, $user, 'edit_physiotherapy');
+            if ($this->isPhysiotherapyUser($user)) {
+                $errors[] = 'Physiotherapy users can view the doctor-entered physiotherapy record but cannot edit it.';
+            }
 
             if ((string)$record['status'] !== 'Active') {
                 $errors[] = 'Completed or cancelled physiotherapy records are view-only.';
@@ -324,6 +327,9 @@ class PhysiotherapyService
 
             $visit = $this->lockVisit((int)$record['visit_id']);
             $errors = $this->validateSessionMutation($record, $visit, $user, 'manage_physiotherapy_sessions');
+            if ($this->countSessions($recordId) >= 1) {
+                $errors[] = 'Only one physiotherapy session can be added to each physiotherapy record.';
+            }
             $sessionDate = $this->parseSessionDate($data['session_date'] ?? null);
             $treatmentGiven = $this->requiredText($data['treatment_given'] ?? '');
             $patientResponse = $this->nullableText($data['patient_response'] ?? null);
@@ -633,6 +639,9 @@ class PhysiotherapyService
 
             $visit = $this->lockVisit((int)$record['visit_id']);
             $errors = $this->validateRecordMutation($record, $visit, $user, 'edit_physiotherapy', false);
+            if ($this->isPhysiotherapyUser($user)) {
+                $errors[] = 'Physiotherapy users can view the doctor-entered physiotherapy record but cannot cancel it.';
+            }
 
             if ((string)$record['status'] !== 'Active') {
                 $errors[] = 'Only active physiotherapy records can be cancelled.';
@@ -876,6 +885,19 @@ class PhysiotherapyService
         }
 
         return null;
+    }
+
+    private function isPhysiotherapyUser(array $user): bool
+    {
+        if ($this->permissionService->isAdministrator($user)) {
+            return false;
+        }
+
+        $role = (string)($user['role_name'] ?? '');
+        $department = (string)($user['department_name'] ?? '');
+
+        return in_array($role, ['Physiotherapist', 'Physiotherapy'], true)
+            || in_array($department, ['Physiotherapy', 'Physio', 'Rehabilitation'], true);
     }
 
     private function canAccessPhysiotherapyEncounter(array $visit, array $user): bool

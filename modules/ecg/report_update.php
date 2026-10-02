@@ -24,7 +24,7 @@ if (!$permissionService->canEditEcgReport($visit, $currentUser)) {
     exit('You cannot edit this ECG report.');
 }
 
-$result = $ecgService->updateReport($_POST, $currentUser, $_FILES['ecg_chart'] ?? null);
+$result = $ecgService->updateReport($_POST, $currentUser, null);
 if (($result['success'] ?? false) === true) {
     $configuredResult = $configurableFormService->saveResponse(
         'ecg_report',

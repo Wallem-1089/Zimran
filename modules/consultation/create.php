@@ -211,7 +211,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <p>Refer the patient for physiotherapy or review existing records.</p>
             </div>
             <?php if ($physiotherapyService && $permissionService->canCreatePhysiotherapyRequest($visit, $currentUser, 'Clinical')): ?>
-                <a class="btn-primary" href="../physiotherapy/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Refer to Physiotherapy</a>
+                <a class="btn-primary" href="../physiotherapy/request.php?visit=<?= (int)$visit['id'] ?>&source=Clinical">Create Physiotherapy Request</a>
             <?php endif; ?>
         </div>
         <?php if (!$physiotherapyService): ?>
@@ -249,12 +249,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="card-header">
             <div>
                 <h3>Theatre</h3>
-                <p>Open or create a simple theatre record for this encounter.</p>
+                <p>Create a Theatre request for Accounts billing, then complete operative documentation after clearance.</p>
             </div>
             <?php if ($theatreService && $permissionService->canCreateTheatre($visit, $currentUser)): ?>
                 <?php $existingTheatre = $theatreService->getByVisit((int)$visit['id'], $currentUser); ?>
                 <a class="btn-primary" href="<?= $existingTheatre ? '../theatre/view.php?id=' . (int)$existingTheatre['id'] : '../theatre/create.php?visit=' . (int)$visit['id'] ?>">
-                    <?= $existingTheatre ? 'Open Theatre' : 'Start Theatre Record' ?>
+                    <?= $existingTheatre ? 'Open Theatre' : 'Create Theatre Request' ?>
                 </a>
             <?php endif; ?>
         </div>

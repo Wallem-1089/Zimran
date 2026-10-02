@@ -103,20 +103,14 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?= csrfField() ?>
         <input type="hidden" name="radiology_request_id" value="<?= (int)$requestId ?>">
 
-        <div class="form-group">
-            <label for="radiology_chart">Scanned X-Ray/Radiology Document <?= !empty($radiologyResult['chart_original_name']) ? '(optional replacement)' : '' ?></label>
-            <input id="radiology_chart" name="radiology_chart" type="file" accept="application/pdf,image/jpeg,image/png">
-            <small class="text-muted">Allowed: PDF, JPG, PNG. Maximum size: 10 MB.</small>
-            <?php if (!empty($radiologyResult['chart_original_name'])): ?>
-                <p>Current document: <a href="download_chart.php?id=<?= (int)$requestId ?>" target="_blank" rel="noopener"><?= e((string)$radiologyResult['chart_original_name']) ?></a></p>
-            <?php endif; ?>
-        </div>
+        <?php hmsRenderDiagnosticAttachmentPicker('X-Ray/Radiology Attachments', 'Upload one or more PDF, JPG, or PNG X-Ray/Radiology files. Use the round plus button to add more file rows. Maximum size: 10 MB each.'); ?>
 
-        <div class="form-group">
-            <label for="diagnostic_attachments">Additional X-Ray/Radiology Attachments</label>
-            <input id="diagnostic_attachments" name="diagnostic_attachments[]" type="file" accept="application/pdf,image/jpeg,image/png" multiple>
-            <small class="text-muted">Optional. Upload one or more PDF, JPG, or PNG files. Maximum size: 10 MB each.</small>
-        </div>
+        <?php if (!empty($radiologyResult['chart_original_name'])): ?>
+            <div class="alert-info">
+                Existing legacy X-Ray/Radiology document:
+                <a href="download_chart.php?id=<?= (int)$requestId ?>" target="_blank" rel="noopener"><?= e((string)$radiologyResult['chart_original_name']) ?></a>
+            </div>
+        <?php endif; ?>
 
         <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Radiology Report Entry Mode'); ?>
         <?php hmsRenderHandwritingTextarea('findings', 'Findings', (string)($radiologyResult['findings'] ?? ''), 5, false, $enableWritingMode); ?>

@@ -38,6 +38,12 @@ $canCancelForBilling = $billingGate->cancellationErrors('Physiotherapy', $record
 $canEdit = $permissionService->canEditPhysiotherapy($visit, $currentUser);
 $canManageSessions = $permissionService->canManagePhysiotherapySessions($visit, $currentUser);
 $canComplete = $permissionService->canCompletePhysiotherapy($visit, $currentUser);
+$isPhysiotherapyUser = !$permissionService->isAdministrator($currentUser)
+    && (
+        in_array((string)($currentUser['role_name'] ?? ''), ['Physiotherapist', 'Physiotherapy'], true)
+        || in_array((string)($currentUser['department_name'] ?? ''), ['Physiotherapy', 'Physio', 'Rehabilitation'], true)
+    );
+$sessionCount = (int)($record['session_count'] ?? count($sessions));
 $isClosed = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
 $recordIsClosed = in_array((string)($record['status'] ?? ''), ['Completed', 'Cancelled'], true);
 $addSessionBlockedReason = null;
@@ -47,6 +53,8 @@ if ($isClosed) {
     $addSessionBlockedReason = 'Add Session is unavailable because this physiotherapy record is completed or cancelled.';
 } elseif (!$billingCleared) {
     $addSessionBlockedReason = 'Add Session is unavailable until Accounts clears this physiotherapy request for payment.';
+} elseif ($sessionCount >= 1) {
+    $addSessionBlockedReason = 'Only one physiotherapy session can be added to each physiotherapy record.';
 } elseif (!$canManageSessions) {
     $addSessionBlockedReason = 'Add Session is available to authorized Physiotherapy users when the encounter is currently in the Physiotherapy department. If the patient is ready for physiotherapy treatment, transfer and receive the encounter in Physiotherapy first.';
 }
@@ -79,7 +87,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="page-header">
         <div>
-            <h1>Physiotherapy Record #<?= (int)$record['id'] ?></h1>
+            <h1>Physiotherapy Request #<?= (int)$record['id'] ?></h1>
             <p><?= e((string)($visit['visit_number'] ?? ('Encounter #' . (int)$record['visit_id']))) ?></p>
         </div>
         <div class="form-actions">
@@ -89,7 +97,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <a class="btn-secondary" href="<?= e(physiotherapyBackToWorkspace((int)$record['visit_id'])) ?>">Workspace</a>
             <a class="btn-secondary" href="history.php?visit=<?= (int)$record['visit_id'] ?>">History</a>
             <a class="btn-secondary" href="#sessions">Sessions</a>
-            <?php if ($billingCleared && !$isClosed && !$recordIsClosed && $canManageSessions): ?>
+            <?php if ($billingCleared && !$isClosed && !$recordIsClosed && $canManageSessions && $sessionCount < 1): ?>
                 <a class="btn-primary" href="report.php?record=<?= (int)$record['id'] ?>">Add New Session</a>
             <?php endif; ?>
             <?php if (!$isClosed && $permissionService->canCreateBillingRequest($currentUser)): ?>
@@ -122,43 +130,54 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <p><?php hmsRenderNarrative((string)($record['presenting_problem'] ?? '')); ?></p>
     </div>
 
-    <div class="card">
-        <h3>Assessment</h3>
-        <p><?php hmsRenderNarrative((string)($record['assessment'] ?? '')); ?></p>
-    </div>
+    <?php if (!$billingCleared): ?>
+        <div class="card alert-warning">
+            <h3>Physiotherapy work locked</h3>
+            <p>Accounts clearance is required before assessment, treatment plan, sessions, goals, and completion can be entered.</p>
+        </div>
+    <?php endif; ?>
 
-    <div class="card">
-        <h3>Treatment Plan</h3>
-        <p><?php hmsRenderNarrative((string)($record['treatment_plan'] ?? '')); ?></p>
-    </div>
+    <?php if ($billingCleared): ?>
+        <div class="card">
+            <h3>Assessment</h3>
+            <p><?php hmsRenderNarrative((string)($record['assessment'] ?? '')); ?></p>
+        </div>
 
-    <?php if (trim((string)($record['functional_limitations'] ?? '')) !== ''): ?>
+        <div class="card">
+            <h3>Treatment Plan</h3>
+            <p><?php hmsRenderNarrative((string)($record['treatment_plan'] ?? '')); ?></p>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($billingCleared && trim((string)($record['functional_limitations'] ?? '')) !== ''): ?>
         <div class="card">
             <h3>Functional Limitations</h3>
             <p><?php hmsRenderNarrative((string)$record['functional_limitations']); ?></p>
         </div>
     <?php endif; ?>
 
-    <?php if (trim((string)($record['goals'] ?? '')) !== ''): ?>
+    <?php if ($billingCleared && trim((string)($record['goals'] ?? '')) !== ''): ?>
         <div class="card">
             <h3>Goals</h3>
             <p><?php hmsRenderNarrative((string)$record['goals']); ?></p>
         </div>
     <?php endif; ?>
 
-    <?php if (trim((string)($record['precautions'] ?? '')) !== ''): ?>
+    <?php if ($billingCleared && trim((string)($record['precautions'] ?? '')) !== ''): ?>
         <div class="card">
             <h3>Precautions</h3>
             <p><?php hmsRenderNarrative((string)$record['precautions']); ?></p>
         </div>
     <?php endif; ?>
-    <?php hmsRenderConfiguredValues($physiotherapyConfiguredDisplayValues); ?>
+    <?php if ($billingCleared): ?>
+        <?php hmsRenderConfiguredValues($physiotherapyConfiguredDisplayValues); ?>
+    <?php endif; ?>
 
     <div class="card" id="sessions">
         <div class="section-heading">
             <h3>Sessions</h3>
             <div class="form-actions">
-                <?php if ($billingCleared && !$isClosed && !$recordIsClosed && $canManageSessions): ?>
+                <?php if ($billingCleared && !$isClosed && !$recordIsClosed && $canManageSessions && $sessionCount < 1): ?>
                     <a class="btn-primary" href="report.php?record=<?= (int)$record['id'] ?>">Add New Session</a>
                 <?php endif; ?>
             </div>
@@ -227,7 +246,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php if (!$billingCleared): ?>
                 <p class="text-muted">Awaiting Accounts clearance before Physiotherapy can edit, record sessions, or complete this request.</p>
             <?php endif; ?>
-            <?php if ($billingCleared && !$isClosed && $canEdit && (string)$record['status'] === 'Active'): ?>
+            <?php if (!$isPhysiotherapyUser && $billingCleared && !$isClosed && $canEdit && (string)$record['status'] === 'Active'): ?>
                 <a class="btn-secondary" href="edit.php?id=<?= (int)$record['id'] ?>">Edit Record</a>
             <?php endif; ?>
             <?php if ($billingCleared && !$isClosed && $canComplete && (string)$record['status'] === 'Active'): ?>
@@ -237,7 +256,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                     <button type="submit" class="btn-primary">Complete</button>
                 </form>
             <?php endif; ?>
-            <?php if ($canCancelForBilling && !$isClosed && $canEdit && (string)$record['status'] === 'Active'): ?>
+            <?php if (!$isPhysiotherapyUser && $canCancelForBilling && !$isClosed && $canEdit && (string)$record['status'] === 'Active'): ?>
                 <form method="post" action="cancel.php" onsubmit="return confirm('Cancel this physiotherapy record?');">
                     <?= csrfField() ?>
                     <input type="hidden" name="id" value="<?= (int)$record['id'] ?>">

@@ -3653,9 +3653,9 @@ private function appendPhysiotherapyEvents(
     foreach ($rows as $row) {
         $timeline[] = [
             'type' => 'physiotherapy',
-            'title' => 'Physiotherapy Started',
+            'title' => 'Physiotherapy Requested',
             'description' => sprintf(
-                '%s started physiotherapy: %s (%s).',
+                '%s requested physiotherapy: %s (%s).',
                 $row['created_by_name'] ?? 'Unknown User',
                 $row['presenting_problem'] ?? 'Unknown problem',
                 $row['record_source'] ?? 'Clinical'

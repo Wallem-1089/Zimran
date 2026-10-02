@@ -163,7 +163,7 @@ try {
     ')->execute([
         ':item_code' => 'STB-001',
         ':item_name' => 'Test Stock Price',
-        ':item_type' => 'Consumable',
+        ':item_type' => 'Drug',
         ':department_id' => null,
         ':description' => 'Linked catalogue item.',
         ':unit_price' => 25.00,
@@ -175,7 +175,7 @@ try {
     $item = requireStoreSuccess($service->createItem([
         'item_code' => 'STO-ITEM-001',
         'item_name' => 'Test Inventory Item',
-        'category' => 'Consumable',
+        'category' => 'Drug',
         'unit' => 'Pack',
         'description' => 'Used by store tests.',
         'billable_item_id' => $billableId,
@@ -187,7 +187,7 @@ try {
     $duplicate = $service->createItem([
         'item_code' => 'STO-ITEM-001',
         'item_name' => 'Duplicate Item',
-        'category' => 'Consumable',
+        'category' => 'Drug',
         'unit' => 'Pack',
     ], $store);
     assertStore(($duplicate['success'] ?? true) === false, 'Duplicate inventory code was accepted.');
@@ -211,7 +211,7 @@ try {
     $updated = requireStoreSuccess($service->updateItem($itemId, [
         'item_code' => 'STO-ITEM-001',
         'item_name' => 'Test Inventory Item Updated',
-        'category' => 'Consumable',
+        'category' => 'Drug',
         'unit' => 'Pack',
         'description' => 'Updated description.',
         'billable_item_id' => $billableId,
@@ -229,7 +229,7 @@ try {
     $duplicateBarcode = $service->createItem([
         'item_code' => 'STO-ITEM-002',
         'item_name' => 'Duplicate Barcode Item',
-        'category' => 'Consumable',
+        'category' => 'Drug',
         'unit' => 'Pack',
         'barcodes' => 'STO-BAR-001',
     ], $store);

@@ -46,7 +46,7 @@ unset($_SESSION['old_configured_fields']);
 $existingRecords = $physiotherapyService->listByVisit($visitId, $currentUser);
 $existingRecord = $existingRecords[0] ?? null;
 $billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Physiotherapy']));
-$pageTitle = 'Create Physiotherapy Record';
+$pageTitle = 'Create Physiotherapy Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 
 require __DIR__ . '/../../layouts/header.php';
@@ -107,7 +107,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             </div>
         </div>
     <?php else: ?>
-        <?php $buttonLabel = 'Save Physiotherapy Record'; require __DIR__ . '/_form.php'; ?>
+        <?php $buttonLabel = 'Send Physiotherapy Request to Accounts'; $physiotherapyRequestOnly = false; require __DIR__ . '/_form.php'; ?>
     <?php endif; ?>
 
     <div class="card">

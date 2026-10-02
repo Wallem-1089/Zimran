@@ -79,11 +79,8 @@ $requestClosed = $latest !== null && in_array((string)($latest['status'] ?? ''),
             <div class="form-actions">
                 <a href="../pop/view.php?id=<?= (int)$latest['id'] ?>" class="btn-secondary">View</a>
                 <a href="../pop/history.php?visit=<?= (int)$visit['id'] ?>" class="btn-secondary">View History</a>
-                <?php if (!$isClosedEncounter && !$requestClosed && !empty($canProcessPopRequest) && (string)$latest['status'] === 'Requested'): ?>
-                    <form method="post" action="../pop/start.php"><?= csrfField() ?><input type="hidden" name="id" value="<?= (int)$latest['id'] ?>"><button type="submit" class="btn-primary">Start</button></form>
-                <?php endif; ?>
                 <?php if (!$isClosedEncounter && !$requestClosed && (!empty($canRecordPopProcedure) || !empty($canEditPopRecord))): ?>
-                    <a href="../pop/record.php?id=<?= (int)$latest['id'] ?>" class="btn-secondary"><?= $record && !empty($record['record_id']) ? 'Edit Plaster Record' : 'Record Plaster Procedure' ?></a>
+                    <a href="../pop/record.php?id=<?= (int)$latest['id'] ?>" class="btn-primary"><?= $record && !empty($record['record_id']) ? 'Edit Plaster Record' : 'Record Plaster Procedure' ?></a>
                 <?php endif; ?>
                 <?php if (!$isClosedEncounter && !$requestClosed && !empty($canCompletePopRequest)): ?>
                     <form method="post" action="../pop/complete.php"><?= csrfField() ?><input type="hidden" name="id" value="<?= (int)$latest['id'] ?>"><button type="submit" class="btn-secondary">Complete</button></form>

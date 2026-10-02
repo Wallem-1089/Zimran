@@ -14,6 +14,16 @@ if (!$user) {
 
 administrationGuardSuperAdministratorUser($user, $currentUser, $permissionService);
 
+$loadedStaffProfile = $staffProfileService->getProfile($userId);
+$staffProfile = $loadedStaffProfile['profile'] ?? [];
+$staffPhotoPath = (string)($staffProfile['profile_photo_path'] ?? '');
+$staffPhotoUrl = $staffPhotoPath !== ''
+    ? ('staff_photo.php?' . http_build_query([
+        'id' => $userId,
+        'v' => (string)($staffProfile['updated_at'] ?? time()),
+    ]))
+    : '';
+
 $pageTitle = 'View User';
 $success = $_SESSION['success_message'] ?? null;
 unset($_SESSION['success_message']);
@@ -25,7 +35,19 @@ require_once __DIR__ . '/../../../layouts/sidebar.php';
 <main class="content">
     <?php require_once __DIR__ . '/../../../layouts/navbar.php'; ?>
     <section class="card">
-        <h2><?= e($user['first_name'] . ' ' . $user['last_name']) ?></h2>
+        <div class="page-header">
+            <div>
+                <h2><?= e($user['first_name'] . ' ' . $user['last_name']) ?></h2>
+                <p><?= e((string)$user['employee_id']) ?></p>
+            </div>
+            <div style="width:96px;height:96px;border:1px solid #d6e0ec;border-radius:12px;overflow:hidden;background:#f8fafc;display:flex;align-items:center;justify-content:center;">
+                <?php if ($staffPhotoUrl !== ''): ?>
+                    <img src="<?= e($staffPhotoUrl) ?>" alt="Staff profile picture" style="width:100%;height:100%;object-fit:cover;">
+                <?php else: ?>
+                    <span class="text-muted">No Photo</span>
+                <?php endif; ?>
+            </div>
+        </div>
         <?php if ($success): ?><p class="alert alert-success"><?= e($success) ?></p><?php endif; ?>
         <dl>
             <dt>Employee ID</dt><dd><?= e($user['employee_id']) ?></dd>

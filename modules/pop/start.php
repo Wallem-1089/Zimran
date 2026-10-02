@@ -17,11 +17,11 @@ if (!$request) {
     exit('Plaster request not found.');
 }
 $visit = popRequireVisit($visitService, (int)$request['visit_id']);
-if (!$permissionService->canProcessPopRequest($visit, $currentUser)) {
+if (!$permissionService->canRecordPopProcedure($visit, $currentUser) && !$permissionService->canEditPopRecord($visit, $currentUser)) {
     http_response_code(403);
-    exit('You cannot start this Plaster request.');
+    exit('You cannot record this Plaster procedure.');
 }
 
-popFlash($popService->startRequest($requestId, $currentUser), 'Plaster request started.');
-header('Location: view.php?id=' . $requestId);
+$_SESSION['success_message'] = 'Use Record Plaster Procedure to work on this Plaster request.';
+header('Location: record.php?id=' . $requestId);
 exit;

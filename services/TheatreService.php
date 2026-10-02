@@ -63,6 +63,10 @@ class TheatreService
             if ($payloadErrors !== []) {
                 $errors = array_merge($errors, $payloadErrors);
             }
+            if ($errors !== []) {
+                $this->rollback();
+                return $this->failure($errors);
+            }
             $surgeonId = $this->resolveClinicalOwnerId($visit, $user);
 
             $stmt = $this->pdo->prepare("
@@ -116,13 +120,13 @@ class TheatreService
             }
             if (!$this->event(
                 (int)$visit['id'],
-                'THEATRE_STARTED',
-                'Theatre Started',
-                'Theatre record created.',
+                'THEATRE_REQUESTED',
+                'Theatre Requested',
+                'Theatre request created for Accounts clearance.',
                 $visit,
                 $user
             )) {
-                throw new RuntimeException('Unable to record theatre start event.');
+                throw new RuntimeException('Unable to record theatre request event.');
             }
 
             $this->pdo->commit();
@@ -386,7 +390,7 @@ class TheatreService
     private function normalizePayload(array $data, ?array $existing = null): array
     {
         $procedureName = $this->requiredText($data['procedure_name'] ?? ($existing['procedure_name'] ?? ''));
-        $procedureDetails = $this->nullableText($data['procedure_details'] ?? ($existing['procedure_details'] ?? null));
+        $procedureDetails = $this->nullableText($data['procedure_details'] ?? ($existing['procedure_details'] ?? null)) ?? '';
 
         return [
             'errors' => $procedureName === '' ? ['Procedure name is required.'] : [],

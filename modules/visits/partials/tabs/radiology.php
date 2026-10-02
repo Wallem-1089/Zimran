@@ -88,15 +88,8 @@ $requestSource = $radiologyRequestSource ?? 'Clinical';
             <div class="form-actions">
                 <a href="../radiology/view.php?id=<?= (int)$latest['id'] ?>" class="btn-secondary">View</a>
                 <a href="../radiology/history.php?visit=<?= (int)$visit['id'] ?>" class="btn-secondary">View History</a>
-                <?php if (!$isClosedEncounter && $canProcessRadiologyRequest && (string)$latest['status'] === 'Requested'): ?>
-                    <form method="post" action="../radiology/start.php">
-                        <?= csrfField() ?>
-                        <input type="hidden" name="id" value="<?= (int)$latest['id'] ?>">
-                        <button type="submit" class="btn-primary">Start</button>
-                    </form>
-                <?php endif; ?>
                 <?php if (!$isClosedEncounter && ($canEnterRadiologyReport || $canEditRadiologyReport)): ?>
-                    <a href="../radiology/report.php?id=<?= (int)$latest['id'] ?>" class="btn-secondary">
+                    <a href="../radiology/report.php?id=<?= (int)$latest['id'] ?>" class="btn-primary">
                         <?= $report ? 'Edit Report' : 'Enter Report' ?>
                     </a>
                 <?php endif; ?>

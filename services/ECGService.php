@@ -261,7 +261,7 @@ class ECGService
             if ($mustExist && !$existing) {
                 $errors[] = 'ECG report not found.';
             }
-            $upload = $this->prepareUpload($file, $errors, !$existing);
+            $upload = $this->prepareUpload($file, $errors, false);
             if ($errors !== []) {
                 $this->rollback();
                 return $this->failure($errors);

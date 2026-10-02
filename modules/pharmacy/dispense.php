@@ -43,6 +43,7 @@ $stock = null;
 if ((int)($prescription['inventory_item_id'] ?? 0) > 0) {
     $stock = $storeService->getDepartmentBalance((int)$prescription['inventory_item_id'], pharmacyDepartmentId($pdo), $currentUser);
 }
+$quantityToDispense = max(1, (int)round((float)($prescription['quantity'] ?? 1)));
 
 $canViewClinicalSafety = $permissionService->canViewClinicalSafety((int)$visit['patient_id'], $currentUser);
 $allergies = $canViewClinicalSafety
@@ -96,7 +97,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="summary-grid">
             <div class="summary-item"><span class="summary-label">Medication</span> <span class="summary-value"><?= e((string)$prescription['medication_name']) ?></span></div>
             <div class="summary-item"><span class="summary-label">Stock Available</span> <span class="summary-value"><?= number_format((float)($stock['quantity'] ?? 0), 2) ?></span></div>
-            <div class="summary-item"><span class="summary-label">Quantity</span> <span class="summary-value"><?= e((string)$prescription['quantity']) ?></span></div>
+            <div class="summary-item"><span class="summary-label">Quantity</span> <span class="summary-value"><?= e((string)$quantityToDispense) ?></span></div>
             <div class="summary-item"><span class="summary-label">Source</span> <span class="summary-value"><?= e((string)$prescription['prescription_source']) ?></span></div>
         </div>
     </div>
@@ -116,9 +117,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 type="number"
                 id="quantity_dispensed"
                 name="quantity_dispensed"
-                min="0.01"
+                min="1"
                 step="1"
-                value="<?= e((string)$prescription['quantity']) ?>"
+                value="<?= e((string)$quantityToDispense) ?>"
                 required>
         </div>
 

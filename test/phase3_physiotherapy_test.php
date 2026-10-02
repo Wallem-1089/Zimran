@@ -289,7 +289,7 @@ try {
     $auditCount = (int)$pdo->query("SELECT COUNT(*) FROM audit_logs WHERE action IN ('PHYSIOTHERAPY_CREATED','PHYSIOTHERAPY_SESSION_CREATED','PHYSIOTHERAPY_COMPLETED')")->fetchColumn();
     assertPhysio($auditCount >= 3, 'Expected physiotherapy audit events were not written.');
 
-    $eventCount = (int)$pdo->query("SELECT COUNT(*) FROM encounter_events WHERE event_type IN ('PHYSIOTHERAPY_STARTED','PHYSIOTHERAPY_COMPLETED')")->fetchColumn();
+    $eventCount = (int)$pdo->query("SELECT COUNT(*) FROM encounter_events WHERE event_type IN ('PHYSIOTHERAPY_REQUESTED','PHYSIOTHERAPY_COMPLETED')")->fetchColumn();
     assertPhysio($eventCount >= 2, 'Expected physiotherapy encounter events were not written.');
 
     $history = $service->listByVisit($doctorVisitId, $doctor);

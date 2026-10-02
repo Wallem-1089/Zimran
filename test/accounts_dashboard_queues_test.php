@@ -31,8 +31,12 @@ foreach ([
     'Patient Registration',
     'Patient Renewal',
     'Emergency Registration',
+    'Auto-charged Bills',
+    'All Actionable Requests',
     '../billing/billing_requests.php?',
     '../billing/registration_requests.php?',
+    "'status' => 'Actionable'",
+    'auto-charged',
 ] as $needle) {
     assertAccountsDashboardQueues(
         str_contains($accountsDashboard, $needle),
@@ -41,10 +45,10 @@ foreach ([
 }
 
 assertAccountsDashboardQueues(
-    str_contains($accountsDashboard, 'accountsPendingClinicalBillingCount')
+    str_contains($accountsDashboard, 'accountsClinicalBillingCount')
         && str_contains($accountsDashboard, 'accountsPendingRegistrationBillingCount')
         && str_contains($accountsDashboard, 'accounts-queue-button'),
-    'Accounts dashboard should render pending queue counts as clickable summary-style buttons.'
+    'Accounts dashboard should render actionable queue counts as clickable summary-style buttons.'
 );
 
 $patientRegistrationPosition = strpos($accountsDashboard, 'Patient Registration');
@@ -79,8 +83,12 @@ foreach ([
     'Dressing',
     'Patient Renewal',
     'Emergency Registration',
+    'Auto-charged Bills',
+    'All Actionable Requests',
     '../modules/billing/billing_requests.php?',
     '../modules/billing/registration_requests.php?',
+    "'status' => 'Actionable'",
+    'auto-charged',
 ] as $needle) {
     assertAccountsDashboardQueues(
         str_contains($mainDashboard, $needle),

@@ -19,13 +19,11 @@ if (!$request) {
 }
 
 $visit = laboratoryRequireVisit($visitService, (int)$request['visit_id']);
-if (!$permissionService->canProcessLaboratoryRequest($visit, $currentUser)) {
+if (!$permissionService->canEnterLaboratoryResult($visit, $currentUser) && !$permissionService->canEditLaboratoryResult($visit, $currentUser)) {
     http_response_code(403);
-    exit('You cannot process this laboratory request.');
+    exit('You cannot enter this laboratory result.');
 }
 
-$result = $laboratoryService->startRequest($requestId, $currentUser);
-laboratoryFlash($result, 'Laboratory request started.');
-
-header('Location: view.php?id=' . $requestId);
+$_SESSION['success_message'] = 'Use Enter Result to work on this laboratory request.';
+header('Location: result.php?id=' . $requestId);
 exit;

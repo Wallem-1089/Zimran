@@ -32,7 +32,7 @@ if ($existingRecord !== null) {
 
 $result = $physiotherapyService->createRecord($_POST, $currentUser);
 if (($result['success'] ?? false) !== true) {
-    $_SESSION['validation_errors'] = $result['errors'] ?? ['Unable to save physiotherapy record.'];
+    $_SESSION['validation_errors'] = $result['errors'] ?? ['Unable to save physiotherapy request.'];
     $_SESSION['old_physiotherapy_request'] = [
         'record_source' => $recordSource,
         'referral_reason' => (string)($_POST['referral_reason'] ?? ''),
@@ -64,6 +64,6 @@ if (($configuredResult['success'] ?? false) !== true) {
     exit;
 }
 
-$_SESSION['success_message'] = 'Physiotherapy record saved.';
+$_SESSION['success_message'] = 'Physiotherapy request sent to Accounts.';
 header('Location: view.php?id=' . (int)$result['physiotherapy_record_id']);
 exit;

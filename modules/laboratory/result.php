@@ -100,11 +100,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?= csrfField() ?>
         <input type="hidden" name="laboratory_request_id" value="<?= (int)$requestId ?>">
 
-        <div class="form-group">
-            <label for="diagnostic_attachments">Laboratory Attachments</label>
-            <input id="diagnostic_attachments" name="diagnostic_attachments[]" type="file" accept="application/pdf,image/jpeg,image/png" multiple>
-            <small class="text-muted">Optional. Upload one or more PDF, JPG, or PNG result files. Maximum size: 10 MB each.</small>
-        </div>
+        <?php hmsRenderDiagnosticAttachmentPicker('Laboratory Attachments', 'Optional. Upload one or more PDF, JPG, or PNG result files. Maximum size: 10 MB each.'); ?>
 
         <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Laboratory Result Entry Mode'); ?>
         <?php hmsRenderHandwritingTextarea('sample_taken', 'Sample Taken', (string)($laboratoryResult['sample_taken'] ?? ''), 3, false, $enableWritingMode); ?>

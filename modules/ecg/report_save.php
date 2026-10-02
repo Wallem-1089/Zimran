@@ -24,7 +24,7 @@ if (!$permissionService->canUploadEcgChart($visit, $currentUser)) {
     exit('You cannot upload this ECG chart.');
 }
 
-$result = $ecgService->saveReport($_POST, $currentUser, $_FILES['ecg_chart'] ?? null);
+$result = $ecgService->saveReport($_POST, $currentUser, null);
 if (($result['success'] ?? false) === true) {
     $configuredResult = $configurableFormService->saveResponse(
         'ecg_report',

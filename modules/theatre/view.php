@@ -63,7 +63,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <a class="btn-secondary" href="../billing/request_create.php?visit=<?= (int)$theatre['visit_id'] ?>&source_module=Theatre&source_record_id=<?= (int)$theatre['id'] ?>&description=<?= urlencode('Theatre: ' . (string)($theatre['procedure_name'] ?? '')) ?>">Request Billing</a>
             <?php endif; ?>
             <?php if (!$billingCleared): ?>
-                <span class="text-muted">Awaiting Accounts clearance</span>
+                <span class="text-muted">Awaiting Accounts clearance — Theatre work is locked</span>
             <?php endif; ?>
             <?php if ($canEdit): ?>
                 <a class="btn-secondary" href="edit.php?id=<?= (int)$theatre['id'] ?>">Edit</a>
@@ -94,7 +94,13 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php $latest = $latestVitalSigns; require __DIR__ . '/../vital_signs/partials/record_card.php'; ?>
         </div>
     <?php endif; ?>
-    <?php foreach ([
+    <?php if (!$billingCleared): ?>
+        <div class="card alert-warning">
+            <h3>Theatre work locked</h3>
+            <p>Accounts clearance is required before operative details, anaesthesia notes, findings, completion, and procedure documentation can be entered.</p>
+        </div>
+    <?php endif; ?>
+    <?php foreach (($billingCleared ? [
         'indication' => 'Indication',
         'preoperative_notes' => 'Preoperative Notes',
         'procedure_details' => 'Procedure Details',
@@ -103,13 +109,18 @@ require __DIR__ . '/../../layouts/sidebar.php';
         'postoperative_notes' => 'Postoperative Notes',
         'postoperative_plan' => 'Postoperative Plan',
         'anaesthesia_notes' => 'Anaesthesia Notes',
-    ] as $field => $label): ?>
+    ] : [
+        'indication' => 'Indication',
+        'preoperative_notes' => 'Preoperative Notes',
+    ]) as $field => $label): ?>
         <div class="card">
             <h3><?= e($label) ?></h3>
             <p><?php hmsRenderNarrative((string)($theatre[$field] ?? '')); ?></p>
         </div>
     <?php endforeach; ?>
-    <?php hmsRenderConfiguredValues($theatreConfiguredDisplayValues); ?>
+    <?php if ($billingCleared): ?>
+        <?php hmsRenderConfiguredValues($theatreConfiguredDisplayValues); ?>
+    <?php endif; ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

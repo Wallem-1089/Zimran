@@ -67,7 +67,7 @@ if (!verifyCsrfToken()) {
 */
 
 $login = trim($_POST['login'] ?? '');
-$password = $_POST['password'] ?? '';
+$password = trim((string)($_POST['password'] ?? ''));
 
 $errors = [];
 

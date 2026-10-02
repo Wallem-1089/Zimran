@@ -14,8 +14,7 @@ if (!$request) {
 }
 
 $canApprove = (string)$request['status'] === 'Pending' && $permissionService->canReviewStockRequest($currentUser);
-$canIssue = in_array((string)$request['status'], ['Pending','Approved','Partially Issued'], true)
-    && $permissionService->canIssueStockRequest($currentUser);
+$canIssue = $stockRequestService->canIssueRequest($request, $currentUser);
 $canCancel = in_array((string)$request['status'], ['Pending','Approved','Partially Issued'], true)
     && $permissionService->canCancelStockRequest($currentUser);
 

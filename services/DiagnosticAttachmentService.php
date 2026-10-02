@@ -259,17 +259,37 @@ class DiagnosticAttachmentService
         }
 
         $normalized = [];
-        foreach ($files['name'] as $index => $name) {
+        $walk = function (mixed $names, array $path = []) use (&$walk, &$normalized, $files): void {
+            if (is_array($names)) {
+                foreach ($names as $index => $value) {
+                    $walk($value, [...$path, $index]);
+                }
+                return;
+            }
+
             $normalized[] = [
-                'name' => $name,
-                'type' => $files['type'][$index] ?? '',
-                'tmp_name' => $files['tmp_name'][$index] ?? '',
-                'error' => $files['error'][$index] ?? UPLOAD_ERR_NO_FILE,
-                'size' => $files['size'][$index] ?? 0,
+                'name' => $names,
+                'type' => $this->nestedUploadValue($files['type'] ?? null, $path, ''),
+                'tmp_name' => $this->nestedUploadValue($files['tmp_name'] ?? null, $path, ''),
+                'error' => $this->nestedUploadValue($files['error'] ?? null, $path, UPLOAD_ERR_NO_FILE),
+                'size' => $this->nestedUploadValue($files['size'] ?? null, $path, 0),
             ];
-        }
+        };
+        $walk($files['name']);
 
         return $normalized;
+    }
+
+    private function nestedUploadValue(mixed $value, array $path, mixed $default): mixed
+    {
+        foreach ($path as $segment) {
+            if (!is_array($value) || !array_key_exists($segment, $value)) {
+                return $default;
+            }
+            $value = $value[$segment];
+        }
+
+        return $value;
     }
 
     private function canViewAttachment(array $attachment, array $user): bool

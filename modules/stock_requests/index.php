@@ -23,7 +23,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="page-header">
         <div>
             <h1>Stock Requests</h1>
-            <p>Departments request stock here. Store issues stock through the existing inventory ledger.</p>
+            <p>Departments request stock here. Pharmacy fulfills drug stock requests; Store fulfills consumable stock requests.</p>
         </div>
         <div class="form-actions">
             <a class="btn-secondary" href="my_department_stock.php">My Department Stock</a>

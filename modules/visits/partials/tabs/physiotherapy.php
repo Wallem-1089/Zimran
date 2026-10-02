@@ -10,6 +10,20 @@ $record = $latestPhysiotherapyRecord ?? null;
 $session = $latestPhysiotherapySession ?? null;
 $isClosedEncounter = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
 $requestSource = $physiotherapyRequestSource ?? 'Clinical';
+$physiotherapyBillingClearance = ['cleared' => false, 'label' => 'Not requested'];
+if ($record !== null && isset($pdo)) {
+    require_once __DIR__ . '/../../../../services/ClinicalBillingGateService.php';
+    $physiotherapyBillingGate = new ClinicalBillingGateService($pdo);
+    $physiotherapyBillingClearance = $physiotherapyBillingGate->status('Physiotherapy', (int)$record['id'], (int)$visit['id'], $currentUser ?? null);
+}
+$physiotherapyBillingCleared = $record !== null && !empty($physiotherapyBillingClearance['cleared']);
+$physiotherapySessionCount = $record !== null ? (int)($record['session_count'] ?? 0) : 0;
+$isPhysiotherapyUser = isset($currentUser, $permissionService)
+    && !$permissionService->isAdministrator($currentUser)
+    && (
+        in_array((string)($currentUser['role_name'] ?? ''), ['Physiotherapist', 'Physiotherapy'], true)
+        || in_array((string)($currentUser['department_name'] ?? ''), ['Physiotherapy', 'Physio', 'Rehabilitation'], true)
+    );
 ?>
 
 <section id="tab-physiotherapy" class="workspace-tab">
@@ -17,7 +31,7 @@ $requestSource = $physiotherapyRequestSource ?? 'Clinical';
         <div class="card-header">
             <div>
                 <h2>Physiotherapy</h2>
-                <p>Physiotherapy records and sessions linked to this encounter.</p>
+                <p>Physiotherapy request, billing clearance, and treatment sessions linked to this encounter.</p>
             </div>
             <div>
                 <?php if (!empty($canOpenPhysiotherapyWorklist)): ?>
@@ -29,7 +43,7 @@ $requestSource = $physiotherapyRequestSource ?? 'Clinical';
                     <span class="badge badge-warning">No physiotherapy permission</span>
                 <?php elseif ($record === null && !$isClosedEncounter && $canCreatePhysiotherapyRequest): ?>
                     <a href="../physiotherapy/request.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
-                        Refer to Physiotherapy
+                        Create Physiotherapy Request
                     </a>
                 <?php endif; ?>
             </div>
@@ -69,7 +83,7 @@ $requestSource = $physiotherapyRequestSource ?? 'Clinical';
             <?php if (!$isClosedEncounter && $canCreatePhysiotherapyRequest): ?>
                 <p>
                     <a href="../physiotherapy/request.php?visit=<?= (int)$visit['id'] ?>&source=<?= e($requestSource) ?>" class="btn-primary">
-                        Refer to Physiotherapy
+                        Create Physiotherapy Request
                     </a>
                 </p>
             <?php endif; ?>
@@ -84,20 +98,24 @@ $requestSource = $physiotherapyRequestSource ?? 'Clinical';
                 <div class="summary-item"><span class="summary-label">Physiotherapist</span> <span class="summary-value"><?= e((string)($record['physiotherapist_name'] ?? '-')) ?></span></div>
                 <div class="summary-item"><span class="summary-label">Sessions</span> <span class="summary-value"><?= e((string)($record['session_count'] ?? 0)) ?></span></div>
                 <div class="summary-item"><span class="summary-label">Created</span> <span class="summary-value"><?= e((string)($record['created_at'] ?? '-')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Accounts Clearance</span> <span class="summary-value"><?= e((string)($physiotherapyBillingClearance['label'] ?? 'Unknown')) ?></span></div>
             </div>
+            <?php if (!$physiotherapyBillingCleared): ?>
+                <div class="alert-warning">Awaiting Accounts clearance. Physiotherapy assessment, sessions, editing, and completion are locked until payment is cleared.</div>
+            <?php endif; ?>
 
             <div class="form-actions">
                 <a href="../physiotherapy/view.php?id=<?= (int)$record['id'] ?>" class="btn-secondary">View</a>
                 <a href="../physiotherapy/history.php?visit=<?= (int)$visit['id'] ?>" class="btn-secondary">View History</a>
-                <?php if (!$isClosedEncounter && $canEditPhysiotherapy && (string)$record['status'] === 'Active'): ?>
+                <?php if (!$isPhysiotherapyUser && $physiotherapyBillingCleared && !$isClosedEncounter && $canEditPhysiotherapy && (string)$record['status'] === 'Active'): ?>
                     <a class="btn-secondary" href="../physiotherapy/edit.php?id=<?= (int)$record['id'] ?>">Edit Record</a>
                 <?php endif; ?>
-                <?php if (!$isClosedEncounter && $canManagePhysiotherapySessions && (string)$record['status'] === 'Active'): ?>
+                <?php if ($physiotherapyBillingCleared && $physiotherapySessionCount < 1 && !$isClosedEncounter && $canManagePhysiotherapySessions && (string)$record['status'] === 'Active'): ?>
                     <a class="btn-primary" href="../physiotherapy/report.php?record=<?= (int)$record['id'] ?>">
                         Add Session
                     </a>
                 <?php endif; ?>
-                <?php if (!$isClosedEncounter && $canCompletePhysiotherapyRequest && (string)$record['status'] === 'Active'): ?>
+                <?php if ($physiotherapyBillingCleared && !$isClosedEncounter && $canCompletePhysiotherapyRequest && (string)$record['status'] === 'Active'): ?>
                     <form method="post" action="../physiotherapy/complete.php">
                         <?= csrfField() ?>
                         <input type="hidden" name="id" value="<?= (int)$record['id'] ?>">
@@ -121,7 +139,7 @@ $requestSource = $physiotherapyRequestSource ?? 'Clinical';
                 </div>
                 <div class="form-actions">
                     <a class="btn-secondary" href="../physiotherapy/view.php?id=<?= (int)$record['id'] ?>#sessions">View All Sessions</a>
-                    <?php if (!$isClosedEncounter && $canManagePhysiotherapySessions && (string)$record['status'] === 'Active'): ?>
+                    <?php if ($physiotherapyBillingCleared && $physiotherapySessionCount < 1 && !$isClosedEncounter && $canManagePhysiotherapySessions && (string)$record['status'] === 'Active'): ?>
                         <a class="btn-primary" href="../physiotherapy/report.php?record=<?= (int)$record['id'] ?>">Add Another Session</a>
                     <?php endif; ?>
                 </div>
@@ -129,7 +147,7 @@ $requestSource = $physiotherapyRequestSource ?? 'Clinical';
         <?php else: ?>
             <div class="card">
                 <p class="text-muted">No physiotherapy session recorded.</p>
-                <?php if (!$isClosedEncounter && $canManagePhysiotherapySessions && (string)$record['status'] === 'Active'): ?>
+                <?php if ($physiotherapyBillingCleared && $physiotherapySessionCount < 1 && !$isClosedEncounter && $canManagePhysiotherapySessions && (string)$record['status'] === 'Active'): ?>
                     <div class="form-actions">
                         <a class="btn-primary" href="../physiotherapy/report.php?record=<?= (int)$record['id'] ?>">Add Session</a>
                     </div>

@@ -24,7 +24,7 @@ if (!$permissionService->canEnterRadiologyResult($visit, $currentUser)) {
     exit('You cannot enter this radiology result.');
 }
 
-$result = $radiologyService->saveResult($_POST, $currentUser, $_FILES['radiology_chart'] ?? null);
+$result = $radiologyService->saveResult($_POST, $currentUser, null);
 if (($result['success'] ?? false) === true) {
     $uploadResult = $diagnosticAttachmentService->uploadMany(
         'Radiology',

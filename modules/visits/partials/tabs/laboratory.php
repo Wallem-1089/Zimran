@@ -88,15 +88,8 @@ $requestSource = $laboratoryRequestSource ?? 'Clinical';
             <div class="form-actions">
                 <a href="../laboratory/view.php?id=<?= (int)$latest['id'] ?>" class="btn-secondary">View</a>
                 <a href="../laboratory/history.php?visit=<?= (int)$visit['id'] ?>" class="btn-secondary">View History</a>
-                <?php if (!$isClosedEncounter && $canProcessLaboratoryRequest && (string)$latest['status'] === 'Requested'): ?>
-                    <form method="post" action="../laboratory/start.php">
-                        <?= csrfField() ?>
-                        <input type="hidden" name="id" value="<?= (int)$latest['id'] ?>">
-                        <button type="submit" class="btn-primary">Start</button>
-                    </form>
-                <?php endif; ?>
                 <?php if (!$isClosedEncounter && ($canEnterLaboratoryResult || $canEditLaboratoryResult)): ?>
-                    <a href="../laboratory/result.php?id=<?= (int)$latest['id'] ?>" class="btn-secondary">
+                    <a href="../laboratory/result.php?id=<?= (int)$latest['id'] ?>" class="btn-primary">
                         <?= $result ? 'Edit Result' : 'Enter Result' ?>
                     </a>
                 <?php endif; ?>

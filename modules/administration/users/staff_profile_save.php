@@ -35,5 +35,5 @@ if (!$result['success']) {
 }
 
 $_SESSION['success_message'] = 'Staff profile saved successfully.';
-header('Location: view.php?id=' . $userId);
+header('Location: staff_profile.php?id=' . $userId);
 exit;

@@ -11,6 +11,18 @@ if (!$permissionService->canCreateStockRequest($currentUser)) {
 }
 
 $items = stockRequestInventoryItems($pdo);
+$itemsById = [];
+foreach ($items as $item) {
+    $itemsById[(int)$item['id']] = $item;
+}
+$drugItems = array_values(array_filter(
+    $items,
+    static fn (array $item): bool => strcasecmp((string)($item['category'] ?? ''), 'Drug') === 0
+));
+$consumableItems = array_values(array_filter(
+    $items,
+    static fn (array $item): bool => strcasecmp((string)($item['category'] ?? ''), 'Drug') !== 0
+));
 $departments = stockRequestDepartments($pdo);
 $canChooseDepartment = $permissionService->isAdministrator($currentUser);
 $currentDepartmentId = (int)($currentUser['active_department_id'] ?? $currentUser['department_id'] ?? 0);
@@ -18,6 +30,53 @@ $currentDepartmentName = (string)($currentUser['active_department_name'] ?? $cur
 $old = $_SESSION['old_stock_request'] ?? [];
 unset($_SESSION['old_stock_request']);
 $enableWritingMode = $permissionService->canUseConsultationHandwriting($currentUser);
+$oldDrugRows = [];
+$oldConsumableRows = [];
+foreach ((array)($old['inventory_item_id'] ?? []) as $index => $oldItemIdRaw) {
+    $oldItemId = (int)$oldItemIdRaw;
+    if ($oldItemId <= 0) {
+        continue;
+    }
+    $oldRow = [
+        'inventory_item_id' => $oldItemId,
+        'quantity_requested' => (string)($old['quantity_requested'][$index] ?? ''),
+        'notes' => (string)($old['notes'][$index] ?? ''),
+    ];
+    $oldItem = $itemsById[$oldItemId] ?? [];
+    if (strcasecmp((string)($oldItem['category'] ?? ''), 'Drug') === 0) {
+        $oldDrugRows[] = $oldRow;
+    } else {
+        $oldConsumableRows[] = $oldRow;
+    }
+}
+for ($i = count($oldDrugRows); $i < 3; $i++) {
+    $oldDrugRows[] = [];
+}
+for ($i = count($oldConsumableRows); $i < 3; $i++) {
+    $oldConsumableRows[] = [];
+}
+
+$renderStockRequestRows = static function (array $rows, array $options): void {
+    foreach ($rows as $row):
+        $selectedItemId = (int)($row['inventory_item_id'] ?? 0);
+        ?>
+        <tr>
+            <td>
+                <select name="inventory_item_id[]">
+                    <option value="">Select item</option>
+                    <?php foreach ($options as $item): ?>
+                        <option value="<?= (int)$item['id'] ?>" <?= $selectedItemId === (int)$item['id'] ? 'selected' : '' ?>>
+                            <?= e((string)$item['item_code']) ?> - <?= e((string)$item['item_name']) ?> <?= e((string)($item['unit'] ?? '')) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </td>
+            <td><input name="quantity_requested[]" type="number" step="1" min="0" value="<?= e((string)($row['quantity_requested'] ?? '')) ?>"></td>
+            <td><input name="notes[]" maxlength="1000" value="<?= e((string)($row['notes'] ?? '')) ?>"></td>
+        </tr>
+        <?php
+    endforeach;
+};
 
 $pageTitle = 'New Stock Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -30,7 +89,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <?php if (isset($_SESSION['validation_errors'])): ?><div class="alert-danger"><ul><?php foreach ((array)$_SESSION['validation_errors'] as $error): ?><li><?= e((string)$error) ?></li><?php endforeach; ?></ul></div><?php unset($_SESSION['validation_errors']); endif; ?>
 
     <div class="page-header">
-        <div><h1>New Stock Request</h1><p>Request items from Store. This does not move stock until Store issues it.</p></div>
+        <div><h1>New Stock Request</h1><p>Request stock for your department. Drug requests go to Pharmacy; consumable/non-drug requests go to Store.</p></div>
         <div><a class="btn-secondary" href="index.php">Back</a></div>
     </div>
 
@@ -57,29 +116,44 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Stock Request Entry Mode'); ?>
         <?php hmsRenderHandwritingTextarea('reason', 'Reason / Notes', (string)($old['reason'] ?? ''), 4, false, $enableWritingMode, 2000); ?>
 
-        <h3>Requested Items</h3>
-        <div class="table-responsive">
-            <table class="table">
-                <thead><tr><th>Item</th><th>Quantity</th><th>Notes</th></tr></thead>
-                <tbody>
-                <?php for ($i = 0; $i < 5; $i++): ?>
-                    <tr>
-                        <td>
-                            <select name="inventory_item_id[]">
-                                <option value="">Select item</option>
-                                <?php foreach ($items as $item): ?>
-                                    <option value="<?= (int)$item['id'] ?>" <?= (int)($old['inventory_item_id'][$i] ?? 0) === (int)$item['id'] ? 'selected' : '' ?>>
-                                        <?= e((string)$item['item_code']) ?> - <?= e((string)$item['item_name']) ?> <?= e((string)($item['unit'] ?? '')) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </td>
-                        <td><input name="quantity_requested[]" type="number" step="1" min="0" value="<?= e((string)($old['quantity_requested'][$i] ?? '')) ?>"></td>
-                        <td><input name="notes[]" maxlength="1000" value="<?= e((string)($old['notes'][$i] ?? '')) ?>"></td>
-                    </tr>
-                <?php endfor; ?>
-                </tbody>
-            </table>
+        <div class="card">
+            <div class="section-header">
+                <div>
+                    <h3>Drug Stock Request</h3>
+                    <p class="text-muted">These lines are routed to Pharmacy for issuing. Store only supplies drug stock into Pharmacy.</p>
+                </div>
+                <button class="btn-secondary btn-sm" type="button" data-add-stock-row="drug-stock-request-table">+ Add Drug Item</button>
+            </div>
+            <?php if ($drugItems === []): ?>
+                <div class="empty-state">No active drug inventory items are available.</div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table" id="drug-stock-request-table">
+                        <thead><tr><th>Drug Item</th><th>Quantity</th><th>Notes</th></tr></thead>
+                        <tbody><?php $renderStockRequestRows($oldDrugRows, $drugItems); ?></tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="card">
+            <div class="section-header">
+                <div>
+                    <h3>Consumable / Non-drug Stock Request</h3>
+                    <p class="text-muted">These lines are routed to Store for issuing to the requesting department.</p>
+                </div>
+                <button class="btn-secondary btn-sm" type="button" data-add-stock-row="consumable-stock-request-table">+ Add Consumable Item</button>
+            </div>
+            <?php if ($consumableItems === []): ?>
+                <div class="empty-state">No active consumable/non-drug inventory items are available.</div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table" id="consumable-stock-request-table">
+                        <thead><tr><th>Consumable / Non-drug Item</th><th>Quantity</th><th>Notes</th></tr></thead>
+                        <tbody><?php $renderStockRequestRows($oldConsumableRows, $consumableItems); ?></tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
         </div>
         <div class="form-actions">
             <button class="btn-primary" type="submit">Submit Request</button>
@@ -87,6 +161,27 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
     </form>
     <?php hmsRenderHandwritingScript($enableWritingMode); ?>
+    <script>
+    document.querySelectorAll('[data-add-stock-row]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const table = document.getElementById(button.getAttribute('data-add-stock-row'));
+            const body = table ? table.querySelector('tbody') : null;
+            const sourceRow = body ? body.querySelector('tr:last-child') : null;
+            if (!body || !sourceRow) {
+                return;
+            }
+
+            const row = sourceRow.cloneNode(true);
+            row.querySelectorAll('select').forEach((select) => {
+                select.selectedIndex = 0;
+            });
+            row.querySelectorAll('input').forEach((input) => {
+                input.value = '';
+            });
+            body.appendChild(row);
+        });
+    });
+    </script>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

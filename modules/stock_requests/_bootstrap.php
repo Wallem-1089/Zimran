@@ -68,10 +68,10 @@ function stockRequestDepartments(PDO $pdo): array
 function stockRequestInventoryItems(PDO $pdo): array
 {
     $stmt = $pdo->query('
-        SELECT id, item_code, item_name, unit
+        SELECT id, item_code, item_name, unit, category
         FROM inventory_items
         WHERE is_active = 1
-        ORDER BY item_name ASC
+        ORDER BY category ASC, item_name ASC
     ');
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }

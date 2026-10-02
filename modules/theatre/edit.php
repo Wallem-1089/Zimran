@@ -70,7 +70,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php $latest = $latestVitalSigns; require __DIR__ . '/../vital_signs/partials/record_card.php'; ?>
         </div>
     <?php endif; ?>
-    <?php $action = 'update.php'; $buttonLabel = 'Update Theatre Record'; require __DIR__ . '/_form.php'; ?>
+    <?php $action = 'update.php'; $buttonLabel = 'Update Theatre Record'; $billableItemsLocked = true; require __DIR__ . '/_form.php'; ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

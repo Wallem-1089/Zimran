@@ -158,6 +158,7 @@ class EncounterEventService
             'RADIOLOGY_COMPLETED' => 'radiology',
             'PRESCRIPTION_CREATED',
             'PRESCRIPTION_DISPENSED' => 'pharmacy',
+            'PHYSIOTHERAPY_REQUESTED',
             'PHYSIOTHERAPY_STARTED',
             'PHYSIOTHERAPY_COMPLETED' => 'physiotherapy',
             'THEATRE_STARTED',

@@ -24,7 +24,7 @@ if (!$permissionService->canEditRadiologyResult($visit, $currentUser)) {
     exit('You cannot edit this radiology result.');
 }
 
-$result = $radiologyService->updateResult($_POST, $currentUser, $_FILES['radiology_chart'] ?? null);
+$result = $radiologyService->updateResult($_POST, $currentUser, null);
 if (($result['success'] ?? false) === true) {
     $uploadResult = $diagnosticAttachmentService->uploadMany(
         'Radiology',

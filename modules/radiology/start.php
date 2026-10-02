@@ -19,14 +19,12 @@ if (!$request) {
 }
 
 $visit = radiologyRequireVisit($visitService, (int)$request['visit_id']);
-if (!$permissionService->canProcessRadiologyRequest($visit, $currentUser)) {
+if (!$permissionService->canEnterRadiologyResult($visit, $currentUser) && !$permissionService->canEditRadiologyResult($visit, $currentUser)) {
     http_response_code(403);
-    exit('You cannot process this radiology request.');
+    exit('You cannot enter this radiology report.');
 }
 
-$result = $radiologyService->startRequest($requestId, $currentUser);
-radiologyFlash($result, 'Radiology request started.');
-
-header('Location: view.php?id=' . $requestId);
+$_SESSION['success_message'] = 'Use Enter Report to work on this radiology request.';
+header('Location: report.php?id=' . $requestId);
 exit;
 

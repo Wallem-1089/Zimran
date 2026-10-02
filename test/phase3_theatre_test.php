@@ -321,7 +321,7 @@ try {
         FROM encounter_events ee
         INNER JOIN visits v ON v.id = ee.visit_id
         WHERE v.visit_number LIKE 'P37-%'
-          AND ee.event_type IN ('THEATRE_STARTED','THEATRE_COMPLETED')
+          AND ee.event_type IN ('THEATRE_REQUESTED','THEATRE_COMPLETED')
     ")->fetchColumn();
     assertTheatre($eventCount >= 2, 'Theatre encounter events were not written.');
 

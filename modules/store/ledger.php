@@ -26,7 +26,8 @@ $filters = [
     'date_from' => $_GET['date_from'] ?? '',
     'date_to' => $_GET['date_to'] ?? '',
 ];
-$rows = $storeService->listStockLedger($filters, $currentUser, 200);
+$showFullHistory = (string)($_GET['full'] ?? '1') !== '0';
+$rows = $storeService->listStockLedger($filters, $currentUser, $showFullHistory ? 0 : 200);
 $items = $storeService->searchItems(['status' => 'all'], $currentUser);
 
 $pageTitle = 'Stock Ledger';
@@ -45,6 +46,11 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="form-actions">
             <button class="btn-secondary" type="button" onclick="window.print()">Print Bin Card / Ledger</button>
             <a class="btn-secondary" href="index.php">Inventory Items</a>
+            <?php if ($showFullHistory): ?>
+                <a class="btn-secondary" href="ledger.php?<?= e(http_build_query(array_merge($_GET, ['full' => '0']))) ?>">Show Recent 200</a>
+            <?php else: ?>
+                <a class="btn-secondary" href="ledger.php?<?= e(http_build_query(array_diff_key($_GET, ['full' => true]))) ?>">Full History</a>
+            <?php endif; ?>
             <?php if ($item): ?><a class="btn-secondary" href="view.php?id=<?= $itemId ?>">Item</a><?php endif; ?>
         </div>
     </div>
@@ -115,7 +121,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="section-header">
             <div>
                 <h2>Stock Movements</h2>
-                <p class="text-muted">Showing latest <?= e((string)count($rows)) ?> matching movement<?= count($rows) === 1 ? '' : 's' ?>.</p>
+                <p class="text-muted"><?= $showFullHistory ? 'Showing all' : 'Showing latest ' ?> <?= e((string)count($rows)) ?> matching movement<?= count($rows) === 1 ? '' : 's' ?>.</p>
             </div>
         </div>
 

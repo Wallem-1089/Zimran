@@ -95,15 +95,8 @@ $requestClosed = $latest !== null && in_array((string)($latest['status'] ?? ''),
             <div class="form-actions">
                 <a href="../ecg/view.php?id=<?= (int)$latest['id'] ?>" class="btn-secondary">View</a>
                 <a href="../ecg/history.php?visit=<?= (int)$visit['id'] ?>" class="btn-secondary">View History</a>
-                <?php if (!$isClosedEncounter && !$requestClosed && !empty($canProcessEcgRequest) && (string)$latest['status'] === 'Requested'): ?>
-                    <form method="post" action="../ecg/start.php">
-                        <?= csrfField() ?>
-                        <input type="hidden" name="id" value="<?= (int)$latest['id'] ?>">
-                        <button type="submit" class="btn-primary">Start</button>
-                    </form>
-                <?php endif; ?>
                 <?php if (!$isClosedEncounter && !$requestClosed && (!empty($canUploadEcgChart) || !empty($canEditEcgReport))): ?>
-                    <a href="../ecg/report.php?id=<?= (int)$latest['id'] ?>" class="btn-secondary">
+                    <a href="../ecg/report.php?id=<?= (int)$latest['id'] ?>" class="btn-primary">
                         <?= $report && !empty($report['report_id']) ? 'Edit ECG Chart/Notes' : 'Upload ECG Chart' ?>
                     </a>
                 <?php endif; ?>

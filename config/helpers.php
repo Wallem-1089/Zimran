@@ -1066,6 +1066,33 @@ function hmsRenderBillableItemSelect(array $items, $selectedId = null, string $l
     echo '</div>';
 }
 
+function hmsRenderDiagnosticAttachmentPicker(
+    string $label,
+    string $helpText = 'Optional. Upload one or more PDF, JPG, or PNG files. Maximum size: 10 MB each.'
+): void {
+    $templateId = 'diagnostic-attachment-template-' . bin2hex(random_bytes(3));
+    $inputId = 'diagnostic-attachments-' . bin2hex(random_bytes(3));
+
+    echo '<div class="form-group diagnostic-attachment-picker" data-diagnostic-attachment-picker>';
+    echo '<label for="' . e($inputId) . '">' . e($label) . '</label>';
+    echo '<div class="diagnostic-attachment-rows" data-diagnostic-attachment-rows>';
+    echo '<div class="diagnostic-attachment-row" data-diagnostic-attachment-row style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;">';
+    echo '<input id="' . e($inputId) . '" name="diagnostic_attachments[]" type="file" accept="application/pdf,image/jpeg,image/png" multiple style="flex:1;">';
+    echo '<button type="button" class="btn-secondary" data-remove-diagnostic-attachment title="Remove attachment row" style="border-radius:999px;width:2rem;height:2rem;padding:0;visibility:hidden;">&times;</button>';
+    echo '</div>';
+    echo '</div>';
+    echo '<button type="button" class="btn-primary" data-add-diagnostic-attachment title="Add another attachment" style="border-radius:999px;width:2.75rem;height:2.75rem;padding:0;font-size:1.5rem;line-height:1;margin-top:.25rem;">+</button>';
+    echo '<small class="form-help text-muted">' . e($helpText) . '</small>';
+    echo '<template id="' . e($templateId) . '">';
+    echo '<div class="diagnostic-attachment-row" data-diagnostic-attachment-row style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;">';
+    echo '<input name="diagnostic_attachments[]" type="file" accept="application/pdf,image/jpeg,image/png" multiple style="flex:1;">';
+    echo '<button type="button" class="btn-secondary" data-remove-diagnostic-attachment title="Remove attachment row" style="border-radius:999px;width:2rem;height:2rem;padding:0;">&times;</button>';
+    echo '</div>';
+    echo '</template>';
+    echo '<script>(function(){var root=document.currentScript.closest("[data-diagnostic-attachment-picker]");if(!root){return;}var rows=root.querySelector("[data-diagnostic-attachment-rows]");var template=root.querySelector("template");var add=root.querySelector("[data-add-diagnostic-attachment]");if(add&&rows&&template){add.addEventListener("click",function(){rows.appendChild(template.content.cloneNode(true));});}root.addEventListener("click",function(event){var button=event.target.closest("[data-remove-diagnostic-attachment]");if(!button){return;}var row=button.closest("[data-diagnostic-attachment-row]");if(row&&rows.querySelectorAll("[data-diagnostic-attachment-row]").length>1){row.remove();}});})();</script>';
+    echo '</div>';
+}
+
 function hmsRenderInventoryItemSelect(array $items, $selectedId = null, string $label = 'Medication / Inventory Item'): void
 {
     $selectedIds = [];

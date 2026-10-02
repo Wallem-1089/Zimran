@@ -47,6 +47,12 @@ if (!$record) {
     exit('Physiotherapy record not found.');
 }
 
+if ($sessionId <= 0 && (int)($record['session_count'] ?? 0) >= 1) {
+    $_SESSION['validation_errors'] = ['Only one physiotherapy session can be added to each physiotherapy record.'];
+    header('Location: view.php?id=' . $recordId . '#sessions');
+    exit;
+}
+
 $visit = physiotherapyRequireVisit($visitService, (int)$record['visit_id']);
 $patient = $patientService->getPatientById((int)$record['patient_id']);
 if (!$patient) {

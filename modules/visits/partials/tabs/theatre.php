@@ -11,6 +11,13 @@ $theatreHistory = $theatreHistory ?? [];
 $canCreateTheatre = $canCreateTheatre ?? false;
 $canEditTheatre = $canEditTheatre ?? false;
 $canCompleteTheatre = $canCompleteTheatre ?? false;
+$theatreBillingClearance = ['cleared' => false, 'label' => 'Not requested'];
+if ($theatreRecord !== null && isset($pdo)) {
+    require_once __DIR__ . '/../../../../services/ClinicalBillingGateService.php';
+    $theatreBillingGate = new ClinicalBillingGateService($pdo);
+    $theatreBillingClearance = $theatreBillingGate->status('Theatre', (int)$theatreRecord['id'], (int)$visit['id'], $currentUser ?? null);
+}
+$theatreBillingCleared = $theatreRecord !== null && !empty($theatreBillingClearance['cleared']);
 ?>
 
 <section id="tab-theatre" class="workspace-tab">
@@ -18,14 +25,14 @@ $canCompleteTheatre = $canCompleteTheatre ?? false;
         <div class="card-header">
             <div>
                 <h2>Theatre</h2>
-                <p>Simple encounter-linked theatre record and operative notes.</p>
+                <p>Theatre request, billing clearance, and operative notes.</p>
             </div>
             <div>
                 <?php if ($theatreRecord === null && $canCreateTheatre): ?>
-                    <a class="btn-primary" href="../theatre/create.php?visit=<?= (int)$visit['id'] ?>">Start Theatre Record</a>
+                    <a class="btn-primary" href="../theatre/create.php?visit=<?= (int)$visit['id'] ?>">Create Theatre Request</a>
                 <?php elseif ($theatreRecord !== null): ?>
                     <a class="btn-secondary" href="../theatre/view.php?id=<?= (int)$theatreRecord['id'] ?>">Open Theatre</a>
-                    <?php if ((string)($theatreRecord['status'] ?? '') === 'Draft' && $canEditTheatre): ?>
+                    <?php if ($theatreBillingCleared && (string)($theatreRecord['status'] ?? '') === 'Draft' && $canEditTheatre): ?>
                         <a class="btn-primary" href="../theatre/edit.php?id=<?= (int)$theatreRecord['id'] ?>">Continue/Edit</a>
                     <?php endif; ?>
                 <?php endif; ?>
@@ -62,11 +69,15 @@ $canCompleteTheatre = $canCompleteTheatre ?? false;
                 <div class="summary-item"><span class="summary-label">Created By</span> <span class="summary-value"><?= e((string)($theatreRecord['created_by_name'] ?? '-')) ?></span></div>
                 <div class="summary-item"><span class="summary-label">Completed By</span> <span class="summary-value"><?= e((string)($theatreRecord['completed_by_name'] ?? 'Not completed')) ?></span></div>
                 <div class="summary-item"><span class="summary-label">Completed At</span> <span class="summary-value"><?= e((string)($theatreRecord['completed_at'] ?? 'Not completed')) ?></span></div>
+                <div class="summary-item"><span class="summary-label">Accounts Clearance</span> <span class="summary-value"><?= e((string)($theatreBillingClearance['label'] ?? 'Unknown')) ?></span></div>
             </div>
+            <?php if (!$theatreBillingCleared): ?>
+                <div class="alert-warning">Awaiting Accounts clearance. Theatre work/editing and completion are locked until payment is cleared.</div>
+            <?php endif; ?>
             <div class="form-actions">
                 <a class="btn-secondary" href="../theatre/view.php?id=<?= (int)$theatreRecord['id'] ?>">View</a>
                 <a class="btn-secondary" href="../theatre/history.php?patient=<?= (int)$patient['id'] ?>">History</a>
-                <?php if ((string)($theatreRecord['status'] ?? '') === 'Draft' && $canCompleteTheatre): ?>
+                <?php if ($theatreBillingCleared && (string)($theatreRecord['status'] ?? '') === 'Draft' && $canCompleteTheatre): ?>
                     <form method="post" action="../theatre/complete.php" style="display:inline">
                         <?= csrfField() ?>
                         <input type="hidden" name="id" value="<?= (int)$theatreRecord['id'] ?>">

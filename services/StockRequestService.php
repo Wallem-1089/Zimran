@@ -96,6 +96,25 @@ class StockRequestService
             }
             $where[] = 'sr.requesting_department_id = :scope_department_id';
             $params[':scope_department_id'] = $departmentId;
+        } elseif ($user !== null && !$this->permissionService->isAdministrator($user)) {
+            $activeDepartmentName = $this->activeDepartmentName($user);
+            if (strcasecmp($activeDepartmentName, 'Pharmacy') === 0) {
+                $where[] = "EXISTS (
+                    SELECT 1
+                    FROM stock_request_items scope_sri
+                    INNER JOIN inventory_items scope_ii ON scope_ii.id = scope_sri.inventory_item_id
+                    WHERE scope_sri.stock_request_id = sr.id
+                      AND scope_ii.category = 'Drug'
+                )";
+            } elseif (strcasecmp($activeDepartmentName, 'Store') === 0) {
+                $where[] = "EXISTS (
+                    SELECT 1
+                    FROM stock_request_items scope_sri
+                    INNER JOIN inventory_items scope_ii ON scope_ii.id = scope_sri.inventory_item_id
+                    WHERE scope_sri.stock_request_id = sr.id
+                      AND scope_ii.category <> 'Drug'
+                )";
+            }
         }
 
         $status = trim((string)($filters['status'] ?? ''));
@@ -210,6 +229,11 @@ class StockRequestService
             }
 
             $items = $this->lockItems($requestId);
+            if (!$this->requestHasIssuableLineForUser($items, $user)) {
+                $this->rollback();
+                return $this->failure(['This stock request has no items your department can issue. Pharmacy issues drug stock; Store issues consumables.']);
+            }
+
             $issuedAny = false;
             $errors = [];
             foreach ($items as $item) {
@@ -217,6 +241,11 @@ class StockRequestService
                 $issueRaw = $quantities[$itemId] ?? 0;
                 $issueQty = is_numeric($issueRaw) ? (float)$issueRaw : 0.0;
                 if ($issueQty <= 0) {
+                    continue;
+                }
+
+                if (!$this->canUserIssueItem($item, $user)) {
+                    $errors[] = $this->issueScopeError($item, $user);
                     continue;
                 }
 
@@ -439,7 +468,7 @@ class StockRequestService
     private function lockItems(int $requestId): array
     {
         $stmt = $this->pdo->prepare('
-            SELECT sri.*, ii.item_name
+            SELECT sri.*, ii.item_name, ii.category
             FROM stock_request_items sri
             INNER JOIN inventory_items ii ON ii.id = sri.inventory_item_id
             WHERE sri.stock_request_id = :request_id
@@ -473,8 +502,25 @@ class StockRequestService
         if (!$user || !$this->permissionService->canViewStockRequests($user)) {
             return false;
         }
-        return $this->canSeeAllRequests($user)
-            || (int)$request['requesting_department_id'] === $this->activeDepartmentId($user);
+        if ((int)$request['requesting_department_id'] === $this->activeDepartmentId($user)) {
+            return true;
+        }
+        if (!$this->canSeeAllRequests($user)) {
+            return false;
+        }
+        if ($this->permissionService->isAdministrator($user)) {
+            return true;
+        }
+
+        $activeDepartmentName = $this->activeDepartmentName($user);
+        if (strcasecmp($activeDepartmentName, 'Pharmacy') === 0) {
+            return $this->requestHasItemCategory((int)$request['id'], true);
+        }
+        if (strcasecmp($activeDepartmentName, 'Store') === 0) {
+            return $this->requestHasItemCategory((int)$request['id'], false);
+        }
+
+        return true;
     }
 
     private function canSeeAllRequests(?array $user): bool
@@ -491,6 +537,78 @@ class StockRequestService
     private function activeDepartmentId(?array $user): int
     {
         return (int)($user['active_department_id'] ?? $user['department_id'] ?? 0);
+    }
+
+    private function activeDepartmentName(?array $user): string
+    {
+        return (string)($user['active_department_name'] ?? $user['department_name'] ?? '');
+    }
+
+    private function requestHasItemCategory(int $requestId, bool $drug): bool
+    {
+        $operator = $drug ? '=' : '<>';
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*)
+            FROM stock_request_items sri
+            INNER JOIN inventory_items ii ON ii.id = sri.inventory_item_id
+            WHERE sri.stock_request_id = :request_id
+              AND ii.category {$operator} 'Drug'
+        ");
+        $stmt->execute([':request_id' => $requestId]);
+        return (int)$stmt->fetchColumn() > 0;
+    }
+
+    public function canIssueRequest(array $request, array $user): bool
+    {
+        if (!in_array((string)($request['status'] ?? ''), ['Pending','Approved','Partially Issued'], true)
+            || !$this->permissionService->canIssueStockRequest($user)
+        ) {
+            return false;
+        }
+
+        return $this->requestHasIssuableLineForUser((array)($request['items'] ?? []), $user);
+    }
+
+    private function requestHasIssuableLineForUser(array $items, array $user): bool
+    {
+        foreach ($items as $item) {
+            $remaining = (float)($item['quantity_requested'] ?? 0) - (float)($item['quantity_issued'] ?? 0);
+            if ($remaining > 0 && $this->canUserIssueItem($item, $user)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function canUserIssueItem(array $item, array $user): bool
+    {
+        if ($this->permissionService->isAdministrator($user)) {
+            return true;
+        }
+
+        $activeDepartmentName = $this->activeDepartmentName($user);
+        $category = (string)($item['category'] ?? '');
+
+        if (strcasecmp($activeDepartmentName, 'Pharmacy') === 0) {
+            return $category === 'Drug';
+        }
+
+        if (strcasecmp($activeDepartmentName, 'Store') === 0) {
+            return $category !== 'Drug';
+        }
+
+        return false;
+    }
+
+    private function issueScopeError(array $item, array $user): string
+    {
+        $itemName = (string)($item['item_name'] ?? 'Selected item');
+        if (strcasecmp($this->activeDepartmentName($user), 'Pharmacy') === 0) {
+            return $itemName . ' is not drug stock. Pharmacy can only issue drug stock requests.';
+        }
+
+        return $itemName . ' is drug stock. Pharmacy must issue drug stock requests after Store moves stock into Pharmacy.';
     }
 
     private function departmentExists(int $departmentId): bool

@@ -33,6 +33,16 @@ if (!$permissionService->canEditPhysiotherapy($visit, $currentUser)) {
     exit('You cannot edit this physiotherapy record.');
 }
 
+$isPhysiotherapyUser = !$permissionService->isAdministrator($currentUser)
+    && (
+        in_array((string)($currentUser['role_name'] ?? ''), ['Physiotherapist', 'Physiotherapy'], true)
+        || in_array((string)($currentUser['department_name'] ?? ''), ['Physiotherapy', 'Physio', 'Rehabilitation'], true)
+    );
+if ($isPhysiotherapyUser) {
+    http_response_code(403);
+    exit('Physiotherapy users can view the doctor-entered physiotherapy record but cannot edit it.');
+}
+
 if (in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)
     && !$permissionService->isAdministrator($currentUser)) {
     http_response_code(403);
@@ -47,6 +57,7 @@ if (isset($_SESSION['old_configured_fields']) && is_array($_SESSION['old_configu
 }
 $action = 'update.php';
 $buttonLabel = 'Update Physiotherapy Record';
+$billableItemsLocked = true;
 
 $pageTitle = 'Edit Physiotherapy Record';
 $moduleStylesheet = '/modules/visits/assets/visits.css';

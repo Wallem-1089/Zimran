@@ -33,7 +33,7 @@ $latestVitalSigns = $vitalSignsService
     ? $vitalSignsService->getLatestByVisit($visitId, $currentUser)
     : null;
 
-$pageTitle = 'Start Theatre Record';
+$pageTitle = 'Create Theatre Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 require __DIR__ . '/../../layouts/header.php';
 require __DIR__ . '/../../layouts/sidebar.php';
@@ -58,7 +58,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <?php endif; ?>
     <div class="page-header">
         <div>
-            <h1>Start Theatre Record</h1>
+            <h1>Create Theatre Request</h1>
             <p><?= e($visit['visit_number'] ?? ('Encounter #' . $visitId)) ?></p>
         </div>
         <div>
@@ -71,7 +71,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php $latest = $latestVitalSigns; require __DIR__ . '/../vital_signs/partials/record_card.php'; ?>
         </div>
     <?php endif; ?>
-    <?php $action = 'save.php'; $buttonLabel = 'Save Draft'; require __DIR__ . '/_form.php'; ?>
+    <?php $action = 'save.php'; $buttonLabel = 'Send Theatre Request to Accounts'; $theatreRequestOnly = true; require __DIR__ . '/_form.php'; ?>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

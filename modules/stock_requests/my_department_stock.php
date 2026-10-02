@@ -55,7 +55,7 @@ $stockUrl = 'my_department_stock.php?view=stock' . $departmentQuery;
 $ledgerUrl = 'my_department_stock.php?view=ledger' . $departmentQuery;
 
 $balances = $storeService->listDepartmentStock($selectedDepartmentId, $currentUser);
-$ledgerLimit = $viewMode === 'ledger' ? 200 : 75;
+$ledgerLimit = $viewMode === 'ledger' ? 0 : 75;
 $ledger = $storeService->listDepartmentLedger($selectedDepartmentId, $currentUser, $ledgerLimit);
 
 $receivedRows = array_values(array_filter(
@@ -247,7 +247,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <div class="card-header">
                 <div>
                     <h2>Stock Ledger</h2>
-                    <p>Latest <?= count($ledger) ?> stock movements for <?= e($selectedDepartmentName) ?>. Use the Store ledger for wider investigation.</p>
+                    <p>All <?= count($ledger) ?> stock movement<?= count($ledger) === 1 ? '' : 's' ?> for <?= e($selectedDepartmentName) ?>. Use the Store ledger for wider investigation.</p>
                 </div>
             </div>
 
