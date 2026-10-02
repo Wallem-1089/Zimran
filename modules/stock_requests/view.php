@@ -13,7 +13,6 @@ if (!$request) {
     exit('Stock request not found.');
 }
 
-$canApprove = (string)$request['status'] === 'Pending' && $permissionService->canReviewStockRequest($currentUser);
 $canIssue = $stockRequestService->canIssueRequest($request, $currentUser);
 $canCancel = in_array((string)$request['status'], ['Pending','Approved','Partially Issued'], true)
     && $permissionService->canCancelStockRequest($currentUser);
@@ -38,13 +37,6 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <button class="btn-secondary" type="button" onclick="window.print()">Print</button>
             <a class="btn-secondary" href="index.php">Stock Requests</a>
             <?php if ($canIssue): ?><a class="btn-primary" href="issue.php?id=<?= (int)$request['id'] ?>">Issue Stock</a><?php endif; ?>
-            <?php if ($canApprove): ?>
-                <form method="post" action="approve.php" style="display:inline">
-                    <?= csrfField() ?>
-                    <input type="hidden" name="id" value="<?= (int)$request['id'] ?>">
-                    <button class="btn-secondary" type="submit">Approve</button>
-                </form>
-            <?php endif; ?>
         </div>
     </div>
 

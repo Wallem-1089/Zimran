@@ -21,6 +21,14 @@ $canEdit = $permissionService->canEditNursing($visit, $currentUser)
 $isClosed = in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true);
 $canRequestBilling = !$isClosed && $permissionService->canCreateBillingRequest($currentUser);
 $dressingConfiguredDisplayValues = $configurableFormService->getResponseValues('dressing_record', 'Dressing Record', (int)$record['id']);
+$linkedDressingStockUsage = [];
+if ($patientStockUsageTablesReady && $patientStockUsageService !== null && $permissionService->canViewPatientStockUsage($currentUser)) {
+    $linkedDressingStockUsage = array_values(array_filter(
+        $patientStockUsageService->listByVisit((int)$record['visit_id'], $currentUser),
+        static fn (array $usage): bool => (string)($usage['source_module'] ?? '') === 'Dressing'
+            && (int)($usage['source_record_id'] ?? 0) === (int)$record['id']
+    ));
+}
 
 $pageTitle = 'Dressing Record';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -68,6 +76,37 @@ require __DIR__ . '/../../../layouts/sidebar.php';
             <p><?php hmsRenderNarrative((string)($record[$field] ?? '-')); ?></p>
         </div>
     <?php endforeach; ?>
+    <div class="card">
+        <h3>Patient Stock Used</h3>
+        <?php if ($linkedDressingStockUsage === []): ?>
+            <p class="text-muted">No patient stock usage is linked to this dressing record.</p>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Quantity</th>
+                            <th>Department</th>
+                            <th>Billing Request</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($linkedDressingStockUsage as $usage): ?>
+                            <tr>
+                                <td><?= e((string)($usage['item_name'] ?? '-')) ?></td>
+                                <td><?= e((string)($usage['quantity'] ?? '-')) ?> <?= e((string)($usage['unit'] ?? '')) ?></td>
+                                <td><?= e((string)($usage['department_name'] ?? '-')) ?></td>
+                                <td><?= !empty($usage['billing_request_id']) ? '#' . (int)$usage['billing_request_id'] . ' ' . e((string)($usage['billing_request_status'] ?? '')) : 'Not requested' ?></td>
+                                <td><a class="btn-secondary btn-sm" href="../../patient_stock_usage/view.php?id=<?= (int)$usage['id'] ?>">View Usage</a></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
     <?php hmsRenderConfiguredValues($dressingConfiguredDisplayValues); ?>
 </main>
 <?php require __DIR__ . '/../../../layouts/footer.php'; ?>

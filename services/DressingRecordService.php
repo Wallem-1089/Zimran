@@ -3,20 +3,30 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/AuditService.php';
+require_once __DIR__ . '/PatientStockUsageService.php';
 require_once __DIR__ . '/PermissionService.php';
 
 class DressingRecordService
 {
     private AuditService $auditService;
     private PermissionService $permissionService;
+    private PatientStockUsageService $patientStockUsageService;
 
     public function __construct(
         private PDO $pdo,
         ?AuditService $auditService = null,
-        ?PermissionService $permissionService = null
+        ?PermissionService $permissionService = null,
+        ?PatientStockUsageService $patientStockUsageService = null
     ) {
         $this->auditService = $auditService ?? new AuditService($pdo);
         $this->permissionService = $permissionService ?? new PermissionService($pdo);
+        $this->patientStockUsageService = $patientStockUsageService ?? new PatientStockUsageService(
+            $pdo,
+            null,
+            null,
+            $this->auditService,
+            $this->permissionService
+        );
     }
 
     public function create(array $data, array $user): array
@@ -59,6 +69,32 @@ class DressingRecordService
             ]);
 
             $recordId = (int)$this->pdo->lastInsertId();
+            $stockUsageRows = $this->prepareStockUsageRows($data, $payload['data']['wound_site']);
+            if ($stockUsageRows['errors'] !== []) {
+                $this->rollback();
+                return $this->failure($stockUsageRows['errors']);
+            }
+
+            $stockUsageIds = [];
+            foreach ($stockUsageRows['data'] as $stockUsageRow) {
+                $usageResult = $this->patientStockUsageService->createUsage([
+                    'visit_id' => (int)$visit['id'],
+                    'patient_id' => (int)$visit['patient_id'],
+                    'department_id' => $stockUsageRow['department_id'] ?? null,
+                    'inventory_item_id' => $stockUsageRow['inventory_item_id'],
+                    'quantity' => $stockUsageRow['quantity'],
+                    'usage_reason' => $stockUsageRow['usage_reason'],
+                    'source_module' => 'Dressing',
+                    'source_record_id' => $recordId,
+                    'request_billing' => !empty($stockUsageRow['request_billing']) ? '1' : '',
+                ], $user);
+
+                if (!($usageResult['success'] ?? false)) {
+                    $this->rollback();
+                    return $this->failure($usageResult['errors'] ?? ['Unable to record dressing stock used.']);
+                }
+                $stockUsageIds[] = (int)$usageResult['patient_stock_usage_id'];
+            }
 
             if (!$this->audit('DRESSING_RECORD_CREATED', $visit, $user, 'Created dressing record #' . $recordId . '.')) {
                 throw new RuntimeException('Unable to audit dressing record creation.');
@@ -69,6 +105,7 @@ class DressingRecordService
             return [
                 'success' => true,
                 'dressing_record_id' => $recordId,
+                'patient_stock_usage_ids' => $stockUsageIds,
                 'visit_id' => (int)$visit['id'],
                 'patient_id' => (int)$visit['patient_id'],
                 'errors' => [],
@@ -202,6 +239,48 @@ class DressingRecordService
         $payload['next_dressing_date'] = $nextDate !== '' ? $nextDate : null;
 
         return ['errors' => $errors, 'data' => $payload];
+    }
+
+    private function prepareStockUsageRows(array $data, string $woundSite): array
+    {
+        $errors = [];
+        $itemIds = (array)($data['stock_inventory_item_id'] ?? []);
+        $quantities = (array)($data['stock_quantity'] ?? []);
+        $reasons = (array)($data['stock_usage_reason'] ?? []);
+        $departmentId = (int)($data['stock_department_id'] ?? 0);
+        $requestBilling = !empty($data['stock_request_billing']);
+        $rows = [];
+
+        foreach ($itemIds as $index => $itemIdRaw) {
+            $itemId = (int)$itemIdRaw;
+            $quantityRaw = $quantities[$index] ?? '';
+            if ($itemId <= 0 && ($quantityRaw === '' || (float)$quantityRaw <= 0)) {
+                continue;
+            }
+            if ($itemId <= 0) {
+                $errors[] = 'Inventory item is required for each stock-used row.';
+                continue;
+            }
+            if (!is_numeric($quantityRaw) || (float)$quantityRaw <= 0) {
+                $errors[] = 'Quantity used must be greater than zero for each stock-used row.';
+                continue;
+            }
+
+            $reason = trim((string)($reasons[$index] ?? ''));
+            if ($reason === '') {
+                $reason = 'Dressing care: ' . $woundSite;
+            }
+
+            $rows[] = [
+                'department_id' => $departmentId > 0 ? $departmentId : null,
+                'inventory_item_id' => $itemId,
+                'quantity' => number_format((float)$quantityRaw, 2, '.', ''),
+                'usage_reason' => $reason,
+                'request_billing' => $requestBilling,
+            ];
+        }
+
+        return ['errors' => array_values(array_unique($errors)), 'data' => $rows];
     }
 
     private function validateMutation(array $visit, array $user, string $permission): array

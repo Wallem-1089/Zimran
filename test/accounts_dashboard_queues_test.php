@@ -47,8 +47,9 @@ foreach ([
 assertAccountsDashboardQueues(
     str_contains($accountsDashboard, 'accountsClinicalBillingCount')
         && str_contains($accountsDashboard, 'accountsPendingRegistrationBillingCount')
-        && str_contains($accountsDashboard, 'accounts-queue-button'),
-    'Accounts dashboard should render actionable queue counts as clickable summary-style buttons.'
+        && str_contains($accountsDashboard, 'accounts-queue-button')
+        && str_contains($accountsDashboard, "COALESCE(i.balance_due, 0.00) > 0.00001"),
+    'Accounts dashboard should render actionable queue counts as clickable summary-style buttons and exclude paid auto-charged requests.'
 );
 
 $patientRegistrationPosition = strpos($accountsDashboard, 'Patient Registration');
@@ -116,8 +117,9 @@ assertAccountsDashboardQueues(
 assertAccountsDashboardQueues(
     str_contains($mainDashboard, "strcasecmp(\$activeDepartmentName, 'Accounts') === 0")
         && str_contains($mainDashboard, "'Accountant'")
-        && str_contains($mainDashboard, '$isAdministrator'),
-    'Main dashboard billing queue buttons should be restricted to Accounts and Super Administrator users.'
+        && str_contains($mainDashboard, '$isAdministrator')
+        && str_contains($mainDashboard, "COALESCE(i.balance_due, 0.00) > 0.00001"),
+    'Main dashboard billing queue buttons should be restricted to Accounts and Super Administrator users and exclude paid auto-charged requests.'
 );
 
 $registrationRequestsPage = file_get_contents(__DIR__ . '/../modules/billing/registration_requests.php');

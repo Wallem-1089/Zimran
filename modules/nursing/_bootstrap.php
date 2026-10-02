@@ -13,6 +13,7 @@ require_once __DIR__ . '/../../services/MedicalRecordService.php';
 require_once __DIR__ . '/../../services/MedicationAdministrationService.php';
 require_once __DIR__ . '/../../services/NursingService.php';
 require_once __DIR__ . '/../../services/PatientService.php';
+require_once __DIR__ . '/../../services/PatientStockUsageService.php';
 require_once __DIR__ . '/../../services/PermissionService.php';
 require_once __DIR__ . '/../../services/ProblemListService.php';
 require_once __DIR__ . '/../../services/VitalSignsService.php';
@@ -91,6 +92,11 @@ $nursingService = new NursingService($pdo, null, null, $permissionService);
 $dressingTablesReady = nursingTableExists($pdo, 'dressing_records');
 $dressingRecordService = $dressingTablesReady
     ? new DressingRecordService($pdo, null, $permissionService)
+    : null;
+$patientStockUsageTablesReady = nursingTableExists($pdo, 'patient_stock_usage')
+    && nursingTableExists($pdo, 'department_stock_balances');
+$patientStockUsageService = $patientStockUsageTablesReady
+    ? new PatientStockUsageService($pdo, null, null, null, $permissionService)
     : null;
 $medicationAdministrationTablesReady = nursingTableExists($pdo, 'medication_administration_records')
     && nursingTableExists($pdo, 'prescriptions');

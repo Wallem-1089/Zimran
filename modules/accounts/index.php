@@ -47,14 +47,33 @@ function accountsClinicalBillingCount(PDO $pdo, string $sourceModule, array $sta
         $params[$placeholder] = $status;
     }
 
+    $requiresPaymentOpenFilter = in_array('Charged', $statuses, true)
+        && accountsTableExists($pdo, 'invoices');
+    $joinSql = $requiresPaymentOpenFilter ? ' LEFT JOIN invoices i ON i.visit_id = br.visit_id' : '';
+    $paidAutochargedFilter = $requiresPaymentOpenFilter
+        ? " AND (br.status <> 'Charged' OR COALESCE(i.balance_due, 0.00) > 0.00001)"
+        : '';
+
     if (strcasecmp($sourceModule, 'Plaster') === 0) {
-        $stmt = $pdo->prepare('SELECT COUNT(*) FROM billing_requests WHERE status IN (' . implode(', ', $statusPlaceholders) . ") AND source_module IN ('Plaster', 'POP')");
+        $stmt = $pdo->prepare(
+            'SELECT COUNT(*) FROM billing_requests br'
+            . $joinSql
+            . ' WHERE br.status IN (' . implode(', ', $statusPlaceholders) . ")"
+            . " AND br.source_module IN ('Plaster', 'POP')"
+            . $paidAutochargedFilter
+        );
         $stmt->execute($params);
         return (int)$stmt->fetchColumn();
     }
 
     $params[':source_module'] = $sourceModule;
-    $stmt = $pdo->prepare('SELECT COUNT(*) FROM billing_requests WHERE status IN (' . implode(', ', $statusPlaceholders) . ') AND source_module = :source_module');
+    $stmt = $pdo->prepare(
+        'SELECT COUNT(*) FROM billing_requests br'
+        . $joinSql
+        . ' WHERE br.status IN (' . implode(', ', $statusPlaceholders) . ')'
+        . ' AND br.source_module = :source_module'
+        . $paidAutochargedFilter
+    );
     $stmt->execute($params);
     return (int)$stmt->fetchColumn();
 }

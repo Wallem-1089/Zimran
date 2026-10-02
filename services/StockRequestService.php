@@ -88,6 +88,8 @@ class StockRequestService
 
         $where = [];
         $params = [];
+        $scope = trim((string)($filters['scope'] ?? ''));
+        $scope = in_array($scope, ['made', 'received'], true) ? $scope : '';
 
         if (!$this->canSeeAllRequests($user)) {
             $departmentId = $this->activeDepartmentId($user);
@@ -99,22 +101,39 @@ class StockRequestService
         } elseif ($user !== null && !$this->permissionService->isAdministrator($user)) {
             $activeDepartmentName = $this->activeDepartmentName($user);
             if (strcasecmp($activeDepartmentName, 'Pharmacy') === 0) {
-                $where[] = "EXISTS (
-                    SELECT 1
-                    FROM stock_request_items scope_sri
-                    INNER JOIN inventory_items scope_ii ON scope_ii.id = scope_sri.inventory_item_id
-                    WHERE scope_sri.stock_request_id = sr.id
-                      AND scope_ii.category IN ('Drug', 'Medication')
-                )";
+                if ($scope !== 'made') {
+                    $where[] = "EXISTS (
+                        SELECT 1
+                        FROM stock_request_items scope_sri
+                        INNER JOIN inventory_items scope_ii ON scope_ii.id = scope_sri.inventory_item_id
+                        WHERE scope_sri.stock_request_id = sr.id
+                          AND scope_ii.category IN ('Drug', 'Medication')
+                    )";
+                }
             } elseif (strcasecmp($activeDepartmentName, 'Store') === 0) {
-                $where[] = "EXISTS (
-                    SELECT 1
-                    FROM stock_request_items scope_sri
-                    INNER JOIN inventory_items scope_ii ON scope_ii.id = scope_sri.inventory_item_id
-                    WHERE scope_sri.stock_request_id = sr.id
-                      AND scope_ii.category NOT IN ('Drug', 'Medication')
-                )";
+                if ($scope !== 'made') {
+                    $where[] = "EXISTS (
+                        SELECT 1
+                        FROM stock_request_items scope_sri
+                        INNER JOIN inventory_items scope_ii ON scope_ii.id = scope_sri.inventory_item_id
+                        WHERE scope_sri.stock_request_id = sr.id
+                          AND scope_ii.category NOT IN ('Drug', 'Medication')
+                    )";
+                }
             }
+        }
+
+        if ($scope !== '' && $user !== null && $this->canSeeAllRequests($user) && !$this->permissionService->isAdministrator($user)) {
+            $departmentId = $this->activeDepartmentId($user);
+            if ($departmentId <= 0) {
+                return [];
+            }
+            if ($scope === 'made') {
+                $where[] = 'sr.requesting_department_id = :stock_request_scope_department_id';
+            } elseif ($scope === 'received') {
+                $where[] = 'sr.requesting_department_id <> :stock_request_scope_department_id';
+            }
+            $params[':stock_request_scope_department_id'] = $departmentId;
         }
 
         $status = trim((string)($filters['status'] ?? ''));

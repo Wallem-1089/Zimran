@@ -29,22 +29,25 @@ class PatientStockUsageService
 
     public function createUsage(array $data, array $user): array
     {
+        $ownsTransaction = !$this->pdo->inTransaction();
         try {
             if (!$this->permissionService->canRecordPatientStockUsage($user)) {
                 return $this->failure(['You are not allowed to record patient stock usage.']);
             }
 
-            $this->pdo->beginTransaction();
+            if ($ownsTransaction) {
+                $this->pdo->beginTransaction();
+            }
 
             $visit = $this->lockVisit((int)($data['visit_id'] ?? 0));
             if (!$visit) {
-                $this->rollback();
+                $this->rollbackIfOwned($ownsTransaction);
                 return $this->failure(['Encounter not found.']);
             }
 
             $errors = $this->validateUsage($data, $visit, $user);
             if ($errors !== []) {
-                $this->rollback();
+                $this->rollbackIfOwned($ownsTransaction);
                 return $this->failure($errors);
             }
 
@@ -96,7 +99,7 @@ class PatientStockUsageService
                 'remarks' => $reason ?? 'Patient stock usage.',
             ], $user);
             if (!($stock['success'] ?? false)) {
-                $this->rollback();
+                $this->rollbackIfOwned($ownsTransaction);
                 return $this->failure($stock['errors'] ?? ['Unable to consume department stock.']);
             }
 
@@ -113,7 +116,7 @@ class PatientStockUsageService
                     'quantity' => $quantity,
                 ], $user);
                 if (!($billing['success'] ?? false)) {
-                    $this->rollback();
+                    $this->rollbackIfOwned($ownsTransaction);
                     return $this->failure($billing['errors'] ?? ['Unable to create billing request.']);
                 }
                 $billingRequestId = (int)$billing['billing_request_id'];
@@ -145,7 +148,9 @@ class PatientStockUsageService
                 throw new RuntimeException('Unable to audit patient stock usage.');
             }
 
-            $this->pdo->commit();
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
 
             return [
                 'success' => true,
@@ -157,7 +162,7 @@ class PatientStockUsageService
                 'errors' => [],
             ];
         } catch (Throwable) {
-            $this->rollback();
+            $this->rollbackIfOwned($ownsTransaction);
             return $this->failure(['Unable to record patient stock usage.']);
         }
     }
@@ -401,6 +406,13 @@ class PatientStockUsageService
     {
         if ($this->pdo->inTransaction()) {
             $this->pdo->rollBack();
+        }
+    }
+
+    private function rollbackIfOwned(bool $ownsTransaction): void
+    {
+        if ($ownsTransaction) {
+            $this->rollback();
         }
     }
 

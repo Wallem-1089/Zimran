@@ -7,9 +7,27 @@ stockRequestRequireReady($stockRequestTablesReady);
 stockRequestRequireView($permissionService, $currentUser);
 
 $status = trim((string)($_GET['status'] ?? ''));
-$requests = $stockRequestService->listRequests(['status' => $status], $currentUser);
+$scope = trim((string)($_GET['scope'] ?? ''));
+$scope = in_array($scope, ['made', 'received'], true) ? $scope : '';
+$requests = $stockRequestService->listRequests(['status' => $status, 'scope' => $scope], $currentUser);
+$activeDepartmentName = (string)(
+    $currentUser['active_department_name']
+    ?? $_SESSION['active_department_name']
+    ?? $currentUser['department_name']
+    ?? ''
+);
+$isPharmacyStockRequestView = strcasecmp($activeDepartmentName, 'Pharmacy') === 0;
+$stockRequestHeading = 'Stock Requests';
+$stockRequestDescription = 'Departments request stock here. Pharmacy handles drug stock requests; Store handles consumable/non-drug stock requests.';
+if ($isPharmacyStockRequestView && $scope === 'received') {
+    $stockRequestHeading = 'Stock Requests Received';
+    $stockRequestDescription = 'Drug stock requests from other departments for Pharmacy issuing.';
+} elseif ($isPharmacyStockRequestView && $scope === 'made') {
+    $stockRequestHeading = 'Stock Requests Made';
+    $stockRequestDescription = 'Stock requests made by Pharmacy to Store.';
+}
 
-$pageTitle = 'Stock Requests';
+$pageTitle = $stockRequestHeading;
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 require __DIR__ . '/../../layouts/header.php';
 require __DIR__ . '/../../layouts/sidebar.php';
@@ -22,10 +40,14 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="page-header">
         <div>
-            <h1>Stock Requests</h1>
-            <p>Departments request stock here. Pharmacy handles drug stock requests; Store handles consumable/non-drug stock requests.</p>
+            <h1><?= e($stockRequestHeading) ?></h1>
+            <p><?= e($stockRequestDescription) ?></p>
         </div>
         <div class="form-actions">
+            <?php if ($isPharmacyStockRequestView): ?>
+                <a class="<?= $scope === 'received' ? 'btn-primary' : 'btn-secondary' ?>" href="index.php?scope=received">Stock Requests Received</a>
+                <a class="<?= $scope === 'made' ? 'btn-primary' : 'btn-secondary' ?>" href="index.php?scope=made">Stock Requests Made</a>
+            <?php endif; ?>
             <a class="btn-secondary" href="my_department_stock.php">My Department Stock</a>
             <?php if ($permissionService->canCreateStockRequest($currentUser)): ?>
                 <a class="btn-primary" href="create.php">New Stock Request</a>
@@ -34,6 +56,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
     </div>
 
     <form class="card" method="get">
+        <?php if ($scope !== ''): ?>
+            <input type="hidden" name="scope" value="<?= e($scope) ?>">
+        <?php endif; ?>
         <div class="form-grid">
             <label>Status
                 <select name="status">
@@ -46,7 +71,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
         <div class="form-actions">
             <button class="btn-primary" type="submit">Filter</button>
-            <a class="btn-secondary" href="index.php">Reset</a>
+            <a class="btn-secondary" href="index.php<?= $scope !== '' ? '?scope=' . e($scope) : '' ?>">Reset</a>
         </div>
     </form>
 
@@ -71,8 +96,6 @@ require __DIR__ . '/../../layouts/sidebar.php';
                     <?php foreach ($requests as $request): ?>
                         <?php
                             $requestDetail = $stockRequestService->getRequestById((int)$request['id'], $currentUser);
-                            $canApprove = (string)$request['status'] === 'Pending'
-                                && $permissionService->canReviewStockRequest($currentUser);
                             $canIssue = $requestDetail !== null
                                 && $stockRequestService->canIssueRequest($requestDetail, $currentUser);
                         ?>
@@ -88,13 +111,6 @@ require __DIR__ . '/../../layouts/sidebar.php';
                                     <a class="btn-secondary btn-sm" href="view.php?id=<?= (int)$request['id'] ?>">View</a>
                                     <?php if ($canIssue): ?>
                                         <a class="btn-primary btn-sm" href="issue.php?id=<?= (int)$request['id'] ?>">Issue Stock</a>
-                                    <?php endif; ?>
-                                    <?php if ($canApprove): ?>
-                                        <form method="post" action="approve.php" style="display:inline">
-                                            <?= csrfField() ?>
-                                            <input type="hidden" name="id" value="<?= (int)$request['id'] ?>">
-                                            <button class="btn-secondary btn-sm" type="submit">Approve</button>
-                                        </form>
                                     <?php endif; ?>
                                 </div>
                             </td>

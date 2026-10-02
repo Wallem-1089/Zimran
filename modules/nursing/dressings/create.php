@@ -23,6 +23,19 @@ unset($_SESSION['old_dressing_record']);
 $dressingConfiguredFields = $configurableFormService->listFields('dressing_record', true);
 $dressingConfiguredValues = $_SESSION['old_configured_fields'] ?? [];
 unset($_SESSION['old_configured_fields']);
+$dressingStockDepartmentId = (int)(
+    $currentUser['active_department_id']
+    ?? $_SESSION['active_department_id']
+    ?? $currentUser['department_id']
+    ?? $visit['current_department_id']
+    ?? 0
+);
+$dressingAvailableStock = ($patientStockUsageTablesReady && $patientStockUsageService !== null)
+    ? $patientStockUsageService->listAvailableDepartmentStock($dressingStockDepartmentId, $currentUser)
+    : [];
+$showDressingStockUsage = $patientStockUsageTablesReady
+    && $patientStockUsageService !== null
+    && $permissionService->canRecordPatientStockUsage($currentUser);
 
 require __DIR__ . '/../../../layouts/header.php';
 require __DIR__ . '/../../../layouts/sidebar.php';

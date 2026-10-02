@@ -27,6 +27,7 @@ $canAccessDepartmentWorklistSidebar = false;
 $canAccessEmergencyWorklistSidebar = false;
 $canAccessEmergencySidebar = false;
 $sidebarStockRequestOnly = false;
+$sidebarIsPharmacyDepartment = false;
 $departmentWorklistCount = 0;
 $emergencyWorklistCount = 0;
 $emergencyWorklistHref = '';
@@ -63,6 +64,7 @@ if ($currentUser && isset($pdo)) {
         $departments,
         true
     );
+    $sidebarIsPharmacyDepartment = $sidebarDepartmentIn(['Pharmacy']);
     $sidebarCan = static function (string $permission) use (
         $sidebarPermissionService,
         $currentUser
@@ -609,15 +611,41 @@ $sidebarBranding = appBranding($pdo ?? null);
 
             <?php if ($canAccessStockRequestsSidebar): ?>
 
-                <li>
+                <?php if ($sidebarIsPharmacyDepartment): ?>
 
-                    <a href="<?= e($baseUrl) ?>/modules/stock_requests/index.php">
+                    <li>
 
-                        Stock Requests
+                        <a href="<?= e($baseUrl) ?>/modules/stock_requests/index.php?scope=received">
 
-                    </a>
+                            Stock Requests Received
 
-                </li>
+                        </a>
+
+                    </li>
+
+                    <li>
+
+                        <a href="<?= e($baseUrl) ?>/modules/stock_requests/index.php?scope=made">
+
+                            Stock Requests Made
+
+                        </a>
+
+                    </li>
+
+                <?php else: ?>
+
+                    <li>
+
+                        <a href="<?= e($baseUrl) ?>/modules/stock_requests/index.php">
+
+                            Stock Requests
+
+                        </a>
+
+                    </li>
+
+                <?php endif; ?>
 
             <?php endif; ?>
 

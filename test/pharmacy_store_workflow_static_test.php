@@ -73,8 +73,12 @@ assertPharmacyStoreWorkflow(is_string($stockRequestService), 'Unable to read sto
 assertPharmacyStoreWorkflow(
     str_contains($stockRequestService, "scope_ii.category IN ('Drug', 'Medication')")
         && str_contains($stockRequestService, "scope_ii.category NOT IN ('Drug', 'Medication')")
+        && str_contains($stockRequestService, "\$scope = in_array(\$scope, ['made', 'received'], true) ? \$scope : ''")
+        && str_contains($stockRequestService, "\$scope === 'made'")
+        && str_contains($stockRequestService, "\$scope === 'received'")
+        && str_contains($stockRequestService, 'sr.requesting_department_id <> :stock_request_scope_department_id')
         && str_contains($stockRequestService, "['drug', 'medication']"),
-    'Stock request service should route legacy Medication category as drug stock.'
+    'Stock request service should route legacy Medication category as drug stock and support made/received queues.'
 );
 
 $stockRequestIndex = file_get_contents(__DIR__ . '/../modules/stock_requests/index.php');
@@ -82,9 +86,22 @@ assertPharmacyStoreWorkflow(is_string($stockRequestIndex), 'Unable to read stock
 assertPharmacyStoreWorkflow(
     str_contains($stockRequestIndex, '$stockRequestService->canIssueRequest')
         && str_contains($stockRequestIndex, 'Issue Stock')
-        && str_contains($stockRequestIndex, 'action="approve.php"')
-        && str_contains($stockRequestIndex, 'Pharmacy handles drug stock requests'),
-    'Stock requests page should expose handling buttons for Pharmacy/Store stock request users.'
+        && !str_contains($stockRequestIndex, 'action="approve.php"')
+        && str_contains($stockRequestIndex, 'Pharmacy handles drug stock requests')
+        && str_contains($stockRequestIndex, 'Stock Requests Received')
+        && str_contains($stockRequestIndex, 'Stock Requests Made')
+        && str_contains($stockRequestIndex, 'index.php?scope=received')
+        && str_contains($stockRequestIndex, 'index.php?scope=made'),
+    'Stock requests page should expose Issue Stock and scoped Pharmacy received/made queues without a redundant Approve button.'
+);
+
+$stockRequestView = file_get_contents(__DIR__ . '/../modules/stock_requests/view.php');
+assertPharmacyStoreWorkflow(is_string($stockRequestView), 'Unable to read stock request view page.');
+assertPharmacyStoreWorkflow(
+    str_contains($stockRequestView, 'Issue Stock')
+        && !str_contains($stockRequestView, 'action="approve.php"')
+        && !str_contains($stockRequestView, '$canApprove'),
+    'Stock request detail page should use Issue Stock as the workflow action and omit Approve.'
 );
 
 $permissionService = file_get_contents(__DIR__ . '/../services/PermissionService.php');
@@ -94,6 +111,9 @@ foreach ([
     "\$department === 'Pharmacy'",
     'canCreateBillableItems',
     'canIssueStock',
+    "canIssueStockRequest(?array \$user = null)",
+    "roleMatches(\$user, ['Store Officer', 'Pharmacist'])",
+    "activeDepartmentName(\$user), ['Store', 'Pharmacy']",
     'canViewStockLedger',
 ] as $needle) {
     assertPharmacyStoreWorkflow(
@@ -132,8 +152,20 @@ assertPharmacyStoreWorkflow(is_string($sidebar), 'Unable to read sidebar.');
 assertPharmacyStoreWorkflow(
     str_contains($sidebar, "['Accountant', 'Accounts', 'Pharmacist']")
         && str_contains($sidebar, "['Store Officer', 'Pharmacist']")
-        && str_contains($sidebar, 'Price Catalogue'),
-    'Sidebar should expose Price Catalogue and inventory access to Pharmacy.'
+        && str_contains($sidebar, 'Price Catalogue')
+        && str_contains($sidebar, 'Stock Requests Received')
+        && str_contains($sidebar, 'Stock Requests Made')
+        && str_contains($sidebar, 'index.php?scope=received')
+        && str_contains($sidebar, 'index.php?scope=made'),
+    'Sidebar should expose Price Catalogue, inventory access, and split Pharmacy stock request queues.'
+);
+
+$pharmacyStockRequestPermissionMigration = file_get_contents(__DIR__ . '/../database/migrations/082_pharmacy_stock_request_permissions_up.sql');
+assertPharmacyStoreWorkflow(
+    is_string($pharmacyStockRequestPermissionMigration)
+        && str_contains($pharmacyStockRequestPermissionMigration, "r.role_name = 'Pharmacist'")
+        && str_contains($pharmacyStockRequestPermissionMigration, "'review_stock_request', 'issue_stock_request'"),
+    'Migration 082 should repair Pharmacist stock request review/issue permissions.'
 );
 
 fwrite(STDOUT, 'PASS: Pharmacy/Store stock workflow static checks passed.' . PHP_EOL);

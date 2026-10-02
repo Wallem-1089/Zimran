@@ -324,6 +324,10 @@ try {
     assertNursing(fileContains(__DIR__ . '/../modules/nursing/update.php', 'requireCsrfToken'), 'Nursing update route missing CSRF protection.');
     assertNursing(fileContains(__DIR__ . '/../modules/nursing/complete.php', 'requireCsrfToken'), 'Nursing complete route missing CSRF protection.');
     assertNursing(fileContains(__DIR__ . '/../modules/nursing/_form.php', 'csrfField'), 'Nursing form missing CSRF field.');
+    assertNursing(fileContains(__DIR__ . '/../modules/nursing/dressings/_form.php', 'Stock Used for Dressing'), 'Dressing Book form should collect stock used.');
+    assertNursing(fileContains(__DIR__ . '/../modules/nursing/dressings/_form.php', 'stock_inventory_item_id[]'), 'Dressing Book form should support inventory item rows.');
+    assertNursing(fileContains(__DIR__ . '/../services/DressingRecordService.php', "'source_module' => 'Dressing'"), 'Dressing records should create linked patient stock usage rows.');
+    assertNursing(fileContains(__DIR__ . '/../modules/nursing/dressings/view.php', 'Patient Stock Used'), 'Dressing record view should show linked patient stock usage.');
 
     $auditCount = (int)$pdo->query("
         SELECT COUNT(*)

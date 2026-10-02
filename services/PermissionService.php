@@ -2041,15 +2041,31 @@ class PermissionService
     public function canReviewStockRequest(?array $user = null): bool
     {
         $user = $user ?? $this->currentUser();
+        if ($user && $this->hasUserPermissionOverride('review_stock_request', $user, 'Deny')) {
+            return false;
+        }
+
         return $this->isAdministrator($user)
-            || $this->hasPermission('review_stock_request', $user);
+            || $this->hasPermission('review_stock_request', $user)
+            || ($user !== null && (
+                $this->roleMatches($user, ['Store Officer', 'Pharmacist'])
+                || in_array($this->activeDepartmentName($user), ['Store', 'Pharmacy'], true)
+            ));
     }
 
     public function canIssueStockRequest(?array $user = null): bool
     {
         $user = $user ?? $this->currentUser();
+        if ($user && $this->hasUserPermissionOverride('issue_stock_request', $user, 'Deny')) {
+            return false;
+        }
+
         return $this->isAdministrator($user)
-            || $this->hasPermission('issue_stock_request', $user);
+            || $this->hasPermission('issue_stock_request', $user)
+            || ($user !== null && (
+                $this->roleMatches($user, ['Store Officer', 'Pharmacist'])
+                || in_array($this->activeDepartmentName($user), ['Store', 'Pharmacy'], true)
+            ));
     }
 
     public function canCancelStockRequest(?array $user = null): bool
