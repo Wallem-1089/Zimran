@@ -1069,6 +1069,7 @@ class StoreService
         $activeDepartmentName = trim($activeDepartmentName);
         $pharmacyDepartmentId = $this->getPharmacyDepartmentId();
         $itemCategory = (string)($item['category'] ?? '');
+        $isDrugStock = $this->isDrugStockCategory($itemCategory);
 
         switch ($transactionType) {
             case 'Receipt':
@@ -1083,7 +1084,7 @@ class StoreService
                     if ($pharmacyDepartmentId === null) {
                         return $this->failure(['Pharmacy department is not available.']);
                     }
-                    if ($itemCategory !== 'Drug') {
+                    if (!$isDrugStock) {
                         return $this->failure(['Pharmacy can only issue drug stock onward to another requesting department.']);
                     }
                     if ((int)$toDepartmentId === $pharmacyDepartmentId || (int)$toDepartmentId === $storeDepartmentId) {
@@ -1094,7 +1095,7 @@ class StoreService
                     if ($pharmacyDepartmentId === null) {
                         return $this->failure(['Pharmacy department is not available.']);
                     }
-                    if ($itemCategory === 'Drug') {
+                    if ($isDrugStock) {
                         if ((int)$toDepartmentId !== $pharmacyDepartmentId) {
                             return $this->failure(['Store can only issue drug stock to Pharmacy. Pharmacy handles drug stock movement to requesting departments.']);
                         }
@@ -1159,6 +1160,11 @@ class StoreService
             'Adjustment' => 'Insufficient stock in the selected department to decrease this quantity.',
             default => 'Insufficient stock for this movement.',
         };
+    }
+
+    private function isDrugStockCategory(string $category): bool
+    {
+        return in_array(strtolower(trim($category)), ['drug', 'medication'], true);
     }
 
     private function normalizeMovementPayload(string $transactionType, array $data): array

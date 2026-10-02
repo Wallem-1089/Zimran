@@ -104,7 +104,7 @@ class StockRequestService
                     FROM stock_request_items scope_sri
                     INNER JOIN inventory_items scope_ii ON scope_ii.id = scope_sri.inventory_item_id
                     WHERE scope_sri.stock_request_id = sr.id
-                      AND scope_ii.category = 'Drug'
+                      AND scope_ii.category IN ('Drug', 'Medication')
                 )";
             } elseif (strcasecmp($activeDepartmentName, 'Store') === 0) {
                 $where[] = "EXISTS (
@@ -112,7 +112,7 @@ class StockRequestService
                     FROM stock_request_items scope_sri
                     INNER JOIN inventory_items scope_ii ON scope_ii.id = scope_sri.inventory_item_id
                     WHERE scope_sri.stock_request_id = sr.id
-                      AND scope_ii.category <> 'Drug'
+                      AND scope_ii.category NOT IN ('Drug', 'Medication')
                 )";
             }
         }
@@ -546,13 +546,13 @@ class StockRequestService
 
     private function requestHasItemCategory(int $requestId, bool $drug): bool
     {
-        $operator = $drug ? '=' : '<>';
+        $operator = $drug ? 'IN' : 'NOT IN';
         $stmt = $this->pdo->prepare("
             SELECT COUNT(*)
             FROM stock_request_items sri
             INNER JOIN inventory_items ii ON ii.id = sri.inventory_item_id
             WHERE sri.stock_request_id = :request_id
-              AND ii.category {$operator} 'Drug'
+              AND ii.category {$operator} ('Drug', 'Medication')
         ");
         $stmt->execute([':request_id' => $requestId]);
         return (int)$stmt->fetchColumn() > 0;
@@ -588,14 +588,14 @@ class StockRequestService
         }
 
         $activeDepartmentName = $this->activeDepartmentName($user);
-        $category = (string)($item['category'] ?? '');
+        $isDrugStock = $this->isDrugStockCategory((string)($item['category'] ?? ''));
 
         if (strcasecmp($activeDepartmentName, 'Pharmacy') === 0) {
-            return $category === 'Drug';
+            return $isDrugStock;
         }
 
         if (strcasecmp($activeDepartmentName, 'Store') === 0) {
-            return $category !== 'Drug';
+            return !$isDrugStock;
         }
 
         return false;
@@ -609,6 +609,11 @@ class StockRequestService
         }
 
         return $itemName . ' is drug stock. Pharmacy must issue drug stock requests after Store moves stock into Pharmacy.';
+    }
+
+    private function isDrugStockCategory(string $category): bool
+    {
+        return in_array(strtolower(trim($category)), ['drug', 'medication'], true);
     }
 
     private function departmentExists(int $departmentId): bool

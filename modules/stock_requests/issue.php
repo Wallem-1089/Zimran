@@ -42,12 +42,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <table class="table">
                 <thead><tr><th>Item</th><th>Requested</th><th>Already Issued</th><th>Remaining</th><th>Issue Now</th></tr></thead>
                 <tbody>
-                <?php foreach (($request['items'] ?? []) as $item): $remaining = max(0, (float)$item['quantity_requested'] - (float)$item['quantity_issued']); $canIssueItem = $stockRequestService->canUserIssueItem($item, $currentUser); ?>
+                <?php foreach (($request['items'] ?? []) as $item): $remaining = max(0, (float)$item['quantity_requested'] - (float)$item['quantity_issued']); $canIssueItem = $stockRequestService->canUserIssueItem($item, $currentUser); $isDrugStockItem = in_array(strtolower(trim((string)($item['category'] ?? ''))), ['drug', 'medication'], true); ?>
                     <tr>
                         <td>
                             <?= e((string)$item['item_code']) ?> - <?= e((string)$item['item_name']) ?>
                             <span class="badge"><?= e((string)($item['category'] ?? '-')) ?></span>
-                            <?php if (!$canIssueItem): ?><br><small class="text-muted">Handled by <?= (string)($item['category'] ?? '') === 'Drug' ? 'Pharmacy' : 'Store' ?>.</small><?php endif; ?>
+                            <?php if (!$canIssueItem): ?><br><small class="text-muted">Handled by <?= $isDrugStockItem ? 'Pharmacy' : 'Store' ?>.</small><?php endif; ?>
                         </td>
                         <td><?= e(number_format((float)$item['quantity_requested'], 2)) ?> <?= e((string)$item['unit']) ?></td>
                         <td><?= e(number_format((float)$item['quantity_issued'], 2)) ?> <?= e((string)$item['unit']) ?></td>

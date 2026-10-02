@@ -17,11 +17,11 @@ foreach ($items as $item) {
 }
 $drugItems = array_values(array_filter(
     $items,
-    static fn (array $item): bool => strcasecmp((string)($item['category'] ?? ''), 'Drug') === 0
+    static fn (array $item): bool => in_array(strtolower(trim((string)($item['category'] ?? ''))), ['drug', 'medication'], true)
 ));
 $consumableItems = array_values(array_filter(
     $items,
-    static fn (array $item): bool => strcasecmp((string)($item['category'] ?? ''), 'Drug') !== 0
+    static fn (array $item): bool => !in_array(strtolower(trim((string)($item['category'] ?? ''))), ['drug', 'medication'], true)
 ));
 $departments = stockRequestDepartments($pdo);
 $canChooseDepartment = $permissionService->isAdministrator($currentUser);
@@ -43,7 +43,7 @@ foreach ((array)($old['inventory_item_id'] ?? []) as $index => $oldItemIdRaw) {
         'notes' => (string)($old['notes'][$index] ?? ''),
     ];
     $oldItem = $itemsById[$oldItemId] ?? [];
-    if (strcasecmp((string)($oldItem['category'] ?? ''), 'Drug') === 0) {
+    if (in_array(strtolower(trim((string)($oldItem['category'] ?? ''))), ['drug', 'medication'], true)) {
         $oldDrugRows[] = $oldRow;
     } else {
         $oldConsumableRows[] = $oldRow;

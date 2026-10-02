@@ -23,7 +23,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="page-header">
         <div>
             <h1>Stock Requests</h1>
-            <p>Departments request stock here. Pharmacy fulfills drug stock requests; Store fulfills consumable stock requests.</p>
+            <p>Departments request stock here. Pharmacy handles drug stock requests; Store handles consumable/non-drug stock requests.</p>
         </div>
         <div class="form-actions">
             <a class="btn-secondary" href="my_department_stock.php">My Department Stock</a>
@@ -69,6 +69,13 @@ require __DIR__ . '/../../layouts/sidebar.php';
                     </thead>
                     <tbody>
                     <?php foreach ($requests as $request): ?>
+                        <?php
+                            $requestDetail = $stockRequestService->getRequestById((int)$request['id'], $currentUser);
+                            $canApprove = (string)$request['status'] === 'Pending'
+                                && $permissionService->canReviewStockRequest($currentUser);
+                            $canIssue = $requestDetail !== null
+                                && $stockRequestService->canIssueRequest($requestDetail, $currentUser);
+                        ?>
                         <tr>
                             <td>#<?= (int)$request['id'] ?></td>
                             <td><?= e((string)$request['requesting_department_name']) ?></td>
@@ -76,7 +83,21 @@ require __DIR__ . '/../../layouts/sidebar.php';
                             <td><?= e((string)$request['status']) ?></td>
                             <td><?= e((string)($request['created_at'] ?? '-')) ?></td>
                             <td><?= e((string)($request['reviewed_by_name'] ?? '-')) ?></td>
-                            <td class="no-print"><a class="btn-secondary btn-sm" href="view.php?id=<?= (int)$request['id'] ?>">View</a></td>
+                            <td class="no-print">
+                                <div class="form-actions">
+                                    <a class="btn-secondary btn-sm" href="view.php?id=<?= (int)$request['id'] ?>">View</a>
+                                    <?php if ($canIssue): ?>
+                                        <a class="btn-primary btn-sm" href="issue.php?id=<?= (int)$request['id'] ?>">Issue Stock</a>
+                                    <?php endif; ?>
+                                    <?php if ($canApprove): ?>
+                                        <form method="post" action="approve.php" style="display:inline">
+                                            <?= csrfField() ?>
+                                            <input type="hidden" name="id" value="<?= (int)$request['id'] ?>">
+                                            <button class="btn-secondary btn-sm" type="submit">Approve</button>
+                                        </form>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody>

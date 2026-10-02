@@ -39,6 +39,7 @@ foreach ([
     'Consumable / Non-drug Stock Request',
     'Drug requests go to Pharmacy',
     'consumable/non-drug requests go to Store',
+    "['drug', 'medication']",
     'data-add-stock-row="drug-stock-request-table"',
     'data-add-stock-row="consumable-stock-request-table"',
     'Store only supplies drug stock into Pharmacy',
@@ -55,6 +56,7 @@ foreach ([
     'Store can only issue drug stock to Pharmacy',
     'Pharmacy can only issue drug stock onward to another requesting department',
     'Consumable stock should be issued directly by Store to the requesting department',
+    'isDrugStockCategory',
     'getPharmacyDepartmentId',
     'Category must be Drug or Consumable',
     'strcasecmp($activeDepartmentName, \'Pharmacy\')',
@@ -65,6 +67,25 @@ foreach ([
         'Store service is missing workflow rule: ' . $needle
     );
 }
+
+$stockRequestService = file_get_contents(__DIR__ . '/../services/StockRequestService.php');
+assertPharmacyStoreWorkflow(is_string($stockRequestService), 'Unable to read stock request service.');
+assertPharmacyStoreWorkflow(
+    str_contains($stockRequestService, "scope_ii.category IN ('Drug', 'Medication')")
+        && str_contains($stockRequestService, "scope_ii.category NOT IN ('Drug', 'Medication')")
+        && str_contains($stockRequestService, "['drug', 'medication']"),
+    'Stock request service should route legacy Medication category as drug stock.'
+);
+
+$stockRequestIndex = file_get_contents(__DIR__ . '/../modules/stock_requests/index.php');
+assertPharmacyStoreWorkflow(is_string($stockRequestIndex), 'Unable to read stock request index page.');
+assertPharmacyStoreWorkflow(
+    str_contains($stockRequestIndex, '$stockRequestService->canIssueRequest')
+        && str_contains($stockRequestIndex, 'Issue Stock')
+        && str_contains($stockRequestIndex, 'action="approve.php"')
+        && str_contains($stockRequestIndex, 'Pharmacy handles drug stock requests'),
+    'Stock requests page should expose handling buttons for Pharmacy/Store stock request users.'
+);
 
 $permissionService = file_get_contents(__DIR__ . '/../services/PermissionService.php');
 assertPharmacyStoreWorkflow(is_string($permissionService), 'Unable to read Permission service.');
