@@ -45,6 +45,13 @@ if (!$patient) {
 
 }
 
+if ($permissionService->isEmergencyPatientProfileRestricted($id)
+    && !$permissionService->canViewRestrictedEmergencyAdministrativeProfile($id, $currentUser)
+) {
+    http_response_code(403);
+    exit('You do not have permission to access this Emergency patient profile.');
+}
+
 $canViewMedicalRecord = $permissionService->canViewMedicalRecord(
     $id,
     $currentUser
@@ -57,6 +64,9 @@ $canDeletePatient = $permissionService->canDeletePatient(
 );
 $isDeletedPatient = (int)($patient['is_deleted'] ?? 0) === 1;
 $registrationGate = $patientService->getRegistrationGateStatus($id);
+$canCreateEmergencyEncounter = !$isDeletedPatient
+    && !empty($registrationGate['can_create_emergency_encounter'])
+    && $permissionService->canUseEmergencyWorkflow($currentUser);
 $canRequestRegistrationRenewal = !$isDeletedPatient
     && (
         $permissionService->canRegisterPatient($currentUser)
@@ -171,6 +181,11 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 <div class="alert-warning">
     <strong>Registration Billing Required</strong>
     <?= e((string)$registrationGate['message']) ?>
+    <?php if ($canCreateEmergencyEncounter && ($registrationGate['status'] ?? '') === 'EmergencyPendingPayment'): ?>
+        <p style="margin-top: 1rem;">
+            <a class="btn-primary" href="../visits/create.php?patient=<?= (int)$patient['id'] ?>">Open Emergency Encounter</a>
+        </p>
+    <?php endif; ?>
     <?php if (($registrationGate['status'] ?? '') === 'Expired' && $canRequestRegistrationRenewal): ?>
         <?php if ($pendingRenewalRequest && $permissionService->canViewBillingRequests($currentUser)): ?>
             <p style="margin-top: 1rem;">

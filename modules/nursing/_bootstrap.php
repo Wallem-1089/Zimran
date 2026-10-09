@@ -60,7 +60,7 @@ function nursingSafetyLink(int $patientId, int $visitId): string
 
 function nursingRequireAccess(PermissionService $permissions, array $visit, array $user): void
 {
-    if (!$permissions->canViewNursing((int)$visit['patient_id'], $user)) {
+    if (!$permissions->canViewNursingForEncounter($visit, $user)) {
         http_response_code(403);
         exit('Nursing access denied.');
     }

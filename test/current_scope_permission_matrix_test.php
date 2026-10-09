@@ -42,6 +42,8 @@ $pharmacy = currentScopeUser('Pharmacist', 'Pharmacy');
 $store = currentScopeUser('Store Officer', 'Store');
 $admin = currentScopeUser('System Administrator', 'Administrator');
 $superAdmin = currentScopeUser('Super Administrator', 'Super Administrator');
+$emergencyDoctor = currentScopeUser('Emergency Doctor', 'Emergency');
+$emergencyNurse = currentScopeUser('Emergency Nurse', 'Emergency');
 
 $doctorEncounter = [
     'id' => 1,
@@ -49,6 +51,15 @@ $doctorEncounter = [
     'visit_status' => 'Doctor',
     'current_department_id' => 4,
     'attending_doctor_id' => (int)$doctor['id'],
+];
+$emergencyEncounter = [
+    'id' => 2,
+    'patient_id' => 2,
+    'visit_type' => 'Emergency',
+    'visit_status' => 'Emergency',
+    'department_name' => 'Emergency',
+    'current_department_id' => 0,
+    'attending_doctor_id' => (int)$emergencyDoctor['id'],
 ];
 
 $requestDepartments = [
@@ -87,8 +98,9 @@ assertCurrentScopePermission(!$permissionService->canReviewBillingRequest($docto
 assertCurrentScopePermission(!$permissionService->canRecordPayment($nurse), 'Nurse should not record payments.');
 
 assertCurrentScopePermission($permissionService->canCreateBillableItems($pharmacy), 'Pharmacy should create price catalogue items.');
-assertCurrentScopePermission($permissionService->canEditBillableItems($pharmacy), 'Pharmacy should edit price catalogue items.');
+assertCurrentScopePermission(!$permissionService->canEditBillableItems($pharmacy), 'Pharmacy should not edit price catalogue item prices after creation.');
 assertCurrentScopePermission($permissionService->canManageBillableItemStatus($pharmacy), 'Pharmacy should manage price catalogue item status.');
+assertCurrentScopePermission($permissionService->canEditBillableItems($superAdmin), 'Super Administrator should edit price catalogue item prices.');
 assertCurrentScopePermission(!$permissionService->canCreateBillableItems($accounts), 'Accounts should not create price catalogue items after Pharmacy ownership change.');
 assertCurrentScopePermission(!$permissionService->canEditBillableItems($accounts), 'Accounts should not edit price catalogue items after Pharmacy ownership change.');
 
@@ -110,6 +122,24 @@ assertCurrentScopePermission($permissionService->canRecordPayment($superAdmin), 
 
 assertCurrentScopePermission($permissionService->canViewEmergency($admin), 'Administrator should view Emergency.');
 assertCurrentScopePermission($permissionService->canViewEmergency($superAdmin), 'Super Administrator should view Emergency.');
+assertCurrentScopePermission(!$permissionService->canUseEmergencyWorkflow($reception), 'Reception should not automatically use Emergency workflow.');
+assertCurrentScopePermission(!$permissionService->canRegisterEmergencyPatient($reception), 'Reception should not automatically register emergency patients.');
+assertCurrentScopePermission(!$permissionService->canRegisterPatient($nurse), 'Nurse should not have broad normal patient registration.');
+assertCurrentScopePermission($permissionService->canRegisterEmergencyPatient($nurse), 'Nurse should be able to register emergency patients only.');
+assertCurrentScopePermission($permissionService->canUseEmergencyWorkflow($emergencyDoctor), 'Emergency Doctor should use Emergency workflow.');
+assertCurrentScopePermission($permissionService->canUseEmergencyWorkflow($emergencyNurse), 'Emergency Nurse should use Emergency workflow.');
+assertCurrentScopePermission($permissionService->canViewEmergencyWorklist($emergencyNurse), 'Emergency Nurse should view Emergency worklist.');
+assertCurrentScopePermission($permissionService->canViewVitalSignsForEncounter($emergencyEncounter, $emergencyNurse), 'Emergency Nurse should view Emergency vital signs.');
+assertCurrentScopePermission($permissionService->canCreateVitalSigns($emergencyEncounter, $emergencyNurse), 'Emergency Nurse should record Emergency vital signs.');
+assertCurrentScopePermission($permissionService->canViewVitalSignsForEncounter($emergencyEncounter, $emergencyDoctor), 'Emergency Doctor should view Emergency vital signs.');
+assertCurrentScopePermission($permissionService->canCreateVitalSigns($emergencyEncounter, $emergencyDoctor), 'Emergency Doctor should record Emergency vital signs.');
+assertCurrentScopePermission($permissionService->canCreateTheatre($emergencyEncounter, $emergencyDoctor), 'Emergency Doctor should create Theatre records from Emergency.');
+assertCurrentScopePermission($permissionService->canCreateLaboratoryRequest($emergencyEncounter, $emergencyDoctor, 'Clinical'), 'Emergency Doctor should create Laboratory requests.');
+assertCurrentScopePermission($permissionService->canCreateRadiologyRequest($emergencyEncounter, $emergencyDoctor, 'Clinical'), 'Emergency Doctor should create Radiology requests.');
+assertCurrentScopePermission($permissionService->canCreateEcgRequest($emergencyEncounter, $emergencyDoctor, 'Clinical'), 'Emergency Doctor should create ECG requests.');
+assertCurrentScopePermission($permissionService->canCreatePopRequest($emergencyEncounter, $emergencyDoctor, 'Clinical'), 'Emergency Doctor should create Plaster requests.');
+assertCurrentScopePermission($permissionService->canCreatePhysiotherapyRequest($emergencyEncounter, $emergencyDoctor, 'Clinical'), 'Emergency Doctor should create Physiotherapy requests.');
+assertCurrentScopePermission($permissionService->canCreatePrescription($emergencyEncounter, $emergencyDoctor, 'Clinical'), 'Emergency Doctor should create prescriptions.');
 
 $emergencyRoleId = (int)$pdo->query("SELECT id FROM roles WHERE role_name IN ('Emergency Nurse','Triage Nurse') ORDER BY FIELD(role_name, 'Emergency Nurse', 'Triage Nurse') LIMIT 1")->fetchColumn();
 $emergencyDepartmentId = (int)$pdo->query("SELECT id FROM departments WHERE department_name = 'Emergency' LIMIT 1")->fetchColumn();
@@ -147,6 +177,8 @@ $selectedEmergency = $pdo->query("
     LIMIT 1
 ")->fetch(PDO::FETCH_ASSOC);
 assertCurrentScopePermission((bool)$selectedEmergency, 'Selected Emergency test user was not created.');
+assertCurrentScopePermission($permissionService->canUseEmergencyWorkflow($selectedEmergency), 'Selected Emergency users should use Emergency workflow.');
+assertCurrentScopePermission($permissionService->canRegisterEmergencyPatient($selectedEmergency), 'Selected Emergency users should register emergency patients.');
 assertCurrentScopePermission($permissionService->canViewEmergencyWorklist($selectedEmergency), 'Selected Emergency users should view Emergency worklist.');
 assertCurrentScopePermission(!$permissionService->canViewReports($selectedEmergency), 'Selected Emergency users should not inherit all reports.');
 assertCurrentScopePermission($permissionService->canViewEmergencyReports($selectedEmergency), 'Selected Emergency users should view Emergency reports.');

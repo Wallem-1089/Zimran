@@ -122,7 +122,7 @@ class VitalSignsService
             return [];
         }
 
-        if ($user !== null && !$this->permissionService->canViewVitalSigns((int)$visit['patient_id'], $user)) {
+        if ($user !== null && !$this->permissionService->canViewVitalSignsForEncounter($visit, $user)) {
             return [];
         }
 
@@ -235,8 +235,7 @@ class VitalSignsService
 
     public function canViewVitalSigns(array $encounter, ?array $user = null): bool
     {
-        $patientId = (int)($encounter['patient_id'] ?? 0);
-        return $patientId > 0 && $this->permissionService->canViewVitalSigns($patientId, $user);
+        return $this->permissionService->canViewVitalSignsForEncounter($encounter, $user);
     }
 
     public function canCreateVitalSigns(array $encounter, ?array $user = null): bool
@@ -264,22 +263,20 @@ class VitalSignsService
             return true;
         }
 
-        return $this->permissionService->hasPermission($permission, $user)
-            && in_array((string)($user['role_name'] ?? ''), ['Doctor', 'Nurse'], true)
-            && $this->permissionService->canViewEncounter($encounter, $user);
+        return $permission === 'edit_vital_signs'
+            ? $this->permissionService->canEditVitalSigns($encounter, $user)
+            : $this->permissionService->canCreateVitalSigns($encounter, $user);
     }
 
     private function validateMutation(array $visit, array $user, string $permission): array
     {
         $errors = [];
-        if (!$this->permissionService->hasPermission($permission, $user)) {
+        $allowed = $permission === 'edit_vital_signs'
+            ? $this->permissionService->canEditVitalSigns($visit, $user)
+            : $this->permissionService->canCreateVitalSigns($visit, $user);
+
+        if (!$allowed) {
             $errors[] = 'You are not allowed to perform this vital signs action.';
-        }
-        if (!$this->permissionService->canViewEncounter($visit, $user)) {
-            $errors[] = 'You cannot access this encounter.';
-        }
-        if (in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)) {
-            $errors[] = 'Completed or cancelled encounters are read-only.';
         }
         return $errors;
     }
@@ -459,7 +456,7 @@ class VitalSignsService
 
     private function canViewRow(array $row, array $user): bool
     {
-        return $this->permissionService->canViewVitalSigns((int)($row['patient_id'] ?? 0), $user);
+        return $this->permissionService->canViewVitalSignsForEncounter($row, $user);
     }
 
     private function audit(
@@ -486,6 +483,7 @@ class VitalSignsService
         return '
             SELECT vs.*,
                    v.visit_number,
+                   v.visit_type,
                    v.visit_status,
                    p.hospital_number,
                    p.first_name,

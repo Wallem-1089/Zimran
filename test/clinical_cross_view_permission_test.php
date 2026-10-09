@@ -66,6 +66,24 @@ assertTrue($permissionService->canCreateVitalSigns($encounter, $nurse), 'Nurse s
 assertTrue($permissionService->canEditVitalSigns($encounter, $nurse), 'Nurse should edit Vital Signs on active encounters.');
 assertTrue($permissionService->canCreateNursing($encounter, $nurse), 'Nurse should create Nursing on active encounters.');
 
+$emergencyEncounter = $encounter + [
+    'visit_type' => 'Emergency',
+    'department_name' => 'Emergency',
+];
+$normalDoctorEncounter = $encounter + [
+    'visit_type' => 'Outpatient',
+    'department_name' => 'Doctor',
+];
+$emergencyNurse = clinicalPermissionUser('Emergency Nurse', 'Emergency');
+assertTrue($permissionService->canViewNursingForEncounter($emergencyEncounter, $emergencyNurse), 'Emergency Nurse should view Nursing in an Emergency encounter.');
+assertTrue($permissionService->canCreateNursing($emergencyEncounter, $emergencyNurse), 'Emergency Nurse should create Nursing entries in an Emergency encounter.');
+assertTrue(!$permissionService->canCreateNursing($normalDoctorEncounter, $emergencyNurse), 'Emergency Nurse should not receive broad Nursing mutation outside Emergency encounters.');
+
+$emergencyDoctor = clinicalPermissionUser('Emergency Doctor', 'Emergency');
+assertTrue($permissionService->canViewNursingForEncounter($emergencyEncounter, $emergencyDoctor), 'Emergency Doctor should view Nursing in an Emergency encounter.');
+assertTrue($permissionService->canCreateNursing($emergencyEncounter, $emergencyDoctor), 'Emergency Doctor should create Nursing entries in an Emergency encounter.');
+assertTrue(!$permissionService->canCreateNursing($normalDoctorEncounter, $emergencyDoctor), 'Emergency Doctor should not receive broad Nursing mutation outside Emergency encounters.');
+
 foreach (array_slice($clinicalUsers, 2) as $user) {
     assertTrue(!$permissionService->canEditVitalSigns($encounter, $user), $user['role_name'] . ' should not edit Vital Signs.');
 }

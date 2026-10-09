@@ -28,7 +28,7 @@ function vitalSignsRequireVisit(VisitService $service, int $visitId): array
 
 function vitalSignsRequireAccess(PermissionService $permissions, array $visit, array $user): void
 {
-    if (!$permissions->canViewVitalSigns((int)$visit['patient_id'], $user)) {
+    if (!$permissions->canViewVitalSignsForEncounter($visit, $user)) {
         http_response_code(403);
         exit('Vital signs access denied.');
     }

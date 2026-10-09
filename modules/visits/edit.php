@@ -14,6 +14,7 @@ require_once __DIR__ . '/../../config/helpers.php';
 
 require_once __DIR__ . '/../../services/VisitService.php';
 require_once __DIR__ . '/../../services/EncounterStateService.php';
+require_once __DIR__ . '/../../services/PermissionService.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -57,6 +58,7 @@ if (!$visitId) {
 */
 
 $visitService = new VisitService($pdo);
+$permissionService = new PermissionService($pdo);
 
 $visit = $visitService->getVisitById($visitId);
 
@@ -215,17 +217,21 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
             <?php
 
+            $canUseEmergencyWorkflow = $permissionService->canUseEmergencyWorkflow($currentUser ?? ($_SESSION['user'] ?? null));
+
             $types = [
 
                 'Outpatient',
 
                 'Inpatient',
 
-                'Emergency',
-
                 'Referral'
 
             ];
+
+            if ($canUseEmergencyWorkflow || $visit['visit_type'] === 'Emergency') {
+                $types[] = 'Emergency';
+            }
 
             foreach ($types as $type):
 

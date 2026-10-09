@@ -26,6 +26,7 @@ require_once __DIR__ . '/../../services/VisitService.php';
 $currentUser = $currentUser ?? ($_SESSION['user'] ?? null);
 $permissionService = new PermissionService($pdo);
 $canRegisterPatient = $permissionService->canRegisterPatient($currentUser);
+$canRegisterEmergencyPatient = $permissionService->canRegisterEmergencyPatient($currentUser);
 
 require_once __DIR__ . '/../../layouts/header.php';
 require_once __DIR__ . '/../../layouts/sidebar.php';
@@ -52,9 +53,10 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
     </div>
 
-    <?php if ($canRegisterPatient): ?>
-    <div>
+    <?php if ($canRegisterPatient || $canRegisterEmergencyPatient): ?>
+    <div class="form-actions">
 
+        <?php if ($canRegisterPatient): ?>
         <a
             href="register.php"
             class="btn-primary">
@@ -62,6 +64,17 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
             + Register Patient
 
         </a>
+        <?php endif; ?>
+
+        <?php if ($canRegisterEmergencyPatient): ?>
+        <a
+            href="register.php?type=Emergency"
+            class="btn-secondary">
+
+            + Emergency Registration
+
+        </a>
+        <?php endif; ?>
 
     </div>
     <?php endif; ?>

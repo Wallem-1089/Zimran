@@ -242,7 +242,13 @@ class VisitService
     int $createdBy
 ): array {
 
-    if (!$this->permissionService->hasPermission('create_encounter')) {
+    $creator = $this->loadUserContext($createdBy);
+    $isEmergencyEncounter = strcasecmp((string)($visit['visit_type'] ?? ''), 'Emergency') === 0
+        || $this->isEmergencyDepartmentId((int)($visit['current_department_id'] ?? 0));
+
+    if (!$this->permissionService->hasPermission('create_encounter', $creator)
+        && !($isEmergencyEncounter && $this->permissionService->canUseEmergencyWorkflow($creator))
+    ) {
         $this->permissionService->logDenied(
             $createdBy,
             null,
@@ -266,11 +272,14 @@ class VisitService
     |--------------------------------------------------------------------------
     */
 
-    $errors = $this->validate($visit);
+    $errors = $this->validate($visit, $creator);
 
     if (empty($errors)) {
         $registrationGate = $this->patientService->getRegistrationGateStatus((int)($visit['patient_id'] ?? 0));
-        if (empty($registrationGate['can_create_encounter'])) {
+        $canCreateEmergencyEncounter = !empty($registrationGate['can_create_emergency_encounter'])
+            && $isEmergencyEncounter
+            && $this->permissionService->canUseEmergencyWorkflow($creator);
+        if (empty($registrationGate['can_create_encounter']) && !$canCreateEmergencyEncounter) {
             $errors[] = (string)($registrationGate['message'] ?? 'Patient registration payment must be cleared before creating an encounter.');
         }
     }
@@ -526,7 +535,7 @@ class VisitService
     |--------------------------------------------------------------------------
     */
 
-    private function validate(array $visit): array
+    private function validate(array $visit, ?array $user = null): array
     {
         $errors = [];
 
@@ -570,6 +579,14 @@ class VisitService
 
         }
 
+        if (
+            !empty($visit['visit_type'])
+            && strcasecmp((string)$visit['visit_type'], 'Emergency') === 0
+            && !$this->permissionService->canUseEmergencyWorkflow($user)
+        ) {
+            $errors[] = 'You are not allowed to create emergency encounters.';
+        }
+
         if (empty($visit['current_department_id'])) {
 
             $errors[] = 'Receiving department is required.';
@@ -578,6 +595,10 @@ class VisitService
 
             $errors[] = 'The selected department works from clinical requests or internal workflows and cannot be the initial encounter department.';
 
+        } elseif ($this->isEmergencyDepartmentId((int)$visit['current_department_id'])
+            && !$this->permissionService->canUseEmergencyWorkflow($user)
+        ) {
+            $errors[] = 'You are not allowed to send encounters directly to Emergency.';
         }
 
         return $errors;
@@ -1086,6 +1107,14 @@ public function canAccessDepartmentWorkspace(
 
             $errors[] = 'Department is required.';
 
+        }
+
+        $editor = $this->loadUserContext($updatedBy);
+        if (!empty($visit['visit_type'])
+            && strcasecmp((string)$visit['visit_type'], 'Emergency') === 0
+            && !$this->permissionService->canUseEmergencyWorkflow($editor)
+        ) {
+            $errors[] = 'You are not allowed to mark encounters as Emergency.';
         }
 
         if (!empty($errors)) {
@@ -4115,6 +4144,47 @@ public function receiveVisit(
         $department = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return $department !== false && $this->isAllowedInitialEncounterDepartmentRow($department);
+    }
+
+    private function isEmergencyDepartmentId(int $departmentId): bool
+    {
+        if ($departmentId <= 0) {
+            return false;
+        }
+
+        $stmt = $this->pdo->prepare('
+            SELECT department_name
+            FROM departments
+            WHERE id = :id
+              AND is_active = 1
+            LIMIT 1
+        ');
+        $stmt->execute([':id' => $departmentId]);
+
+        return strcasecmp((string)$stmt->fetchColumn(), 'Emergency') === 0;
+    }
+
+    private function loadUserContext(int $userId): ?array
+    {
+        if ($userId <= 0) {
+            return null;
+        }
+
+        try {
+            $stmt = $this->pdo->prepare('
+                SELECT u.*, r.role_name, d.department_name
+                FROM users u
+                INNER JOIN roles r ON r.id = u.role_id
+                INNER JOIN departments d ON d.id = u.department_id
+                WHERE u.id = :id
+                LIMIT 1
+            ');
+            $stmt->execute([':id' => $userId]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $user ?: null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function isAllowedInitialEncounterDepartmentRow(array $department): bool

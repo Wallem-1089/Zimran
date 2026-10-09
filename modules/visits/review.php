@@ -14,6 +14,7 @@ require_once __DIR__ . '/../../config/helpers.php';
 
 require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/VisitService.php';
+require_once __DIR__ . '/../../services/PermissionService.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -65,6 +66,18 @@ foreach ($fields as $field) {
 
 $patientService = new PatientService($pdo);
 $visitService   = new VisitService($pdo);
+$permissionService = new PermissionService($pdo);
+$currentUser = $currentUser ?? ($_SESSION['user'] ?? null);
+$canUseEmergencyWorkflow = $permissionService->canUseEmergencyWorkflow($currentUser);
+
+if (strcasecmp((string)($visit['visit_type'] ?? ''), 'Emergency') === 0 && !$canUseEmergencyWorkflow) {
+    $_SESSION['validation_errors'] = [
+        'You are not allowed to create emergency encounters.'
+    ];
+    $_SESSION['old_visit'] = $_POST;
+    header('Location: create.php?patient=' . (int)$visit['patient_id']);
+    exit;
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -93,6 +106,11 @@ if (!$patient) {
 $departmentName = 'Unknown Department';
 
 foreach ($visitService->getEncounterCreationDepartments() as $department) {
+    if (!$canUseEmergencyWorkflow
+        && strcasecmp((string)($department['department_name'] ?? ''), 'Emergency') === 0
+    ) {
+        continue;
+    }
 
     if (
 
@@ -143,7 +161,7 @@ $moduleScript =
 
 function reviewItem(
     string $label,
-    string $value
+    ?string $value
 ): void {
 
 ?>
@@ -160,7 +178,7 @@ function reviewItem(
 
         <?= nl2br(
 
-            e($value !== '' ? $value : '-')
+            e($value !== null && $value !== '' ? $value : '-')
 
         ) ?>
 
@@ -225,7 +243,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
             'Hospital Number',
 
-            $patient['hospital_number']
+            (string)($patient['hospital_number'] ?? '')
 
         );
 
@@ -233,11 +251,11 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
             'Patient Name',
 
-            $patient['first_name'] .
+            (string)($patient['first_name'] ?? '') .
 
             ' ' .
 
-            $patient['last_name']
+            (string)($patient['last_name'] ?? '')
 
         );
 

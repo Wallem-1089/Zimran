@@ -13,7 +13,10 @@ $currentDate = date('l, d F Y');
 $permissionService = new PermissionService($pdo);
 $isAdministrator = $permissionService->isAdministrator($currentUser);
 $canRegisterPatient = $permissionService->canRegisterPatient($currentUser);
-$canCreateEncounter = $permissionService->hasPermission('create_encounter', $currentUser);
+$canRegisterEmergencyPatient = $permissionService->canRegisterEmergencyPatient($currentUser);
+$canUseEmergencyWorkflow = $permissionService->canUseEmergencyWorkflow($currentUser);
+$canCreateEncounter = $permissionService->hasPermission('create_encounter', $currentUser)
+    || $canUseEmergencyWorkflow;
 $canViewReports = $permissionService->canViewReports($currentUser)
     || $permissionService->canViewClinicalReports($currentUser)
     || $permissionService->canViewFinancialReports($currentUser)
@@ -456,6 +459,9 @@ require_once __DIR__ . '/../layouts/sidebar.php';
             <?php else: ?>
                 <?php if ($canRegisterPatient): ?>
                     <a href="../modules/patients/register.php">Register Patient</a>
+                <?php endif; ?>
+                <?php if ($canRegisterEmergencyPatient): ?>
+                    <a href="../modules/patients/register.php?type=Emergency">Emergency Registration</a>
                 <?php endif; ?>
                 <?php if ($canCreateEncounter): ?>
                     <a href="../modules/visits/create.php">New Encounter</a>

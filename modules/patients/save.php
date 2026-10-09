@@ -138,20 +138,29 @@ if (!$currentUser) {
 
 $permissionService = new PermissionService($pdo);
 
-if (!$permissionService->canRegisterPatient($currentUser)) {
-    http_response_code(403);
-    exit('You do not have permission to register patients.');
-}
-
 $registeredBy = (int)$currentUser['id'];
 
 if (($_POST['action'] ?? '') === 'initial_registration') {
+    $registrationType = strcasecmp((string)($_POST['registration_type'] ?? 'Normal'), 'Emergency') === 0
+        ? 'Emergency'
+        : 'Normal';
+
+    if ($registrationType === 'Emergency') {
+        if (!$permissionService->canRegisterEmergencyPatient($currentUser)) {
+            http_response_code(403);
+            exit('You do not have permission to register emergency patients.');
+        }
+    } elseif (!$permissionService->canRegisterPatient($currentUser)) {
+        http_response_code(403);
+        exit('You do not have permission to register patients.');
+    }
+
     $result = $registrationBillingService->createInitialRegistration([
         'first_name' => trim($_POST['first_name'] ?? ''),
         'middle_name' => trim($_POST['middle_name'] ?? ''),
         'last_name' => trim($_POST['last_name'] ?? ''),
         'phone' => trim($_POST['phone'] ?? ''),
-        'registration_type' => trim($_POST['registration_type'] ?? 'Normal'),
+        'registration_type' => $registrationType,
     ], $currentUser);
 
     if (empty($result['success'])) {
@@ -161,11 +170,17 @@ if (($_POST['action'] ?? '') === 'initial_registration') {
         exit;
     }
 
-    $_SESSION['success_message'] =
-        'Initial details saved. Accounts must clear the registration fee before the patient ID is generated.';
+    $_SESSION['success_message'] = $registrationType === 'Emergency'
+        ? 'Emergency initial details saved. Emergency encounter can be opened immediately; Accounts will clear the emergency registration fee later.'
+        : 'Initial details saved. Accounts must clear the registration fee before the patient ID is generated.';
 
     header('Location: view.php?id=' . (int)$result['patient_id']);
     exit;
+}
+
+if (!$permissionService->canRegisterPatient($currentUser)) {
+    http_response_code(403);
+    exit('You do not have permission to register patients.');
 }
 
 /*

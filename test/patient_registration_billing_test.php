@@ -67,6 +67,7 @@ assertRegistrationBilling((float)$result['amount'] === 30000.0, 'Normal registra
 
 $gate = $patientService->getRegistrationGateStatus($patientId);
 assertRegistrationBilling(empty($gate['can_create_encounter']), 'Pending registration should block encounters.');
+assertRegistrationBilling(empty($gate['can_create_emergency_encounter']), 'Normal pending registration should not allow emergency encounter bypass.');
 
 $paid = $service->markPaid((int)$result['billing_request_id'], $users['dev_accounts'], 'Test payment');
 assertRegistrationBilling(($paid['success'] ?? false) === true, 'Accounts could not clear registration payment.');

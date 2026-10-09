@@ -37,6 +37,13 @@ class PatientRegistrationBillingService
             : self::NORMAL_REGISTRATION_FEE;
 
         $errors = [];
+        if ($registrationType === 'Emergency') {
+            if (!$this->permissionService->canRegisterEmergencyPatient($user)) {
+                $errors[] = 'You are not allowed to create emergency registration billing requests.';
+            }
+        } elseif (!$this->permissionService->canRegisterPatient($user)) {
+            $errors[] = 'You are not allowed to create normal registration billing requests.';
+        }
         if ($firstName === '') {
             $errors[] = 'First name is required.';
         }

@@ -15,6 +15,7 @@ require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../services/PatientService.php';
 require_once __DIR__ . '/../../services/VisitService.php';
 require_once __DIR__ . '/../../services/PatientRegistrationBillingService.php';
+require_once __DIR__ . '/../../services/PermissionService.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -60,6 +61,9 @@ if (!$patientId) {
 $patientService = new PatientService($pdo);
 $visitService   = new VisitService($pdo);
 $registrationBillingService = new PatientRegistrationBillingService($pdo);
+$permissionService = new PermissionService($pdo);
+$currentUser = $currentUser ?? ($_SESSION['user'] ?? null);
+$canUseEmergencyWorkflow = $permissionService->canUseEmergencyWorkflow($currentUser);
 
 /*
 |--------------------------------------------------------------------------
@@ -86,7 +90,11 @@ if ((int)($patient['is_deleted'] ?? 0) === 1) {
 }
 
 $registrationGate = $patientService->getRegistrationGateStatus($patientId);
-if (empty($registrationGate['can_create_encounter'])) {
+$canCreateEmergencyEncounterFromGate = !empty($registrationGate['can_create_emergency_encounter'])
+    && $canUseEmergencyWorkflow;
+$emergencyOnlyEncounter = empty($registrationGate['can_create_encounter'])
+    && $canCreateEmergencyEncounterFromGate;
+if (empty($registrationGate['can_create_encounter']) && !$canCreateEmergencyEncounterFromGate) {
     $currentUser = $currentUser ?? ($_SESSION['user'] ?? null);
     if (($registrationGate['status'] ?? '') === 'Expired' && $currentUser) {
         $registrationBillingService->ensureRenewalRequest($patientId, $currentUser);
@@ -131,7 +139,21 @@ if ($activeVisit !== null) {
 */
 
 $departments = $visitService->getEncounterCreationDepartments();
+if ($emergencyOnlyEncounter) {
+    $departments = array_values(array_filter(
+        $departments,
+        static fn (array $department): bool => strcasecmp((string)($department['department_name'] ?? ''), 'Emergency') === 0
+    ));
+} elseif (!$canUseEmergencyWorkflow) {
+    $departments = array_values(array_filter(
+        $departments,
+        static fn (array $department): bool => strcasecmp((string)($department['department_name'] ?? ''), 'Emergency') !== 0
+    ));
+}
 $defaultDepartmentId = $visitService->getDefaultEncounterDepartmentId();
+if ($emergencyOnlyEncounter && $departments !== []) {
+    $defaultDepartmentId = (int)$departments[0]['id'];
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -198,6 +220,13 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
 </div>
 
+<?php endif; ?>
+
+<?php if ($emergencyOnlyEncounter): ?>
+<div class="alert-warning">
+    <strong>Emergency registration payment pending.</strong>
+    This encounter can be opened for Emergency care before Accounts clears the registration fee.
+</div>
 <?php endif; ?>
 
 <div class="card">
@@ -312,17 +341,19 @@ required>
 
 <?php
 
-$types = [
+$types = $emergencyOnlyEncounter ? ['Emergency'] : [
 
 'Outpatient',
 
 'Inpatient',
 
-'Emergency',
-
 'Referral'
 
 ];
+
+if (!$emergencyOnlyEncounter && $canUseEmergencyWorkflow) {
+    $types[] = 'Emergency';
+}
 
 foreach ($types as $type) :
 

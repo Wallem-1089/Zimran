@@ -127,7 +127,7 @@ if (!$visit) {
 
 $permissionService = new PermissionService($pdo);
 
-if (!$permissionService->canViewEncounter($visit, $currentUser)) {
+if (!$permissionService->canViewEncounterWorkspace($visit, $currentUser)) {
 
     $permissionService->logDenied(
         isset($currentUser['id']) ? (int)$currentUser['id'] : null,
@@ -315,7 +315,7 @@ $canCompleteConsultation = $permissionService->canCompleteConsultation($visit, $
 $vitalSignsService = $vitalSignsTablesReady ? new VitalSignsService($pdo, null, $permissionService) : null;
 $vitalSignsHistory = $vitalSignsService ? $vitalSignsService->listByVisit($visitId, $currentUser) : [];
 $latestVitalSigns = $vitalSignsHistory[0] ?? null;
-$canViewVitalSigns = $permissionService->canViewVitalSigns((int)$visit['patient_id'], $currentUser);
+$canViewVitalSigns = $permissionService->canViewVitalSignsForEncounter($visit, $currentUser);
 $canCreateVitalSigns = $permissionService->canCreateVitalSigns($visit, $currentUser);
 $canEditVitalSigns = $permissionService->canEditVitalSigns($visit, $currentUser);
 $nursingService = $nursingTablesReady ? new NursingService($pdo, null, null, $permissionService) : null;
@@ -331,7 +331,7 @@ $drugChartPrescriptions = $medicationAdministrationService ? $medicationAdminist
 $diabetesMonitoringService = $diabetesMonitoringTablesReady ? new DiabetesMonitoringService($pdo, null, $permissionService) : null;
 $diabetesMonitoringRecords = $diabetesMonitoringService ? $diabetesMonitoringService->listByVisit($visitId, $currentUser) : [];
 $latestDiabetesMonitoringRecord = $diabetesMonitoringRecords[0] ?? null;
-$canViewNursing = $permissionService->canViewNursing((int)$visit['patient_id'], $currentUser);
+$canViewNursing = $permissionService->canViewNursingForEncounter($visit, $currentUser);
 $canCreateNursing = $permissionService->canCreateNursing($visit, $currentUser);
 $canEditNursing = $permissionService->canEditNursing($visit, $currentUser);
 $canCompleteNursing = $permissionService->canCompleteNursing($visit, $currentUser);

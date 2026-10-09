@@ -34,6 +34,9 @@ $enableWritingMode ??= isset($permissionService)
     <?php endif; ?>
 
     <?php hmsRenderInventoryItemSelect($inventoryItems, $selectedInventoryItemIds); ?>
+    <?php if ($requestSource === 'Clinical'): ?>
+        <p class="form-help">For multiple medications/items, add the same number of billable items. The first billable item is paired with the first medication/item, the second with the second, and so on.</p>
+    <?php endif; ?>
 
     <div class="form-group">
         <label for="medication_name">Medication Name Snapshot</label>

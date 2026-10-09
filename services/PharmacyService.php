@@ -50,18 +50,31 @@ class PharmacyService
     public function createPrescription(array $data, array $user): array
     {
         $inventoryItemIds = $this->normalizeInventoryItemIds($data);
+        $billableItemIdsForBatch = $this->normalizePostedBillableItemIds($data);
         if (empty($data['_hms_single_prescription_batch']) && count($inventoryItemIds) > 1) {
+            if (strtoupper(trim((string)($data['prescription_source'] ?? 'Clinical'))) !== 'DIRECT'
+                && count($billableItemIdsForBatch) !== count($inventoryItemIds)
+            ) {
+                return $this->failure([
+                    'The number of billable items must match the number of selected medication / inventory items.'
+                ]);
+            }
+
             $prescriptionIds = [];
-            foreach ($inventoryItemIds as $inventoryItemId) {
+            foreach ($inventoryItemIds as $index => $inventoryItemId) {
                 $single = $data;
                 $single['inventory_item_id'] = $inventoryItemId;
                 $single['inventory_item_ids'] = [];
                 $single['_hms_single_prescription_batch'] = '1';
 
-                $linkedBillableItemId = $this->billableItemIdForInventoryItem($inventoryItemId);
-                if ($linkedBillableItemId > 0) {
-                    $single['suggested_billable_item_id'] = $linkedBillableItemId;
-                    $single['suggested_billable_item_ids'] = [$linkedBillableItemId];
+                $pairedBillableItemId = $billableItemIdsForBatch[$index] ?? 0;
+                if ($pairedBillableItemId > 0) {
+                    $single['suggested_billable_item_id'] = $pairedBillableItemId;
+                    $single['suggested_billable_item_ids'] = [$pairedBillableItemId];
+                } elseif (strtoupper(trim((string)($data['prescription_source'] ?? 'Clinical'))) !== 'DIRECT') {
+                    return $this->failure([
+                        'Each selected medication / inventory item must have a matching billable item.'
+                    ]);
                 }
 
                 $result = $this->createPrescription($single, $user);
@@ -89,6 +102,15 @@ class PharmacyService
                 $data['suggested_billable_item_id'] = $linkedBillableItemId;
                 $data['suggested_billable_item_ids'] = [$linkedBillableItemId];
             }
+        }
+
+        if (strtoupper(trim((string)($data['prescription_source'] ?? 'Clinical'))) !== 'DIRECT'
+            && count($inventoryItemIds) === 1
+            && count($this->normalizePostedBillableItemIds($data)) > 1
+        ) {
+            return $this->failure([
+                'The number of billable items must match the number of selected medication / inventory items.'
+            ]);
         }
 
         try {
@@ -730,6 +752,7 @@ class PharmacyService
         $quantity = $this->wholeQuantity($data['quantity'] ?? 0);
         $inventoryItemId = (int)($data['inventory_item_id'] ?? 0);
         $suggestedBillableItemIds = ClinicalBillingGateService::normalizeBillableItemIds($data);
+        $postedBillableItemIds = $this->normalizePostedBillableItemIds($data);
 
         if ($visitId <= 0) {
             $errors[] = 'Encounter is required.';
@@ -757,6 +780,10 @@ class PharmacyService
 
         if (mb_strlen($dosage) > 255 || mb_strlen($frequency) > 255 || mb_strlen($duration) > 255) {
             $errors[] = 'Prescription details are too long.';
+        }
+
+        if ($source === 'CLINICAL' && $inventoryItemId > 0 && count($postedBillableItemIds) > 1) {
+            $errors[] = 'The number of billable items must match the number of selected medication / inventory items.';
         }
 
         return [
@@ -847,6 +874,28 @@ class PharmacyService
         foreach ($values as $value) {
             $id = (int)$value;
             if ($id > 0 && !in_array($id, $ids, true)) {
+                $ids[] = $id;
+            }
+        }
+
+        return $ids;
+    }
+
+    private function normalizePostedBillableItemIds(array $data): array
+    {
+        $values = $data['suggested_billable_item_ids'] ?? [];
+        if (!is_array($values)) {
+            $values = [$values];
+        }
+
+        if (isset($data['suggested_billable_item_id']) && (int)$data['suggested_billable_item_id'] > 0) {
+            array_unshift($values, $data['suggested_billable_item_id']);
+        }
+
+        $ids = [];
+        foreach ($values as $value) {
+            $id = (int)$value;
+            if ($id > 0) {
                 $ids[] = $id;
             }
         }

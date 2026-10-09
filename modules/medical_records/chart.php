@@ -66,6 +66,19 @@ if ((int)($patient['is_deleted'] ?? 0) === 1) {
     exit('This patient record has been deleted/voided. Patient Chart access is disabled.');
 }
 
+if ($permissionService->isEmergencyPatientProfileRestricted($patientId)
+    && !$permissionService->canViewRestrictedEmergencyClinicalProfile($patientId, $currentUser)
+) {
+    $permissionService->logPatientDenied(
+        (int)($currentUser['id'] ?? 0),
+        $patientId,
+        'EMERGENCY_CHART_ACCESS_DENIED',
+        'User attempted to view a restricted Emergency patient chart without Emergency permission.'
+    );
+    http_response_code(403);
+    exit('You do not have permission to view this Emergency patient chart.');
+}
+
 $visitId = filter_input(INPUT_GET, 'visit', FILTER_VALIDATE_INT) ?: null;
 $visit = null;
 if ($visitId !== null) {
@@ -214,28 +227,48 @@ $theatreService = $theatreTablesReady ? new TheatreService($pdo, null, null, $pe
 $theatreHistory = [];
 $latestTheatreRecord = null;
 $vitalSignsTablesReady = chartTableExists($pdo, 'vital_signs');
-$canViewVitalSigns = $vitalSignsTablesReady && $permissionService->canViewVitalSigns($patientId, $currentUser);
+$canViewVitalSigns = $vitalSignsTablesReady && (
+    $visit !== null
+        ? $permissionService->canViewVitalSignsForEncounter($visit, $currentUser)
+        : $permissionService->canViewVitalSigns($patientId, $currentUser)
+);
 $vitalSignsService = $vitalSignsTablesReady ? new VitalSignsService($pdo, null, $permissionService) : null;
 $vitalSignsHistory = [];
 $latestVitalSigns = null;
 $nursingTablesReady = chartTableExists($pdo, 'nursing_assessments');
-$canViewNursing = $nursingTablesReady && $permissionService->canViewNursing($patientId, $currentUser);
+$canViewNursing = $nursingTablesReady && (
+    $visit !== null
+        ? $permissionService->canViewNursingForEncounter($visit, $currentUser)
+        : $permissionService->canViewNursing($patientId, $currentUser)
+);
 $nursingService = $nursingTablesReady ? new NursingService($pdo, null, null, $permissionService) : null;
 $nursingHistory = [];
 $latestNursingAssessment = null;
 $dressingTablesReady = chartTableExists($pdo, 'dressing_records');
-$canViewDressings = $dressingTablesReady && $permissionService->canViewNursing($patientId, $currentUser);
+$canViewDressings = $dressingTablesReady && (
+    $visit !== null
+        ? $permissionService->canViewNursingForEncounter($visit, $currentUser)
+        : $permissionService->canViewNursing($patientId, $currentUser)
+);
 $dressingRecordService = $dressingTablesReady ? new DressingRecordService($pdo, null, $permissionService) : null;
 $dressingHistory = [];
 $latestDressingRecord = null;
 $medicationAdministrationTablesReady = chartTableExists($pdo, 'medication_administration_records')
     && chartTableExists($pdo, 'prescriptions');
-$canViewDrugChart = $medicationAdministrationTablesReady && $permissionService->canViewNursing($patientId, $currentUser);
+$canViewDrugChart = $medicationAdministrationTablesReady && (
+    $visit !== null
+        ? $permissionService->canViewNursingForEncounter($visit, $currentUser)
+        : $permissionService->canViewNursing($patientId, $currentUser)
+);
 $medicationAdministrationService = $medicationAdministrationTablesReady ? new MedicationAdministrationService($pdo, null, $permissionService) : null;
 $medicationAdministrationHistory = [];
 $latestMedicationAdministrationRecord = null;
 $diabetesMonitoringTablesReady = chartTableExists($pdo, 'diabetes_monitoring');
-$canViewDmSheet = $diabetesMonitoringTablesReady && $permissionService->canViewNursing($patientId, $currentUser);
+$canViewDmSheet = $diabetesMonitoringTablesReady && (
+    $visit !== null
+        ? $permissionService->canViewNursingForEncounter($visit, $currentUser)
+        : $permissionService->canViewNursing($patientId, $currentUser)
+);
 $diabetesMonitoringService = $diabetesMonitoringTablesReady ? new DiabetesMonitoringService($pdo, null, $permissionService) : null;
 $diabetesMonitoringHistory = [];
 $latestDiabetesMonitoringRecord = null;
@@ -357,7 +390,9 @@ if ($canViewClinicalNotes) {
 }
 
 if ($canViewVitalSigns) {
-    $vitalSignsHistory = $vitalSignsService->listByPatient($patientId, $currentUser);
+    $vitalSignsHistory = $visitId !== null
+        ? $vitalSignsService->listByVisit((int)$visitId, $currentUser)
+        : $vitalSignsService->listByPatient($patientId, $currentUser);
     $latestVitalSigns = $vitalSignsHistory[0] ?? null;
 }
 
@@ -423,22 +458,30 @@ if ($canViewTheatre) {
 }
 
 if ($canViewNursing) {
-    $nursingHistory = $nursingService->listByPatient($patientId, $currentUser);
+    $nursingHistory = $visitId !== null
+        ? $nursingService->listByVisit((int)$visitId, $currentUser)
+        : $nursingService->listByPatient($patientId, $currentUser);
     $latestNursingAssessment = $nursingHistory[0] ?? null;
 }
 
 if ($canViewDressings) {
-    $dressingHistory = $dressingRecordService->listByPatient($patientId, $currentUser);
+    $dressingHistory = $visitId !== null
+        ? $dressingRecordService->listByVisit((int)$visitId, $currentUser)
+        : $dressingRecordService->listByPatient($patientId, $currentUser);
     $latestDressingRecord = $dressingHistory[0] ?? null;
 }
 
 if ($canViewDrugChart) {
-    $medicationAdministrationHistory = $medicationAdministrationService->listByPatient($patientId, $currentUser);
+    $medicationAdministrationHistory = $visitId !== null
+        ? $medicationAdministrationService->listByVisit((int)$visitId, $currentUser)
+        : $medicationAdministrationService->listByPatient($patientId, $currentUser);
     $latestMedicationAdministrationRecord = $medicationAdministrationHistory[0] ?? null;
 }
 
 if ($canViewDmSheet) {
-    $diabetesMonitoringHistory = $diabetesMonitoringService->listByPatient($patientId, $currentUser);
+    $diabetesMonitoringHistory = $visitId !== null
+        ? $diabetesMonitoringService->listByVisit((int)$visitId, $currentUser)
+        : $diabetesMonitoringService->listByPatient($patientId, $currentUser);
     $latestDiabetesMonitoringRecord = $diabetesMonitoringHistory[0] ?? null;
 }
 

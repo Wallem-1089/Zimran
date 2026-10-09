@@ -10,7 +10,19 @@ require_once __DIR__ . '/../../services/PermissionService.php';
 $permissionService = new PermissionService($GLOBALS['pdo'] ?? $pdo);
 $currentUser = $currentUser ?? ($_SESSION['user'] ?? null);
 
-if (!$permissionService->canRegisterPatient($currentUser)) {
+$patient = $_SESSION['old_patient'] ?? [];
+unset($_SESSION['old_patient']);
+
+$registrationType = strcasecmp((string)($_GET['type'] ?? ($patient['registration_type'] ?? '')), 'Emergency') === 0
+    ? 'Emergency'
+    : 'Normal';
+
+if ($registrationType === 'Emergency') {
+    if (!$permissionService->canRegisterEmergencyPatient($currentUser)) {
+        http_response_code(403);
+        exit('You do not have permission to register emergency patients.');
+    }
+} elseif (!$permissionService->canRegisterPatient($currentUser)) {
     http_response_code(403);
     exit('You do not have permission to register patients.');
 }
@@ -18,9 +30,6 @@ if (!$permissionService->canRegisterPatient($currentUser)) {
 $pageTitle = 'Register Patient';
 $moduleStylesheet = '/modules/patients/assets/patients.css';
 $moduleScript = '/modules/patients/assets/patients.js';
-
-$patient = $_SESSION['old_patient'] ?? [];
-unset($_SESSION['old_patient']);
 
 $errors = $_SESSION['validation_errors'] ?? [];
 unset($_SESSION['validation_errors']);
@@ -31,9 +40,6 @@ unset($_SESSION['error_message']);
 $successMessage = $_SESSION['success_message'] ?? null;
 unset($_SESSION['success_message']);
 
-$registrationType = strcasecmp((string)($_GET['type'] ?? ($patient['registration_type'] ?? '')), 'Emergency') === 0
-    ? 'Emergency'
-    : 'Normal';
 $registrationFee = $registrationType === 'Emergency' ? 50000 : 30000;
 
 require_once __DIR__ . '/../../layouts/header.php';

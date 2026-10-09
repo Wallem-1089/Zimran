@@ -126,19 +126,19 @@ class PermissionService
             'view_confidential_notes' => in_array($role, ['Records Officer', 'Doctor'], true),
             'view_vital_signs' => in_array(
                 $role,
-                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
+                ['Records Officer', 'Doctor', 'Emergency Doctor', 'Nurse', 'Emergency Nurse', 'Triage Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
                 true
-            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
+            ) || in_array($department, ['Records', 'Doctor', 'Emergency', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'create_vital_signs', 'edit_vital_signs' => in_array(
                 $role,
-                ['Doctor', 'Nurse'],
+                ['Doctor', 'Emergency Doctor', 'Nurse', 'Emergency Nurse', 'Triage Nurse'],
                 true
-            ),
+            ) || in_array($department, ['Doctor', 'Emergency', 'Nursing'], true),
             'view_nursing' => in_array(
                 $role,
-                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
+                ['Records Officer', 'Doctor', 'Emergency Doctor', 'Nurse', 'Emergency Nurse', 'Triage Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
                 true
-            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
+            ) || in_array($department, ['Records', 'Doctor', 'Emergency', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'create_nursing', 'edit_nursing', 'complete_nursing' => $role === 'Nurse',
             'view_laboratory' => in_array(
                 $role,
@@ -147,82 +147,82 @@ class PermissionService
             ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'create_laboratory_request' => in_array(
                 $role,
-                ['Doctor', 'Laboratory Scientist'],
+                ['Doctor', 'Emergency Doctor', 'Laboratory Scientist'],
                 true
             ),
             'process_laboratory_request', 'enter_laboratory_result',
             'edit_laboratory_result', 'complete_laboratory_request' => $role === 'Laboratory Scientist',
             'view_radiology' => in_array(
                 $role,
-                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
+                ['Records Officer', 'Doctor', 'Emergency Doctor', 'Nurse', 'Emergency Nurse', 'Triage Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
                 true
-            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
+            ) || in_array($department, ['Records', 'Doctor', 'Emergency', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'create_radiology_request' => in_array(
                 $role,
-                ['Doctor', 'Radiographer'],
+                ['Doctor', 'Emergency Doctor', 'Radiographer'],
                 true
             ),
             'process_radiology_request', 'enter_radiology_report',
             'edit_radiology_report', 'complete_radiology_request' => $role === 'Radiographer',
             'view_ecg' => in_array(
                 $role,
-                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
+                ['Records Officer', 'Doctor', 'Emergency Doctor', 'Nurse', 'Emergency Nurse', 'Triage Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
                 true
-            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
+            ) || in_array($department, ['Records', 'Doctor', 'Emergency', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'create_ecg_request' => in_array(
                 $role,
-                ['Doctor', 'ECG Technician'],
+                ['Doctor', 'Emergency Doctor', 'ECG Technician'],
                 true
-            ) || in_array($department, ['Doctor', 'ECG'], true),
+            ) || in_array($department, ['Doctor', 'Emergency', 'ECG'], true),
             'process_ecg_request', 'upload_ecg_chart',
             'edit_ecg_report', 'complete_ecg_request' => $role === 'ECG Technician'
                 || $department === 'ECG',
             'view_pop' => in_array(
                 $role,
-                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
+                ['Records Officer', 'Doctor', 'Emergency Doctor', 'Nurse', 'Emergency Nurse', 'Triage Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
                 true
-            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
+            ) || in_array($department, ['Records', 'Doctor', 'Emergency', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'create_pop_request' => in_array(
                 $role,
-                ['Doctor', 'Plaster Technician', 'POP Technician'],
+                ['Doctor', 'Emergency Doctor', 'Plaster Technician', 'POP Technician'],
                 true
-            ) || in_array($department, ['Doctor', 'Plaster', 'POP'], true),
+            ) || in_array($department, ['Doctor', 'Emergency', 'Plaster', 'POP'], true),
             'process_pop_request', 'record_pop_procedure',
             'edit_pop_record', 'complete_pop_request' => in_array($role, ['Plaster Technician', 'POP Technician'], true)
                 || in_array($department, ['Plaster', 'POP'], true),
             'view_physiotherapy' => in_array(
                 $role,
-                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
+                ['Records Officer', 'Doctor', 'Emergency Doctor', 'Nurse', 'Emergency Nurse', 'Triage Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
                 true
-            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Physio', 'Rehabilitation', 'Theatre', 'Pharmacy'], true),
+            ) || in_array($department, ['Records', 'Doctor', 'Emergency', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Physio', 'Rehabilitation', 'Theatre', 'Pharmacy'], true),
             'create_physiotherapy' => in_array(
                 $role,
-                ['Doctor', 'Physiotherapist'],
+                ['Doctor', 'Emergency Doctor', 'Physiotherapist'],
                 true
-            ) || in_array($department, ['Doctor', 'Physiotherapy', 'Physio', 'Rehabilitation'], true),
+            ) || in_array($department, ['Doctor', 'Emergency', 'Physiotherapy', 'Physio', 'Rehabilitation'], true),
             'edit_physiotherapy', 'manage_physiotherapy_sessions',
             'complete_physiotherapy' => $role === 'Physiotherapist'
                 || in_array($department, ['Physiotherapy', 'Physio', 'Rehabilitation'], true),
             'view_theatre' => in_array(
                 $role,
-                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
+                ['Records Officer', 'Doctor', 'Emergency Doctor', 'Nurse', 'Emergency Nurse', 'Triage Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
                 true
-            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
+            ) || in_array($department, ['Records', 'Doctor', 'Emergency', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'create_theatre', 'edit_theatre', 'complete_theatre' => in_array(
                 $role,
-                ['Doctor', 'Theatre Staff'],
+                ['Doctor', 'Emergency Doctor', 'Theatre Staff'],
                 true
-            ) || in_array($department, ['Doctor', 'Theatre'], true),
+            ) || in_array($department, ['Doctor', 'Emergency', 'Theatre'], true),
             'view_pharmacy' => in_array(
                 $role,
-                ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
+                ['Records Officer', 'Doctor', 'Emergency Doctor', 'Nurse', 'Emergency Nurse', 'Triage Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
                 true
-            ) || in_array($department, ['Records', 'Doctor', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
+            ) || in_array($department, ['Records', 'Doctor', 'Emergency', 'Nursing', 'Laboratory', 'X-Ray', 'Radiology', 'ECG', 'Plaster', 'POP', 'Physiotherapy', 'Theatre', 'Pharmacy'], true),
             'create_prescription', 'edit_prescription' => in_array(
                 $role,
-                ['Doctor', 'Pharmacist'],
+                ['Doctor', 'Emergency Doctor', 'Pharmacist'],
                 true
-            ) || in_array($department, ['Doctor', 'Pharmacy'], true),
+            ) || in_array($department, ['Doctor', 'Emergency', 'Pharmacy'], true),
             'dispense_prescription' => $role === 'Pharmacist'
                 || $department === 'Pharmacy',
             'view_billing' => in_array(
@@ -320,12 +320,13 @@ class PermissionService
                 ],
                 true
             ),
-            'create_billable_items', 'edit_billable_items',
+            'create_billable_items',
             'manage_billable_item_status' => in_array(
                 $role,
                 ['Pharmacist'],
                 true
             ) || $department === 'Pharmacy',
+            'edit_billable_items' => false,
             'view_inventory' => in_array(
                 $role,
                 [
@@ -790,6 +791,12 @@ class PermissionService
             return true;
         }
 
+        if ($this->isEmergencyPatientProfileRestricted($patientId)
+            && !$this->canViewRestrictedEmergencyClinicalProfile($patientId, $user)
+        ) {
+            return false;
+        }
+
         if (!$this->hasPermission('view_medical_record', $user)) {
             return false;
         }
@@ -808,6 +815,106 @@ class PermissionService
         }
 
         return $this->hasTreatmentRelationship($patientId, $user);
+    }
+
+    public function isEmergencyPatientProfileRestricted(int $patientId): bool
+    {
+        if ($patientId <= 0) {
+            return false;
+        }
+
+        try {
+            $stmt = $this->pdo->prepare('
+                SELECT registration_type, registration_status
+                FROM patients
+                WHERE id = :patient_id
+                LIMIT 1
+            ');
+            $stmt->execute([':patient_id' => $patientId]);
+            $patient = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($patient
+                && strcasecmp((string)($patient['registration_type'] ?? ''), 'Emergency') === 0
+                && strcasecmp((string)($patient['registration_status'] ?? ''), 'PendingPayment') === 0
+            ) {
+                return true;
+            }
+
+            $visitStmt = $this->pdo->prepare('
+                SELECT 1
+                FROM visits v
+                LEFT JOIN departments d
+                    ON d.id = v.current_department_id
+                WHERE v.patient_id = :patient_id
+                  AND v.visit_status NOT IN (\'Completed\', \'Cancelled\')
+                  AND (
+                      v.visit_type = \'Emergency\'
+                      OR v.visit_status = \'Emergency\'
+                      OR d.department_name = \'Emergency\'
+                  )
+                LIMIT 1
+            ');
+            $visitStmt->execute([':patient_id' => $patientId]);
+
+            return (bool)$visitStmt->fetchColumn();
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    public function canViewRestrictedEmergencyClinicalProfile(
+        int $patientId,
+        ?array $user = null
+    ): bool {
+        $user = $user ?? $this->currentUser();
+        if (!$user || $patientId <= 0) {
+            return false;
+        }
+
+        if ($this->isAdministrationUser($user)) {
+            return true;
+        }
+
+        return $this->canUseEmergencyWorkflow($user);
+    }
+
+    public function canViewRestrictedEmergencyAdministrativeProfile(
+        int $patientId,
+        ?array $user = null
+    ): bool {
+        $user = $user ?? $this->currentUser();
+        if (!$user || $patientId <= 0) {
+            return false;
+        }
+
+        if ($this->canViewRestrictedEmergencyClinicalProfile($patientId, $user)) {
+            return true;
+        }
+
+        return $this->canViewBilling($user)
+            || $this->canViewBillingRequests($user)
+            || $this->canReviewBillingRequest($user)
+            || $this->canRecordPayment($user)
+            || $this->canRegisterPatient($user);
+    }
+
+    public function canViewEncounterWorkspace(
+        array $encounter,
+        ?array $user = null
+    ): bool {
+        $user = $user ?? $this->currentUser();
+        if (!$this->canViewEncounter($encounter, $user)) {
+            return false;
+        }
+
+        if (!$this->isEmergencyEncounter($encounter)) {
+            return true;
+        }
+
+        return $this->canViewRestrictedEmergencyClinicalProfile(
+            (int)($encounter['patient_id'] ?? 0),
+            $user
+        );
     }
 
     public function canEditPatientDemographics(
@@ -846,6 +953,40 @@ class PermissionService
         $user = $user ?? $this->currentUser();
 
         return $this->hasPermission('register_patient', $user);
+    }
+
+    public function canRegisterEmergencyPatient(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        if ($user === null) {
+            return false;
+        }
+
+        return $this->canUseEmergencyWorkflow($user)
+            || $this->roleMatches($user, ['Nurse']);
+    }
+
+    public function canUseEmergencyWorkflow(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        if ($user === null) {
+            return false;
+        }
+
+        if ($this->isAdministrationUser($user)) {
+            return true;
+        }
+
+        if ($this->roleMatches($user, ['Emergency Doctor', 'Emergency Nurse', 'Triage Nurse'])) {
+            return true;
+        }
+
+        if ($this->activeDepartmentName($user) === 'Emergency') {
+            return true;
+        }
+
+        return $this->hasPermission('view_emergency', $user)
+            || $this->hasPermission('view_emergency_worklist', $user);
     }
 
     public function canDeletePatient(
@@ -1405,9 +1546,29 @@ class PermissionService
         return $this->canPerformLongitudinalAction(
             'view_vital_signs',
             $patientId,
-            ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
+            ['Records Officer', 'Doctor', 'Emergency Doctor', 'Nurse', 'Emergency Nurse', 'Triage Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
             $user
         );
+    }
+
+    public function canViewVitalSignsForEncounter(array $encounter, ?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        if (!$user) {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        if ($this->canUseEmergencyClinicalForEncounter($encounter, $user)
+            && $this->canViewEncounter($encounter, $user)
+        ) {
+            return true;
+        }
+
+        return $this->canViewVitalSigns((int)($encounter['patient_id'] ?? 0), $user);
     }
 
     public function canCreateVitalSigns(array $encounter, ?array $user = null): bool
@@ -1428,6 +1589,26 @@ class PermissionService
             ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'Physiotherapist', 'Theatre Staff', 'Pharmacist'],
             $user
         );
+    }
+
+    public function canViewNursingForEncounter(array $encounter, ?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        if (!$user) {
+            return false;
+        }
+
+        if ($this->isAdministrator($user)) {
+            return true;
+        }
+
+        if ($this->canUseEmergencyNursingForEncounter($encounter, $user)
+            && $this->canViewEncounter($encounter, $user)
+        ) {
+            return true;
+        }
+
+        return $this->canViewNursing((int)($encounter['patient_id'] ?? 0), $user);
     }
 
     public function canCreateNursing(array $encounter, ?array $user = null): bool
@@ -1917,10 +2098,7 @@ class PermissionService
         if (!$user) {
             return false;
         }
-        $department = $this->activeDepartmentName($user);
-        return $this->isAdministrator($user)
-            || $department === 'Pharmacy'
-            || $this->roleMatches($user, ['Pharmacist']);
+        return $this->isAdministrator($user);
     }
 
     public function canManageBillableItemStatus(?array $user = null): bool
@@ -2128,6 +2306,7 @@ class PermissionService
     {
         $user = $user ?? $this->currentUser();
         return $this->isAdministrationUser($user)
+            || $this->canUseEmergencyWorkflow($user)
             || $this->hasPermission('view_emergency', $user);
     }
 
@@ -2135,6 +2314,7 @@ class PermissionService
     {
         $user = $user ?? $this->currentUser();
         return $this->isAdministrationUser($user)
+            || $this->canUseEmergencyWorkflow($user)
             || $this->hasPermission('view_emergency_worklist', $user)
             || $this->hasPermission('view_emergency', $user);
     }
@@ -2542,7 +2722,14 @@ class PermissionService
             return false;
         }
 
-        if ($this->roleMatches($user, ['Doctor'])) {
+        if ($this->roleMatches($user, ['Doctor', 'Emergency Doctor'])) {
+            return true;
+        }
+
+        if ($this->isEmergencyEncounter($encounter)
+            && $this->roleMatches($user, ['Emergency Doctor'])
+            && $this->canUseEmergencyWorkflow($user)
+        ) {
             return true;
         }
 
@@ -2930,9 +3117,56 @@ class PermissionService
             return false;
         }
 
+        if (!$this->canViewEncounter($encounter, $user)) {
+            return false;
+        }
+
+        if ($this->hasUserPermissionOverride($permission, $user, 'Deny')) {
+            return false;
+        }
+
+        if ($this->canUseEmergencyNursingForEncounter($encounter, $user)) {
+            return true;
+        }
+
         return $this->hasPermission($permission, $user)
-            && ($this->roleMatches($user, ['Nurse']) || $this->activeDepartmentName($user) === 'Nursing')
-            && $this->canViewEncounter($encounter, $user);
+            && ($this->roleMatches($user, ['Nurse']) || $this->activeDepartmentName($user) === 'Nursing');
+    }
+
+    private function canUseEmergencyNursingForEncounter(array $encounter, array $user): bool
+    {
+        if (!$this->canUseEmergencyClinicalForEncounter($encounter, $user)) {
+            return false;
+        }
+
+        return $this->roleMatches($user, ['Emergency Doctor', 'Emergency Nurse', 'Triage Nurse'])
+            || ($this->roleMatches($user, ['Doctor', 'Nurse']) && $this->activeDepartmentName($user) === 'Emergency')
+            || $this->activeDepartmentName($user) === 'Nursing';
+    }
+
+    private function canUseEmergencyClinicalForEncounter(array $encounter, array $user): bool
+    {
+        if (!$this->isEmergencyEncounter($encounter)) {
+            return false;
+        }
+
+        if (!$this->canUseEmergencyWorkflow($user)) {
+            return false;
+        }
+
+        return $this->roleMatches($user, ['Emergency Doctor', 'Emergency Nurse', 'Triage Nurse'])
+            || ($this->roleMatches($user, ['Doctor', 'Nurse']) && $this->activeDepartmentName($user) === 'Emergency');
+    }
+
+    private function isEmergencyEncounter(array $encounter): bool
+    {
+        foreach (['visit_type', 'visit_status', 'department_name', 'current_department_name'] as $key) {
+            if (strcasecmp(trim((string)($encounter[$key] ?? '')), 'Emergency') === 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function canMutateLaboratory(
@@ -2963,7 +3197,7 @@ class PermissionService
         }
 
         return match ($permission) {
-            'create_laboratory_request' => $this->roleMatches($user, ['Doctor'])
+            'create_laboratory_request' => $this->roleMatches($user, ['Doctor', 'Emergency Doctor'])
                 && $this->canViewEncounter($encounter, $user),
             'process_laboratory_request',
             'enter_laboratory_result',
@@ -3002,7 +3236,7 @@ class PermissionService
         }
 
         return match ($permission) {
-            'create_radiology_request' => $this->roleMatches($user, ['Doctor'])
+            'create_radiology_request' => $this->roleMatches($user, ['Doctor', 'Emergency Doctor'])
                 && $this->canViewEncounter($encounter, $user),
             'process_radiology_request',
             'enter_radiology_report',
@@ -3041,7 +3275,7 @@ class PermissionService
         }
 
         return match ($permission) {
-            'create_ecg_request' => $this->roleMatches($user, ['Doctor'])
+            'create_ecg_request' => $this->roleMatches($user, ['Doctor', 'Emergency Doctor'])
                 && $this->canViewEncounter($encounter, $user),
             'process_ecg_request',
             'upload_ecg_chart',
@@ -3082,7 +3316,7 @@ class PermissionService
         }
 
         return match ($permission) {
-            'create_pop_request' => $this->roleMatches($user, ['Doctor'])
+            'create_pop_request' => $this->roleMatches($user, ['Doctor', 'Emergency Doctor'])
                 && $this->canViewEncounter($encounter, $user),
             'process_pop_request',
             'record_pop_procedure',
@@ -3126,7 +3360,7 @@ class PermissionService
 
         return match ($permission) {
             'create_prescription',
-            'edit_prescription' => $this->roleMatches($user, ['Doctor'])
+            'edit_prescription' => $this->roleMatches($user, ['Doctor', 'Emergency Doctor'])
                 && $this->canViewEncounter($encounter, $user),
             'dispense_prescription' => ($this->roleMatches($user, ['Pharmacist']) || $this->activeDepartmentName($user) === 'Pharmacy')
                 && $this->canViewPharmacy((int)($encounter['patient_id'] ?? 0), $user),
@@ -3162,7 +3396,7 @@ class PermissionService
         }
 
         return match ($permission) {
-            'create_physiotherapy' => $this->roleMatches($user, ['Doctor'])
+            'create_physiotherapy' => $this->roleMatches($user, ['Doctor', 'Emergency Doctor'])
                 && $this->canViewEncounter($encounter, $user),
             'edit_physiotherapy',
             'manage_physiotherapy_sessions',
@@ -3190,8 +3424,12 @@ class PermissionService
             return true;
         }
 
+        if ($this->canUseEmergencyClinicalForEncounter($encounter, $user)) {
+            return $this->canViewEncounter($encounter, $user);
+        }
+
         return $this->hasPermission($permission, $user)
-            && $this->roleMatches($user, ['Doctor', 'Nurse'])
+            && $this->roleMatches($user, ['Doctor', 'Emergency Doctor', 'Nurse', 'Emergency Nurse', 'Triage Nurse'])
             && $this->canViewEncounter($encounter, $user);
     }
 

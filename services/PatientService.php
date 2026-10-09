@@ -944,6 +944,7 @@ public function deletePatient(
         if (!$patient) {
             return [
                 'can_create_encounter' => false,
+                'can_create_emergency_encounter' => false,
                 'status' => 'NotFound',
                 'message' => 'Patient not found.',
             ];
@@ -952,8 +953,18 @@ public function deletePatient(
         if (trim((string)($patient['hospital_number'] ?? '')) === ''
             || (string)($patient['registration_status'] ?? 'Active') !== 'Active'
         ) {
+            if (strcasecmp((string)($patient['registration_type'] ?? ''), 'Emergency') === 0) {
+                return [
+                    'can_create_encounter' => false,
+                    'can_create_emergency_encounter' => true,
+                    'status' => 'EmergencyPendingPayment',
+                    'message' => 'Emergency registration payment is pending. Emergency encounters can start immediately; Accounts must clear the emergency registration bill later.',
+                ];
+            }
+
             return [
                 'can_create_encounter' => false,
+                'can_create_emergency_encounter' => false,
                 'status' => 'PendingPayment',
                 'message' => 'Patient registration payment is pending. Accounts must clear the registration bill before a patient ID is generated.',
             ];
@@ -966,6 +977,7 @@ public function deletePatient(
                 if ($expiry < new DateTimeImmutable('today')) {
                     return [
                         'can_create_encounter' => false,
+                        'can_create_emergency_encounter' => false,
                         'status' => 'Expired',
                         'message' => 'Patient registration has expired. A monthly renewal charge must be paid before a new encounter can be created.',
                         'valid_until' => $validUntil,
@@ -975,6 +987,7 @@ public function deletePatient(
                 // Treat invalid dates as expired so Accounts can repair by renewal.
                 return [
                     'can_create_encounter' => false,
+                    'can_create_emergency_encounter' => false,
                     'status' => 'Expired',
                     'message' => 'Patient registration validity is not current. A monthly renewal charge must be paid before a new encounter can be created.',
                     'valid_until' => $validUntil,
@@ -984,6 +997,7 @@ public function deletePatient(
 
         return [
             'can_create_encounter' => true,
+            'can_create_emergency_encounter' => true,
             'status' => 'Active',
             'message' => 'Patient registration is active.',
             'valid_until' => $validUntil,

@@ -287,17 +287,12 @@ class MedicationAdministrationService
     private function validateMutation(array $visit, array $user, string $permission): array
     {
         $errors = [];
-        if (!$this->permissionService->hasPermission($permission, $user)) {
+        $allowed = $permission === 'edit_nursing'
+            ? $this->permissionService->canEditNursing($visit, $user)
+            : $this->permissionService->canCreateNursing($visit, $user);
+
+        if (!$allowed) {
             $errors[] = 'You are not allowed to perform this drug chart action.';
-        }
-        if (!$this->permissionService->canViewEncounter($visit, $user)) {
-            $errors[] = 'You cannot access this encounter.';
-        }
-        if (!$this->permissionService->isAdministrator($user) && in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)) {
-            $errors[] = 'Completed or cancelled encounters are read-only.';
-        }
-        if (!$this->permissionService->isAdministrator($user) && (string)($user['role_name'] ?? '') !== 'Nurse') {
-            $errors[] = 'Only nurses may record drug chart entries.';
         }
         return $errors;
     }
@@ -339,7 +334,7 @@ class MedicationAdministrationService
 
     private function canViewRow(array $row, array $user): bool
     {
-        return $this->permissionService->canViewNursing((int)($row['patient_id'] ?? 0), $user)
+        return $this->permissionService->canViewNursingForEncounter($row, $user)
             || $this->permissionService->isAdministrator($user);
     }
 
@@ -369,6 +364,7 @@ class MedicationAdministrationService
         return '
             SELECT mar.*,
                    v.visit_number,
+                   v.visit_type,
                    v.visit_status,
                    p.hospital_number,
                    p.first_name,

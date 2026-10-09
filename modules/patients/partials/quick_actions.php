@@ -5,6 +5,7 @@ declare(strict_types=1);
 /** @var array $patient */
 $isDeletedPatient = (int)($patient['is_deleted'] ?? 0) === 1;
 $registrationGate = $registrationGate ?? ['can_create_encounter' => true, 'message' => ''];
+$canCreateEmergencyEncounter = $canCreateEmergencyEncounter ?? false;
 ?>
 
 <div class="card patient-quick-actions-card">
@@ -20,12 +21,12 @@ $registrationGate = $registrationGate ?? ['can_create_encounter' => true, 'messa
             </a>
         <?php endif; ?>
 
-        <?php if (!$isDeletedPatient && !empty($registrationGate['can_create_encounter'])): ?>
+        <?php if (!$isDeletedPatient && (!empty($registrationGate['can_create_encounter']) || !empty($canCreateEmergencyEncounter))): ?>
             <a href="../visits/create.php?patient=<?= (int)$patient['id'] ?>" class="action-card action-primary">
                 <span class="action-icon" aria-hidden="true">+</span>
                 <div class="action-content">
-                    <strong>New Encounter</strong>
-                    <span>Register a new patient visit</span>
+                    <strong><?= !empty($canCreateEmergencyEncounter) && empty($registrationGate['can_create_encounter']) ? 'New Emergency Encounter' : 'New Encounter' ?></strong>
+                    <span><?= !empty($canCreateEmergencyEncounter) && empty($registrationGate['can_create_encounter']) ? 'Open emergency care before registration payment clears' : 'Register a new patient visit' ?></span>
                 </div>
             </a>
         <?php elseif (!$isDeletedPatient): ?>
