@@ -1,0 +1,3 @@
+-- No safe rollback: this migration intentionally deactivates legacy Laboratory
+-- billable items outside the current approved price list. Reactivate specific
+-- historical items manually if they are needed again.

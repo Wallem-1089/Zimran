@@ -986,7 +986,7 @@ function hmsBillableItemOptions(PDO $pdo, ?int $departmentId = null): array
         $where = ['is_active = 1'];
         $params = [];
         if ($departmentId !== null && $departmentId > 0) {
-            $where[] = 'department_id = :department_id';
+            $where[] = '(department_id = :department_id OR department_id IS NULL)';
             $params[':department_id'] = $departmentId;
         }
 

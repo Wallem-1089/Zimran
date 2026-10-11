@@ -2098,7 +2098,8 @@ class PermissionService
         if (!$user) {
             return false;
         }
-        return $this->isAdministrator($user);
+        return $this->isAdministrator($user)
+            || $this->hasPermission('edit_billable_items', $user);
     }
 
     public function canManageBillableItemStatus(?array $user = null): bool
