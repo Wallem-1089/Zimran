@@ -90,6 +90,30 @@ if ((int)($patient['is_deleted'] ?? 0) === 1) {
 }
 
 $registrationGate = $patientService->getRegistrationGateStatus($patientId);
+$activeFamilyCardCoverage = $registrationGate['family_card'] ?? null;
+if ($activeFamilyCardCoverage === null) {
+    try {
+        $familyCoverageStmt = $pdo->prepare('
+            SELECT fc.id,
+                   fc.card_number,
+                   fc.valid_until,
+                   fcm.relationship,
+                   fcm.member_type
+            FROM family_card_members fcm
+            INNER JOIN family_cards fc ON fc.id = fcm.family_card_id
+            WHERE fcm.patient_id = :patient_id
+              AND fcm.status = \'Active\'
+              AND fc.status = \'Active\'
+              AND fc.valid_until >= CURDATE()
+            ORDER BY fc.valid_until DESC, fc.id DESC
+            LIMIT 1
+        ');
+        $familyCoverageStmt->execute([':patient_id' => $patientId]);
+        $activeFamilyCardCoverage = $familyCoverageStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    } catch (Throwable) {
+        $activeFamilyCardCoverage = null;
+    }
+}
 $canCreateEmergencyEncounterFromGate = !empty($registrationGate['can_create_emergency_encounter'])
     && $canUseEmergencyWorkflow;
 $emergencyOnlyEncounter = empty($registrationGate['can_create_encounter'])
@@ -226,6 +250,16 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 <div class="alert-warning">
     <strong>Emergency registration payment pending.</strong>
     This encounter can be opened for Emergency care before Accounts clears the registration fee.
+</div>
+<?php endif; ?>
+
+<?php if (is_array($activeFamilyCardCoverage)): ?>
+<div class="alert-info">
+    <strong>Covered by Family Card.</strong>
+    This patient is covered by Family Card
+    <strong><?= e((string)$activeFamilyCardCoverage['card_number']) ?></strong>
+    until <strong><?= e((string)$activeFamilyCardCoverage['valid_until']) ?></strong>.
+    If the Family Card expires before the patient's normal registration, normal registration coverage will continue until its own expiry.
 </div>
 <?php endif; ?>
 

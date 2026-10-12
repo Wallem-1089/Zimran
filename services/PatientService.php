@@ -938,6 +938,102 @@ public function deletePatient(
         }
     }
 
+    public function activateRegistrationUnderFamilyCard(int $patientId, int $clearedBy): array
+    {
+        try {
+            $stmt = $this->pdo->prepare('SELECT * FROM patients WHERE id = :id FOR UPDATE');
+            $stmt->execute([':id' => $patientId]);
+            $patient = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$patient) {
+                return ['success' => false, 'errors' => ['Patient not found.']];
+            }
+
+            $hospitalNumber = trim((string)($patient['hospital_number'] ?? ''));
+            if ($hospitalNumber === '') {
+                $hospitalNumber = $this->generateHospitalNumber($patientId);
+            }
+
+            $update = $this->pdo->prepare('
+                UPDATE patients
+                SET hospital_number = :hospital_number,
+                    registration_status = \'Active\',
+                    registration_completed_at = COALESCE(registration_completed_at, NOW()),
+                    updated_at = NOW()
+                WHERE id = :id
+            ');
+            $update->execute([
+                ':hospital_number' => $hospitalNumber,
+                ':id' => $patientId,
+            ]);
+
+            $this->auditService->logPatient(
+                $clearedBy,
+                $patientId,
+                null,
+                'Patients',
+                'PATIENT_FAMILY_CARD_ACTIVATED',
+                'Activated patient registration under Family Card coverage. Hospital Number: ' . $hospitalNumber . '.',
+                null,
+                'INFO',
+                'PATIENT_FAMILY_CARD_ACTIVATED'
+            );
+
+            return ['success' => true, 'hospital_number' => $hospitalNumber, 'errors' => []];
+        } catch (Throwable) {
+            return ['success' => false, 'errors' => ['Unable to activate patient under Family Card.']];
+        }
+    }
+
+    public function activateLegacyRegistration(int $patientId, int $registeredBy): array
+    {
+        try {
+            $stmt = $this->pdo->prepare('SELECT * FROM patients WHERE id = :id FOR UPDATE');
+            $stmt->execute([':id' => $patientId]);
+            $patient = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$patient) {
+                return ['success' => false, 'errors' => ['Patient not found.']];
+            }
+
+            $hospitalNumber = trim((string)($patient['hospital_number'] ?? ''));
+            if ($hospitalNumber === '') {
+                $hospitalNumber = $this->generateHospitalNumber($patientId);
+            }
+
+            $update = $this->pdo->prepare('
+                UPDATE patients
+                SET hospital_number = :hospital_number,
+                    registration_status = \'Active\',
+                    registration_type = \'Legacy\',
+                    registration_fee = 0.00,
+                    registration_paid_at = NULL,
+                    registration_valid_until = DATE_ADD(CURDATE(), INTERVAL 30 DAY),
+                    registration_completed_at = COALESCE(registration_completed_at, NOW()),
+                    updated_at = NOW()
+                WHERE id = :id
+            ');
+            $update->execute([
+                ':hospital_number' => $hospitalNumber,
+                ':id' => $patientId,
+            ]);
+
+            $this->auditService->logPatient(
+                $registeredBy,
+                $patientId,
+                null,
+                'Patients',
+                'LEGACY_PATIENT_IMPORTED',
+                'Imported existing hospital patient. Hospital Number: ' . $hospitalNumber . '.',
+                null,
+                'INFO',
+                'LEGACY_PATIENT_IMPORTED'
+            );
+
+            return ['success' => true, 'hospital_number' => $hospitalNumber, 'errors' => []];
+        } catch (Throwable) {
+            return ['success' => false, 'errors' => ['Unable to activate legacy patient registration.']];
+        }
+    }
+
     public function getRegistrationGateStatus(int $patientId): array
     {
         $patient = $this->getPatientById($patientId);
@@ -971,10 +1067,21 @@ public function deletePatient(
         }
 
         $validUntil = trim((string)($patient['registration_valid_until'] ?? ''));
+        $familyCoverage = $this->activeFamilyCardCoverage($patientId);
         if ($validUntil !== '') {
             try {
                 $expiry = new DateTimeImmutable($validUntil);
                 if ($expiry < new DateTimeImmutable('today')) {
+                    if ($familyCoverage !== null) {
+                        return [
+                            'can_create_encounter' => true,
+                            'can_create_emergency_encounter' => true,
+                            'status' => 'FamilyCardActive',
+                            'message' => 'Patient registration is covered by active Family Card ' . $familyCoverage['card_number'] . '.',
+                            'valid_until' => $familyCoverage['valid_until'],
+                            'family_card' => $familyCoverage,
+                        ];
+                    }
                     return [
                         'can_create_encounter' => false,
                         'can_create_emergency_encounter' => false,
@@ -995,6 +1102,17 @@ public function deletePatient(
             }
         }
 
+        if ($validUntil === '' && $familyCoverage !== null) {
+            return [
+                'can_create_encounter' => true,
+                'can_create_emergency_encounter' => true,
+                'status' => 'FamilyCardActive',
+                'message' => 'Patient registration is covered by active Family Card ' . $familyCoverage['card_number'] . '.',
+                'valid_until' => $familyCoverage['valid_until'],
+                'family_card' => $familyCoverage,
+            ];
+        }
+
         return [
             'can_create_encounter' => true,
             'can_create_emergency_encounter' => true,
@@ -1002,6 +1120,36 @@ public function deletePatient(
             'message' => 'Patient registration is active.',
             'valid_until' => $validUntil,
         ];
+    }
+
+    private function activeFamilyCardCoverage(int $patientId): ?array
+    {
+        if ($patientId <= 0 || !$this->tableExists('family_card_members')) {
+            return null;
+        }
+
+        try {
+            $stmt = $this->pdo->prepare('
+                SELECT fc.id,
+                       fc.card_number,
+                       fc.valid_until,
+                       fcm.relationship,
+                       fcm.member_type
+                FROM family_card_members fcm
+                INNER JOIN family_cards fc ON fc.id = fcm.family_card_id
+                WHERE fcm.patient_id = :patient_id
+                  AND fcm.status = \'Active\'
+                  AND fc.status = \'Active\'
+                  AND fc.valid_until >= CURDATE()
+                ORDER BY fc.valid_until DESC, fc.id DESC
+                LIMIT 1
+            ');
+            $stmt->execute([':patient_id' => $patientId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ?: null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     public function searchPatientsPaginated(
@@ -1936,6 +2084,17 @@ public function updatePatientWithContext(
         }
 
         return $this->patientSoftDeleteAvailable;
+    }
+
+    private function tableExists(string $table): bool
+    {
+        try {
+            $stmt = $this->pdo->prepare('SHOW TABLES LIKE :table_name');
+            $stmt->execute([':table_name' => $table]);
+            return (bool)$stmt->fetchColumn();
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     private function currentUserId(): ?int

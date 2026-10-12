@@ -91,6 +91,37 @@ foreach ($registrationBillingHistory as $registrationRequest) {
         break;
     }
 }
+$familyCardMembership = null;
+try {
+    $familyStmt = $pdo->prepare('
+        SELECT fc.*,
+               fcm.relationship,
+               fcm.member_type,
+               fcm.status AS member_status
+        FROM family_card_members fcm
+        INNER JOIN family_cards fc ON fc.id = fcm.family_card_id
+        WHERE fcm.patient_id = :patient_id
+          AND fcm.status = \'Active\'
+        ORDER BY fc.valid_until DESC, fc.id DESC
+        LIMIT 1
+    ');
+    $familyStmt->execute([':patient_id' => $id]);
+    $familyCardMembership = $familyStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+} catch (Throwable) {
+    $familyCardMembership = null;
+}
+$pendingFamilyCardRenewalRequest = null;
+if ($familyCardMembership !== null) {
+    foreach ($registrationBillingHistory as $registrationRequest) {
+        if ((string)($registrationRequest['billing_type'] ?? '') === 'FamilyCardRenewal'
+            && (int)($registrationRequest['family_card_id'] ?? 0) === (int)$familyCardMembership['id']
+            && (string)($registrationRequest['status'] ?? '') === 'Pending'
+        ) {
+            $pendingFamilyCardRenewalRequest = $registrationRequest;
+            break;
+        }
+    }
+}
 
 if ($isDeletedPatient && !$permissionService->canViewDeletedPatient($currentUser)) {
     http_response_code(404);
@@ -236,6 +267,42 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
     <?php require __DIR__ . '/partials/quick_actions.php'; ?>
 
     <?php if ($canViewRegistrationBillingActions): ?>
+        <?php if ($familyCardMembership !== null): ?>
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Family Card</h2>
+                        <p>Family plan coverage for this patient.</p>
+                    </div>
+                    <div class="form-actions">
+                        <?php if ($canRequestRegistrationRenewal): ?>
+                            <?php if ($pendingFamilyCardRenewalRequest && $permissionService->canViewBillingRequests($currentUser)): ?>
+                                <a class="btn-primary" href="../billing/registration_requests.php?<?= e(http_build_query([
+                                    'status' => 'Pending',
+                                    'billing_type' => 'FamilyCardRenewal',
+                                    'patient_name' => trim((string)($patient['first_name'] ?? '') . ' ' . (string)($patient['last_name'] ?? '')),
+                                ])) ?>">Open Pending Family Card Renewal</a>
+                            <?php elseif (!$pendingFamilyCardRenewalRequest): ?>
+                                <form method="post" action="renew_family_card.php" class="inline-form">
+                                    <?= csrfField() ?>
+                                    <input type="hidden" name="patient_id" value="<?= (int)$patient['id'] ?>">
+                                    <input type="hidden" name="family_card_id" value="<?= (int)$familyCardMembership['id'] ?>">
+                                    <button class="btn-primary" type="submit">Create Family Card Renewal Request</button>
+                                </form>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="summary-grid">
+                    <div class="summary-item"><span class="summary-label">Card Number</span> <span class="summary-value"><?= e((string)$familyCardMembership['card_number']) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)$familyCardMembership['status']) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Valid Until</span> <span class="summary-value"><?= e((string)($familyCardMembership['valid_until'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Member Type</span> <span class="summary-value"><?= e((string)$familyCardMembership['member_type']) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Relationship</span> <span class="summary-value"><?= e((string)($familyCardMembership['relationship'] ?? '-')) ?></span></div>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <div class="card">
             <div class="card-header">
                 <div>

@@ -62,7 +62,12 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <label for="billing_type">Billing Type</label>
                 <select id="billing_type" name="billing_type">
                     <option value="">All</option>
-                    <?php foreach (['InitialRegistration' => 'Initial Registration', 'MonthlyRenewal' => 'Monthly Renewal'] as $value => $label): ?>
+                    <?php foreach ([
+                        'InitialRegistration' => 'Initial Registration',
+                        'MonthlyRenewal' => 'Monthly Renewal',
+                        'FamilyCardActivation' => 'Family Card Activation',
+                        'FamilyCardRenewal' => 'Family Card Renewal',
+                    ] as $value => $label): ?>
                         <option value="<?= e($value) ?>" <?= $filters['billing_type'] === $value ? 'selected' : '' ?>><?= e($label) ?></option>
                     <?php endforeach; ?>
                 </select>

@@ -161,6 +161,13 @@ if (($_POST['action'] ?? '') === 'initial_registration') {
         'last_name' => trim($_POST['last_name'] ?? ''),
         'phone' => trim($_POST['phone'] ?? ''),
         'registration_type' => $registrationType,
+        'registration_plan' => trim((string)($_POST['registration_plan'] ?? 'Normal')),
+        'family_card_number' => trim((string)($_POST['family_card_number'] ?? '')),
+        'family_relationship' => trim((string)($_POST['family_relationship'] ?? '')),
+        'family_member_type' => trim((string)($_POST['family_member_type'] ?? 'Dependent')),
+        'legacy_hospital_number' => trim((string)($_POST['legacy_hospital_number'] ?? '')),
+        'legacy_first_seen_date' => trim((string)($_POST['legacy_first_seen_date'] ?? '')),
+        'legacy_notes' => trim((string)($_POST['legacy_notes'] ?? '')),
     ], $currentUser);
 
     if (empty($result['success'])) {
@@ -170,9 +177,16 @@ if (($_POST['action'] ?? '') === 'initial_registration') {
         exit;
     }
 
-    $_SESSION['success_message'] = $registrationType === 'Emergency'
+    $registrationPlan = trim((string)($_POST['registration_plan'] ?? 'Normal'));
+    $_SESSION['success_message'] = $registrationPlan === 'ExistingFamilyCard'
+        ? 'Patient registered and added to the existing active Family Card.'
+        : ($registrationPlan === 'Legacy'
+            ? 'Legacy patient imported. No initial registration bill was created; patient has 30 days registration validity.'
+        : ($registrationPlan === 'FamilyCard'
+            ? 'Initial details saved. Accounts must clear the Family Card registration fee before the Family Card becomes active.'
+            : ($registrationType === 'Emergency'
         ? 'Emergency initial details saved. Emergency encounter can be opened immediately; Accounts will clear the emergency registration fee later.'
-        : 'Initial details saved. Accounts must clear the registration fee before the patient ID is generated.';
+        : 'Initial details saved. Accounts must clear the registration fee before the patient ID is generated.')));
 
     header('Location: view.php?id=' . (int)$result['patient_id']);
     exit;

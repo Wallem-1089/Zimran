@@ -22,6 +22,7 @@ $canAccessAdmissionsSidebar = false;
 $canAccessPharmacySidebar = false;
 $canAccessBillingSidebar = false;
 $canAccessReportsSidebar = false;
+$canAccessFamilyCardsSidebar = false;
 $canAccessDepartmentSwitchSidebar = false;
 $canAccessDepartmentWorklistSidebar = false;
 $canAccessEmergencyWorklistSidebar = false;
@@ -201,6 +202,10 @@ if ($currentUser && isset($pdo)) {
                 || $sidebarCan('view_clinical_reports')
             )
         );
+
+    $canAccessFamilyCardsSidebar = $sidebarIsAdmin
+        || $sidebarRoleIn(['Records Officer', 'Receptionist'])
+        || $sidebarDepartmentIn(['Records', 'Reception']);
 
     $sidebarDepartmentId = (int)(
         $currentUser['active_department_id']
@@ -684,6 +689,20 @@ $sidebarBranding = appBranding($pdo ?? null);
                     <a href="<?= e($baseUrl) ?>/modules/billing/index.php">
 
                         Billing
+
+                    </a>
+
+                </li>
+
+            <?php endif; ?>
+
+            <?php if ($canAccessFamilyCardsSidebar): ?>
+
+                <li>
+
+                    <a href="<?= e($baseUrl) ?>/modules/family_cards/index.php">
+
+                        Family Cards
 
                     </a>
 

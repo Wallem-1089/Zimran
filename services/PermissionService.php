@@ -797,6 +797,13 @@ class PermissionService
             return false;
         }
 
+        if (($this->roleMatches($user, ['Physiotherapist'])
+                || $this->activeDepartmentIn($user, ['Physiotherapy', 'Physio', 'Rehabilitation']))
+            && $this->hasActivePhysiotherapyPatientAccess($patientId)
+        ) {
+            return true;
+        }
+
         if (!$this->hasPermission('view_medical_record', $user)) {
             return false;
         }
@@ -2679,6 +2686,13 @@ class PermissionService
             return false;
         }
 
+        if (($this->roleMatches($user, ['Physiotherapist'])
+                || $this->activeDepartmentIn($user, ['Physiotherapy', 'Physio', 'Rehabilitation']))
+            && $this->hasActivePhysiotherapyPatientAccess($patientId)
+        ) {
+            return true;
+        }
+
         try {
             $stmt = $this->pdo->prepare('
                 SELECT 1
@@ -2699,6 +2713,28 @@ class PermissionService
 
             return (bool)$stmt->fetchColumn();
         } catch (Throwable $exception) {
+            return false;
+        }
+    }
+
+    private function hasActivePhysiotherapyPatientAccess(int $patientId): bool
+    {
+        if ($patientId <= 0 || !$this->tableExists('physiotherapy_patient_access')) {
+            return false;
+        }
+
+        try {
+            $stmt = $this->pdo->prepare('
+                SELECT 1
+                FROM physiotherapy_patient_access
+                WHERE patient_id = :patient_id
+                  AND valid_until >= CURDATE()
+                LIMIT 1
+            ');
+            $stmt->execute([':patient_id' => $patientId]);
+
+            return (bool)$stmt->fetchColumn();
+        } catch (Throwable) {
             return false;
         }
     }
@@ -3482,6 +3518,17 @@ class PermissionService
             $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM departments WHERE id = ? AND LOWER(TRIM(department_name)) IN ($placeholders)");
             $stmt->execute(array_merge([$currentId], $normalizedNames));
             return (int)$stmt->fetchColumn() > 0;
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    private function tableExists(string $table): bool
+    {
+        try {
+            $stmt = $this->pdo->prepare('SHOW TABLES LIKE :table_name');
+            $stmt->execute([':table_name' => $table]);
+            return (bool)$stmt->fetchColumn();
         } catch (Throwable) {
             return false;
         }

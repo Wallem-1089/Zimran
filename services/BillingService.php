@@ -761,6 +761,12 @@ class BillingService
             $paymentId = (int)$this->pdo->lastInsertId();
 
             $this->refreshInvoiceTotals((int)$invoice['visit_id'], $user);
+            $this->refreshPhysiotherapyPatientAccess(
+                (int)$invoice['patient_id'],
+                $invoiceId,
+                $paymentId,
+                (int)$user['id']
+            );
 
             if (!$this->audit(
                 (int)$user['id'],
@@ -849,6 +855,12 @@ class BillingService
             ]);
 
             $this->refreshInvoiceTotals((int)$payment['visit_id'], $user);
+            $this->refreshPhysiotherapyPatientAccess(
+                (int)$payment['patient_id'],
+                (int)$payment['invoice_id'],
+                null,
+                (int)$user['id']
+            );
 
             if (!$this->audit(
                 (int)$user['id'],
@@ -2323,6 +2335,95 @@ class BillingService
         $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM departments WHERE id = :id');
         $stmt->execute([':id' => $departmentId]);
         return (int)$stmt->fetchColumn() > 0;
+    }
+
+    private function refreshPhysiotherapyPatientAccess(
+        int $patientId,
+        ?int $invoiceId,
+        ?int $paymentId,
+        int $userId
+    ): void {
+        if ($patientId <= 0 || !$this->tableExists('physiotherapy_patient_access')) {
+            return;
+        }
+
+        $stmt = $this->pdo->prepare('
+            SELECT i.id AS invoice_id
+            FROM invoices i
+            INNER JOIN patient_charges pc
+                ON pc.visit_id = i.visit_id
+               AND pc.patient_id = i.patient_id
+               AND pc.status = \'Active\'
+            INNER JOIN billable_items bi
+                ON bi.id = pc.billable_item_id
+            WHERE i.patient_id = :patient_id
+              AND i.status = \'Paid\'
+              AND bi.item_code IN (
+                  \'PHY-SRV-TREATMENT-ADULT\',
+                  \'PHY-SRV-TREATMENT-CHILD\'
+              )
+            ORDER BY i.updated_at DESC, i.id DESC
+            LIMIT 1
+        ');
+        $stmt->execute([':patient_id' => $patientId]);
+        $paidInvoiceId = (int)($stmt->fetchColumn() ?: 0);
+
+        if ($paidInvoiceId <= 0) {
+            $delete = $this->pdo->prepare('DELETE FROM physiotherapy_patient_access WHERE patient_id = :patient_id');
+            $delete->execute([':patient_id' => $patientId]);
+            return;
+        }
+
+        $sourcePaymentId = $paymentId;
+        if ($sourcePaymentId === null || $sourcePaymentId <= 0) {
+            $paymentStmt = $this->pdo->prepare('
+                SELECT id
+                FROM payments
+                WHERE patient_id = :patient_id
+                  AND invoice_id = :invoice_id
+                  AND status = \'Active\'
+                ORDER BY created_at DESC, id DESC
+                LIMIT 1
+            ');
+            $paymentStmt->execute([
+                ':patient_id' => $patientId,
+                ':invoice_id' => $paidInvoiceId,
+            ]);
+            $sourcePaymentId = (int)($paymentStmt->fetchColumn() ?: 0) ?: null;
+        }
+
+        $upsert = $this->pdo->prepare('
+            INSERT INTO physiotherapy_patient_access (
+                patient_id, valid_until, source_invoice_id, source_payment_id,
+                granted_by, granted_at, updated_at
+            ) VALUES (
+                :patient_id, DATE_ADD(CURDATE(), INTERVAL 30 YEAR), :invoice_id,
+                :payment_id, :granted_by, NOW(), NOW()
+            )
+            ON DUPLICATE KEY UPDATE
+                valid_until = GREATEST(valid_until, VALUES(valid_until)),
+                source_invoice_id = VALUES(source_invoice_id),
+                source_payment_id = VALUES(source_payment_id),
+                granted_by = VALUES(granted_by),
+                updated_at = NOW()
+        ');
+        $upsert->execute([
+            ':patient_id' => $patientId,
+            ':invoice_id' => $paidInvoiceId,
+            ':payment_id' => $sourcePaymentId,
+            ':granted_by' => $userId > 0 ? $userId : null,
+        ]);
+    }
+
+    private function tableExists(string $table): bool
+    {
+        try {
+            $stmt = $this->pdo->prepare('SHOW TABLES LIKE :table_name');
+            $stmt->execute([':table_name' => $table]);
+            return (bool)$stmt->fetchColumn();
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     private function audit(
