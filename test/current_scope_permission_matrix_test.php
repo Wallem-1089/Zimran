@@ -15,7 +15,7 @@ function assertCurrentScopePermission(bool $condition, string $message): void
 function currentScopeUser(string $role, string $department): array
 {
     return [
-        'id' => crc32($role . '|' . $department),
+        'id' => 0,
         'role_id' => 0,
         'role_name' => $role,
         'department_id' => 0,
@@ -44,6 +44,17 @@ $admin = currentScopeUser('System Administrator', 'Administrator');
 $superAdmin = currentScopeUser('Super Administrator', 'Super Administrator');
 $emergencyDoctor = currentScopeUser('Emergency Doctor', 'Emergency');
 $emergencyNurse = currentScopeUser('Emergency Nurse', 'Emergency');
+
+$roleIds = [];
+foreach (['Pharmacist', 'Store Officer', 'Accountant'] as $roleName) {
+    $stmt = $pdo->prepare('SELECT id FROM roles WHERE role_name = :role_name LIMIT 1');
+    $stmt->execute([':role_name' => $roleName]);
+    $roleIds[$roleName] = (int)$stmt->fetchColumn();
+    assertCurrentScopePermission($roleIds[$roleName] > 0, $roleName . ' role seed is missing.');
+}
+$pharmacy['role_id'] = $roleIds['Pharmacist'];
+$store['role_id'] = $roleIds['Store Officer'];
+$accounts['role_id'] = $roleIds['Accountant'];
 
 $doctorEncounter = [
     'id' => 1,
@@ -185,5 +196,42 @@ assertCurrentScopePermission($permissionService->canViewEmergencyReports($select
 
 $pdo->exec("DELETE FROM user_permissions WHERE user_id = {$selectedEmergencyUserId}");
 $pdo->exec("DELETE FROM users WHERE id = {$selectedEmergencyUserId}");
+
+$matrixPharmacist = currentScopeUser('Pharmacist', 'Pharmacy');
+$matrixPharmacist['id'] = 0;
+$matrixPharmacist['role_id'] = $roleIds['Pharmacist'];
+
+$matrixStore = currentScopeUser('Store Officer', 'Store');
+$matrixStore['id'] = 0;
+$matrixStore['role_id'] = $roleIds['Store Officer'];
+
+$matrixAccounts = currentScopeUser('Accountant', 'Accounts');
+$matrixAccounts['id'] = 0;
+$matrixAccounts['role_id'] = $roleIds['Accountant'];
+
+assertCurrentScopePermission($permissionService->canCreateBillableItems($matrixPharmacist), 'Pharmacy catalogue creation should be granted through the matrix.');
+assertCurrentScopePermission($permissionService->canManageBillableItemStatus($matrixPharmacist), 'Pharmacy catalogue status management should be granted through the matrix.');
+assertCurrentScopePermission($permissionService->canIssueStock($matrixPharmacist), 'Pharmacy drug stock issuing should be granted through the matrix.');
+assertCurrentScopePermission($permissionService->canIssueStock($matrixStore), 'Store stock issuing should be granted through the matrix.');
+assertCurrentScopePermission(!$permissionService->canCreateBillableItems($matrixAccounts), 'Accounts should not create catalogue items unless granted in the matrix.');
+assertCurrentScopePermission(!$permissionService->canIssueStock($matrixAccounts), 'Accounts should not issue stock unless granted in the matrix.');
+
+$pdo->beginTransaction();
+try {
+    $pdo->exec("
+        DELETE rp
+        FROM role_permissions rp
+        JOIN roles r ON r.id = rp.role_id
+        JOIN permissions p ON p.id = rp.permission_id
+        WHERE r.role_name = 'Pharmacist'
+          AND p.permission_key IN ('create_billable_items', 'manage_billable_item_status', 'issue_stock')
+    ");
+
+    assertCurrentScopePermission(!$permissionService->canCreateBillableItems($matrixPharmacist), 'Removing create_billable_items from the matrix should block Pharmacy catalogue creation.');
+    assertCurrentScopePermission(!$permissionService->canManageBillableItemStatus($matrixPharmacist), 'Removing manage_billable_item_status from the matrix should block Pharmacy catalogue status management.');
+    assertCurrentScopePermission(!$permissionService->canIssueStock($matrixPharmacist), 'Removing issue_stock from the matrix should block Pharmacy drug stock issuing.');
+} finally {
+    $pdo->rollBack();
+}
 
 echo "PASS: Current-scope permission matrix regression passed.\n";

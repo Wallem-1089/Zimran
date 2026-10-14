@@ -156,6 +156,8 @@ $pdo->prepare("
     SELECT 'ECG-AUTO', 'ECG Study', 'Service', :department_id, 'ECG fixture.', 1000.00, '', 1, :created_by, NOW(), NOW()
     WHERE NOT EXISTS (SELECT 1 FROM billable_items WHERE item_code = 'ECG-AUTO')
 ")->execute([':department_id' => $ecgDepartmentId, ':created_by' => (int)$accounts['id']]);
+$pdo->prepare("UPDATE billable_items SET department_id = :department_id, unit_price = 1000.00, is_active = 1, updated_at = NOW() WHERE item_code = 'ECG-AUTO'")
+    ->execute([':department_id' => $ecgDepartmentId]);
 $ecgBillableItemId = (int)$pdo->query("SELECT id FROM billable_items WHERE item_code = 'ECG-AUTO' LIMIT 1")->fetchColumn();
 
 $clinicalVisitId = ecgCreateEncounter($pdo, $doctor, $patientId, (int)$doctor['department_id'], 'Doctor', (string)time());
@@ -174,6 +176,7 @@ $clinical = requireEcgSuccess($ecgService->createRequest([
 $clinicalRequestId = (int)$clinical['ecg_request_id'];
 $pdo->prepare("UPDATE billing_requests SET status = 'Charged', reviewed_by = :reviewed_by, reviewed_at = NOW(), updated_at = NOW() WHERE source_module = 'ECG' AND source_record_id = :source_record_id")
     ->execute([':reviewed_by' => (int)$accounts['id'], ':source_record_id' => $clinicalRequestId]);
+$ecgInvoiceCreate = requireEcgSuccess($billingService->createInvoice($clinicalVisitId, $accounts), 'Create ECG invoice');
 $ecgInvoice = $billingService->getInvoiceByVisit($clinicalVisitId);
 assertEcg($ecgInvoice !== null, 'ECG invoice was not created.');
 requireEcgSuccess($billingService->recordPayment([

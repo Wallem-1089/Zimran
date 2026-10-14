@@ -523,7 +523,9 @@ class LaboratoryService
     private function validateProcessing(array $request, array $visit, array $user, string $permissionKey, bool $requireBillingClearance = true): array
     {
         $errors = [];
-        if (!$this->permissionService->canViewLaboratory((int)($visit['patient_id'] ?? 0), $user)) {
+        if (!$this->permissionService->canViewLaboratory((int)($visit['patient_id'] ?? 0), $user)
+            && !$this->requestBelongsToUserDepartment($request, $user)
+        ) {
             $errors[] = 'You cannot access this encounter.';
         }
 
@@ -676,7 +678,18 @@ class LaboratoryService
     private function canViewRow(array $row, array $user): bool
     {
         return $this->permissionService->canViewLaboratory((int)($row['patient_id'] ?? 0), $user)
+            || $this->requestBelongsToUserDepartment($row, $user)
             || $this->permissionService->isAdministrator($user);
+    }
+
+    private function requestBelongsToUserDepartment(array $request, array $user): bool
+    {
+        $requestDepartmentId = (int)($request['department_id'] ?? 0);
+        $userDepartmentId = (int)($user['active_department_id'] ?? $user['department_id'] ?? 0);
+
+        return (string)($user['role_name'] ?? '') === 'Laboratory Scientist'
+            || strcasecmp((string)($user['department_name'] ?? ''), 'Laboratory') === 0
+            || ($requestDepartmentId > 0 && $requestDepartmentId === $userDepartmentId);
     }
 
     private function filterRows(array $rows, ?array $user): array

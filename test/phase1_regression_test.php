@@ -294,7 +294,7 @@ try {
         'patient_id' => $patientId,
         'visit_date' => date('Y-m-d H:i:s'),
         'visit_type' => 'Outpatient',
-        'current_department_id' => $receptionDepartmentId
+        'current_department_id' => $doctorDepartmentId
     ], $adminId), 'Encounter creation');
     $visitId = (int)$encounter['visit_id'];
 
@@ -303,21 +303,21 @@ try {
 
     successful($visitService->updateVisit($visitId, [
         'visit_type' => 'Outpatient',
-        'current_department_id' => $receptionDepartmentId,
+        'current_department_id' => $doctorDepartmentId,
         'attending_doctor_id' => null
     ], $adminId), 'Encounter administrative update');
 
     $bypassedTransfer = $visitService->updateVisit($visitId, [
         'visit_type' => 'Outpatient',
-        'current_department_id' => $doctorDepartmentId,
+        'current_department_id' => $nursingDepartmentId,
         'attending_doctor_id' => null
     ], $adminId);
     assertRegression(!$bypassedTransfer['success'], 'Encounter edit bypassed the transfer workflow.');
 
-    $duplicateQueue = $visitService->enqueueEncounter($visitId, $receptionDepartmentId, $adminId);
+    $duplicateQueue = $visitService->enqueueEncounter($visitId, $doctorDepartmentId, $adminId);
     assertRegression(!$duplicateQueue['success'], 'Duplicate active queue entry was not prevented.');
 
-    $called = successful($visitService->callNextPatient($receptionDepartmentId, $adminId), 'Queue call');
+    $called = successful($visitService->callNextPatient($doctorDepartmentId, $adminId), 'Queue call');
     assertRegression((int)$called['visit_id'] === $visitId, 'Queue ordering returned the wrong encounter.');
     successful($visitService->startService((int)$called['queue_id'], $adminId), 'Queue service start');
     successful($visitService->completeQueueEntry((int)$called['queue_id'], $adminId), 'Queue service completion');

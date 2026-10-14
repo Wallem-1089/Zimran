@@ -794,7 +794,7 @@ class PermissionService
         if ($this->isEmergencyPatientProfileRestricted($patientId)
             && !$this->canViewRestrictedEmergencyClinicalProfile($patientId, $user)
         ) {
-            return false;
+            return $this->hasRequestTreatmentRelationship($patientId, $user);
         }
 
         if (($this->roleMatches($user, ['Physiotherapist'])
@@ -2090,13 +2090,8 @@ class PermissionService
     public function canCreateBillableItems(?array $user = null): bool
     {
         $user = $user ?? $this->currentUser();
-        if (!$user) {
-            return false;
-        }
-        $department = $this->activeDepartmentName($user);
         return $this->isAdministrator($user)
-            || $department === 'Pharmacy'
-            || $this->roleMatches($user, ['Pharmacist']);
+            || $this->hasPermission('create_billable_items', $user);
     }
 
     public function canEditBillableItems(?array $user = null): bool
@@ -2112,13 +2107,8 @@ class PermissionService
     public function canManageBillableItemStatus(?array $user = null): bool
     {
         $user = $user ?? $this->currentUser();
-        if (!$user) {
-            return false;
-        }
-        $department = $this->activeDepartmentName($user);
         return $this->isAdministrator($user)
-            || $department === 'Pharmacy'
-            || $this->roleMatches($user, ['Pharmacist']);
+            || $this->hasPermission('manage_billable_item_status', $user);
     }
 
     public function canViewInventory(?array $user = null): bool
@@ -2145,13 +2135,7 @@ class PermissionService
     public function canIssueStock(?array $user = null): bool
     {
         $user = $user ?? $this->currentUser();
-        if (!$user) {
-            return false;
-        }
-        $department = $this->activeDepartmentName($user);
         return $this->isAdministrator($user)
-            || $department === 'Pharmacy'
-            || $this->roleMatches($user, ['Pharmacist'])
             || $this->hasPermission('issue_stock', $user);
     }
 
@@ -2227,31 +2211,15 @@ class PermissionService
     public function canReviewStockRequest(?array $user = null): bool
     {
         $user = $user ?? $this->currentUser();
-        if ($user && $this->hasUserPermissionOverride('review_stock_request', $user, 'Deny')) {
-            return false;
-        }
-
         return $this->isAdministrator($user)
-            || $this->hasPermission('review_stock_request', $user)
-            || ($user !== null && (
-                $this->roleMatches($user, ['Store Officer', 'Pharmacist'])
-                || in_array($this->activeDepartmentName($user), ['Store', 'Pharmacy'], true)
-            ));
+            || $this->hasPermission('review_stock_request', $user);
     }
 
     public function canIssueStockRequest(?array $user = null): bool
     {
         $user = $user ?? $this->currentUser();
-        if ($user && $this->hasUserPermissionOverride('issue_stock_request', $user, 'Deny')) {
-            return false;
-        }
-
         return $this->isAdministrator($user)
-            || $this->hasPermission('issue_stock_request', $user)
-            || ($user !== null && (
-                $this->roleMatches($user, ['Store Officer', 'Pharmacist'])
-                || in_array($this->activeDepartmentName($user), ['Store', 'Pharmacy'], true)
-            ));
+            || $this->hasPermission('issue_stock_request', $user);
     }
 
     public function canCancelStockRequest(?array $user = null): bool
@@ -2693,6 +2661,10 @@ class PermissionService
             return true;
         }
 
+        if ($this->hasRequestTreatmentRelationship($patientId, $user)) {
+            return true;
+        }
+
         try {
             $stmt = $this->pdo->prepare('
                 SELECT 1
@@ -2715,6 +2687,70 @@ class PermissionService
         } catch (Throwable $exception) {
             return false;
         }
+    }
+
+    private function hasRequestTreatmentRelationship(
+        int $patientId,
+        array $user
+    ): bool {
+        $departmentId = $this->activeDepartmentId($user);
+        $departmentName = $this->normalizeDepartmentName($this->activeDepartmentName($user));
+
+        if ($patientId <= 0 || ($departmentId <= 0 && $departmentName === '')) {
+            return false;
+        }
+
+        $requestTables = [];
+        if (in_array($departmentName, ['laboratory', 'lab'], true)) {
+            $requestTables[] = ['laboratory_requests', ['Requested', 'In Progress']];
+        } elseif (in_array($departmentName, ['radiology', 'x-ray', 'xray'], true)) {
+            $requestTables[] = ['radiology_requests', ['Requested', 'In Progress']];
+        } elseif ($departmentName === 'ecg') {
+            $requestTables[] = ['ecg_requests', ['Requested', 'In Progress']];
+        } elseif (in_array($departmentName, ['plaster', 'pop'], true)) {
+            $requestTables[] = ['pop_requests', ['Requested', 'In Progress']];
+        } elseif (in_array($departmentName, ['physiotherapy', 'physio', 'rehabilitation'], true)) {
+            $requestTables[] = ['physiotherapy_records', ['Active']];
+        } elseif ($departmentName === 'theatre') {
+            $requestTables[] = ['theatre_records', ['Draft']];
+        } elseif ($departmentName === 'pharmacy') {
+            $requestTables[] = ['prescriptions', ['Prescribed', 'Dispensed']];
+        }
+
+        foreach ($requestTables as [$table, $activeStatuses]) {
+            if (!$this->tableExists($table)) {
+                continue;
+            }
+
+            try {
+                $statusPlaceholders = implode(',', array_fill(0, count($activeStatuses), '?'));
+                $params = [$patientId];
+                $departmentSql = '';
+                if ($departmentId > 0) {
+                    $departmentSql = ' AND (department_id IS NULL OR department_id = ?)';
+                    $params[] = $departmentId;
+                }
+                foreach ($activeStatuses as $status) {
+                    $params[] = $status;
+                }
+
+                $stmt = $this->pdo->prepare(
+                    'SELECT 1 FROM ' . $table . '
+                     WHERE patient_id = ?'
+                     . $departmentSql . '
+                       AND status IN (' . $statusPlaceholders . ')
+                     LIMIT 1'
+                );
+                $stmt->execute($params);
+                if ($stmt->fetchColumn()) {
+                    return true;
+                }
+            } catch (Throwable) {
+                continue;
+            }
+        }
+
+        return false;
     }
 
     private function hasActivePhysiotherapyPatientAccess(int $patientId): bool
@@ -3239,8 +3275,8 @@ class PermissionService
             'process_laboratory_request',
             'enter_laboratory_result',
             'edit_laboratory_result',
-            'complete_laboratory_request' => ($this->roleMatches($user, ['Laboratory Scientist']) || $this->activeDepartmentName($user) === 'Laboratory')
-                && $this->canViewLaboratory((int)($encounter['patient_id'] ?? 0), $user),
+            'complete_laboratory_request' => $this->roleMatches($user, ['Laboratory Scientist'])
+                || $this->activeDepartmentIn($user, ['Laboratory', 'Lab']),
             default => false
         };
     }

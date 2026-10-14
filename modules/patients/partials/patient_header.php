@@ -9,6 +9,8 @@ $gender = $patient['gender'] ?? '';
 $phone = $patient['phone'] ?? '';
 $whatsappNumber = $patient['whatsapp_number'] ?? '';
 $dateOfBirth = $patient['date_of_birth'] ?? '';
+$registrationType = (string)($patient['registration_type'] ?? 'Normal');
+$registrationValidUntil = (string)($patient['registration_valid_until'] ?? '');
 
 $age = '-';
 
@@ -45,6 +47,9 @@ if ($dateOfBirth !== '') {
                 <strong>
                     <?= e($hospitalNumber !== '' ? $hospitalNumber : 'Pending payment') ?>
                 </strong>
+                <?php if ($registrationType !== ''): ?>
+                    <span class="status-badge"><?= e($registrationType) ?></span>
+                <?php endif; ?>
             </div>
 
             <div class="patient-meta">
@@ -53,6 +58,10 @@ if ($dateOfBirth !== '') {
                 <span><?= e($age) ?></span>
                 <span>•</span>
                 <span><?= e($phone ?: '-') ?></span>
+                <?php if ($registrationValidUntil !== ''): ?>
+                    <span>&bull;</span>
+                    <span>Valid until <?= e($registrationValidUntil) ?></span>
+                <?php endif; ?>
             </div>
 
         </div>

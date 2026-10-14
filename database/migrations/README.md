@@ -651,3 +651,84 @@ choosing which uploaded files are included in the WhatsApp handoff workflow.
 for staff profiles, changes billable item types from the old Service/Product
 model to Drug/Consumable/Service, and adds auditable payment cancellation for
 Super Administrator recovery workflows.
+
+## Migration 082 - Pharmacy Stock Request Permissions
+
+`082_pharmacy_stock_request_permissions_up.sql` aligns stock-request
+permissions with the Pharmacy/Store split. Pharmacy receives the access needed
+to handle drug stock requests, while Store keeps non-drug/consumable stock
+request issuing and central stock intake responsibilities.
+
+## Migration 083 - Emergency Visit Status Repair
+
+`083_visit_status_emergency_enum_repair_up.sql` repairs visit-status enum
+support so Emergency encounters can be represented consistently in encounter
+creation, worklists, reports, and request billing-gate checks.
+
+## Migration 084 - Pharmacy-Owned Price Catalogue Permissions
+
+`084_pharmacy_price_catalogue_permissions_up.sql` moves price catalogue
+mutation away from Accounts and to Pharmacy/Pharmacist roles. Accounts keeps
+view/review/payment workflow access but does not own billable item setup.
+
+## Migration 085 - Emergency Clinical Permissions and Catalogue Edit Lock
+
+`085_emergency_clinical_permissions_and_catalogue_edit_lock_up.sql` seeds
+Emergency Doctor/Nurse clinical permissions and locks billable item price
+editing to the intended catalogue owners/overrides.
+
+## Migrations 086-088 - Diagnostic Price Lists
+
+`086_xray_price_list_services_up.sql` seeds current X-Ray/Radiology service
+prices. `087_lab_and_ecg_price_list_services_up.sql` seeds Lab and ECG service
+prices. `088_deactivate_legacy_lab_billable_items_up.sql` deactivates old Lab
+catalogue entries so new requests use the current list.
+
+## Migration 089 - Store Consumable Inventory Items
+
+`089_store_consumable_inventory_items_up.sql` seeds Store consumable inventory
+items from the current hospital list.
+
+## Migration 090 - Global Support and Ward Billable Items
+
+`090_global_support_and_ward_billable_items_up.sql` seeds support, ward, and
+orthopaedic-support billable items available to the appropriate workflows.
+
+## Migration 091 - Theatre Store Inventory Items
+
+`091_theatre_store_inventory_items_up.sql` seeds Theatre-related Store items
+and categorizes them as Drug, Consumable, or Service as appropriate.
+
+## Migrations 092-094 - Physiotherapy Catalogue and Access
+
+`092_physiotherapy_billable_items_up.sql` seeds current Physiotherapy items.
+`093_deactivate_legacy_physiotherapy_billable_items_up.sql` deactivates older
+Physiotherapy items. `094_physiotherapy_treatment_rates_and_access_up.sql`
+adds the adult/child treatment rates and grants paid Physiotherapy patient
+access for the configured long validity period.
+
+## Migration 095 - Family Card Registration
+
+`095_family_card_registration_up.sql` adds Family Cards, Family Card members,
+Family Card activation/renewal billing types, and the fields required to link
+registration billing requests to a Family Card.
+
+## Migration 096 - Legacy Patient Registration
+
+`096_legacy_patient_registration_up.sql` adds Legacy/Existing Hospital Patient
+registration. Legacy patients keep a separate old hospital/card number and
+proof notes, receive an immediate system hospital number, create no initial
+registration billing request, and receive 30 days registration validity.
+
+## Migration 097 - Hardening Repair: Staff Photo and Catalogue Permissions
+
+`097_hardening_repair_staff_photo_and_catalogue_permissions_up.sql` repairs
+environments where `profile_photo_path` was missing after earlier migrations
+and removes stale Accounts catalogue mutation grants so Pharmacy-owned pricing
+rules remain authoritative.
+
+## Migration 098 - Permission Matrix Stock Issue Grants
+
+`098_permission_matrix_stock_issue_grants_up.sql` grants `issue_stock` to the
+Pharmacist role so Pharmacy drug stock issuing remains controlled by the
+permission matrix instead of hardcoded department checks.

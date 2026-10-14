@@ -103,6 +103,12 @@ require_once __DIR__ . '/../../layouts/header.php';
         <div>
             <h1>Patient Face Sheet</h1>
             <p><?= e((string)($patient['first_name'] ?? '')) ?> <?= e((string)($patient['last_name'] ?? '')) ?></p>
+            <p>
+                Registration:
+                <?= e((string)($patient['registration_type'] ?? 'Normal')) ?>
+                /
+                <?= e((string)($patient['registration_status'] ?? 'Active')) ?>
+            </p>
         </div>
         <div>
             <strong>Hospital No.</strong><br>
@@ -123,6 +129,18 @@ require_once __DIR__ . '/../../layouts/header.php';
             <div class="print-field"><small>Address</small><?= nl2br(e((string)($patient['address'] ?? ''))) ?></div>
         </div>
     </section>
+
+    <?php if ((string)($patient['registration_type'] ?? '') === 'Legacy'): ?>
+        <section class="print-section">
+            <h2>Legacy Patient Import</h2>
+            <div class="print-grid">
+                <div class="print-field"><small>Old Hospital/Card Number</small><?= e((string)($patient['legacy_hospital_number'] ?? '')) ?></div>
+                <div class="print-field"><small>First Seen Date</small><?= e((string)($patient['legacy_first_seen_date'] ?? '')) ?></div>
+                <div class="print-field"><small>Registration Valid Until</small><?= e((string)($patient['registration_valid_until'] ?? '')) ?></div>
+                <div class="print-field"><small>Legacy Proof / Notes</small><?= nl2br(e((string)($patient['legacy_notes'] ?? ''))) ?></div>
+            </div>
+        </section>
+    <?php endif; ?>
 
     <section class="print-section">
         <h2>Medical Summary</h2>

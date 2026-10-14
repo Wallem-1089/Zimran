@@ -266,6 +266,41 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
     <!-- Quick Actions -->
     <?php require __DIR__ . '/partials/quick_actions.php'; ?>
 
+    <?php if ((string)($patient['registration_type'] ?? '') === 'Legacy' && $canViewRegistrationBillingActions): ?>
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h2>Legacy Patient Import</h2>
+                    <p>Existing hospital patient imported without a new initial registration fee.</p>
+                </div>
+            </div>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <span class="summary-label">Old Hospital/Card Number</span>
+                    <span class="summary-value"><?= e((string)($patient['legacy_hospital_number'] ?? '-')) ?></span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">First Seen Date</span>
+                    <span class="summary-value"><?= e((string)($patient['legacy_first_seen_date'] ?? '-')) ?></span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">System Hospital Number</span>
+                    <span class="summary-value"><?= e((string)($patient['hospital_number'] ?? '-')) ?></span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Registration Valid Until</span>
+                    <span class="summary-value"><?= e((string)($patient['registration_valid_until'] ?? '-')) ?></span>
+                </div>
+            </div>
+            <?php if (trim((string)($patient['legacy_notes'] ?? '')) !== ''): ?>
+                <div class="review-item">
+                    <div class="review-label">Legacy Proof / Notes</div>
+                    <div class="review-value"><?= nl2br(e((string)$patient['legacy_notes'])) ?></div>
+                </div>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
+
     <?php if ($canViewRegistrationBillingActions): ?>
         <?php if ($familyCardMembership !== null): ?>
             <div class="card">

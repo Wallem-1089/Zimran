@@ -173,6 +173,8 @@ $pdo->prepare("
     SELECT 'P36-PHY-AUTO', 'P36 Physiotherapy Session', 'Service', :department_id, 'Physiotherapy fixture.', 1800.00, '', 1, :created_by, NOW(), NOW()
     WHERE NOT EXISTS (SELECT 1 FROM billable_items WHERE item_code = 'P36-PHY-AUTO')
 ")->execute([':department_id' => $deptId, ':created_by' => (int)$accounts['id']]);
+$pdo->prepare("UPDATE billable_items SET department_id = :department_id, unit_price = 1800.00, is_active = 1, updated_at = NOW() WHERE item_code = 'P36-PHY-AUTO'")
+    ->execute([':department_id' => $deptId]);
 $physioBillableItemId = (int)$pdo->query("SELECT id FROM billable_items WHERE item_code = 'P36-PHY-AUTO' LIMIT 1")->fetchColumn();
 
 try {
@@ -192,6 +194,7 @@ try {
     $clinicalRecordId = (int)$clinical['physiotherapy_record_id'];
     $pdo->prepare("UPDATE billing_requests SET status = 'Charged', reviewed_by = :reviewed_by, reviewed_at = NOW(), updated_at = NOW() WHERE source_module = 'Physiotherapy' AND source_record_id = :source_record_id")
         ->execute([':reviewed_by' => (int)$accounts['id'], ':source_record_id' => $clinicalRecordId]);
+    success($billingService->createInvoice($doctorVisitId, $accounts), 'Create physiotherapy invoice');
     $physioInvoice = $billingService->getInvoiceByVisit($doctorVisitId);
     assertPhysio($physioInvoice !== null, 'Physiotherapy invoice was not created.');
     success($billingService->recordPayment([

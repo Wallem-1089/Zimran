@@ -612,6 +612,17 @@ try {
 
     echo "PASS: Phase 4.4 Billing regression passed." . PHP_EOL;
 } catch (Throwable $exception) {
+    $pdo->exec("DELETE FROM billing_requests WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
+    $pdo->exec("DELETE FROM billing_discounts WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
+    $pdo->exec("DELETE FROM payments WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
+    $pdo->exec("DELETE FROM invoices WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
+    $pdo->exec("DELETE FROM patient_charges WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
+    $pdo->exec("DELETE lr FROM laboratory_results lr INNER JOIN laboratory_requests lq ON lq.id = lr.laboratory_request_id INNER JOIN visits v ON v.id = lq.visit_id WHERE v.visit_number LIKE 'BIL-%'");
+    $pdo->exec("DELETE lq FROM laboratory_requests lq INNER JOIN visits v ON v.id = lq.visit_id WHERE v.visit_number LIKE 'BIL-%'");
+    $pdo->exec("DELETE FROM encounter_events WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
+    $pdo->exec("DELETE FROM audit_logs WHERE visit_id IN (SELECT id FROM visits WHERE visit_number LIKE 'BIL-%')");
+    $pdo->exec("DELETE FROM visits WHERE visit_number LIKE 'BIL-%'");
+    $pdo->exec("DELETE FROM billable_items WHERE item_code LIKE 'BIL-%'");
     fwrite(STDERR, 'FAIL: ' . $exception->getMessage() . PHP_EOL);
     throw $exception;
 }

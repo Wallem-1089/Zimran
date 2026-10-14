@@ -16,9 +16,10 @@ Version: **1.2**
 
 The application is an encounter-centered hospital management system with:
 
-- payment-gated patient registration, renewal billing, patient search, patient
-  profile, printable Patient Face Sheet, patient chart, medical documents,
-  clinical safety, clinical notes, and MPI support;
+- payment-gated patient registration, Family Card registration/renewal,
+  Legacy/Existing Hospital Patient import, renewal billing, patient search,
+  patient profile, printable Patient Face Sheet, patient chart, medical
+  documents, clinical safety, clinical notes, and MPI support;
 - encounter workspace, department transfer/receive, doctor assignment,
   department/user notifications, cancellation, reopen, and completion/discharge;
 - Consultation, Emergency, Vital Signs, Nursing, Dressing Book, Drug Chart, DM
@@ -39,6 +40,13 @@ The application is an encounter-centered hospital management system with:
 - Normal registration initially captures only first name, middle name, last name,
   and phone number. Accounts must clear the generated registration bill before a
   hospital number is issued and the rest of the registration fields are enabled.
+- Family Card registration creates a Family Card billing request. Patients
+  added to an active existing Family Card inherit the card coverage without a
+  separate initial registration charge.
+- Legacy/Existing Hospital Patient registration creates an active patient
+  immediately, stores the old hospital/card number and proof notes, creates no
+  initial registration billing request, and gives 30 days of validity before
+  normal renewal billing applies.
 - Monthly renewal billing is required when registration validity expires before
   a new encounter can be created.
 - Doctor-created clinical requests are sent to Accounts first. Departments can
@@ -46,7 +54,9 @@ The application is an encounter-centered hospital management system with:
   satisfied, except for Super Admin and configured emergency override paths.
 - Request-only departments such as Laboratory, Radiology/X-Ray, ECG, Plaster,
   Physiotherapy, and Pharmacy work from clinical requests; they do not require
-  encounter transfer ownership.
+  encounter transfer ownership. Request ownership now counts as the treatment
+  relationship needed to view/process department work, including Emergency
+  encounters.
 - Accounts worklists show both pending billing requests and auto-charged
   requests that still need payment/clearance.
 - Pharmacy requests can include multiple billable items and multiple medication

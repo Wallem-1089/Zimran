@@ -1075,10 +1075,12 @@ summary without duplicating the data model.
 
 ### Phase 4.2 / 4.3 - Store and Pharmacy
 
-Store is implemented as the operational stock owner. It uses inventory items,
-stock transactions, and transaction-safe department balance updates. Pharmacy is
-implemented with prescriptions and dispensing. Pharmacy consumes Store stock
-when dispensing and does not maintain a separate stock system.
+Store is implemented as the central stock intake owner. It receives hospital
+stock, keeps the full stock ledger, handles external sales, and issues Drug
+stock only to Pharmacy. Pharmacy owns Drug stock after Store transfer and is
+responsible for Drug stock requests from other departments, onward issue,
+prescriptions, dispensing, and the Pharmacy stock ledger. Store continues to
+handle non-drug/Consumable stock requests for departments.
 
 ### Phase 4.4 - Billing
 
@@ -1110,6 +1112,35 @@ discounts, then subtracts posted payments to get the balance. Cancelling a
 discount requires a reason and refreshes the invoice totals.
 
 Advanced insurance and financial approval chains are postponed.
+
+## Current registration coverage workflows
+
+Registration coverage can come from four paths:
+
+- Normal Registration: creates a ₦30,000 registration billing request and
+  activates the patient only after Accounts clears payment.
+- Emergency Registration: creates a ₦50,000 emergency registration billing
+  request but allows the Emergency encounter to open immediately; when paid, it
+  counts as the initial registration for 30 days.
+- Family Card: a new Family Card creates a ₦50,000 activation request; active
+  members are covered for the card validity period and renew at ₦20,000.
+- Legacy/Existing Hospital Patient: no initial registration billing request is
+  created. The old hospital/card number and proof notes are stored separately,
+  a system hospital number is generated immediately, and the patient receives
+  30 days validity before the normal ₦20,000 renewal rule applies.
+
+Patient profiles and printable face sheets must show the coverage context where
+applicable so Accounts, Records, and clinical users can see why the patient is
+active.
+
+## Request-based treatment relationship
+
+Request-only departments do not need encounter transfer ownership to process
+work. An active request/prescription/department record sent to Laboratory,
+Radiology/X-Ray, ECG, Plaster, Physiotherapy, Theatre, or Pharmacy establishes
+the treatment relationship needed to view/process that department work. This is
+especially important for Emergency encounters, where billing clearance may be
+bypassed but department access still remains request-owned and permission-gated.
 
 ### Later / Optional
 

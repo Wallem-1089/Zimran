@@ -58,6 +58,21 @@ next-of-kin name, next-of-kin phone number, and next-of-kin address are required
 both by the browser form and by `PatientService`. Existing patient/MPI
 regression fixtures must include the required next-of-kin fields.
 
+Payment-based registration regression must also cover:
+
+- Normal registration creates a registration billing request and blocks normal
+  encounter creation until Accounts clears payment.
+- Emergency registration creates the higher emergency registration billing
+  request but allows Emergency encounter creation immediately.
+- Family Card registration creates a Family Card activation billing request;
+  adding a patient to an active existing Family Card creates no new initial
+  registration bill.
+- Legacy/Existing Hospital Patient import creates no initial registration bill,
+  stores old hospital/card details and proof notes, generates a system hospital
+  number immediately, and grants 30 days validity before normal renewal billing.
+- Monthly renewal remains ₦20,000 after normal, emergency, family-card, or
+  legacy validity expires.
+
 ## Phase 3.4 Laboratory CRUD
 
 Use only the explicit dedicated database configuration:
@@ -508,6 +523,21 @@ php database\tools\migration_status.php --live
 Phase 5.0 is bug-fix-only: fix verified blockers, preserve routes and service
 contracts, keep migrations additive, and record non-blocking technical debt
 instead of adding new modules.
+
+Current-scope hardening should also verify the post-Migration-097 workflows:
+
+- live and test databases both report migrations through
+  `097_hardening_repair_staff_photo_and_catalogue_permissions_up.sql`;
+- request-based departments can process work sent to them without encounter
+  transfer ownership, including Emergency encounters where billing override
+  applies;
+- Accounts can view the price catalogue but cannot create/edit/activate
+  Pharmacy-owned billable items unless Super Administrator override applies;
+- staff profile photo upload, saved preview, and protected photo serving work;
+- ECG/Lab/Physio request regressions explicitly create/refresh invoices after
+  auto-charge before recording payment;
+- Family Card and Legacy Patient registration flows remain visible on patient
+  profile and printable Patient Face Sheet.
 
 Production error logging should be checked by confirming that `config/app.php`
 sets `display_errors=0`, `display_startup_errors=0`, `log_errors=1`, and

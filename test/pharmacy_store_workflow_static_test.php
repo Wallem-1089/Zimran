@@ -107,13 +107,13 @@ assertPharmacyStoreWorkflow(
 $permissionService = file_get_contents(__DIR__ . '/../services/PermissionService.php');
 assertPharmacyStoreWorkflow(is_string($permissionService), 'Unable to read Permission service.');
 foreach ([
-    "['Pharmacist']",
-    "\$department === 'Pharmacy'",
     'canCreateBillableItems',
+    "hasPermission('create_billable_items'",
+    "hasPermission('manage_billable_item_status'",
     'canIssueStock',
+    "hasPermission('issue_stock'",
     "canIssueStockRequest(?array \$user = null)",
-    "roleMatches(\$user, ['Store Officer', 'Pharmacist'])",
-    "activeDepartmentName(\$user), ['Store', 'Pharmacy']",
+    "hasPermission('issue_stock_request'",
     'canViewStockLedger',
 ] as $needle) {
     assertPharmacyStoreWorkflow(

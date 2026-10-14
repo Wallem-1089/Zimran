@@ -1,21 +1,70 @@
 # Release Readiness
 
+## 2026-10-12 hardening addendum
+
+- Current hardening date: 2026-10-12
+- Live database: `hospital_management_system`
+- Dedicated test database used: `hms_test_hospital_management_system`
+- Latest migration level: 097
+  (`097_hardening_repair_staff_photo_and_catalogue_permissions_up.sql`)
+- Live and test migration status: applied through 097 with no pending
+  migrations reported.
+- PHP syntax validation: 684 PHP files checked, 0 failures.
+- Broad selected regression suite: passed.
+- POST/CSRF scan: 189 candidate files, 0 without CSRF marker.
+- Suspicious GET state-route scan: 6 candidates reviewed; they are POST-only
+  handlers with CSRF or read-only confirmation/form pages.
+- Targeted integrity checks returned zero failures for visit/patient mismatch,
+  negative department stock, negative invoice balance, orphan registration
+  billing requests, and duplicate active hospital numbers.
+
+New/current-scope workflows included in this pass:
+
+- Family Card registration, active Family Card membership, and Family Card
+  renewal billing.
+- Legacy/Existing Hospital Patient import with no initial registration bill,
+  old card-number/proof capture, immediate system hospital number, and 30 days
+  validity.
+- Emergency registration/encounter behavior with emergency billing override.
+- Request-based treatment relationship for request-only departments, including
+  Emergency encounters.
+- Pharmacy-owned price catalogue permissions.
+- Store/Pharmacy stock split and Pharmacy drug stock request handling.
+- Staff profile photo storage and protected preview.
+- Multi-file diagnostic attachment and WhatsApp handoff wiring.
+
+Fixes made during this hardening pass:
+
+- Added Migration 097 to repair missing `staff_profiles.profile_photo_path` in
+  drifted environments and remove stale Accounts billable-item mutation grants.
+- Hardened `PermissionService` so active request ownership establishes
+  treatment relationship for request departments.
+- Hardened Laboratory request processing so Laboratory users can process
+  Laboratory requests sent to them without encounter transfer ownership.
+- Updated regressions for the current default Doctor initial encounter
+  workflow, unique registration test data, active billable-item fixtures, and
+  explicit invoice creation/refresh after auto-charge.
+
+Final automated result for this pass: READY FOR CURRENT-SCOPE HANDOFF based on
+syntax, migration, permission, request-billing, registration, emergency,
+department, stock/pharmacy, staff-profile, and broad regression checks.
+
 ## Release baseline
 
 - Application: Zimran E-HMIS / Hospital Management System
 - Application config version: `1.2`
 - Legacy constant version: `APP_VERSION = 1.2`
-- Release hardening date: 2026-10-01
+- Release hardening date: 2026-10-12
 - PHP tested locally: 8.2.12
 - Database engine in final backup header: MariaDB 10.4.32
 - Live database: `hospital_management_system`
-- Dedicated test database used: `hms_test_release_hardening`
-- Latest migration level: 080 (`080_diagnostic_attachments_up.sql`)
+- Dedicated test database used: `hms_test_hospital_management_system`
+- Latest migration level: 097 (`097_hardening_repair_staff_photo_and_catalogue_permissions_up.sql`)
 - Migration status: no pending migrations and no checksum mismatches reported for the dedicated test database or live database.
 
 ## Implemented modules in scope
 
-Authentication/session management; Administration/users/roles/permission matrix/settings; staff profiles; patient registration/search/demographics/history/communications; payment-based registration, monthly renewal, and emergency registration billing; encounters/visits/queues/transfers/workspace; request-based departmental workflow; multi-billable clinical requests; Accounts billing clearance gate; Emergency Department and emergency reports; Patient Chart; Medical Records; MPI; Clinical Safety; Allergies; Alerts; Problem List; Medical History; Medical Documents; Clinical Notes; Department and User Notifications; Consultation; Vital Signs; Nursing; Laboratory; Radiology/X-Ray; ECG; Plaster with legacy POP internals; Physiotherapy; Theatre; Admissions/wards/beds; Accounts billing queues; Pharmacy-owned Price Catalogue; Store inventory/stock intake/barcodes/external sales; Store-to-Pharmacy stock transfer; Pharmacy onward stock movement and ledger; Stock Requests; Patient Stock Usage; Pharmacy prescriptions/dispensing; Billing/charges/invoices/discounts/payments/receipts; Reports/dashboards; Configurable Form Fields; diagnostic attachments and WhatsApp selectable attachment handoff.
+Authentication/session management; Administration/users/roles/permission matrix/settings; staff profiles with protected profile photos; patient registration/search/demographics/history/communications; payment-based registration, monthly renewal, emergency registration billing, Family Card registration/renewal, and Legacy Patient import; encounters/visits/queues/transfers/workspace; request-based departmental workflow; multi-billable clinical requests; Accounts billing clearance gate; Emergency Department and emergency reports; Patient Chart; Medical Records; MPI; Clinical Safety; Allergies; Alerts; Problem List; Medical History; Medical Documents; Clinical Notes; Department and User Notifications; Consultation; Vital Signs; Nursing; Laboratory; Radiology/X-Ray; ECG; Plaster with legacy POP internals; Physiotherapy; Theatre; Admissions/wards/beds; Accounts billing queues; Pharmacy-owned Price Catalogue; Store inventory/stock intake/barcodes/external sales; Store-to-Pharmacy stock transfer; Pharmacy onward stock movement and ledger; Stock Requests; Patient Stock Usage; Pharmacy prescriptions/dispensing; Billing/charges/invoices/discounts/payments/receipts; Reports/dashboards; Configurable Form Fields; diagnostic attachments and WhatsApp selectable attachment handoff.
 
 ## Ownership boundaries
 
@@ -42,12 +91,12 @@ Earlier backups remain preserved in `database/backups/`.
 
 ## Migration status
 
-- Latest migration file present: `080_diagnostic_attachments_up.sql`
+- Latest migration file present: `097_hardening_repair_staff_photo_and_catalogue_permissions_up.sql`
 - Test database migration status: no `Pending` and no `Checksum mismatch`
 - Live database migration status: no `Pending` and no `Checksum mismatch`
-- No migration was applied during the 2026-10-01 hardening pass.
+- Migration 097 was applied during the 2026-10-12 hardening pass.
 - `database/hospital.sql` was synchronized to the canonical `database/schema.sql` baseline.
-- `database/migrations/README.md` was updated to document migrations 072-080.
+- `database/migrations/README.md` was updated to document migrations 072-097.
 
 ## Tests executed
 
@@ -100,9 +149,10 @@ Excluded from the bulk run: the explicit migration down/up cycle tests for 019, 
 ## Test results
 
 - Broad non-destructive regression suite: passed.
-- PHP syntax validation: 662 source PHP files checked, 0 failures.
-- POST/CSRF scan: 51 POST handlers found; 0 without CSRF marker.
-- Suspicious GET state-changing route scan: no matching route pattern found.
+- PHP syntax validation: 684 source PHP files checked, 0 failures.
+- POST/CSRF scan: 189 candidate files found; 0 without CSRF marker.
+- Suspicious GET state-changing route scan: 6 candidates reviewed; no unsafe
+  GET mutation found.
 - Migration status checks: passed.
 - Final backup verification: passed.
 
@@ -143,6 +193,8 @@ Targeted read-only checks on the dedicated test database returned zero for:
 - diagnostic attachments without valid patient/visit ownership
 - duplicate active hospital numbers
 - Lab/Radiology/ECG/Plaster/Physiotherapy/Theatre/Prescription patient-visit mismatches
+- Legacy/Family Card registration migrations present and registration billing
+  request patient ownership valid
 
 ## Security and authorization verification
 

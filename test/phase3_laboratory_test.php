@@ -213,6 +213,8 @@ try {
         SELECT 'P34-LAB-AUTO', 'P34 Laboratory Test', 'Service', :department_id, 'Laboratory test fixture.', 1200.00, '', 1, :created_by, NOW(), NOW()
         WHERE NOT EXISTS (SELECT 1 FROM billable_items WHERE item_code = 'P34-LAB-AUTO')
     ")->execute([':department_id' => $laboratoryDepartmentId, ':created_by' => (int)$admin['id']]);
+    $pdo->prepare("UPDATE billable_items SET department_id = :department_id, unit_price = 1200.00, is_active = 1, updated_at = NOW() WHERE item_code = 'P34-LAB-AUTO'")
+        ->execute([':department_id' => $laboratoryDepartmentId]);
     $laboratoryBillableItemId = (int)$pdo->query("SELECT id FROM billable_items WHERE item_code = 'P34-LAB-AUTO' LIMIT 1")->fetchColumn();
 
     $clinicalCreate = requireLaboratorySuccess($laboratoryService->createRequest([
@@ -228,7 +230,9 @@ try {
     $requestIds[] = $clinicalRequestId;
     $pdo->prepare("UPDATE billing_requests SET status = 'Charged', reviewed_by = :reviewed_by, reviewed_at = NOW(), updated_at = NOW() WHERE source_module = 'Laboratory' AND source_record_id = :source_record_id")
         ->execute([':reviewed_by' => (int)$admin['id'], ':source_record_id' => $clinicalRequestId]);
+    requireLaboratorySuccess($billingService->createInvoice($doctorVisitId, $admin), 'Create laboratory invoice');
     $labInvoice = $billingService->getInvoiceByVisit($doctorVisitId, $admin);
+    assertLaboratory($labInvoice !== null, 'Laboratory invoice was not created.');
     requireLaboratorySuccess($billingService->recordPayment([
         'invoice_id' => (int)$labInvoice['id'],
         'amount' => (float)$labInvoice['balance_due'],

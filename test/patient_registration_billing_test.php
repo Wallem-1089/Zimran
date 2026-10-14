@@ -48,16 +48,21 @@ assertRegistrationBilling(isset($users['dev_reception'], $users['dev_accounts'])
 
 $service = new PatientRegistrationBillingService($pdo);
 $patientService = new PatientService($pdo);
+$registrationTestPhone = '0803' . str_pad((string)random_int(1, 9999999), 7, '0', STR_PAD_LEFT);
+$registrationPaymentReference = 'Test payment ' . bin2hex(random_bytes(4));
 
 $result = $service->createInitialRegistration([
     'first_name' => 'Pending',
     'middle_name' => 'Payment',
     'last_name' => 'Patient',
-    'phone' => '08030007878',
+    'phone' => $registrationTestPhone,
     'registration_type' => 'Normal',
 ], $users['dev_reception']);
 
-assertRegistrationBilling(($result['success'] ?? false) === true, 'Initial registration billing request failed.');
+assertRegistrationBilling(
+    ($result['success'] ?? false) === true,
+    'Initial registration billing request failed: ' . implode(' ', $result['errors'] ?? [])
+);
 $patientId = (int)$result['patient_id'];
 $patient = $patientService->getPatientById($patientId);
 assertRegistrationBilling($patient !== null, 'Provisional patient was not created.');
@@ -69,7 +74,7 @@ $gate = $patientService->getRegistrationGateStatus($patientId);
 assertRegistrationBilling(empty($gate['can_create_encounter']), 'Pending registration should block encounters.');
 assertRegistrationBilling(empty($gate['can_create_emergency_encounter']), 'Normal pending registration should not allow emergency encounter bypass.');
 
-$paid = $service->markPaid((int)$result['billing_request_id'], $users['dev_accounts'], 'Test payment');
+$paid = $service->markPaid((int)$result['billing_request_id'], $users['dev_accounts'], $registrationPaymentReference);
 assertRegistrationBilling(($paid['success'] ?? false) === true, 'Accounts could not clear registration payment.');
 $patient = $patientService->getPatientById($patientId);
 assertRegistrationBilling((string)($patient['hospital_number'] ?? '') !== '', 'Hospital number should be generated after payment.');
@@ -77,7 +82,7 @@ assertRegistrationBilling((string)($patient['registration_status'] ?? '') === 'A
 assertRegistrationBilling((string)($patient['registration_valid_until'] ?? '') !== '', 'Registration validity date should be set.');
 $registrationPayments = $service->listRegistrationPaymentsFiltered([
     'patient_name' => 'Pending',
-    'payment_reference' => 'Test payment',
+    'payment_reference' => $registrationPaymentReference,
 ], $users['dev_accounts']);
 assertRegistrationBilling($registrationPayments !== [], 'Paid registration clearances should appear in billing payment history.');
 assertRegistrationBilling(
