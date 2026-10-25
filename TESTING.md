@@ -64,9 +64,11 @@ Payment-based registration regression must also cover:
   encounter creation until Accounts clears payment.
 - Emergency registration creates the higher emergency registration billing
   request but allows Emergency encounter creation immediately.
-- Family Card registration creates a Family Card activation billing request;
-  adding a patient to an active existing Family Card creates no new initial
-  registration bill.
+- Family Profile creation generates a family number and a FamilyCardActivation
+  billing request with ₦50,000 for up to four members plus ₦10,000 per extra
+  member; adding members is blocked until payment clears, and both existing
+  patients and newly created patients can be added up to the paid capacity
+  without creating another initial registration bill.
 - Legacy/Existing Hospital Patient import creates no initial registration bill,
   stores old hospital/card details and proof notes, generates a system hospital
   number immediately, and grants 30 days validity before normal renewal billing.
@@ -523,6 +525,37 @@ php database\tools\migration_status.php --live
 Phase 5.0 is bug-fix-only: fix verified blockers, preserve routes and service
 contracts, keep migrations additive, and record non-blocking technical debt
 instead of adding new modules.
+
+### Full regression gate
+
+For a release-wide pass, run every PHP test file against the isolated test
+database after the syntax scan:
+
+```powershell
+$env:HMS_APP_ENV='testing'
+$env:HMS_TEST_DB_NAME='hms_test_hospital_management_system'
+$env:HMS_DEV_FIXTURE_PASSWORD='TestPassword@123'
+Get-ChildItem test -Filter *.php | Sort-Object Name | ForEach-Object {
+    php $_.FullName
+    if ($LASTEXITCODE -ne 0) { throw "FAILED: $($_.Name)" }
+}
+```
+
+Migration down/up cycle tests are destructive only to the isolated test
+database and require both explicit flags:
+
+```powershell
+php test\phase2_migration019_cycle_test.php --confirm-destructive-test-db --ack-no-test-backup
+php test\phase2_migration020_cycle_test.php --confirm-destructive-test-db --ack-no-test-backup
+php test\phase2_migration021_cycle_test.php --confirm-destructive-test-db --ack-no-test-backup
+```
+
+Before release, verify `php database\tools\migration_status.php --live` and
+the equivalent `--test` command show every migration as `Applied` with no
+checksum mismatch. Also run `php -l` across all non-backup PHP files and
+`git diff --check`. State-changing handlers must retain CSRF validation, and
+permission changes must be tested through the Permission Matrix rather than
+only through hidden UI buttons.
 
 Current-scope hardening should also verify the post-Migration-097 workflows:
 

@@ -80,6 +80,9 @@ foreach (['Medical Records', 'Price Catalogue', 'Store', 'Admissions', 'Pharmacy
     assertSidebarOmits($adminSidebar, $label, 'Administrator');
 }
 
+$departmentAdministratorSidebar = renderSidebarFor(sidebarUser('Department Officer', 'Administrator'));
+assertSidebarContains($departmentAdministratorSidebar, 'Administration', 'Administrator department user');
+
 $doctorSidebar = renderSidebarFor(sidebarUser('Doctor', 'Doctor'));
 assertSidebarContains($doctorSidebar, 'Admissions', 'Doctor');
 foreach (['Price Catalogue', 'Store', 'Pharmacy', 'Billing', 'Reports', 'Medical Records', 'Administration'] as $label) {

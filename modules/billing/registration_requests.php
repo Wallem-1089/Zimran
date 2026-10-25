@@ -12,6 +12,7 @@ if (!$permissionService->canViewBillingRequests($currentUser)) {
 $filters = [
     'status' => trim((string)($_GET['status'] ?? 'Pending')),
     'billing_type' => trim((string)($_GET['billing_type'] ?? '')),
+    'family_card_id' => trim((string)($_GET['family_card_id'] ?? '')),
     'registration_type' => trim((string)($_GET['registration_type'] ?? '')),
     'patient_name' => trim((string)($_GET['patient_name'] ?? '')),
     'hospital_number' => trim((string)($_GET['hospital_number'] ?? '')),
@@ -41,7 +42,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     <div class="page-header">
         <div>
             <h1>Registration Billing Requests</h1>
-            <p>Clear initial registration and monthly renewal payments before encounters continue.</p>
+            <p>Clear patient registration, emergency registration, and Family Profile activation or renewal payments.</p>
         </div>
         <div class="form-actions">
             <a class="btn-secondary" href="index.php">Billing Home</a>
@@ -49,6 +50,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
     </div>
 
     <form method="get" class="card">
+        <input type="hidden" name="family_card_id" value="<?= e($filters['family_card_id']) ?>">
         <div class="form-grid">
             <div class="form-group">
                 <label for="status">Status</label>
@@ -109,7 +111,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>Patient</th>
+                            <th>Patient / Family</th>
                             <th>Hospital No.</th>
                             <th>Type</th>
                             <th>Amount</th>
@@ -123,7 +125,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                     <tbody>
                         <?php foreach ($requests as $request): ?>
                             <tr>
-                                <td><?= e((string)($request['patient_name'] ?? '-')) ?><br><small><?= e((string)($request['phone'] ?? '-')) ?></small></td>
+                                <td><?= (int)($request['patient_id'] ?? 0) > 0 ? e((string)($request['patient_name'] ?? '-')) : e('Family ' . (string)($request['card_number'] ?? '-')) ?><br><small><?= e((string)($request['phone'] ?? '-')) ?></small></td>
                                 <td><?= e((string)($request['hospital_number'] ?? 'Pending')) ?></td>
                                 <td><?= e((string)$request['billing_type']) ?><?= !empty($request['registration_type']) ? ' / ' . e((string)$request['registration_type']) : '' ?></td>
                                 <td>&#8358;<?= e((string)$request['display_amount']) ?></td>
@@ -132,7 +134,8 @@ require __DIR__ . '/../../layouts/sidebar.php';
                                 <td><?= e((string)($request['cleared_at'] ?? '-')) ?><br><small><?= e((string)($request['cleared_by_name'] ?? '')) ?></small></td>
                                 <td><?= e((string)($request['notes'] ?? '-')) ?></td>
                                 <td>
-                                    <a class="btn-secondary btn-sm" href="../patients/view.php?id=<?= (int)$request['patient_id'] ?>">Patient</a>
+                                    <?php if ((int)($request['patient_id'] ?? 0) > 0): ?><a class="btn-secondary btn-sm" href="../patients/view.php?id=<?= (int)$request['patient_id'] ?>">Patient</a><?php endif; ?>
+                                    <?php if (!empty($request['family_card_id'])): ?><a class="btn-secondary btn-sm" href="../family_cards/view.php?id=<?= (int)$request['family_card_id'] ?>">Family Profile</a><?php endif; ?>
                                     <?php if ((string)$request['status'] === 'Pending' && $canClearRegistrationPayments): ?>
                                         <form method="post" action="registration_request_pay.php" class="inline-form">
                                             <?= csrfField() ?>

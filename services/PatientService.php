@@ -2089,7 +2089,12 @@ public function updatePatientWithContext(
     private function tableExists(string $table): bool
     {
         try {
-            $stmt = $this->pdo->prepare('SHOW TABLES LIKE :table_name');
+            $stmt = $this->pdo->prepare('
+                SELECT COUNT(*)
+                FROM information_schema.tables
+                WHERE table_schema = DATABASE()
+                  AND table_name = :table_name
+            ');
             $stmt->execute([':table_name' => $table]);
             return (bool)$stmt->fetchColumn();
         } catch (Throwable) {

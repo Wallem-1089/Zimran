@@ -344,7 +344,7 @@ foreach ($billingDiscounts as $discount) {
                             <td><?= e((string)($charge['status'] ?? 'Active')) ?></td>
                             <td>
                                 <a class="btn-secondary btn-sm" href="../billing/view.php?visit=<?= (int)$visit['id'] ?>#charge-<?= (int)$charge['id'] ?>">View</a>
-                                <?php if (!empty($canCancelPatientCharge) && (string)($charge['status'] ?? '') === 'Active'): ?>
+                                <?php if (!empty($canCancelPatientCharge) && (string)($charge['status'] ?? '') === 'Active' && (empty($charge['is_auto_charged']) || $permissionService->isAdministrator($currentUser))): ?>
                                     <form method="post" action="../billing/charge_cancel.php" style="display:inline">
                                         <?= csrfField() ?>
                                         <input type="hidden" name="charge_id" value="<?= (int)$charge['id'] ?>">

@@ -203,9 +203,7 @@ if ($currentUser && isset($pdo)) {
             )
         );
 
-    $canAccessFamilyCardsSidebar = $sidebarIsAdmin
-        || $sidebarRoleIn(['Records Officer', 'Receptionist'])
-        || $sidebarDepartmentIn(['Records', 'Reception']);
+    $canAccessFamilyCardsSidebar = $sidebarCan('manage_family_cards');
 
     $sidebarDepartmentId = (int)(
         $currentUser['active_department_id']
@@ -702,7 +700,7 @@ $sidebarBranding = appBranding($pdo ?? null);
 
                     <a href="<?= e($baseUrl) ?>/modules/family_cards/index.php">
 
-                        Family Cards
+                        Family Profiles
 
                     </a>
 
@@ -724,7 +722,7 @@ $sidebarBranding = appBranding($pdo ?? null);
 
             <?php endif; ?>
 
-            <?php if (($currentUser['role_name'] ?? '') === 'System Administrator' || ($currentUser['role_name'] ?? '') === 'Super Administrator'): ?>
+            <?php if ($sidebarIsAdministrationUser): ?>
 
                 <li>
 

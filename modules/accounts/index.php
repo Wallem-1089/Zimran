@@ -167,8 +167,8 @@ $priorityBillingQueues = [
         ]),
     ],
     [
-        'label' => 'Family Card',
-        'description' => 'Family Card activation payments',
+        'label' => 'Family Profile Activation',
+        'description' => 'Family profile activation payments',
         'pending_count' => accountsPendingRegistrationBillingCount($pdo, 'FamilyCardActivation'),
         'href' => '../billing/registration_requests.php?' . http_build_query([
             'status' => 'Pending',
@@ -176,8 +176,8 @@ $priorityBillingQueues = [
         ]),
     ],
     [
-        'label' => 'Family Card Renewal',
-        'description' => 'Family Card monthly renewal payments',
+        'label' => 'Family Profile Renewal',
+        'description' => 'Family profile monthly renewal payments',
         'pending_count' => accountsPendingRegistrationBillingCount($pdo, 'FamilyCardRenewal'),
         'href' => '../billing/registration_requests.php?' . http_build_query([
             'status' => 'Pending',

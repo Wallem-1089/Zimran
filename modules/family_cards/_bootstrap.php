@@ -11,12 +11,7 @@ require_once __DIR__ . '/../../services/PatientRegistrationBillingService.php';
 $permissionService = new PermissionService($pdo);
 $currentUser = $currentUser ?? ($_SESSION['user'] ?? null);
 
-$familyCardCanManage = $currentUser
-    && (
-        $permissionService->isAdministrator($currentUser)
-        || in_array((string)($currentUser['role_name'] ?? ''), ['Records Officer', 'Receptionist'], true)
-        || in_array((string)($currentUser['active_department_name'] ?? $currentUser['department_name'] ?? ''), ['Records', 'Reception'], true)
-    );
+$familyCardCanManage = $permissionService->hasPermission('manage_family_cards', $currentUser);
 
 if (!$familyCardCanManage) {
     http_response_code(403);
@@ -26,7 +21,12 @@ if (!$familyCardCanManage) {
 function familyCardTablesReady(PDO $pdo): bool
 {
     try {
-        $stmt = $pdo->prepare('SHOW TABLES LIKE :table_name');
+        $stmt = $pdo->prepare('
+            SELECT COUNT(*)
+            FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name = :table_name
+        ');
         $stmt->execute([':table_name' => 'family_cards']);
         if (!$stmt->fetchColumn()) {
             return false;

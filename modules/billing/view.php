@@ -73,6 +73,24 @@ require __DIR__ . '/../../layouts/sidebar.php';
 <div class="main-container">
 <?php require __DIR__ . '/../../layouts/navbar.php'; ?>
 <main class="content">
+    <style>
+        .invoice-print { display: none; }
+        @media print {
+            @page { size: auto; margin: 10mm; }
+            .billing-screen { display: none !important; }
+            .invoice-print { display: block !important; width: 100%; max-width: 100%; box-sizing: border-box; overflow: visible; }
+            .invoice-print h1 { margin: 0 0 1.25rem; }
+            .invoice-print .print-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 2rem; margin-bottom: 1.5rem; }
+            .invoice-print .print-meta div { border-bottom: 1px solid #d1d5db; padding: .45rem 0; }
+            .invoice-print .print-meta strong { display: inline-block; min-width: 8rem; }
+            .invoice-print table { width: 100%; max-width: 100%; table-layout: fixed; border-collapse: collapse; }
+            .invoice-print th:first-child, .invoice-print td:first-child { width: 70%; overflow-wrap: anywhere; }
+            .invoice-print th:last-child, .invoice-print td:last-child { width: 30%; white-space: nowrap; }
+            .invoice-print th, .invoice-print td { border: 1px solid #9ca3af; padding: .6rem; text-align: left; }
+            .invoice-print .total-paid { font-size: 1.15rem; font-weight: 700; }
+        }
+    </style>
+    <div class="billing-screen">
     <?php if (!empty($_SESSION['success_message'])): ?>
         <div class="alert-success"><?= e((string)$_SESSION['success_message']) ?></div>
         <?php unset($_SESSION['success_message']); ?>
@@ -120,6 +138,40 @@ require __DIR__ . '/../../layouts/sidebar.php';
     </div>
 
     <?php require __DIR__ . '/_summary.php'; ?>
+    </div>
+
+    <section class="invoice-print" aria-label="Printable invoice">
+        <h1>Invoice</h1>
+        <div class="print-meta">
+            <div><strong>Hospital Number</strong> <?= e((string)($patient['hospital_number'] ?? '-')) ?></div>
+            <div><strong>Invoice Number</strong> <?= e((string)($billingInvoice['invoice_number'] ?? '-')) ?></div>
+            <div><strong>Name of Patient</strong> <?= e($billingPatientName) ?></div>
+            <div><strong>Discount</strong> &#8358;<?= e(number_format($billingDiscountsTotal, 2)) ?></div>
+            <div class="total-paid"><strong>Total Price Paid</strong> &#8358;<?= e(number_format((float)($billingInvoice['amount_paid'] ?? $billingPaymentsTotal), 2)) ?></div>
+        </div>
+        <table>
+            <thead>
+                <tr><th>Service or Product Paid For</th><th>Price Paid</th></tr>
+            </thead>
+            <tbody>
+                <?php $printChargeCount = 0; ?>
+                <?php foreach ($billingCharges as $charge): ?>
+                    <?php if ((string)($charge['status'] ?? 'Active') === 'Cancelled') { continue; } ?>
+                    <?php
+                        $printChargeCount++;
+                        $printChargeId = (int)($charge['id'] ?? 0);
+                        $printDiscount = (float)($billingDiscountsByCharge[$printChargeId] ?? 0);
+                        $printAmount = max(0, (float)($charge['amount'] ?? 0) - $printDiscount);
+                    ?>
+                    <tr>
+                        <td><?= e((string)($charge['item_name'] ?? $charge['description'] ?? '-')) ?></td>
+                        <td>&#8358;<?= e(number_format($printAmount, 2)) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                <?php if ($printChargeCount === 0): ?><tr><td colspan="2">No services or products recorded.</td></tr><?php endif; ?>
+            </tbody>
+        </table>
+    </section>
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

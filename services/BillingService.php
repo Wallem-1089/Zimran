@@ -202,6 +202,11 @@ class BillingService
                 return $this->failure(['This encounter is closed to charge cancellation.']);
             }
 
+            if (!empty($charge['is_auto_charged']) && !$this->permissionService->isAdministrator($user)) {
+                $this->rollback();
+                return $this->failure(['Automatically billed charges can only be cancelled by Super Administrator.']);
+            }
+
             $invoice = $this->getInvoiceByVisit((int)$charge['visit_id']);
             if ($invoice) {
                 $projectedGross = max(0.00, $this->sumActiveCharges((int)$charge['visit_id']) - (float)$charge['amount']);
@@ -2076,10 +2081,16 @@ class BillingService
                 bi.item_name,
                 bi.item_type,
                 bi.unit,
+                CASE WHEN br.id IS NOT NULL
+                          AND br.notes LIKE \'Automatically charged from billing request using %\'
+                     THEN 1 ELSE 0 END AS is_auto_charged,
                 CONCAT(created_by.first_name, " ", created_by.last_name) AS created_by_name,
                 CONCAT(cancelled_by.first_name, " ", cancelled_by.last_name) AS cancelled_by_name
             FROM patient_charges pc
             INNER JOIN billable_items bi ON bi.id = pc.billable_item_id
+            LEFT JOIN billing_requests br
+                ON pc.source_module = \'BillingRequest\'
+               AND br.id = pc.source_record_id
             LEFT JOIN users created_by ON created_by.id = pc.created_by
             LEFT JOIN users cancelled_by ON cancelled_by.id = pc.cancelled_by
         ';
@@ -2418,7 +2429,12 @@ class BillingService
     private function tableExists(string $table): bool
     {
         try {
-            $stmt = $this->pdo->prepare('SHOW TABLES LIKE :table_name');
+            $stmt = $this->pdo->prepare('
+                SELECT COUNT(*)
+                FROM information_schema.tables
+                WHERE table_schema = DATABASE()
+                  AND table_name = :table_name
+            ');
             $stmt->execute([':table_name' => $table]);
             return (bool)$stmt->fetchColumn();
         } catch (Throwable) {

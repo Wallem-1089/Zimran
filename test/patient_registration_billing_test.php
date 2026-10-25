@@ -100,6 +100,13 @@ assertRegistrationBilling(($expired['status'] ?? '') === 'Expired', 'Expired reg
 $renewal = $service->ensureRenewalRequest($patientId, $users['dev_reception']);
 assertRegistrationBilling(($renewal['success'] ?? false) === true, 'Renewal request should be created.');
 assertRegistrationBilling((float)($renewal['request']['amount'] ?? 0) === 20000.0, 'Monthly renewal fee should be 20000.');
+$renewalPaid = $service->markPaid((int)$renewal['request']['id'], $users['dev_accounts'], 'Renewal fixture payment');
+assertRegistrationBilling(($renewalPaid['success'] ?? false) === true, 'Standard renewal payment should clear.');
+$pdo->prepare("UPDATE patients SET registration_valid_until = DATE_SUB(CURDATE(), INTERVAL 366 DAY) WHERE id = :id")
+    ->execute([':id' => $patientId]);
+$lapsedRenewal = $service->ensureRenewalRequest($patientId, $users['dev_reception']);
+assertRegistrationBilling(($lapsedRenewal['success'] ?? false) === true, 'Lapsed renewal request should be created.');
+assertRegistrationBilling((float)($lapsedRenewal['request']['amount'] ?? 0) === 30000.0, 'Renewal after 365 inactive days should be 30000.');
 
 $worklistContents = file_get_contents(__DIR__ . '/../modules/visits/department_worklist.php');
 assertRegistrationBilling(

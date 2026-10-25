@@ -36,6 +36,14 @@ if (!$permissionService->canRegisterPatient($currentUser)
 }
 
 $service = new PatientRegistrationBillingService($pdo);
+$familyCardStmt = $pdo->prepare('SELECT valid_until FROM family_cards WHERE id = :id LIMIT 1');
+$familyCardStmt->execute([':id' => $familyCardId]);
+$familyCardValidUntil = $familyCardStmt->fetchColumn();
+if (!$familyCardValidUntil || (string)$familyCardValidUntil >= date('Y-m-d')) {
+    $_SESSION['error_message'] = 'Family Profile renewal can only be requested after the current coverage has expired.';
+    header('Location: view.php?id=' . $patientId);
+    exit;
+}
 $result = $service->ensureFamilyCardRenewalRequest($familyCardId, $currentUser);
 
 if (empty($result['success'])) {

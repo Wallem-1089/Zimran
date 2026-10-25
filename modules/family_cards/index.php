@@ -6,7 +6,7 @@ require_once __DIR__ . '/_bootstrap.php';
 
 if (!familyCardTablesReady($pdo)) {
     http_response_code(503);
-    exit('Family Card tables are not available. Apply migration 095.');
+    exit('Family Profile tables are not available. Apply the family-card migrations.');
 }
 
 $filters = [
@@ -17,7 +17,7 @@ $filters = [
 $where = ['1 = 1'];
 $params = [];
 if ($filters['search'] !== '') {
-    $where[] = '(fc.card_number LIKE :search OR fc.primary_contact_name LIKE :search OR fc.phone LIKE :search)';
+    $where[] = '(fc.card_number LIKE :search OR fc.family_name LIKE :search OR fc.primary_contact_name LIKE :search OR fc.phone LIKE :search)';
     $params[':search'] = '%' . $filters['search'] . '%';
 }
 if ($filters['status'] !== '' && in_array($filters['status'], ['PendingPayment', 'Active', 'Suspended', 'Expired', 'Cancelled'], true)) {
@@ -38,7 +38,7 @@ $stmt = $pdo->prepare('
 $stmt->execute($params);
 $cards = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-$pageTitle = 'Family Cards';
+$pageTitle = 'Family Profiles';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 require __DIR__ . '/../../layouts/header.php';
 require __DIR__ . '/../../layouts/sidebar.php';
@@ -57,16 +57,17 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="page-header">
         <div>
-            <h1>Family Cards</h1>
-            <p>Manage family plan cards and members.</p>
+            <h1>Family Profiles</h1>
+            <p>Create a family, send its capacity-based bill to Accounts, and manage its members after payment.</p>
         </div>
+        <div><a class="btn-primary" href="create.php">Create Family Profile</a></div>
     </div>
 
     <form method="get" class="card">
         <div class="form-grid">
             <div class="form-group">
                 <label for="search">Search</label>
-                <input id="search" name="search" value="<?= e($filters['search']) ?>" placeholder="Card number, contact, phone">
+            <input id="search" name="search" value="<?= e($filters['search']) ?>" placeholder="Family name, family number, phone">
             </div>
             <div class="form-group">
                 <label for="status">Status</label>
@@ -86,18 +87,18 @@ require __DIR__ . '/../../layouts/sidebar.php';
 
     <div class="card">
         <?php if ($cards === []): ?>
-            <div class="empty-state">No Family Cards found.</div>
+            <div class="empty-state">No Family Profiles found.</div>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table">
                     <thead>
                         <tr>
                             <th>Card Number</th>
-                            <th>Primary Contact</th>
+                            <th>Family Name</th>
                             <th>Phone</th>
                             <th>Status</th>
                             <th>Valid Until</th>
-                            <th>Members</th>
+                            <th>Members / Capacity</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -105,11 +106,11 @@ require __DIR__ . '/../../layouts/sidebar.php';
                         <?php foreach ($cards as $card): ?>
                             <tr>
                                 <td><?= e((string)$card['card_number']) ?></td>
-                                <td><?= e((string)$card['primary_contact_name']) ?></td>
+                                <td><?= e((string)($card['family_name'] ?? $card['primary_contact_name'])) ?></td>
                                 <td><?= e((string)($card['phone'] ?? '-')) ?></td>
                                 <td><?= e((string)$card['status']) ?></td>
                                 <td><?= e((string)($card['valid_until'] ?? '-')) ?></td>
-                                <td><?= (int)$card['active_members'] ?></td>
+                                <td><?= (int)$card['active_members'] ?> / <?= (int)($card['member_capacity'] ?? 4) ?></td>
                                 <td><a class="btn-secondary btn-sm" href="view.php?id=<?= (int)$card['id'] ?>">View</a></td>
                             </tr>
                         <?php endforeach; ?>

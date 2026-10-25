@@ -78,6 +78,8 @@ class PermissionService
             'edit_encounter' => $department !== '',
             'manage_users', 'manage_roles', 'manage_permissions', 'manage_settings',
             'manage_configurable_forms', 'view_configurable_form_responses' => $this->isAdministrationUser($user),
+            'manage_family_cards' => in_array($role, ['System Administrator', 'Records Officer', 'Receptionist'], true)
+                || in_array($department, ['Administrator', 'Records', 'Reception'], true),
             'view_medical_record' => in_array(
                 $role,
                 ['Records Officer', 'Doctor', 'Nurse', 'Laboratory Scientist', 'Radiographer', 'ECG Technician', 'Plaster Technician', 'POP Technician', 'Physiotherapist', 'Theatre Staff', 'Pharmacist', 'Receptionist'],
@@ -3562,7 +3564,12 @@ class PermissionService
     private function tableExists(string $table): bool
     {
         try {
-            $stmt = $this->pdo->prepare('SHOW TABLES LIKE :table_name');
+            $stmt = $this->pdo->prepare('
+                SELECT COUNT(*)
+                FROM information_schema.tables
+                WHERE table_schema = DATABASE()
+                  AND table_name = :table_name
+            ');
             $stmt->execute([':table_name' => $table]);
             return (bool)$stmt->fetchColumn();
         } catch (Throwable) {

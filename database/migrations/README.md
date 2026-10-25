@@ -732,3 +732,18 @@ rules remain authoritative.
 `098_permission_matrix_stock_issue_grants_up.sql` grants `issue_stock` to the
 Pharmacist role so Pharmacy drug stock issuing remains controlled by the
 permission matrix instead of hardcoded department checks.
+
+## Migration 099 - Family Card Permission Matrix
+
+`099_family_card_permission_matrix_up.sql` adds `manage_family_cards` to the
+permission matrix and grants it to System Administrators, Records Officers,
+and Receptionists. Family Card sidebar and module access now use this
+permission instead of hardcoded role/department checks.
+
+## Migration 100 - Family Profile Capacity Workflow
+
+`100_family_profile_capacity_workflow_up.sql` allows a Family Profile to be
+created and billed before any patient is attached, stores the family name and
+paid member capacity, and permits a Family Card activation billing request to
+have no patient yet. Capacity pricing is ₦50,000 for up to four people plus
+₦10,000 for each additional person.

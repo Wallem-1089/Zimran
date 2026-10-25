@@ -1122,8 +1122,15 @@ Registration coverage can come from four paths:
 - Emergency Registration: creates a ₦50,000 emergency registration billing
   request but allows the Emergency encounter to open immediately; when paid, it
   counts as the initial registration for 30 days.
-- Family Card: a new Family Card creates a ₦50,000 activation request; active
-  members are covered for the card validity period and renew at ₦20,000.
+- Family Profile: staff first create a family profile with a generated family
+  number and member capacity. Accounts receives an activation request priced at
+  ₦50,000 for up to four members plus ₦10,000 per additional member. Members
+  cannot be added until payment clears; afterward staff can attach existing
+  patients or create new ones up to the paid capacity. Active members are
+  covered for the family validity period and renew at ₦20,000 for 30 days.
+  If the family coverage has been expired for at least 365 days, the renewal
+  request is ₦30,000. The Family Profile page provides the renewal action and
+  sends the request to the Accounts Family Profile Renewal queue.
 - Legacy/Existing Hospital Patient: no initial registration billing request is
   created. The old hospital/card number and proof notes are stored separately,
   a system hospital number is generated immediately, and the patient receives

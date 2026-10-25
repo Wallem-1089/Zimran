@@ -307,6 +307,24 @@ $dashboardPriorityBillingQueues = [
             'registration_type' => 'Emergency',
         ]),
     ],
+    [
+        'label' => 'Family Profile Activation',
+        'description' => 'Family profile activation payments',
+        'pending_count' => dashboardPendingRegistrationBillingCount($pdo, 'FamilyCardActivation'),
+        'href' => '../modules/billing/registration_requests.php?' . http_build_query([
+            'status' => 'Pending',
+            'billing_type' => 'FamilyCardActivation',
+        ]),
+    ],
+    [
+        'label' => 'Family Profile Renewal',
+        'description' => 'Family profile renewal payments',
+        'pending_count' => dashboardPendingRegistrationBillingCount($pdo, 'FamilyCardRenewal'),
+        'href' => '../modules/billing/registration_requests.php?' . http_build_query([
+            'status' => 'Pending',
+            'billing_type' => 'FamilyCardRenewal',
+        ]),
+    ],
 ];
 
 $dashboardPaymentStatusQueues = [

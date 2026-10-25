@@ -42,27 +42,12 @@ unset($_SESSION['success_message']);
 
 $registrationFee = $registrationType === 'Emergency' ? 50000 : 30000;
 $registrationPlan = (string)($patient['registration_plan'] ?? 'Normal');
-if (!in_array($registrationPlan, ['Normal', 'FamilyCard', 'ExistingFamilyCard', 'Legacy'], true)) {
+if (!in_array($registrationPlan, ['Normal', 'Legacy'], true)) {
     $registrationPlan = 'Normal';
 }
 if ($registrationType === 'Emergency') {
     $registrationPlan = 'Normal';
 }
-$activeFamilyCards = [];
-try {
-    $stmt = $pdo->query("
-        SELECT id, card_number, primary_contact_name, phone, valid_until
-        FROM family_cards
-        WHERE status = 'Active'
-          AND valid_until >= CURDATE()
-        ORDER BY primary_contact_name ASC, card_number ASC
-        LIMIT 500
-    ");
-    $activeFamilyCards = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-} catch (Throwable) {
-    $activeFamilyCards = [];
-}
-
 require_once __DIR__ . '/../../layouts/header.php';
 require_once __DIR__ . '/../../layouts/sidebar.php';
 ?>
@@ -103,8 +88,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
 
         <div class="alert-info">
             Normal registration is <strong>&#8358;<?= e(number_format($registrationFee, 2)) ?></strong>.
-            Family Card registration is <strong>&#8358;50,000.00</strong>.
-            Existing active Family Card membership and Legacy Patient import do not create a new registration bill.
+            Family Profiles are created from the Family Profiles page. Patients are added there after the family payment is cleared.
         </div>
 
         <div class="form-section">
@@ -115,34 +99,8 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
                         <label for="registration_plan">Registration Payment Option <span class="required">*</span></label>
                         <select id="registration_plan" name="registration_plan" required>
                             <option value="Normal" <?= $registrationPlan === 'Normal' ? 'selected' : '' ?>>Normal Registration - ₦<?= e(number_format($registrationFee, 2)) ?></option>
-                            <option value="FamilyCard" <?= $registrationPlan === 'FamilyCard' ? 'selected' : '' ?>>New Family Card - ₦50,000.00</option>
-                            <option value="ExistingFamilyCard" <?= $registrationPlan === 'ExistingFamilyCard' ? 'selected' : '' ?>>Add to Existing Family Card</option>
                             <option value="Legacy" <?= $registrationPlan === 'Legacy' ? 'selected' : '' ?>>Existing Hospital Patient / Legacy Patient - No initial fee</option>
                         </select>
-                    </div>
-                    <div class="form-group family-card-existing-fields">
-                        <label for="family_card_number">Existing Family Card</label>
-                        <select id="family_card_number" name="family_card_number">
-                            <option value="">Select active Family Card</option>
-                            <?php foreach ($activeFamilyCards as $card): ?>
-                                <?php $label = (string)$card['card_number'] . ' - ' . (string)$card['primary_contact_name'] . ' (valid until ' . (string)$card['valid_until'] . ')'; ?>
-                                <option value="<?= e((string)$card['card_number']) ?>" <?= (string)($patient['family_card_number'] ?? '') === (string)$card['card_number'] ? 'selected' : '' ?>>
-                                    <?= e($label) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="form-group family-card-existing-fields">
-                        <label for="family_member_type">Family Member Type</label>
-                        <select id="family_member_type" name="family_member_type">
-                            <?php foreach (['Dependent', 'Spouse', 'Child', 'Other'] as $memberType): ?>
-                                <option value="<?= e($memberType) ?>" <?= (string)($patient['family_member_type'] ?? 'Dependent') === $memberType ? 'selected' : '' ?>><?= e($memberType) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="form-group family-card-existing-fields">
-                        <label for="family_relationship">Relationship</label>
-                        <input type="text" id="family_relationship" name="family_relationship" maxlength="100" value="<?= field('family_relationship', $patient) ?>" placeholder="e.g. Son, Daughter, Spouse">
                     </div>
                     <div class="form-group legacy-patient-fields">
                         <label for="legacy_hospital_number">Old Hospital/Card Number</label>
@@ -185,21 +143,16 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
     <script>
         (function () {
             const plan = document.getElementById('registration_plan');
-            const fields = Array.from(document.querySelectorAll('.family-card-existing-fields'));
             const legacyFields = Array.from(document.querySelectorAll('.legacy-patient-fields'));
-            function syncFamilyCardFields() {
-                const show = plan && plan.value === 'ExistingFamilyCard';
-                fields.forEach(function (field) {
-                    field.style.display = show ? '' : 'none';
-                });
+            function syncLegacyFields() {
                 const showLegacy = plan && plan.value === 'Legacy';
                 legacyFields.forEach(function (field) {
                     field.style.display = showLegacy ? '' : 'none';
                 });
             }
             if (plan) {
-                plan.addEventListener('change', syncFamilyCardFields);
-                syncFamilyCardFields();
+                plan.addEventListener('change', syncLegacyFields);
+                syncLegacyFields();
             }
         })();
     </script>

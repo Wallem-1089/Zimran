@@ -75,6 +75,8 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <?php if ($permissionService->canViewBillingRequests($currentUser)): ?>
                 <a class="btn-primary" href="billing_requests.php">Billing Requests</a>
                 <a class="btn-primary" href="registration_requests.php">Registration Requests</a>
+                <a class="btn-secondary" href="registration_requests.php?status=Pending&amp;billing_type=FamilyCardActivation">Family Profile Activation</a>
+                <a class="btn-secondary" href="registration_requests.php?status=Pending&amp;billing_type=FamilyCardRenewal">Family Profile Renewal</a>
             <?php endif; ?>
             <?php if (!$showFullHistory): ?>
                 <a class="btn-secondary" href="index.php?<?= e(http_build_query(array_merge($_GET, ['full' => '1']))) ?>">Full History</a>

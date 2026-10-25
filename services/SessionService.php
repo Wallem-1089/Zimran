@@ -53,7 +53,8 @@ class SessionService
             'department_id'   => $user['department_id'],
             'department_name' => $user['department_name'],
             'role_id'         => $user['role_id'],
-            'role_name'       => $user['role_name']
+            'role_name'       => $user['role_name'],
+            'must_change_password' => !empty($user['must_change_password'])
 
         ];
 

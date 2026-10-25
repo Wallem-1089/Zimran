@@ -207,10 +207,21 @@ if (!empty($errors)) {
 
 $hashedPassword = $authService->hashPassword($newPassword);
 
-$userService->updatePassword(
+$passwordResult = $userService->updatePassword(
     $userId,
     $hashedPassword
 );
+
+if (empty($passwordResult['success'])) {
+    $_SESSION['password_errors'] = $passwordResult['errors'] ?? ['Unable to change password.'];
+    header('Location: change_password.php');
+    exit;
+}
+
+unset($_SESSION['must_change_password']);
+if (isset($_SESSION['user'])) {
+    $_SESSION['user']['must_change_password'] = 0;
+}
 
 /*
 |--------------------------------------------------------------------------

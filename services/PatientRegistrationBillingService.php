@@ -13,6 +13,11 @@ class PatientRegistrationBillingService
     public const MONTHLY_RENEWAL_FEE = 20000.00;
     public const FAMILY_CARD_REGISTRATION_FEE = 50000.00;
     public const FAMILY_CARD_RENEWAL_FEE = 20000.00;
+    public const FAMILY_CARD_BASE_MEMBER_LIMIT = 4;
+    public const FAMILY_CARD_ADDITIONAL_MEMBER_FEE = 10000.00;
+    public const STANDARD_RENEWAL_FEE = 20000.00;
+    public const LAPSED_RENEWAL_FEE = 30000.00;
+    public const RENEWAL_LAPSE_DAYS = 365;
 
     private AuditService $auditService;
     private PatientService $patientService;
@@ -23,6 +28,282 @@ class PatientRegistrationBillingService
         $this->auditService = new AuditService($pdo);
         $this->patientService = new PatientService($pdo);
         $this->permissionService = new PermissionService($pdo);
+    }
+
+    public static function familyCardActivationFee(int $memberCapacity): float
+    {
+        $memberCapacity = max(1, $memberCapacity);
+        return self::FAMILY_CARD_REGISTRATION_FEE
+            + max(0, $memberCapacity - self::FAMILY_CARD_BASE_MEMBER_LIMIT)
+            * self::FAMILY_CARD_ADDITIONAL_MEMBER_FEE;
+    }
+
+    public static function renewalFeeForExpiry(?string $validUntil, float $standardFee = self::STANDARD_RENEWAL_FEE): float
+    {
+        $validUntil = trim((string)$validUntil);
+        if ($validUntil === '') {
+            return $standardFee;
+        }
+
+        try {
+            $expiry = new DateTimeImmutable($validUntil);
+            $today = new DateTimeImmutable('today');
+            if ($expiry < $today && $expiry->diff($today)->days >= self::RENEWAL_LAPSE_DAYS) {
+                return self::LAPSED_RENEWAL_FEE;
+            }
+        } catch (Throwable) {
+            return $standardFee;
+        }
+
+        return $standardFee;
+    }
+
+    public static function patientRenewalFee(?string $validUntil): float
+    {
+        return self::renewalFeeForExpiry($validUntil, self::MONTHLY_RENEWAL_FEE);
+    }
+
+    public static function familyCardRenewalFee(?string $validUntil): float
+    {
+        return self::renewalFeeForExpiry($validUntil, self::FAMILY_CARD_RENEWAL_FEE);
+    }
+
+    public function createFamilyProfile(array $data, array $user): array
+    {
+        if (!$this->permissionService->hasPermission('manage_family_cards', $user)) {
+            return ['success' => false, 'errors' => ['You are not allowed to create Family Profiles.']];
+        }
+
+        $familyName = trim((string)($data['family_name'] ?? ''));
+        $phone = trim((string)($data['phone'] ?? ''));
+        $address = trim((string)($data['address'] ?? ''));
+        $memberCapacity = (int)($data['member_capacity'] ?? 0);
+        $errors = [];
+        if ($familyName === '') {
+            $errors[] = 'Family name is required.';
+        }
+        if ($memberCapacity < 1) {
+            $errors[] = 'The number of people must be at least 1.';
+        }
+        if ($memberCapacity > 100) {
+            $errors[] = 'The number of people cannot exceed 100.';
+        }
+        if ($errors !== []) {
+            return ['success' => false, 'errors' => $errors];
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+            $fee = self::familyCardActivationFee($memberCapacity);
+            $stmt = $this->pdo->prepare('
+                INSERT INTO family_cards (
+                    card_number, family_name, primary_contact_name, phone, address,
+                    member_capacity, status, activation_fee, renewal_fee, created_by, created_at, updated_at
+                ) VALUES (
+                    :card_number, :family_name, :primary_contact_name, :phone, :address,
+                    :member_capacity, \'PendingPayment\', :activation_fee, :renewal_fee, :created_by, NOW(), NOW()
+                )
+            ');
+            $stmt->execute([
+                ':card_number' => $this->generateFamilyCardNumber(),
+                ':family_name' => $familyName,
+                ':primary_contact_name' => $familyName,
+                ':phone' => $phone === '' ? null : $phone,
+                ':address' => $address === '' ? null : $address,
+                ':member_capacity' => $memberCapacity,
+                ':activation_fee' => number_format($fee, 2, '.', ''),
+                ':renewal_fee' => number_format(self::FAMILY_CARD_RENEWAL_FEE, 2, '.', ''),
+                ':created_by' => (int)$user['id'],
+            ]);
+            $familyCardId = (int)$this->pdo->lastInsertId();
+            $requestId = $this->insertRequest(null, 'FamilyCardActivation', null, $fee, (int)$user['id'], $familyCardId);
+            $this->pdo->commit();
+
+            return [
+                'success' => true,
+                'family_card_id' => $familyCardId,
+                'billing_request_id' => $requestId,
+                'card_number' => $this->getFamilyCardNumber($familyCardId),
+                'amount' => $fee,
+                'errors' => [],
+            ];
+        } catch (Throwable) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            return ['success' => false, 'errors' => ['Unable to create Family Profile.']];
+        }
+    }
+
+    public function addExistingFamilyCardMember(int $familyCardId, array $data, array $user): array
+    {
+        $patientId = (int)($data['patient_id'] ?? 0);
+        if ($familyCardId <= 0 || $patientId <= 0) {
+            return ['success' => false, 'errors' => ['A Family Profile and patient are required.']];
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+            $card = $this->lockActiveFamilyCard($familyCardId);
+            if (!$card) {
+                throw new RuntimeException('Family Profile is not active. Accounts must clear its payment first.');
+            }
+            $this->assertFamilyCardHasCapacity($familyCardId, $card);
+            $patientStmt = $this->pdo->prepare('SELECT * FROM patients WHERE id = :id LIMIT 1');
+            $patientStmt->execute([':id' => $patientId]);
+            $patient = $patientStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$patient) {
+                throw new RuntimeException('Patient was not found.');
+            }
+            if ((int)($patient['is_deleted'] ?? 0) === 1) {
+                throw new RuntimeException('Deleted patients cannot be added to a Family Profile.');
+            }
+            if ((string)($patient['registration_status'] ?? '') !== 'Active'
+                || trim((string)($patient['hospital_number'] ?? '')) === ''
+            ) {
+                $activation = $this->patientService->activateRegistrationUnderFamilyCard($patientId, (int)$user['id']);
+                if (empty($activation['success'])) {
+                    throw new RuntimeException('Unable to activate patient under Family Profile.');
+                }
+            }
+            $this->addFamilyCardMember(
+                $familyCardId,
+                $patientId,
+                (int)$user['id'],
+                trim((string)($data['relationship'] ?? '')),
+                trim((string)($data['member_type'] ?? 'Dependent'))
+            );
+            $this->pdo->commit();
+            return ['success' => true, 'errors' => []];
+        } catch (Throwable $exception) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            return ['success' => false, 'errors' => [$exception->getMessage() ?: 'Unable to add patient to Family Profile.']];
+        }
+    }
+
+    public function updateFamilyProfile(int $familyCardId, array $data, array $user): array
+    {
+        if (!$this->permissionService->hasPermission('manage_family_cards', $user)) {
+            return ['success' => false, 'errors' => ['You are not allowed to edit Family Profiles.']];
+        }
+
+        $familyName = trim((string)($data['family_name'] ?? ''));
+        $phone = trim((string)($data['phone'] ?? ''));
+        $address = trim((string)($data['address'] ?? ''));
+        if ($familyCardId <= 0 || $familyName === '') {
+            return ['success' => false, 'errors' => ['Family name is required.']];
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+            $stmt = $this->pdo->prepare('SELECT * FROM family_cards WHERE id = :id FOR UPDATE');
+            $stmt->execute([':id' => $familyCardId]);
+            $card = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$card) {
+                throw new RuntimeException('Family Profile was not found.');
+            }
+
+            $capacity = (int)($card['member_capacity'] ?? 4);
+            if ((string)$card['status'] === 'PendingPayment') {
+                $requestedCapacity = filter_var($data['member_capacity'] ?? $capacity, FILTER_VALIDATE_INT);
+                if ($requestedCapacity === false || $requestedCapacity < 1 || $requestedCapacity > 100) {
+                    throw new RuntimeException('Number of people must be between 1 and 100.');
+                }
+                $capacity = (int)$requestedCapacity;
+            }
+
+            $update = $this->pdo->prepare('UPDATE family_cards SET family_name = :family_name, primary_contact_name = :family_name, phone = :phone, address = :address, member_capacity = :member_capacity, activation_fee = :activation_fee, updated_by = :updated_by, updated_at = NOW() WHERE id = :id');
+            $update->execute([
+                ':family_name' => $familyName,
+                ':phone' => $phone === '' ? null : $phone,
+                ':address' => $address === '' ? null : $address,
+                ':member_capacity' => $capacity,
+                ':activation_fee' => number_format(self::familyCardActivationFee($capacity), 2, '.', ''),
+                ':updated_by' => (int)$user['id'],
+                ':id' => $familyCardId,
+            ]);
+
+            if ((string)$card['status'] === 'PendingPayment') {
+                $billing = $this->pdo->prepare("UPDATE patient_registration_billing_requests SET amount = :amount, updated_at = NOW() WHERE family_card_id = :family_card_id AND billing_type = 'FamilyCardActivation' AND status = 'Pending'");
+                $billing->execute([
+                    ':amount' => number_format(self::familyCardActivationFee($capacity), 2, '.', ''),
+                    ':family_card_id' => $familyCardId,
+                ]);
+            }
+            $this->pdo->commit();
+            return ['success' => true, 'errors' => []];
+        } catch (Throwable $exception) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            return ['success' => false, 'errors' => [$exception->getMessage() ?: 'Unable to update Family Profile.']];
+        }
+    }
+
+    public function createNewFamilyCardMember(int $familyCardId, array $data, array $user): array
+    {
+        if ($familyCardId <= 0) {
+            return ['success' => false, 'errors' => ['A Family Profile is required.']];
+        }
+        $firstName = trim((string)($data['first_name'] ?? ''));
+        $middleName = trim((string)($data['middle_name'] ?? ''));
+        $lastName = trim((string)($data['last_name'] ?? ''));
+        $phone = trim((string)($data['phone'] ?? ''));
+        if ($firstName === '' || $lastName === '' || $phone === '') {
+            return ['success' => false, 'errors' => ['First name, last name, and phone number are required.']];
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+            $card = $this->lockActiveFamilyCard($familyCardId);
+            if (!$card) {
+                throw new RuntimeException('Family Profile is not active. Accounts must clear its payment first.');
+            }
+            $this->assertFamilyCardHasCapacity($familyCardId, $card);
+            $stmt = $this->pdo->prepare('
+                INSERT INTO patients (
+                    hospital_number, registration_status, registration_type, registration_fee,
+                    first_name, normalized_first_name, middle_name, normalized_middle_name,
+                    last_name, normalized_last_name, phone, normalized_phone, registered_by
+                ) VALUES (
+                    NULL, \'PendingPayment\', \'Normal\', 0.00,
+                    :first_name, :normalized_first_name, :middle_name, :normalized_middle_name,
+                    :last_name, :normalized_last_name, :phone, :normalized_phone, :registered_by
+                )
+            ');
+            $stmt->execute([
+                ':first_name' => $firstName,
+                ':normalized_first_name' => $this->normalizeName($firstName),
+                ':middle_name' => $middleName === '' ? null : $middleName,
+                ':normalized_middle_name' => $this->normalizeName($middleName),
+                ':last_name' => $lastName,
+                ':normalized_last_name' => $this->normalizeName($lastName),
+                ':phone' => $phone,
+                ':normalized_phone' => $this->normalizePhone($phone),
+                ':registered_by' => (int)$user['id'],
+            ]);
+            $patientId = (int)$this->pdo->lastInsertId();
+            $activation = $this->patientService->activateRegistrationUnderFamilyCard($patientId, (int)$user['id']);
+            if (empty($activation['success'])) {
+                throw new RuntimeException('Unable to activate the new patient under Family Profile.');
+            }
+            $this->addFamilyCardMember(
+                $familyCardId,
+                $patientId,
+                (int)$user['id'],
+                trim((string)($data['relationship'] ?? '')),
+                trim((string)($data['member_type'] ?? 'Dependent'))
+            );
+            $this->pdo->commit();
+            return ['success' => true, 'patient_id' => $patientId, 'errors' => []];
+        } catch (Throwable $exception) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            return ['success' => false, 'errors' => [$exception->getMessage() ?: 'Unable to create patient under Family Profile.']];
+        }
     }
 
     public function createInitialRegistration(array $data, array $user): array
@@ -37,6 +318,9 @@ class PatientRegistrationBillingService
         $registrationPlan = trim((string)($data['registration_plan'] ?? 'Normal'));
         if (!in_array($registrationPlan, ['Normal', 'FamilyCard', 'ExistingFamilyCard', 'Legacy'], true)) {
             $registrationPlan = 'Normal';
+        }
+        if (in_array($registrationPlan, ['FamilyCard', 'ExistingFamilyCard'], true)) {
+            return ['success' => false, 'errors' => ['Create or manage this Family Profile from the Family Profiles page.']];
         }
         if ($registrationType === 'Emergency') {
             $registrationPlan = 'Normal';
@@ -268,7 +552,7 @@ class PatientRegistrationBillingService
                 $patientId,
                 'MonthlyRenewal',
                 null,
-                self::MONTHLY_RENEWAL_FEE,
+                self::patientRenewalFee($this->patientRegistrationValidUntil($patientId)),
                 (int)$user['id']
             );
 
@@ -300,7 +584,7 @@ class PatientRegistrationBillingService
                 $patientId,
                 'FamilyCardRenewal',
                 null,
-                self::FAMILY_CARD_RENEWAL_FEE,
+                self::familyCardRenewalFee($this->familyCardValidUntil($familyCardId)),
                 (int)$user['id'],
                 $familyCardId
             );
@@ -324,6 +608,11 @@ class PatientRegistrationBillingService
         if ($patientId > 0) {
             $where[] = 'r.patient_id = :patient_id';
             $params[':patient_id'] = $patientId;
+        }
+        $familyCardId = (int)($filters['family_card_id'] ?? 0);
+        if ($familyCardId > 0) {
+            $where[] = 'r.family_card_id = :family_card_id';
+            $params[':family_card_id'] = $familyCardId;
         }
         $status = trim((string)($filters['status'] ?? 'Pending'));
         if ($status !== '' && in_array($status, ['Pending', 'Paid', 'Cancelled'], true)) {
@@ -494,7 +783,7 @@ class PatientRegistrationBillingService
     }
 
     private function insertRequest(
-        int $patientId,
+        ?int $patientId,
         string $billingType,
         ?string $registrationType,
         float $amount,
@@ -621,9 +910,11 @@ class PatientRegistrationBillingService
             return ['success' => false, 'errors' => ['Family Card was not linked to this request.']];
         }
 
-        $patientResult = $this->patientService->activateRegistrationUnderFamilyCard((int)$request['patient_id'], $clearedBy);
-        if (empty($patientResult['success'])) {
-            return $patientResult;
+        if ((int)($request['patient_id'] ?? 0) > 0) {
+            $patientResult = $this->patientService->activateRegistrationUnderFamilyCard((int)$request['patient_id'], $clearedBy);
+            if (empty($patientResult['success'])) {
+                return $patientResult;
+            }
         }
 
         $stmt = $this->pdo->prepare('
@@ -640,7 +931,9 @@ class PatientRegistrationBillingService
             ':id' => $familyCardId,
         ]);
 
-        $this->addFamilyCardMember($familyCardId, (int)$request['patient_id'], $clearedBy, 'Principal', 'Principal');
+        if ((int)($request['patient_id'] ?? 0) > 0) {
+            $this->addFamilyCardMember($familyCardId, (int)$request['patient_id'], $clearedBy, 'Principal', 'Principal');
+        }
 
         return ['success' => true, 'errors' => []];
     }
@@ -671,11 +964,12 @@ class PatientRegistrationBillingService
         return ['success' => true, 'errors' => []];
     }
 
-    private function familyCardPrincipalPatientId(int $familyCardId): int
+    private function familyCardPrincipalPatientId(int $familyCardId): ?int
     {
-        $stmt = $this->pdo->prepare('SELECT COALESCE(principal_patient_id, 0) FROM family_cards WHERE id = :id LIMIT 1');
+        $stmt = $this->pdo->prepare('SELECT principal_patient_id FROM family_cards WHERE id = :id LIMIT 1');
         $stmt->execute([':id' => $familyCardId]);
-        return (int)$stmt->fetchColumn();
+        $value = $stmt->fetchColumn();
+        return $value === false || $value === null ? null : (int)$value;
     }
 
     private function latestOpenFamilyCardRequest(int $familyCardId, string $billingType): ?array
@@ -725,7 +1019,7 @@ class PatientRegistrationBillingService
                    CONCAT(requested_by.first_name, " ", requested_by.last_name) AS requested_by_name,
                    CONCAT(cleared_by.first_name, " ", cleared_by.last_name) AS cleared_by_name
             FROM patient_registration_billing_requests r
-            INNER JOIN patients p ON p.id = r.patient_id
+            LEFT JOIN patients p ON p.id = r.patient_id
             LEFT JOIN family_cards fc ON fc.id = r.family_card_id
             LEFT JOIN users requested_by ON requested_by.id = r.requested_by
             LEFT JOIN users cleared_by ON cleared_by.id = r.cleared_by
@@ -736,6 +1030,51 @@ class PatientRegistrationBillingService
     {
         $row['display_amount'] = number_format((float)($row['amount'] ?? 0), 2);
         return $row;
+    }
+
+    private function getFamilyCardNumber(int $familyCardId): string
+    {
+        $stmt = $this->pdo->prepare('SELECT card_number FROM family_cards WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $familyCardId]);
+        return (string)$stmt->fetchColumn();
+    }
+
+    private function patientRegistrationValidUntil(int $patientId): ?string
+    {
+        $stmt = $this->pdo->prepare('SELECT registration_valid_until FROM patients WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $patientId]);
+        $value = $stmt->fetchColumn();
+        return $value === false || $value === null ? null : (string)$value;
+    }
+
+    private function familyCardValidUntil(int $familyCardId): ?string
+    {
+        $stmt = $this->pdo->prepare('SELECT valid_until FROM family_cards WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $familyCardId]);
+        $value = $stmt->fetchColumn();
+        return $value === false || $value === null ? null : (string)$value;
+    }
+
+    private function lockActiveFamilyCard(int $familyCardId): ?array
+    {
+        $stmt = $this->pdo->prepare('
+            SELECT * FROM family_cards
+            WHERE id = :id AND status = \'Active\' AND valid_until >= CURDATE()
+            FOR UPDATE
+        ');
+        $stmt->execute([':id' => $familyCardId]);
+        $card = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $card ?: null;
+    }
+
+    private function assertFamilyCardHasCapacity(int $familyCardId, array $card): void
+    {
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM family_card_members WHERE family_card_id = :id AND status = 'Active'");
+        $stmt->execute([':id' => $familyCardId]);
+        $activeMembers = (int)$stmt->fetchColumn();
+        if ($activeMembers >= max(1, (int)($card['member_capacity'] ?? 4))) {
+            throw new RuntimeException('The paid Family Profile capacity has been reached.');
+        }
     }
 
     private function normalizeName(string $value): string

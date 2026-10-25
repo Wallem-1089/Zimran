@@ -197,7 +197,7 @@ class UserService
     public function updatePassword(
         int $userId,
         string $hashedPassword
-    ): void {
+    ): array {
 
         try {
             $this->db->beginTransaction();
@@ -236,8 +236,10 @@ class UserService
                 'PASSWORD_CHANGED'
             );
             $this->db->commit();
+            return ['success' => true, 'user_id' => $userId, 'errors' => []];
         } catch (Throwable $exception) {
             $this->rollback();
+            return ['success' => false, 'user_id' => $userId, 'errors' => ['Unable to change password.']];
         }
     }
 
@@ -669,7 +671,12 @@ class UserService
                 UPDATE users
                 SET password = :password,
                     password_changed_at = NOW(),
-                    must_change_password = 1
+                    must_change_password = 1,
+                    failed_login_attempts = 0,
+                    last_failed_login = NULL,
+                    locked_at = NULL,
+                    locked_by = NULL,
+                    lock_reason = NULL
                 WHERE id = :id
             ');
             $stmt->execute([

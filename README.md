@@ -40,15 +40,23 @@ The application is an encounter-centered hospital management system with:
 - Normal registration initially captures only first name, middle name, last name,
   and phone number. Accounts must clear the generated registration bill before a
   hospital number is issued and the rest of the registration fields are enabled.
-- Family Card registration creates a Family Card billing request. Patients
-  added to an active existing Family Card inherit the card coverage without a
-  separate initial registration charge.
+- Family Profiles are created separately from patient registration. The system
+  generates a family number and creates an Accounts activation bill before any
+  members can be added. Capacity up to four costs ₦50,000; each additional
+  member costs ₦10,000. After payment, staff can add existing patients or
+  create new patient profiles up to the paid capacity. Active members inherit
+  family coverage without a separate initial registration charge.
 - Legacy/Existing Hospital Patient registration creates an active patient
   immediately, stores the old hospital/card number and proof notes, creates no
   initial registration billing request, and gives 30 days of validity before
   normal renewal billing applies.
 - Monthly renewal billing is required when registration validity expires before
-  a new encounter can be created.
+  a new encounter can be created. The standard renewal fee is ₦20,000 for a
+  30-day extension; if validity has been expired for at least 365 days, the
+  renewal request is ₦30,000.
+- Family Profiles have their own renewal action and Accounts queue. Family
+  renewal is ₦20,000 for 30 days, increasing to ₦30,000 after at least 365
+  days without renewal.
 - Doctor-created clinical requests are sent to Accounts first. Departments can
   see the request but cannot work on it until Accounts/payment clearance is
   satisfied, except for Super Admin and configured emergency override paths.

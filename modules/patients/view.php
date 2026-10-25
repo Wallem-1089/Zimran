@@ -91,6 +91,7 @@ foreach ($registrationBillingHistory as $registrationRequest) {
         break;
     }
 }
+$patientRenewalFee = PatientRegistrationBillingService::patientRenewalFee((string)($patient['registration_valid_until'] ?? ''));
 $familyCardMembership = null;
 try {
     $familyStmt = $pdo->prepare('
@@ -111,6 +112,9 @@ try {
     $familyCardMembership = null;
 }
 $pendingFamilyCardRenewalRequest = null;
+$familyCardRenewalFee = PatientRegistrationBillingService::familyCardRenewalFee(
+    $familyCardMembership !== null ? (string)($familyCardMembership['valid_until'] ?? '') : null
+);
 if ($familyCardMembership !== null) {
     foreach ($registrationBillingHistory as $registrationRequest) {
         if ((string)($registrationRequest['billing_type'] ?? '') === 'FamilyCardRenewal'
@@ -315,14 +319,14 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
                                 <a class="btn-primary" href="../billing/registration_requests.php?<?= e(http_build_query([
                                     'status' => 'Pending',
                                     'billing_type' => 'FamilyCardRenewal',
-                                    'patient_name' => trim((string)($patient['first_name'] ?? '') . ' ' . (string)($patient['last_name'] ?? '')),
+                                    'family_card_id' => (int)$familyCardMembership['id'],
                                 ])) ?>">Open Pending Family Card Renewal</a>
                             <?php elseif (!$pendingFamilyCardRenewalRequest): ?>
                                 <form method="post" action="renew_family_card.php" class="inline-form">
                                     <?= csrfField() ?>
                                     <input type="hidden" name="patient_id" value="<?= (int)$patient['id'] ?>">
                                     <input type="hidden" name="family_card_id" value="<?= (int)$familyCardMembership['id'] ?>">
-                                    <button class="btn-primary" type="submit">Create Family Card Renewal Request</button>
+                                    <button class="btn-primary" type="submit">Create Family Card Renewal Request (₦<?= e(number_format($familyCardRenewalFee, 2)) ?>)</button>
                                 </form>
                             <?php endif; ?>
                         <?php endif; ?>
@@ -332,6 +336,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
                     <div class="summary-item"><span class="summary-label">Card Number</span> <span class="summary-value"><?= e((string)$familyCardMembership['card_number']) ?></span></div>
                     <div class="summary-item"><span class="summary-label">Status</span> <span class="summary-value"><?= e((string)$familyCardMembership['status']) ?></span></div>
                     <div class="summary-item"><span class="summary-label">Valid Until</span> <span class="summary-value"><?= e((string)($familyCardMembership['valid_until'] ?? '-')) ?></span></div>
+                    <div class="summary-item"><span class="summary-label">Renewal Fee</span> <span class="summary-value">₦<?= e(number_format($familyCardRenewalFee, 2)) ?></span></div>
                     <div class="summary-item"><span class="summary-label">Member Type</span> <span class="summary-value"><?= e((string)$familyCardMembership['member_type']) ?></span></div>
                     <div class="summary-item"><span class="summary-label">Relationship</span> <span class="summary-value"><?= e((string)($familyCardMembership['relationship'] ?? '-')) ?></span></div>
                 </div>
@@ -356,7 +361,7 @@ require_once __DIR__ . '/../../layouts/sidebar.php';
                             <form method="post" action="renew_registration.php" class="inline-form">
                                 <?= csrfField() ?>
                                 <input type="hidden" name="patient_id" value="<?= (int)$patient['id'] ?>">
-                                <button class="btn-primary" type="submit">Create Renewal Payment Request</button>
+                                <button class="btn-primary" type="submit">Create Renewal Payment Request (₦<?= e(number_format($patientRenewalFee, 2)) ?>)</button>
                             </form>
                         <?php endif; ?>
                     <?php endif; ?>

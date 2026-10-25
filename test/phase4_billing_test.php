@@ -210,6 +210,8 @@ try {
     assertBilling((int)($billingRequestRows[0]['patient_charge_id'] ?? 0) > 0, 'Auto-charged billing request is missing patient charge link.');
     assertBilling(abs((float)$billingService->getEncounterBalance($visitId, $accounts)['total_charges'] - 2000.0) < 0.01, 'Auto-charged billing request did not update charge totals.');
     $manualChargeId = (int)$billingRequestRows[0]['patient_charge_id'];
+    $autoCancelByAccounts = $billingService->cancelCharge($manualChargeId, $accounts);
+    assertBilling(($autoCancelByAccounts['success'] ?? false) === false, 'Accounts should not cancel an automatically billed charge.');
 
     $manualCharge = requireBillingSuccess($billingService->createCharge([
         'visit_id' => $visitId,

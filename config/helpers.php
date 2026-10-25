@@ -1046,10 +1046,14 @@ function hmsRenderBillableItemSelect(array $items, $selectedId = null, string $l
     echo '<label>' . e($label) . ' <span class="required">*</span></label>';
     echo '<div class="billable-item-rows" data-billable-item-rows>';
     foreach ($selectedIds as $index => $selected) {
-        echo '<div class="billable-item-row" data-billable-item-row style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;">';
-        echo '<select name="suggested_billable_item_ids[]" ' . ($index === 0 ? 'required' : '') . ' style="flex:1;">';
+        echo '<div class="billable-item-row" data-billable-item-row style="display:flex;gap:.5rem;align-items:flex-end;margin-bottom:.5rem;">';
+        echo '<div class="billable-item-control" style="flex:1;min-width:0;">';
+        echo '<input type="search" data-billable-item-search placeholder="Search by item code or name" autocomplete="off" aria-label="Search billable items">';
+        echo '<select name="suggested_billable_item_ids[]" ' . ($index === 0 ? 'required' : '') . ' style="width:100%;margin-top:.25rem;">';
         echo str_replace('value="' . (int)$selected . '"', 'value="' . (int)$selected . '" selected', $options);
         echo '</select>';
+        echo '<small class="form-help" data-billable-item-empty hidden>No matching billable items.</small>';
+        echo '</div>';
         echo '<button type="button" class="btn-secondary" data-remove-billable-item title="Remove billable item" style="border-radius:999px;width:2rem;height:2rem;padding:0;' . ($index === 0 ? 'visibility:hidden;' : '') . '">&times;</button>';
         echo '</div>';
     }
@@ -1057,12 +1061,16 @@ function hmsRenderBillableItemSelect(array $items, $selectedId = null, string $l
     echo '<button type="button" class="btn-primary" data-add-billable-item title="Add another billable item" style="border-radius:999px;width:2.75rem;height:2.75rem;padding:0;font-size:1.5rem;line-height:1;margin-top:.25rem;">+</button>';
     echo '<small class="form-help">Select every item Accounts should bill for this request before the receiving department starts work.</small>';
     echo '<template id="' . e($templateId) . '">';
-    echo '<div class="billable-item-row" data-billable-item-row style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;">';
-    echo '<select name="suggested_billable_item_ids[]" style="flex:1;">' . $options . '</select>';
+    echo '<div class="billable-item-row" data-billable-item-row style="display:flex;gap:.5rem;align-items:flex-end;margin-bottom:.5rem;">';
+    echo '<div class="billable-item-control" style="flex:1;min-width:0;">';
+    echo '<input type="search" data-billable-item-search placeholder="Search by item code or name" autocomplete="off" aria-label="Search billable items">';
+    echo '<select name="suggested_billable_item_ids[]" style="width:100%;margin-top:.25rem;">' . $options . '</select>';
+    echo '<small class="form-help" data-billable-item-empty hidden>No matching billable items.</small>';
+    echo '</div>';
     echo '<button type="button" class="btn-secondary" data-remove-billable-item title="Remove billable item" style="border-radius:999px;width:2rem;height:2rem;padding:0;">&times;</button>';
     echo '</div>';
     echo '</template>';
-    echo '<script>(function(){var root=document.currentScript.closest("[data-billable-item-picker]");if(!root){return;}var rows=root.querySelector("[data-billable-item-rows]");var template=root.querySelector("template");var add=root.querySelector("[data-add-billable-item]");if(add&&rows&&template){add.addEventListener("click",function(){rows.appendChild(template.content.cloneNode(true));});}root.addEventListener("click",function(event){var button=event.target.closest("[data-remove-billable-item]");if(!button){return;}var row=button.closest("[data-billable-item-row]");if(row&&rows.querySelectorAll("[data-billable-item-row]").length>1){row.remove();}});})();</script>';
+    echo '<script>(function(){var root=document.currentScript.closest("[data-billable-item-picker]");if(!root){return;}var rows=root.querySelector("[data-billable-item-rows]");var template=root.querySelector("template");var add=root.querySelector("[data-add-billable-item]");function filterRow(row){var input=row.querySelector("[data-billable-item-search]");var select=row.querySelector("select");var empty=row.querySelector("[data-billable-item-empty]");if(!input||!select){return;}var term=(input.value||"").trim().toLowerCase();var matches=0;Array.prototype.forEach.call(select.options,function(option,index){if(index===0){option.hidden=false;return;}var match=term===""||option.textContent.toLowerCase().indexOf(term)!==-1;option.hidden=!match;if(match){matches++;}});if(empty){empty.hidden=term===""||matches>0;}}function filterAll(){Array.prototype.forEach.call(rows.querySelectorAll("[data-billable-item-row]"),filterRow);}if(add&&rows&&template){add.addEventListener("click",function(){rows.appendChild(template.content.cloneNode(true));});}root.addEventListener("input",function(event){if(event.target.matches("[data-billable-item-search]")){filterRow(event.target.closest("[data-billable-item-row]"));}});root.addEventListener("click",function(event){var button=event.target.closest("[data-remove-billable-item]");if(!button){return;}var row=button.closest("[data-billable-item-row]");if(row&&rows.querySelectorAll("[data-billable-item-row]").length>1){row.remove();}});filterAll();})();</script>';
     echo '</div>';
 }
 
