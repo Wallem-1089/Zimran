@@ -13,6 +13,12 @@ if (!$user) {
 }
 
 administrationGuardSuperAdministratorUser($user, $currentUser, $permissionService);
+administrationRequirePermission(
+    $permissionService,
+    'reset_user_passwords',
+    $currentUser,
+    'You do not have permission to reset user passwords.'
+);
 
 $pageTitle = 'Reset User Password';
 

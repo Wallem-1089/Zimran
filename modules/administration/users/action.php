@@ -11,9 +11,26 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 requireCsrfToken();
 
+administrationRequirePermission(
+    $permissionService,
+    'manage_users',
+    $currentUser,
+    'You do not have permission to manage user accounts.'
+);
+
 $userId = (int)($_POST['user_id'] ?? 0);
 $action = trim((string)($_POST['action'] ?? ''));
 $actorId = (int)$currentUser['id'];
+
+if ($action === 'force_password_change') {
+    administrationRequirePermission(
+        $permissionService,
+        'reset_user_passwords',
+        $currentUser,
+        'You do not have permission to change password settings.'
+    );
+}
+
 $targetUser = $userService->getUserById($userId);
 if (!$targetUser) {
     http_response_code(404);

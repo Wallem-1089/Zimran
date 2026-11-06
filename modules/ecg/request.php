@@ -35,7 +35,7 @@ $ecgRequest = $_SESSION['old_ecg_request'] ?? [
 ];
 $ecgRequest['request_source'] = $requestSource;
 unset($_SESSION['old_ecg_request']);
-$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['ECG']));
+$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['ECG']), ['service']);
 
 $pageTitle = 'Create ECG Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';

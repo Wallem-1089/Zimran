@@ -5,6 +5,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/../partials/bootstrap.php';
 
 $pageTitle = 'User Management';
+$canManageUsers = $permissionService->canManageUsers($currentUser);
+$canEditUserAccounts = $permissionService->canEditUserAccounts($currentUser);
 $users = $userService->getUsers([
     'search' => trim((string)($_GET['search'] ?? '')),
     'status' => trim((string)($_GET['status'] ?? ''))
@@ -27,7 +29,7 @@ require_once __DIR__ . '/../../../layouts/sidebar.php';
     <?php require_once __DIR__ . '/../../../layouts/navbar.php'; ?>
     <section class="card">
         <h2>Users</h2>
-        <p><a class="btn-primary" href="create.php">Create User</a></p>
+        <?php if ($canManageUsers): ?><p><a class="btn-primary" href="create.php">Create User</a></p><?php endif; ?>
 
         <form method="GET">
             <input name="search" placeholder="Search users" value="<?= e($_GET['search'] ?? '') ?>">
@@ -52,8 +54,10 @@ require_once __DIR__ . '/../../../layouts/sidebar.php';
                     <td><?= e($user['status']) ?><?= !empty($user['locked_at']) ? ' / Locked' : '' ?></td>
                     <td>
                         <a href="view.php?id=<?= (int)$user['id'] ?>">View</a>
-                        <a href="edit.php?id=<?= (int)$user['id'] ?>">Edit</a>
-                        <a href="staff_profile.php?id=<?= (int)$user['id'] ?>">Staff Profile</a>
+                        <?php if ($canEditUserAccounts): ?>
+                            <a href="edit.php?id=<?= (int)$user['id'] ?>">Edit</a>
+                            <a href="staff_profile.php?id=<?= (int)$user['id'] ?>">Staff Profile</a>
+                        <?php endif; ?>
                     </td>
                 </tr>
             <?php endforeach; ?>

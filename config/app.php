@@ -54,6 +54,23 @@ $documentStorageRoot = $configuredDocumentStorageRoot !== ''
 
 $configuredBaseUrl = trim((string)getenv('HMS_BASE_URL'));
 
+$normalizeBaseUrl = static function (string $value): string {
+    $value = trim($value);
+    if ($value === '') {
+        return '/';
+    }
+
+    // Accept either a path (/zimran) or an absolute application URL
+    // (https://example.test/zimran). Only the URL path belongs in links.
+    if (preg_match('#^[a-z][a-z0-9+.-]*://#i', $value) === 1) {
+        $parsedPath = parse_url($value, PHP_URL_PATH);
+        $value = is_string($parsedPath) ? $parsedPath : '';
+    }
+
+    $value = trim($value, "/ \t\n\r\0\x0B");
+    return $value === '' ? '/' : '/' . $value;
+};
+
 $detectBaseUrl = static function (): string {
     $scriptName = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
     foreach (['/authentication/', '/modules/', '/dashboard/', '/admin/'] as $knownPath) {
@@ -77,12 +94,14 @@ $detectBaseUrl = static function (): string {
         }
     }
 
-    return '/hospital_management_system';
+    // Do not fall back to a historical folder name. If the web server does
+    // not expose enough information to detect an install path, root-relative
+    // links are safer than redirecting users to a stale project URL.
+    return '/';
 };
 
 if ($configuredBaseUrl !== '') {
-    $trimmedBaseUrl = trim($configuredBaseUrl, "/ \t\n\r\0\x0B");
-    $baseUrl = $trimmedBaseUrl === '' ? '/' : '/' . $trimmedBaseUrl;
+    $baseUrl = $normalizeBaseUrl($configuredBaseUrl);
 } else {
     $baseUrl = $detectBaseUrl();
 }

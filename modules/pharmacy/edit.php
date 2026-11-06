@@ -44,6 +44,7 @@ $pharmacyPrescription = $prescription;
 $pharmacyPrescription['visit_id'] = (int)$prescription['visit_id'];
 $pharmacyPrescription['patient_id'] = (int)$prescription['patient_id'];
 $requestSource = (string)$prescription['prescription_source'];
+$showInventorySelection = false;
 $formAction = 'update.php';
 $buttonLabel = 'Update Prescription';
 

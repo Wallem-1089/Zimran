@@ -377,7 +377,7 @@ class SessionService
     {
         if (!$this->isAuthenticated()) {
 
-            header('Location: /hospital_management_system/authentication/login.php');
+            header('Location: ' . $this->applicationPath('/authentication/login.php'));
 
             exit;
 
@@ -387,7 +387,7 @@ class SessionService
 
         if (!empty($_SESSION['must_change_password'])) {
 
-            header('Location: /hospital_management_system/authentication/change_password.php');
+            header('Location: ' . $this->applicationPath('/authentication/change_password.php'));
 
             exit;
 
@@ -403,7 +403,7 @@ class SessionService
     {
         if (!$this->isAuthenticated()) {
 
-            header('Location: /hospital_management_system/authentication/login.php');
+            header('Location: ' . $this->applicationPath('/authentication/login.php'));
 
             exit;
         }
@@ -465,9 +465,21 @@ class SessionService
             'Your session has expired. Please sign in again.'
         ];
 
-        header('Location: /hospital_management_system/authentication/login.php');
+        header('Location: ' . $this->applicationPath('/authentication/login.php'));
 
         exit;
+    }
+
+    /**
+     * Build an application-relative URL from the configured/detected base path.
+     * This keeps authentication redirects working when the project is installed
+     * under a different folder name or virtual host.
+     */
+    private function applicationPath(string $path): string
+    {
+        $config = require __DIR__ . '/../config/app.php';
+        $baseUrl = rtrim((string)($config['app']['base_url'] ?? ''), '/');
+        return $baseUrl . '/' . ltrim($path, '/');
     }
 
     private function registerPersistentSession(array $user): void

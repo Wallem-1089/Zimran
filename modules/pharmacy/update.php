@@ -41,12 +41,12 @@ if (!($result['success'] ?? false)) {
         'inventory_item_ids' => array_values((array)($_POST['inventory_item_ids'] ?? [])),
         'suggested_billable_item_ids' => array_values((array)($_POST['suggested_billable_item_ids'] ?? [])),
         'suggested_billable_item_id' => (string)($_POST['suggested_billable_item_id'] ?? ''),
-        'medication_name' => (string)($_POST['medication_name'] ?? ''),
-        'dosage' => (string)($_POST['dosage'] ?? ''),
-        'frequency' => (string)($_POST['frequency'] ?? ''),
-        'duration' => (string)($_POST['duration'] ?? ''),
-        'quantity' => (string)($_POST['quantity'] ?? ''),
-        'instructions' => (string)($_POST['instructions'] ?? ''),
+        'medication_name' => array_values((array)($_POST['medication_name'] ?? [])),
+        'dosage' => array_values((array)($_POST['dosage'] ?? [])),
+        'frequency' => array_values((array)($_POST['frequency'] ?? [])),
+        'duration' => array_values((array)($_POST['duration'] ?? [])),
+        'quantity' => array_values((array)($_POST['quantity'] ?? [])),
+        'instructions' => array_values((array)($_POST['instructions'] ?? [])),
     ];
 
     header('Location: edit.php?id=' . $prescriptionId);

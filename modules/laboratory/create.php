@@ -37,7 +37,7 @@ $laboratoryRequest['request_source'] = $requestSource;
 unset($_SESSION['old_laboratory_request']);
 
 $existingRequests = $laboratoryService->listByVisit($visitId, $currentUser);
-$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Laboratory']));
+$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Laboratory']), ['service']);
 $pageTitle = 'Create Laboratory Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 

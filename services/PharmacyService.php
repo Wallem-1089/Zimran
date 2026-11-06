@@ -51,21 +51,18 @@ class PharmacyService
     {
         $inventoryItemIds = $this->normalizeInventoryItemIds($data);
         $billableItemIdsForBatch = $this->normalizePostedBillableItemIds($data);
-        if (empty($data['_hms_single_prescription_batch']) && count($inventoryItemIds) > 1) {
-            if (strtoupper(trim((string)($data['prescription_source'] ?? 'Clinical'))) !== 'DIRECT'
-                && count($billableItemIdsForBatch) !== count($inventoryItemIds)
-            ) {
-                return $this->failure([
-                    'The number of billable items must match the number of selected medication / inventory items.'
-                ]);
-            }
-
+        $prescriptionRowCount = $this->postedPrescriptionRowCount($data, $inventoryItemIds);
+        if (empty($data['_hms_single_prescription_batch']) && $prescriptionRowCount > 1) {
             $prescriptionIds = [];
-            foreach ($inventoryItemIds as $index => $inventoryItemId) {
+            for ($index = 0; $index < $prescriptionRowCount; $index++) {
                 $single = $data;
-                $single['inventory_item_id'] = $inventoryItemId;
+                $single['inventory_item_id'] = (int)($inventoryItemIds[$index] ?? 0);
                 $single['inventory_item_ids'] = [];
                 $single['_hms_single_prescription_batch'] = '1';
+
+                foreach (['medication_name', 'dosage', 'frequency', 'duration', 'quantity', 'instructions'] as $field) {
+                    $single[$field] = $this->postedPrescriptionRowValue($data[$field] ?? null, $index);
+                }
 
                 $pairedBillableItemId = $billableItemIdsForBatch[$index] ?? 0;
                 if ($pairedBillableItemId > 0) {
@@ -96,21 +93,14 @@ class PharmacyService
             $data['inventory_item_id'] = $inventoryItemIds[0];
         }
 
+        $data = $this->normalizePrescriptionRow($data);
+
         if (count($inventoryItemIds) === 1 && empty($data['suggested_billable_item_ids']) && empty($data['suggested_billable_item_id'])) {
             $linkedBillableItemId = $this->billableItemIdForInventoryItem($inventoryItemIds[0]);
             if ($linkedBillableItemId > 0) {
                 $data['suggested_billable_item_id'] = $linkedBillableItemId;
                 $data['suggested_billable_item_ids'] = [$linkedBillableItemId];
             }
-        }
-
-        if (strtoupper(trim((string)($data['prescription_source'] ?? 'Clinical'))) !== 'DIRECT'
-            && count($inventoryItemIds) === 1
-            && count($this->normalizePostedBillableItemIds($data)) > 1
-        ) {
-            return $this->failure([
-                'The number of billable items must match the number of selected medication / inventory items.'
-            ]);
         }
 
         try {
@@ -132,11 +122,14 @@ class PharmacyService
                 return $this->failure(['You do not have permission to create this prescription.']);
             }
 
-            $inventoryItem = $this->resolveInventoryItemForPrescription(
-                $prepared['data']['inventory_item_id'],
-                $prepared['data']['medication_name'],
-                $user
-            );
+            $inventoryItem = null;
+            if ((int)($prepared['data']['inventory_item_id'] ?? 0) > 0) {
+                $inventoryItem = $this->resolveInventoryItemForPrescription(
+                    (int)$prepared['data']['inventory_item_id'],
+                    '',
+                    $user
+                );
+            }
 
             if ((int)($prepared['data']['inventory_item_id'] ?? 0) > 0 && $inventoryItem === null) {
                 return $this->failure(['Selected inventory item is invalid or inactive.']);
@@ -355,6 +348,25 @@ class PharmacyService
             $params[':status'] = $status;
         }
 
+        $search = trim((string)($filters['search'] ?? ''));
+        if ($search !== '') {
+            $searchLike = '%' . $search . '%';
+            $where .= ' AND (CONCAT(pt.first_name, " ", pt.last_name) LIKE :pharmacy_search_patient
+                OR pt.hospital_number LIKE :pharmacy_search_hospital
+                OR v.visit_number LIKE :pharmacy_search_visit
+                OR p.medication_name LIKE :pharmacy_search_medication
+                OR ii.item_name LIKE :pharmacy_search_item_name
+                OR ii.item_code LIKE :pharmacy_search_item_code
+                OR CONCAT(pr.first_name, " ", pr.last_name) LIKE :pharmacy_search_prescriber)';
+            $params[':pharmacy_search_patient'] = $searchLike;
+            $params[':pharmacy_search_hospital'] = $searchLike;
+            $params[':pharmacy_search_visit'] = $searchLike;
+            $params[':pharmacy_search_medication'] = $searchLike;
+            $params[':pharmacy_search_item_name'] = $searchLike;
+            $params[':pharmacy_search_item_code'] = $searchLike;
+            $params[':pharmacy_search_prescriber'] = $searchLike;
+        }
+
         $stmt = $this->pdo->prepare($this->buildBaseSelect() . ' ' . $where . ' ORDER BY p.created_at DESC, p.id DESC');
         $stmt->execute($params);
 
@@ -364,6 +376,7 @@ class PharmacyService
     public function updatePrescription(int $prescriptionId, array $data, array $user): array
     {
         try {
+            $data = $this->normalizePrescriptionRow($data);
             $prepared = $this->preparePrescription($data, true);
             if ($prepared['errors'] !== []) {
                 return $this->failure($prepared['errors']);
@@ -397,9 +410,15 @@ class PharmacyService
                 return $this->failure(['Patient and encounter do not match.']);
             }
 
+            if ((int)($prepared['data']['inventory_item_id'] ?? 0) <= 0
+                && (int)($current['inventory_item_id'] ?? 0) > 0
+            ) {
+                $prepared['data']['inventory_item_id'] = (int)$current['inventory_item_id'];
+            }
+
             $inventoryItem = $this->resolveInventoryItemForPrescription(
                 $prepared['data']['inventory_item_id'],
-                $prepared['data']['medication_name'],
+                '',
                 $user
             );
 
@@ -524,9 +543,10 @@ class PharmacyService
                 return $this->failure(['Completed or cancelled encounters are read-only.']);
             }
 
+            $selectedInventoryItemId = (int)($data['inventory_item_id'] ?? 0);
             $inventoryItem = $this->resolveInventoryItemForPrescription(
-                (int)($current['inventory_item_id'] ?? 0),
-                (string)$current['medication_name'],
+                $selectedInventoryItemId > 0 ? $selectedInventoryItemId : (int)($current['inventory_item_id'] ?? 0),
+                '',
                 $user
             );
             if ($inventoryItem === null) {
@@ -558,6 +578,21 @@ class PharmacyService
                     'success' => false,
                     'errors' => $consume['errors'] ?? ['Unable to dispense prescription.'],
                 ];
+            }
+
+            if ((int)($current['inventory_item_id'] ?? 0) !== (int)$inventoryItem['id']) {
+                $stmt = $this->pdo->prepare('
+                    UPDATE prescriptions
+                    SET inventory_item_id = :inventory_item_id,
+                        updated_by = :updated_by,
+                        updated_at = NOW()
+                    WHERE id = :id
+                ');
+                $stmt->execute([
+                    ':inventory_item_id' => (int)$inventoryItem['id'],
+                    ':updated_by' => (int)$user['id'],
+                    ':id' => $prescriptionId,
+                ]);
             }
 
             $stmt = $this->pdo->prepare('
@@ -754,6 +789,18 @@ class PharmacyService
         $suggestedBillableItemIds = ClinicalBillingGateService::normalizeBillableItemIds($data);
         $postedBillableItemIds = $this->normalizePostedBillableItemIds($data);
 
+        if ($medicationName === '' && $suggestedBillableItemIds !== []) {
+            $stmt = $this->pdo->prepare('
+                SELECT item_name
+                FROM billable_items
+                WHERE id = :id
+                  AND is_active = 1
+                LIMIT 1
+            ');
+            $stmt->execute([':id' => (int)$suggestedBillableItemIds[0]]);
+            $medicationName = trim((string)($stmt->fetchColumn() ?: ''));
+        }
+
         if ($visitId <= 0) {
             $errors[] = 'Encounter is required.';
         }
@@ -780,10 +827,6 @@ class PharmacyService
 
         if (mb_strlen($dosage) > 255 || mb_strlen($frequency) > 255 || mb_strlen($duration) > 255) {
             $errors[] = 'Prescription details are too long.';
-        }
-
-        if ($source === 'CLINICAL' && $inventoryItemId > 0 && count($postedBillableItemIds) > 1) {
-            $errors[] = 'The number of billable items must match the number of selected medication / inventory items.';
         }
 
         return [
@@ -881,6 +924,24 @@ class PharmacyService
         return $ids;
     }
 
+    private function postedPrescriptionRowCount(array $data, array $inventoryItemIds): int
+    {
+        $count = count($inventoryItemIds);
+        foreach (['medication_name', 'dosage', 'frequency', 'duration', 'quantity', 'instructions'] as $field) {
+            if (!is_array($data[$field] ?? null)) {
+                continue;
+            }
+
+            foreach ($data[$field] as $index => $value) {
+                if (trim((string)$value) !== '') {
+                    $count = max($count, (int)$index + 1);
+                }
+            }
+        }
+
+        return max(1, $count);
+    }
+
     private function normalizePostedBillableItemIds(array $data): array
     {
         $values = $data['suggested_billable_item_ids'] ?? [];
@@ -901,6 +962,38 @@ class PharmacyService
         }
 
         return $ids;
+    }
+
+    private function normalizePrescriptionRow(array $data): array
+    {
+        foreach (['medication_name', 'dosage', 'frequency', 'duration', 'quantity', 'instructions'] as $field) {
+            if (is_array($data[$field] ?? null)) {
+                $data[$field] = $data[$field][0] ?? '';
+            }
+        }
+
+        if ((int)($data['inventory_item_id'] ?? 0) <= 0
+            && is_array($data['inventory_item_ids'] ?? null)
+        ) {
+            $data['inventory_item_id'] = (int)($data['inventory_item_ids'][0] ?? 0);
+        }
+
+        if ((int)($data['suggested_billable_item_id'] ?? 0) <= 0
+            && is_array($data['suggested_billable_item_ids'] ?? null)
+        ) {
+            $data['suggested_billable_item_id'] = (int)($data['suggested_billable_item_ids'][0] ?? 0);
+        }
+
+        return $data;
+    }
+
+    private function postedPrescriptionRowValue(mixed $value, int $index): string
+    {
+        if (is_array($value)) {
+            return trim((string)($value[$index] ?? ''));
+        }
+
+        return trim((string)($value ?? ''));
     }
 
     private function billableItemIdForInventoryItem(int $inventoryItemId): int

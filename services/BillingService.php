@@ -1988,6 +1988,25 @@ class BillingService
             $params[':source_record_id'] = $sourceRecordId;
         }
 
+        $search = trim((string)($filters['search'] ?? ''));
+        if ($search !== '') {
+            $searchLike = '%' . $search . '%';
+            $where[] = '(CONCAT(p.first_name, " ", p.last_name) LIKE :billing_search_patient
+                OR p.hospital_number LIKE :billing_search_hospital
+                OR v.visit_number LIKE :billing_search_visit
+                OR d.department_name LIKE :billing_search_department
+                OR br.description LIKE :billing_search_description
+                OR bi.item_name LIKE :billing_search_item_name
+                OR bi.item_code LIKE :billing_search_item_code)';
+            $params[':billing_search_patient'] = $searchLike;
+            $params[':billing_search_hospital'] = $searchLike;
+            $params[':billing_search_visit'] = $searchLike;
+            $params[':billing_search_department'] = $searchLike;
+            $params[':billing_search_description'] = $searchLike;
+            $params[':billing_search_item_name'] = $searchLike;
+            $params[':billing_search_item_code'] = $searchLike;
+        }
+
         if (!empty($filters['patient_name'])) {
             $where[] = '(CONCAT(p.first_name, " ", p.last_name) LIKE :patient_name OR p.first_name LIKE :patient_name OR p.last_name LIKE :patient_name)';
             $params[':patient_name'] = '%' . trim((string)$filters['patient_name']) . '%';

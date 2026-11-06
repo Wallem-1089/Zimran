@@ -147,6 +147,52 @@ assertPharmacyStoreWorkflow(
     'Price catalogue form should explain Pharmacy-owned pricing.'
 );
 
+$pharmacyForm = file_get_contents(__DIR__ . '/../modules/pharmacy/_form.php');
+assertPharmacyStoreWorkflow(is_string($pharmacyForm), 'Unable to read Pharmacy prescription form.');
+foreach ([
+    'data-pharmacy-medication-picker',
+    'data-medication-search',
+    'data-billable-search',
+    'data-item-name',
+    'name="medication_name[]"',
+    'Medication Name Snapshot',
+    'name="dosage[]"',
+    'name="frequency[]"',
+    'name="duration[]"',
+    'name="quantity[]"',
+    'name="instructions[]"',
+    'data-add-pharmacy-medication',
+] as $needle) {
+    assertPharmacyStoreWorkflow(
+        str_contains($pharmacyForm, $needle),
+        'Pharmacy prescription form is missing multi-medication support: ' . $needle
+    );
+}
+
+$pharmacyDispensePage = file_get_contents(__DIR__ . '/../modules/pharmacy/dispense.php');
+assertPharmacyStoreWorkflow(
+    is_string($pharmacyDispensePage)
+        && str_contains($pharmacyDispensePage, 'name="inventory_item_id"')
+        && str_contains($pharmacyDispensePage, 'Pharmacy chooses the actual stock item'),
+    'Pharmacy dispensing should select the actual available inventory item.'
+);
+
+$pharmacyPrescribePage = file_get_contents(__DIR__ . '/../modules/pharmacy/prescribe.php');
+assertPharmacyStoreWorkflow(
+    is_string($pharmacyPrescribePage) && str_contains($pharmacyPrescribePage, '$showInventorySelection = false;'),
+    'Doctor pharmacy requests should not select Pharmacy inventory.'
+);
+
+$pharmacyService = file_get_contents(__DIR__ . '/../services/PharmacyService.php');
+assertPharmacyStoreWorkflow(
+    is_string($pharmacyService)
+        && str_contains($pharmacyService, 'postedPrescriptionRowCount')
+        && str_contains($pharmacyService, 'postedPrescriptionRowValue')
+        && str_contains($pharmacyService, 'normalizePrescriptionRow')
+        && str_contains($pharmacyService, '$selectedInventoryItemId'),
+    'Pharmacy service is missing row-wise multi-medication normalization.'
+);
+
 $sidebar = file_get_contents(__DIR__ . '/../layouts/sidebar.php');
 assertPharmacyStoreWorkflow(is_string($sidebar), 'Unable to read sidebar.');
 assertPharmacyStoreWorkflow(

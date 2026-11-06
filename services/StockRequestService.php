@@ -142,6 +142,27 @@ class StockRequestService
             $params[':status'] = $status;
         }
 
+        $search = trim((string)($filters['search'] ?? ''));
+        if ($search !== '') {
+            $searchLike = '%' . $search . '%';
+            $where[] = '(CAST(sr.id AS CHAR) LIKE :stock_request_id_search
+                OR d.department_name LIKE :stock_request_department_search
+                OR sr.reason LIKE :stock_request_reason_search
+                OR EXISTS (
+                    SELECT 1
+                    FROM stock_request_items search_sri
+                    INNER JOIN inventory_items search_ii ON search_ii.id = search_sri.inventory_item_id
+                    WHERE search_sri.stock_request_id = sr.id
+                      AND (search_ii.item_name LIKE :stock_request_item_name_search
+                           OR search_ii.item_code LIKE :stock_request_item_code_search)
+                ))';
+            $params[':stock_request_id_search'] = $searchLike;
+            $params[':stock_request_department_search'] = $searchLike;
+            $params[':stock_request_reason_search'] = $searchLike;
+            $params[':stock_request_item_name_search'] = $searchLike;
+            $params[':stock_request_item_code_search'] = $searchLike;
+        }
+
         $sql = $this->baseRequestSelect()
             . ($where === [] ? '' : ' WHERE ' . implode(' AND ', $where))
             . ' ORDER BY sr.created_at DESC, sr.id DESC';

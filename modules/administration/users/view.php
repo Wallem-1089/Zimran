@@ -13,6 +13,8 @@ if (!$user) {
 }
 
 administrationGuardSuperAdministratorUser($user, $currentUser, $permissionService);
+$canEditUserAccounts = $permissionService->canEditUserAccounts($currentUser);
+$canResetUserPasswords = $permissionService->canResetUserPasswords($currentUser);
 
 $loadedStaffProfile = $staffProfileService->getProfile($userId);
 $staffProfile = $loadedStaffProfile['profile'] ?? [];
@@ -60,9 +62,11 @@ require_once __DIR__ . '/../../../layouts/sidebar.php';
             <dt>Last Login</dt><dd><?= e((string)($user['last_login'] ?? 'Never')) ?></dd>
         </dl>
         <p>
-            <a class="btn-primary" href="edit.php?id=<?= $userId ?>">Edit</a>
-            <a href="staff_profile.php?id=<?= $userId ?>">Staff Profile</a>
-            <a href="reset_password.php?id=<?= $userId ?>">Reset Password</a>
+            <?php if ($canEditUserAccounts): ?>
+                <a class="btn-primary" href="edit.php?id=<?= $userId ?>">Edit</a>
+                <a href="staff_profile.php?id=<?= $userId ?>">Staff Profile</a>
+            <?php endif; ?>
+            <?php if ($canResetUserPasswords): ?><a href="reset_password.php?id=<?= $userId ?>">Reset Password</a><?php endif; ?>
             <a href="departments.php?id=<?= $userId ?>">Departments</a>
         </p>
         <form method="POST" action="action.php" style="display:inline">
@@ -78,7 +82,7 @@ require_once __DIR__ . '/../../../layouts/sidebar.php';
             <?php else: ?>
                 <button name="action" value="lock">Lock</button>
             <?php endif; ?>
-            <button name="action" value="force_password_change">Force Password Change</button>
+            <?php if ($canResetUserPasswords): ?><button name="action" value="force_password_change">Force Password Change</button><?php endif; ?>
         </form>
     </section>
 </main>

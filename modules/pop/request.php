@@ -35,7 +35,7 @@ $popRequest = $_SESSION['old_pop_request'] ?? [
 ];
 $popRequest['request_source'] = $requestSource;
 unset($_SESSION['old_pop_request']);
-$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Plaster', 'POP', 'Casting']));
+$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Plaster', 'POP', 'Casting']), ['service']);
 
 $pageTitle = 'Create Plaster Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';

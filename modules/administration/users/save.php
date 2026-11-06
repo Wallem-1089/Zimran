@@ -11,6 +11,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 requireCsrfToken();
 
+administrationRequirePermission(
+    $permissionService,
+    'manage_users',
+    $currentUser,
+    'You do not have permission to create users.'
+);
+
 $result = $userService->createUser($_POST, (int)$currentUser['id']);
 
 if (!$result['success']) {

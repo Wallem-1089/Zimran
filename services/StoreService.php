@@ -98,7 +98,10 @@ class StoreService
             return null;
         }
 
-        if ($user !== null && !$this->permissionService->canViewInventory($user)) {
+        if ($user !== null
+            && !$this->permissionService->canViewInventory($user)
+            && !$this->permissionService->canViewPharmacyDispensingInventory($user)
+        ) {
             return null;
         }
 
@@ -112,7 +115,10 @@ class StoreService
             return null;
         }
 
-        if ($user !== null && !$this->permissionService->canViewInventory($user)) {
+        if ($user !== null
+            && !$this->permissionService->canViewInventory($user)
+            && !$this->permissionService->canViewPharmacyDispensingInventory($user)
+        ) {
             return null;
         }
 
@@ -121,7 +127,10 @@ class StoreService
 
     public function listItems(array $filters = [], ?array $user = null): array
     {
-        if ($user !== null && !$this->permissionService->canViewInventory($user)) {
+        if ($user !== null
+            && !$this->permissionService->canViewInventory($user)
+            && !$this->permissionService->canViewPharmacyDispensingInventory($user)
+        ) {
             return [];
         }
 
@@ -146,6 +155,7 @@ class StoreService
 
         if ($user !== null
             && !$this->permissionService->canViewInventory($user)
+            && !$this->permissionService->canViewPharmacyDispensingInventory($user)
             && !$this->permissionService->canRecordPatientStockUsage($user)
             && !$this->permissionService->canCreateStockRequest($user)
         ) {
@@ -689,13 +699,39 @@ class StoreService
         ];
     }
 
-    public function listDepartmentStock(?int $departmentId = null, ?array $user = null): array
+    public function listDepartmentStock(?int $departmentId = null, ?array $user = null, array $filters = []): array
     {
         if ($user !== null
             && !$this->permissionService->canViewInventory($user)
             && ($departmentId === null || !$this->canViewDepartmentStock($departmentId, $user))
         ) {
             return [];
+        }
+
+        $where = [];
+        $params = [];
+        if ($departmentId !== null && $departmentId > 0) {
+            $where[] = 'dsb.department_id = :department_id';
+            $params[':department_id'] = $departmentId;
+        }
+        $search = trim((string)($filters['search'] ?? ''));
+        if ($search !== '') {
+            $searchLike = '%' . $search . '%';
+            $barcodeClause = $this->tableExists('inventory_item_barcodes')
+                ? ' OR EXISTS (
+                    SELECT 1 FROM inventory_item_barcodes department_stock_barcode
+                    WHERE department_stock_barcode.inventory_item_id = ii.id
+                      AND department_stock_barcode.is_active = 1
+                      AND department_stock_barcode.barcode_value LIKE :department_stock_barcode
+                )'
+                : '';
+            $where[] = '(ii.item_name LIKE :department_stock_item_name
+                OR ii.item_code LIKE :department_stock_item_code' . $barcodeClause . ')';
+            $params[':department_stock_item_name'] = $searchLike;
+            $params[':department_stock_item_code'] = $searchLike;
+            if ($barcodeClause !== '') {
+                $params[':department_stock_barcode'] = '%' . strtoupper($search) . '%';
+            }
         }
 
         $sql = '
@@ -720,9 +756,8 @@ class StoreService
         ';
 
         $params = [];
-        if ($departmentId !== null && $departmentId > 0) {
-            $sql .= ' WHERE dsb.department_id = :department_id';
-            $params[':department_id'] = $departmentId;
+        if ($where !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
         }
 
         $sql .= ' ORDER BY d.department_name ASC, ii.item_name ASC';
@@ -781,6 +816,22 @@ class StoreService
         if ($itemId > 0) {
             $where[] = 'st.inventory_item_id = :item_id';
             $params[':item_id'] = $itemId;
+        }
+
+        $itemSearch = trim((string)($filters['item_search'] ?? ''));
+        if ($itemSearch !== '') {
+            $where[] = '(ii.item_name LIKE :ledger_item_name_search
+                OR ii.item_code LIKE :ledger_item_code_search
+                OR EXISTS (
+                    SELECT 1
+                    FROM inventory_item_barcodes ledger_ib
+                    WHERE ledger_ib.inventory_item_id = ii.id
+                      AND ledger_ib.is_active = 1
+                      AND ledger_ib.barcode_value LIKE :ledger_barcode_search
+                ))';
+            $params[':ledger_item_name_search'] = '%' . $itemSearch . '%';
+            $params[':ledger_item_code_search'] = '%' . strtoupper($itemSearch) . '%';
+            $params[':ledger_barcode_search'] = '%' . strtoupper($itemSearch) . '%';
         }
 
         $departmentId = (int)($filters['department_id'] ?? 0);
@@ -1406,6 +1457,16 @@ class StoreService
                 $where[] = 'ii.item_code LIKE :item_code';
             }
             $params[':item_code'] = '%' . strtoupper(trim((string)$filters['item_code'])) . '%';
+        }
+        if (!empty($filters['barcode']) && $this->tableExists('inventory_item_barcodes')) {
+            $where[] = 'EXISTS (
+                SELECT 1
+                FROM inventory_item_barcodes barcode_filter
+                WHERE barcode_filter.inventory_item_id = ii.id
+                  AND barcode_filter.is_active = 1
+                  AND barcode_filter.barcode_value LIKE :barcode
+            )';
+            $params[':barcode'] = '%' . strtoupper(trim((string)$filters['barcode'])) . '%';
         }
         if (!empty($filters['item_name'])) {
             $where[] = 'ii.item_name LIKE :item_name';

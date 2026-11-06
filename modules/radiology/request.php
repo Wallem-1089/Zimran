@@ -37,7 +37,7 @@ $radiologyRequest['request_source'] = $requestSource;
 unset($_SESSION['old_radiology_request']);
 
 $existingRequests = $radiologyService->listByVisit($visitId, $currentUser);
-$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Radiology', 'X-Ray']));
+$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Radiology', 'X-Ray']), ['service']);
 $pageTitle = 'Create Radiology Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 

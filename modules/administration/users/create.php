@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../partials/bootstrap.php';
 
+administrationRequirePermission(
+    $permissionService,
+    'manage_users',
+    $currentUser,
+    'You do not have permission to create users.'
+);
+
 $pageTitle = 'Create User';
 $roles = $userService->getRoles();
 $departments = $userService->getDepartments();

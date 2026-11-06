@@ -12,7 +12,8 @@ if (!$storeTablesReady) {
 storeRequireAccess($permissionService, $currentUser);
 
 $departmentId = filter_input(INPUT_GET, 'department_id', FILTER_VALIDATE_INT) ?: null;
-$rows = $storeService->listDepartmentStock($departmentId, $currentUser);
+$search = trim((string)($_GET['search'] ?? ''));
+$rows = $storeService->listDepartmentStock($departmentId, $currentUser, ['search' => $search]);
 
 $pageTitle = 'Stock by Department';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -32,16 +33,22 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
     </div>
     <form method="get" class="card">
-        <div class="form-group">
-            <label for="department_id">Department</label>
-            <select id="department_id" name="department_id">
-                <option value="">All Departments</option>
-                <?php foreach ($storeDepartmentOptions as $department): ?>
-                    <option value="<?= (int)$department['id'] ?>" <?= $departmentId === (int)$department['id'] ? 'selected' : '' ?>>
-                        <?= e((string)$department['department_name']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="search">Item / Code / Barcode</label>
+                <input id="search" type="search" name="search" value="<?= e($search) ?>" placeholder="Search stock received by Pharmacy or department">
+            </div>
+            <div class="form-group">
+                <label for="department_id">Department</label>
+                <select id="department_id" name="department_id">
+                    <option value="">All Departments</option>
+                    <?php foreach ($storeDepartmentOptions as $department): ?>
+                        <option value="<?= (int)$department['id'] ?>" <?= $departmentId === (int)$department['id'] ? 'selected' : '' ?>>
+                            <?= e((string)$department['department_name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
         </div>
         <div class="form-actions">
             <button class="btn-primary" type="submit">Filter</button>
@@ -94,4 +101,3 @@ require __DIR__ . '/../../layouts/sidebar.php';
 </main>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>
-

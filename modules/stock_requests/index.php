@@ -7,9 +7,10 @@ stockRequestRequireReady($stockRequestTablesReady);
 stockRequestRequireView($permissionService, $currentUser);
 
 $status = trim((string)($_GET['status'] ?? ''));
+$search = trim((string)($_GET['search'] ?? ''));
 $scope = trim((string)($_GET['scope'] ?? ''));
 $scope = in_array($scope, ['made', 'received'], true) ? $scope : '';
-$requests = $stockRequestService->listRequests(['status' => $status, 'scope' => $scope], $currentUser);
+$requests = $stockRequestService->listRequests(['status' => $status, 'scope' => $scope, 'search' => $search], $currentUser);
 $activeDepartmentName = (string)(
     $currentUser['active_department_name']
     ?? $_SESSION['active_department_name']
@@ -60,6 +61,9 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <input type="hidden" name="scope" value="<?= e($scope) ?>">
         <?php endif; ?>
         <div class="form-grid">
+            <label>Search
+                <input type="search" name="search" value="<?= e($search) ?>" placeholder="Request no., department, item, reason">
+            </label>
             <label>Status
                 <select name="status">
                     <option value="">All</option>

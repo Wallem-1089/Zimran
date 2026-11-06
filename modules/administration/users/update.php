@@ -18,6 +18,12 @@ if (!$targetUser) {
     exit('User not found.');
 }
 administrationGuardSuperAdministratorUser($targetUser, $currentUser, $permissionService);
+administrationRequirePermission(
+    $permissionService,
+    'edit_user_accounts',
+    $currentUser,
+    'You do not have permission to edit user accounts.'
+);
 
 $result = $userService->updateUser(
     $userId,

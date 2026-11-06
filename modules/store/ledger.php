@@ -21,6 +21,7 @@ $isPharmacyLedgerUser = strcasecmp(storeCurrentDepartmentName($pdo, $currentUser
 $pharmacyDepartmentId = $isPharmacyLedgerUser ? storeDepartmentIdByName($pdo, 'Pharmacy') : null;
 $filters = [
     'item_id' => $itemId > 0 ? $itemId : (filter_input(INPUT_GET, 'item_id', FILTER_VALIDATE_INT) ?: null),
+    'item_search' => trim((string)($_GET['item_search'] ?? '')),
     'department_id' => $isPharmacyLedgerUser ? $pharmacyDepartmentId : (filter_input(INPUT_GET, 'department_id', FILTER_VALIDATE_INT) ?: null),
     'transaction_type' => $_GET['transaction_type'] ?? '',
     'date_from' => $_GET['date_from'] ?? '',
@@ -61,6 +62,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?php endif; ?>
         <div class="form-grid">
             <?php if (!$item): ?>
+                <div class="form-group">
+                    <label for="item_search">Item / Code / Barcode Search</label>
+                    <input id="item_search" type="search" name="item_search" value="<?= e((string)$filters['item_search']) ?>" placeholder="Search item, code, or barcode">
+                </div>
                 <div class="form-group">
                     <label for="item_id">Inventory Item</label>
                     <select id="item_id" name="item_id">

@@ -10,7 +10,8 @@ if (!$pharmacyTablesReady) {
 }
 
 $status = trim((string)($_GET['status'] ?? 'Prescribed'));
-$worklist = $pharmacyService->listWorklist($currentUser, ['status' => $status]);
+$search = trim((string)($_GET['search'] ?? ''));
+$worklist = $pharmacyService->listWorklist($currentUser, ['status' => $status, 'search' => $search]);
 $summaryRows = $pharmacyService->listWorklist($currentUser, []);
 $statusCounts = array_count_values(array_map(static fn (array $row): string => (string)($row['status'] ?? 'Unknown'), $summaryRows));
 
@@ -40,6 +41,20 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <div class="summary-item"><span class="summary-label">Dispensed</span> <span class="summary-value"><?= (int)($statusCounts['Dispensed'] ?? 0) ?></span></div>
         <div class="summary-item"><span class="summary-label">Cancelled</span> <span class="summary-value"><?= (int)($statusCounts['Cancelled'] ?? 0) ?></span></div>
     </div>
+
+    <form method="get" class="card">
+        <input type="hidden" name="status" value="<?= e($status) ?>">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="search">Search</label>
+                <input id="search" type="search" name="search" value="<?= e($search) ?>" placeholder="Patient, hospital no., visit, medication, prescriber">
+            </div>
+        </div>
+        <div class="form-actions">
+            <button class="btn-primary" type="submit">Search</button>
+            <a class="btn-secondary" href="index.php?status=<?= urlencode($status) ?>">Reset</a>
+        </div>
+    </form>
 
     <div class="card">
         <?php if ($worklist === []): ?>

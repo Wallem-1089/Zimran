@@ -28,6 +28,14 @@ class ClinicalBillingGateService
         }
 
         $suggestedBillableItemIds = self::normalizeBillableItemIds($suggestedBillableItemId);
+        $billableItemValidation = $this->validateBillableItemsForRequest(
+            $suggestedBillableItemIds,
+            $departmentId,
+            $sourceModule
+        );
+        if ($billableItemValidation !== []) {
+            return ['success' => false, 'errors' => $billableItemValidation];
+        }
         $primaryBillableItemId = $suggestedBillableItemIds[0] ?? null;
         $additionalBillableItemIds = array_slice($suggestedBillableItemIds, 1);
 
@@ -109,7 +117,8 @@ class ClinicalBillingGateService
                     WHERE id = :id
                 ');
                 $stmt->execute([
-                    ':suffix' => ' Additional billable items charged: ' . count($additionalBillableItemIds) . '.',
+                    ':suffix' => ' Additional billable items charged: ' . count($additionalBillableItemIds)
+                        . '. Additional billable item IDs: ' . implode(',', $additionalBillableItemIds) . '.',
                     ':id' => $requestId,
                 ]);
             }
@@ -153,6 +162,64 @@ class ClinicalBillingGateService
         }
 
         return $ids;
+    }
+
+    /**
+     * Clinical request forms may only bill services, except Pharmacy which may
+     * also bill drug items selected by the requesting clinician.
+     */
+    private function validateBillableItemsForRequest(
+        array $itemIds,
+        ?int $departmentId,
+        string $sourceModule
+    ): array {
+        if ($itemIds === []) {
+            return [];
+        }
+
+        $placeholders = [];
+        $params = [];
+        foreach (array_values($itemIds) as $index => $itemId) {
+            $placeholder = ':billable_item_' . $index;
+            $placeholders[] = $placeholder;
+            $params[$placeholder] = (int)$itemId;
+        }
+
+        $where = [
+            'bi.id IN (' . implode(',', $placeholders) . ')',
+            'bi.is_active = 1',
+        ];
+        if ($departmentId !== null && $departmentId > 0) {
+            $where[] = '(bi.department_id = :request_department_id OR bi.department_id IS NULL)';
+            $params[':request_department_id'] = $departmentId;
+        }
+
+        $allowedTypes = strtolower(trim($sourceModule)) === 'pharmacy'
+            ? ['drug', 'service']
+            : ['service'];
+        $typePlaceholders = [];
+        foreach ($allowedTypes as $index => $type) {
+            $placeholder = ':billable_item_type_' . $index;
+            $typePlaceholders[] = $placeholder;
+            $params[$placeholder] = $type;
+        }
+        $where[] = 'LOWER(COALESCE(bi.item_type, \'\')) IN (' . implode(',', $typePlaceholders) . ')';
+
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM billable_items bi WHERE ' . implode(' AND ', $where)
+        );
+        $stmt->execute($params);
+        $validCount = (int)$stmt->fetchColumn();
+
+        if ($validCount !== count($itemIds)) {
+            return [
+                strtolower(trim($sourceModule)) === 'pharmacy'
+                    ? 'Select active Pharmacy drug or service billable items only.'
+                    : 'Select active service billable items assigned to this department only.',
+            ];
+        }
+
+        return [];
     }
 
     public function status(string $sourceModule, int $sourceRecordId, int $visitId, ?array $user = null): array

@@ -13,6 +13,12 @@ if (!$user) {
 }
 
 administrationGuardSuperAdministratorUser($user, $currentUser, $permissionService);
+administrationRequirePermission(
+    $permissionService,
+    'edit_user_accounts',
+    $currentUser,
+    'You do not have permission to edit user accounts.'
+);
 
 $pageTitle = 'Edit User';
 $roles = $userService->getRoles();

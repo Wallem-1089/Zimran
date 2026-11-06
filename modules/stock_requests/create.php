@@ -62,6 +62,7 @@ $renderStockRequestRows = static function (array $rows, array $options): void {
         ?>
         <tr>
             <td>
+                <input type="search" data-stock-item-search placeholder="Search item code or name" autocomplete="off" style="width:100%;margin-bottom:.25rem;">
                 <select name="inventory_item_id[]">
                     <option value="">Select item</option>
                     <?php foreach ($options as $item): ?>
@@ -175,10 +176,32 @@ require __DIR__ . '/../../layouts/sidebar.php';
             row.querySelectorAll('select').forEach((select) => {
                 select.selectedIndex = 0;
             });
+            row.querySelectorAll('[data-stock-item-search]').forEach((input) => {
+                input.value = '';
+            });
             row.querySelectorAll('input').forEach((input) => {
                 input.value = '';
             });
             body.appendChild(row);
+        });
+    });
+
+    document.addEventListener('input', (event) => {
+        const input = event.target.closest('[data-stock-item-search]');
+        if (!input) return;
+        const row = input.closest('tr');
+        const select = row ? row.querySelector('select[name="inventory_item_id[]"]') : null;
+        if (!select) return;
+        const term = input.value.trim().toLowerCase();
+        Array.from(select.options).forEach((option, index) => {
+            if (index === 0) {
+                option.hidden = false;
+                option.disabled = false;
+                return;
+            }
+            const match = term === '' || option.textContent.toLowerCase().includes(term);
+            option.hidden = !match;
+            option.disabled = !match;
         });
     });
     </script>

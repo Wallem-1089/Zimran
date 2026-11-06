@@ -44,3 +44,14 @@ function administrationGuardSuperAdministratorUser(
         );
     }
 }
+
+function administrationRequirePermission(
+    PermissionService $permissionService,
+    string $permission,
+    array $currentUser,
+    string $message
+): void {
+    if (!$permissionService->hasPermission($permission, $currentUser)) {
+        securityFailure($message, null, 'ADMINISTRATION_PERMISSION_DENIED');
+    }
+}

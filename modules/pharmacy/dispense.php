@@ -39,6 +39,13 @@ if (!$patient) {
     exit('Patient not found.');
 }
 
+$inventoryItems = pharmacyInventoryOptions($storeService, $permissionService, $currentUser);
+foreach ($inventoryItems as &$inventoryItem) {
+    $balance = $storeService->getDepartmentBalance((int)$inventoryItem['id'], pharmacyDepartmentId($pdo), $currentUser);
+    $inventoryItem['pharmacy_stock_available'] = (float)($balance['quantity'] ?? 0);
+}
+unset($inventoryItem);
+
 $stock = null;
 if ((int)($prescription['inventory_item_id'] ?? 0) > 0) {
     $stock = $storeService->getDepartmentBalance((int)$prescription['inventory_item_id'], pharmacyDepartmentId($pdo), $currentUser);
@@ -112,6 +119,20 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
 
         <div class="form-group">
+            <label for="inventory_item_id">Inventory Item to Dispense</label>
+            <input type="search" id="inventory_item_search" placeholder="Search pharmacy drug by code or name" autocomplete="off" style="width:100%;margin-bottom:.35rem;">
+            <select id="inventory_item_id" name="inventory_item_id" required>
+                <option value="">Select the available Pharmacy stock item</option>
+                <?php foreach ($inventoryItems as $item): ?>
+                    <option value="<?= (int)$item['id'] ?>" <?= (int)($prescription['inventory_item_id'] ?? 0) === (int)$item['id'] ? 'selected' : '' ?>>
+                        <?= e((string)$item['item_code'] . ' - ' . (string)$item['item_name']) ?> — Stock: <?= e(number_format((float)$item['pharmacy_stock_available'], 0)) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <small class="form-help">Pharmacy chooses the actual stock item after checking availability.</small>
+        </div>
+
+        <div class="form-group">
             <label for="quantity_dispensed">Quantity to Dispense</label>
             <input
                 type="number"
@@ -134,5 +155,21 @@ require __DIR__ . '/../../layouts/sidebar.php';
         </div>
     </form>
 </main>
+<script>
+(function () {
+    var input = document.getElementById('inventory_item_search');
+    var select = document.getElementById('inventory_item_id');
+    if (!input || !select) return;
+    input.addEventListener('input', function () {
+        var term = (input.value || '').trim().toLowerCase();
+        Array.prototype.forEach.call(select.options, function (option, index) {
+            if (index === 0) { option.hidden = false; option.disabled = false; return; }
+            var match = term === '' || option.textContent.toLowerCase().indexOf(term) !== -1;
+            option.hidden = !match;
+            option.disabled = !match;
+        });
+    });
+})();
+</script>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

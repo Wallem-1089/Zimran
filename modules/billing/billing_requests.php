@@ -13,6 +13,7 @@ if (!$billingTablesReady || !$billingRequestsReady) {
 
 $requestedStatus = array_key_exists('status', $_GET) ? trim((string)$_GET['status']) : 'Actionable';
 $filters = [
+    'search' => trim((string)($_GET['search'] ?? '')),
     'status' => $requestedStatus === 'Actionable' ? '' : $requestedStatus,
     'encounter_id' => trim((string)($_GET['encounter_id'] ?? '')),
     'patient_name' => trim((string)($_GET['patient_name'] ?? '')),
@@ -77,6 +78,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
                         <option value="<?= e($status) ?>" <?= $requestedStatus === $status ? 'selected' : '' ?>><?= e($status === '' ? 'All' : $status) ?></option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+            <div class="form-group">
+                <label for="search">Universal Search</label>
+                <input id="search" name="search" value="<?= e($filters['search']) ?>" placeholder="Patient, hospital no., encounter, department, description, billable item">
             </div>
             <div class="form-group">
                 <label for="encounter_id">Encounter ID</label>

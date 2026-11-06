@@ -60,6 +60,28 @@ $canCancel = (string)$prescription['status'] === 'Prescribed'
     && $permissionService->canEditPrescription($visit, $currentUser, (string)$prescription['prescription_source']);
 $canRecordDrugChart = !in_array((string)($visit['visit_status'] ?? ''), ['Completed', 'Cancelled'], true)
     && $permissionService->canCreateNursing($visit, $currentUser);
+$doctorBillableItems = [];
+if ($latestBillingRequest !== null) {
+    $doctorBillableIds = [];
+    $primaryDoctorBillableId = (int)($latestBillingRequest['suggested_billable_item_id'] ?? 0);
+    if ($primaryDoctorBillableId > 0) {
+        $doctorBillableIds[] = $primaryDoctorBillableId;
+    }
+    if (preg_match('/Additional billable item IDs:\s*([0-9,]+)/i', (string)($latestBillingRequest['notes'] ?? ''), $matches)) {
+        foreach (explode(',', $matches[1]) as $billableId) {
+            $billableId = (int)$billableId;
+            if ($billableId > 0 && !in_array($billableId, $doctorBillableIds, true)) {
+                $doctorBillableIds[] = $billableId;
+            }
+        }
+    }
+    if ($doctorBillableIds !== []) {
+        $placeholders = implode(',', array_fill(0, count($doctorBillableIds), '?'));
+        $billableStmt = $pdo->prepare('SELECT id, item_name, unit_price FROM billable_items WHERE id IN (' . $placeholders . ') ORDER BY FIELD(id, ' . $placeholders . ')');
+        $billableStmt->execute(array_merge($doctorBillableIds, $doctorBillableIds));
+        $doctorBillableItems = $billableStmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
 
 $pageTitle = 'Prescription';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
@@ -124,6 +146,11 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <h3>Prescription Details</h3>
         <table class="summary-table">
             <tbody>
+                <?php if ($doctorBillableItems !== []): ?>
+                    <tr><th>Doctor-selected billable items</th><td><?php foreach ($doctorBillableItems as $doctorBillableItem): ?><?= e((string)$doctorBillableItem['item_name']) ?> (₦<?= e(number_format((float)$doctorBillableItem['unit_price'], 2)) ?>)<br><?php endforeach; ?></td></tr>
+                <?php elseif ($latestBillingRequest !== null && trim((string)($latestBillingRequest['suggested_item_name'] ?? '')) !== ''): ?>
+                    <tr><th>Doctor-selected billable item</th><td><?= e((string)$latestBillingRequest['suggested_item_name']) ?> (₦<?= e(number_format((float)($latestBillingRequest['suggested_unit_price'] ?? 0), 2)) ?>)</td></tr>
+                <?php endif; ?>
                 <tr><th>Medication Snapshot</th><td><?= e((string)$prescription['medication_name']) ?></td></tr>
                 <tr><th>Inventory Item</th><td><?= e((string)($prescription['inventory_item_name'] ?? '-')) ?></td></tr>
                 <tr><th>Price</th><td><?= $prescription['unit_price'] !== null ? '₦' . number_format((float)$prescription['unit_price'], 2) : '—' ?></td></tr>

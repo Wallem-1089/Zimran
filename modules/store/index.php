@@ -13,6 +13,7 @@ storeRequireAccess($permissionService, $currentUser);
 
 $filters = [
     'item_code' => trim((string)($_GET['item_code'] ?? '')),
+    'barcode' => trim((string)($_GET['barcode'] ?? '')),
     'item_name' => trim((string)($_GET['item_name'] ?? '')),
     'category' => trim((string)($_GET['category'] ?? '')),
     'status' => trim((string)($_GET['status'] ?? 'all')),
@@ -78,6 +79,10 @@ require __DIR__ . '/../../layouts/sidebar.php';
             <div class="form-group">
                 <label for="item_code">Code</label>
                 <input id="item_code" name="item_code" value="<?= e($filters['item_code']) ?>">
+            </div>
+            <div class="form-group">
+                <label for="barcode">Barcode</label>
+                <input id="barcode" name="barcode" value="<?= e($filters['barcode']) ?>" placeholder="Scan or enter barcode">
             </div>
             <div class="form-group">
                 <label for="item_name">Name</label>

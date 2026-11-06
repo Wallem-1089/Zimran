@@ -501,10 +501,6 @@ class LaboratoryService
             $errors[] = 'Invalid laboratory request source.';
         }
 
-        if ($testsRequested === '') {
-            $errors[] = 'Tests requested are required.';
-        }
-
         if ($this->textLength($testsRequested) > 5000) {
             $errors[] = 'Tests requested is too long.';
         }

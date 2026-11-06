@@ -27,7 +27,7 @@ unset($_SESSION['old_theatre']);
 $theatreConfiguredFields = $configurableFormService->listFields('theatre_record', true);
 $theatreConfiguredValues = $_SESSION['old_configured_fields'] ?? [];
 unset($_SESSION['old_configured_fields']);
-$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Theatre']));
+$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Theatre']), ['service']);
 
 $latestVitalSigns = $vitalSignsService
     ? $vitalSignsService->getLatestByVisit($visitId, $currentUser)

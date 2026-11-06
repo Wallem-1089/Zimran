@@ -35,8 +35,8 @@ $enableWritingMode ??= isset($permissionService)
     </div>
 
     <?php hmsRenderHandwritingToolbar($enableWritingMode, 'Laboratory Request Entry Mode'); ?>
-    <?php hmsRenderHandwritingTextarea('tests_requested', 'Tests Requested', (string)($laboratoryRequest['tests_requested'] ?? ''), 4, true, $enableWritingMode); ?>
-    <?php hmsRenderHandwritingTextarea('clinical_information', 'Clinical Information', (string)($laboratoryRequest['clinical_information'] ?? ''), 4, false, $enableWritingMode); ?>
+    <?php hmsRenderHandwritingTextarea('tests_requested', 'Tests Requested (Optional)', (string)($laboratoryRequest['tests_requested'] ?? ''), 4, false, $enableWritingMode); ?>
+    <?php hmsRenderHandwritingTextarea('clinical_information', 'Clinical Information (Optional)', (string)($laboratoryRequest['clinical_information'] ?? ''), 4, false, $enableWritingMode); ?>
 
     <div class="form-actions">
         <button type="submit" class="btn-primary"><?= e($buttonLabel) ?></button>

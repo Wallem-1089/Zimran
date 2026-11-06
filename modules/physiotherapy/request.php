@@ -45,7 +45,7 @@ unset($_SESSION['old_configured_fields']);
 
 $existingRecords = $physiotherapyService->listByVisit($visitId, $currentUser);
 $existingRecord = $existingRecords[0] ?? null;
-$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Physiotherapy']));
+$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Physiotherapy']), ['service']);
 $pageTitle = 'Create Physiotherapy Request';
 $moduleStylesheet = '/modules/visits/assets/visits.css';
 

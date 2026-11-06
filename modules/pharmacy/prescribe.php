@@ -31,7 +31,7 @@ if (!$permissionService->canCreatePrescription($visit, $currentUser, $requestSou
 }
 
 $inventoryItems = pharmacyInventoryOptions($storeService, $permissionService, $currentUser);
-$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Pharmacy']));
+$billableItemOptions = hmsBillableItemOptions($pdo, hmsDepartmentIdByName($pdo, ['Pharmacy']), ['drug', 'service']);
 foreach ($inventoryItems as &$inventoryItem) {
     $balance = $storeService->getDepartmentBalance((int)$inventoryItem['id'], pharmacyDepartmentId($pdo), $currentUser);
     $inventoryItem['pharmacy_stock_available'] = (float)($balance['quantity'] ?? 0);
@@ -62,6 +62,7 @@ $alerts = $canViewClinicalSafety
     : [];
 
 $existingPrescriptions = $pharmacyService->listByVisit($visitId, $currentUser);
+$showInventorySelection = false;
 
 $pageTitle = 'Create Prescription';
 $moduleStylesheet = '/modules/visits/assets/visits.css';

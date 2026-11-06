@@ -67,6 +67,7 @@ require __DIR__ . '/../../layouts/sidebar.php';
                 <input type="hidden" name="source_module" value="Billing">
                 <div class="form-group">
                     <label for="billable_item_id">Billable Item</label>
+                    <input type="search" data-search-for="billable_item_id" placeholder="Search item code or name" autocomplete="off" style="width:100%;margin-bottom:.35rem;">
                     <select id="billable_item_id" name="billable_item_id" required>
                         <option value="">Select item</option>
                         <?php foreach ($items as $item): ?>
@@ -91,5 +92,20 @@ require __DIR__ . '/../../layouts/sidebar.php';
         <?php endif; ?>
     </div>
 </main>
+<script>
+(function () {
+    var input = document.querySelector('[data-search-for="billable_item_id"]');
+    var select = document.getElementById('billable_item_id');
+    if (!input || !select) return;
+    input.addEventListener('input', function () {
+        var term = input.value.trim().toLowerCase();
+        Array.prototype.forEach.call(select.options, function (option, index) {
+            if (index === 0) { option.hidden = false; option.disabled = false; return; }
+            var match = term === '' || option.textContent.toLowerCase().indexOf(term) !== -1;
+            option.hidden = !match; option.disabled = !match;
+        });
+    });
+})();
+</script>
 <?php require __DIR__ . '/../../layouts/footer.php'; ?>
 </div>

@@ -20,6 +20,12 @@ if (!$targetUser) {
 }
 
 administrationGuardSuperAdministratorUser($targetUser, $currentUser, $permissionService);
+administrationRequirePermission(
+    $permissionService,
+    'edit_user_accounts',
+    $currentUser,
+    'You do not have permission to edit staff information.'
+);
 
 $result = $staffProfileService->saveProfile($userId, $_POST, (int)$currentUser['id'], $_FILES);
 

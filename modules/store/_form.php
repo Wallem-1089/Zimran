@@ -46,6 +46,7 @@ $buttonLabel ??= 'Save Item';
         </div>
         <div class="form-group">
             <label for="billable_item_id">Billable Item</label>
+            <input type="search" data-search-for="store_billable_item_id" placeholder="Search item code or name" autocomplete="off" style="width:100%;margin-bottom:.35rem;">
             <select id="billable_item_id" name="billable_item_id">
                 <option value="">—</option>
                 <?php foreach ($billableItems as $billableItem): ?>
@@ -74,3 +75,18 @@ $buttonLabel ??= 'Save Item';
         <a class="btn-secondary" href="<?= e(storeBackToIndex()) ?>">Cancel</a>
     </div>
 </form>
+<script>
+(function () {
+    var input = document.querySelector('[data-search-for="store_billable_item_id"]');
+    var select = document.getElementById('billable_item_id');
+    if (!input || !select) return;
+    input.addEventListener('input', function () {
+        var term = input.value.trim().toLowerCase();
+        Array.prototype.forEach.call(select.options, function (option, index) {
+            if (index === 0) { option.hidden = false; option.disabled = false; return; }
+            var match = term === '' || option.textContent.toLowerCase().indexOf(term) !== -1;
+            option.hidden = !match; option.disabled = !match;
+        });
+    });
+})();
+</script>

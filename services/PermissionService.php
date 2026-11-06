@@ -42,6 +42,8 @@ class PermissionService
             && in_array($permission, [
                 'view_encounter',
                 'manage_users',
+                'edit_user_accounts',
+                'reset_user_passwords',
                 'manage_roles',
                 'manage_permissions',
                 'manage_settings',
@@ -76,7 +78,7 @@ class PermissionService
                 || $department === 'Doctor',
             'change_encounter_status' => $department !== '',
             'edit_encounter' => $department !== '',
-            'manage_users', 'manage_roles', 'manage_permissions', 'manage_settings',
+            'manage_users', 'edit_user_accounts', 'reset_user_passwords', 'manage_roles', 'manage_permissions', 'manage_settings',
             'manage_configurable_forms', 'view_configurable_form_responses' => $this->isAdministrationUser($user),
             'manage_family_cards' => in_array($role, ['System Administrator', 'Records Officer', 'Receptionist'], true)
                 || in_array($department, ['Administrator', 'Records', 'Reception'], true),
@@ -2120,6 +2122,16 @@ class PermissionService
             || $this->hasPermission('view_inventory', $user);
     }
 
+    public function canViewPharmacyDispensingInventory(?array $user = null): bool
+    {
+        $user = $user ?? $this->currentUser();
+        return $this->isAdministrator($user)
+            || (
+                $this->hasPermission('dispense_prescription', $user)
+                && ($this->roleMatches($user, ['Pharmacist']) || $this->activeDepartmentName($user) === 'Pharmacy')
+            );
+    }
+
     public function canManageInventoryItems(?array $user = null): bool
     {
         $user = $user ?? $this->currentUser();
@@ -2555,6 +2567,22 @@ class PermissionService
     {
         return $this->hasPermission(
             'manage_users',
+            $user ?? $this->currentUser()
+        );
+    }
+
+    public function canEditUserAccounts(?array $user = null): bool
+    {
+        return $this->hasPermission(
+            'edit_user_accounts',
+            $user ?? $this->currentUser()
+        );
+    }
+
+    public function canResetUserPasswords(?array $user = null): bool
+    {
+        return $this->hasPermission(
+            'reset_user_passwords',
             $user ?? $this->currentUser()
         );
     }

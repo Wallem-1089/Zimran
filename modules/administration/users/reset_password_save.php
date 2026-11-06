@@ -20,6 +20,12 @@ if (!$targetUser) {
     exit('User not found.');
 }
 administrationGuardSuperAdministratorUser($targetUser, $currentUser, $permissionService);
+administrationRequirePermission(
+    $permissionService,
+    'reset_user_passwords',
+    $currentUser,
+    'You do not have permission to reset user passwords.'
+);
 
 if ($password !== $confirmation) {
     $_SESSION['administration_errors'] = ['Passwords do not match.'];

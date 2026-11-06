@@ -13,6 +13,12 @@ if (!$user) {
 }
 
 administrationGuardSuperAdministratorUser($user, $currentUser, $permissionService);
+administrationRequirePermission(
+    $permissionService,
+    'edit_user_accounts',
+    $currentUser,
+    'You do not have permission to edit staff information.'
+);
 
 $loadedProfile = $staffProfileService->getProfile($userId);
 $profile = $loadedProfile['profile'] !== []
